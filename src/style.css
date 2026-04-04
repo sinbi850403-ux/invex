@@ -1205,3 +1205,192 @@ html, body {
     transform: none;
   }
 }
+
+/* ===========================
+   프리미엄 기능 스타일
+   =========================== */
+
+/* --- 바코드 스캔 모드 바 --- */
+.scan-mode-bar {
+  display: flex;
+  gap: 4px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 6px;
+  margin-bottom: var(--space-md);
+}
+
+.scan-mode-btn {
+  flex: 1;
+  padding: 12px;
+  border: none;
+  border-radius: var(--radius);
+  background: transparent;
+  font-family: var(--font-family);
+  font-size: var(--font-size-md);
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: var(--text-secondary);
+}
+
+.scan-mode-btn:hover {
+  background: var(--bg-main);
+}
+
+.scan-mode-btn.active[data-type="in"] {
+  background: var(--success);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(22, 163, 74, 0.3);
+}
+
+.scan-mode-btn.active[data-type="out"] {
+  background: var(--danger);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(220, 38, 38, 0.3);
+}
+
+/* --- 문서 유형 카드 --- */
+.doc-type-card {
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 2px solid transparent;
+}
+
+.doc-type-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.doc-type-card.active {
+  border-color: var(--accent);
+  background: var(--accent-light);
+}
+
+/* --- 알림 패널 --- */
+.notification-panel {
+  position: fixed;
+  bottom: 60px;
+  left: 16px;
+  width: 360px;
+  max-height: 480px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-lg);
+  z-index: 1000;
+  animation: slideUp 0.2s ease;
+  overflow: hidden;
+}
+
+.notif-header {
+  display: flex;
+  align-items: center;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border-light);
+  font-size: var(--font-size-md);
+}
+
+.notif-close {
+  margin-left: auto;
+  background: none;
+  border: none;
+  font-size: 16px;
+  cursor: pointer;
+  color: var(--text-muted);
+  padding: 4px 6px;
+  border-radius: var(--radius-sm);
+  transition: all 0.15s;
+}
+
+.notif-close:hover {
+  background: var(--bg-main);
+  color: var(--text-primary);
+}
+
+.notif-body {
+  max-height: 380px;
+  overflow-y: auto;
+  padding: 8px;
+}
+
+.notif-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: var(--radius);
+  margin-bottom: 4px;
+  transition: background 0.15s;
+}
+
+.notif-item:hover {
+  background: var(--bg-main);
+}
+
+.notif-item.notif-danger {
+  border-left: 3px solid var(--danger);
+}
+
+.notif-item.notif-warning {
+  border-left: 3px solid var(--warning);
+}
+
+.notif-item.notif-info {
+  border-left: 3px solid var(--info);
+}
+
+.notif-icon {
+  font-size: 16px;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.notif-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.notif-title {
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: var(--text-primary);
+  margin-bottom: 2px;
+}
+
+.notif-desc {
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+}
+
+/* --- 알림 뱃지 (사이드바) --- */
+.notif-badge {
+  display: none;
+  background: var(--danger);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 10px;
+  min-width: 16px;
+  height: 16px;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  margin-left: 4px;
+}
+
+/* --- 스캐너 영역 --- */
+#scanner-region video {
+  border-radius: 8px;
+}
+
+#scanner-region {
+  position: relative;
+}
+
+#scanner-region canvas {
+  border-radius: 8px;
+}

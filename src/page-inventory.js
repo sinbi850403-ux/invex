@@ -22,6 +22,8 @@ const ALL_FIELDS = [
   { key: 'unitPrice',  label: '단가',      numeric: true  },
   { key: 'totalPrice', label: '합계금액',  numeric: true  },
   { key: 'warehouse',  label: '창고/위치', numeric: false },
+  { key: 'expiryDate', label: '유통기한',  numeric: false },
+  { key: 'lotNumber',  label: 'LOT번호',  numeric: false },
   { key: 'note',       label: '비고',      numeric: false },
 ];
 

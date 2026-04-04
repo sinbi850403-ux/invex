@@ -51,6 +51,9 @@
         <button class="nav-btn" data-page="inout">
           <span class="nav-icon">🔄</span> 입출고 관리
         </button>
+        <button class="nav-btn" data-page="scanner">
+          <span class="nav-icon">📱</span> 바코드 스캔
+        </button>
       </nav>
 
       <div class="sidebar-divider"></div>
@@ -62,15 +65,26 @@
         <button class="nav-btn" data-page="summary">
           <span class="nav-icon">📊</span> 요약 보고
         </button>
+        <button class="nav-btn" data-page="dashboard">
+          <span class="nav-icon">📈</span> 고급 분석
+        </button>
+        <button class="nav-btn" data-page="documents">
+          <span class="nav-icon">📄</span> 문서 생성
+        </button>
       </nav>
 
+      <div class="sidebar-divider"></div>
+
       <div class="sidebar-footer">
-        <div style="display:flex; gap:4px; margin-bottom:8px;">
+        <div style="display:flex; gap:4px; margin-bottom:8px; align-items:center;">
+          <button class="btn btn-ghost btn-sm" id="btn-notifications" style="color:rgba(255,255,255,0.7); font-size:12px; position:relative;" title="알림">
+            🔔 알림 <span class="notif-badge" id="notif-badge"></span>
+          </button>
           <button class="btn btn-ghost btn-sm" id="btn-backup" style="color:rgba(255,255,255,0.5); font-size:11px;" title="데이터 백업">💾 백업</button>
           <button class="btn btn-ghost btn-sm" id="btn-restore" style="color:rgba(255,255,255,0.5); font-size:11px;" title="데이터 복원">📥 복원</button>
         </div>
         <input type="file" id="restore-input" accept=".json" style="display:none" />
-        ERP-Lite v1.0<br/>
+        ERP-Lite v1.5<br/>
         © 2026
       </div>
     </aside>

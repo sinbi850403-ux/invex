@@ -10,6 +10,10 @@ import { renderMappingPage } from './page-mapping.js';
 import { renderInventoryPage } from './page-inventory.js';
 import { renderInoutPage } from './page-inout.js';
 import { renderSummaryPage } from './page-summary.js';
+import { renderScannerPage } from './page-scanner.js';
+import { renderDocumentsPage } from './page-documents.js';
+import { renderDashboardPage } from './page-dashboard.js';
+import { renderNotificationPanel, getNotificationCount } from './notifications.js';
 import { showToast } from './toast.js';
 
 // 현재 페이지
@@ -22,6 +26,9 @@ const pages = {
   inventory: renderInventoryPage,
   inout: renderInoutPage,
   summary: renderSummaryPage,
+  scanner: renderScannerPage,
+  documents: renderDocumentsPage,
+  dashboard: renderDashboardPage,
 };
 
 /**
@@ -44,6 +51,26 @@ function navigateTo(pageName) {
 
   // 모바일에서 사이드바 닫기
   closeSidebar();
+
+  // 알림 뱃지 업데이트
+  updateNotifBadge();
+}
+
+/**
+ * 알림 뱃지 업데이트
+ * 왜 페이지 전환 시마다? → 입출고 등록 후 재고 상태가 바뀔 수 있으므로
+ */
+function updateNotifBadge() {
+  const badge = document.getElementById('notif-badge');
+  if (!badge) return;
+  const count = getNotificationCount();
+  if (count > 0) {
+    badge.textContent = count;
+    badge.style.display = 'inline-flex';
+  } else {
+    badge.textContent = '';
+    badge.style.display = 'none';
+  }
 }
 
 // 모든 nav 영역의 버튼에 이벤트 연결
@@ -51,6 +78,12 @@ document.querySelectorAll('.nav-btn').forEach(btn => {
   btn.addEventListener('click', () => {
     navigateTo(btn.dataset.page);
   });
+});
+
+// 알림 버튼 이벤트
+document.getElementById('btn-notifications')?.addEventListener('click', (e) => {
+  e.stopPropagation();
+  renderNotificationPanel();
 });
 
 // === 모바일 토글 ===
@@ -91,13 +124,14 @@ document.getElementById('btn-backup')?.addEventListener('click', () => {
     const state = getState();
     // 백업에 필요한 핵심 데이터만 추출 (rawData 등 대용량 원본은 제외)
     const backup = {
-      version: '1.0',
+      version: '1.5',
       exportedAt: new Date().toISOString(),
       fileName: state.fileName,
       mappedData: state.mappedData || [],
       transactions: state.transactions || [],
       safetyStock: state.safetyStock || {},
       columnMapping: state.columnMapping || {},
+      visibleColumns: state.visibleColumns || null,
     };
 
     const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
@@ -143,6 +177,7 @@ restoreInput?.addEventListener('change', (e) => {
         safetyStock: backup.safetyStock || {},
         fileName: backup.fileName || '',
         columnMapping: backup.columnMapping || {},
+        visibleColumns: backup.visibleColumns || null,
         currentStep: 3,
       });
 

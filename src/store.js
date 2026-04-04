@@ -20,6 +20,7 @@ const DEFAULT_STATE = {
   safetyStock: {},      // { 품목명: 최소수량 }
   // 컬럼 표시 설정 (null이면 전체 표시, 배열이면 해당 키만 표시)
   visibleColumns: null, // ['itemName','quantity','unitPrice'] 형태
+  // 각 mappedData row에는 expiryDate, lotNumber 필드도 포함 가능
 };
 
 let state = { ...DEFAULT_STATE };

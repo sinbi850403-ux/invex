@@ -18,6 +18,8 @@ const ERP_FIELDS = [
   { key: 'unitPrice', label: '단가', required: false },
   { key: 'totalPrice', label: '합계금액', required: false },
   { key: 'warehouse', label: '창고/위치', required: false },
+  { key: 'expiryDate', label: '유통기한', required: false },
+  { key: 'lotNumber', label: 'LOT번호', required: false },
   { key: 'note', label: '비고', required: false },
 ];
 
@@ -192,6 +194,8 @@ function autoMap(headers, mapping) {
     totalPrice: ['합계', 'total', '금액', '합계금액', '총액', '총금액'],
     warehouse: ['창고', '위치', 'warehouse', 'location', '보관', '저장위치'],
     vendor: ['거래처', '업체', '업체명', '공급업체', '공급처', '매입처', 'vendor', 'supplier', '거래선'],
+    expiryDate: ['유통기한', '유효기한', '만료일', 'expiry', 'exp', '사용기한'],
+    lotNumber: ['lot', 'LOT', '로트', '로트번호', 'batch', '배치'],
     note: ['비고', 'note', 'memo', '메모', '참고', '특이사항'],
   };
 
