@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ERP-Lite | 재고·원가 운영도구</title>
+  <meta name="description" content="중소기업을 위한 간단한 재고/원가/입출고 관리 도구" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+</head>
+<body>
+  <!-- 모바일 토글 버튼 -->
+  <button class="mobile-toggle" id="mobile-toggle">☰</button>
+  <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+  <div id="app">
+    <!-- 사이드 네비게이션 -->
+    <aside id="sidebar">
+      <div class="sidebar-logo">
+        <div>
+          ERP-Lite
+          <span class="logo-sub">재고·원가 관리</span>
+        </div>
+      </div>
+
+      <div class="sidebar-divider"></div>
+
+      <!-- 메인 메뉴 -->
+      <div class="nav-section">
+        <div class="nav-section-title">데이터</div>
+      </div>
+      <nav id="nav">
+        <button class="nav-btn active" data-page="upload">
+          <span class="nav-icon">📂</span> 파일 업로드
+        </button>
+        <button class="nav-btn" data-page="mapping">
+          <span class="nav-icon">📋</span> 데이터 확인
+        </button>
+      </nav>
+
+      <div class="sidebar-divider"></div>
+
+      <div class="nav-section">
+        <div class="nav-section-title">관리</div>
+      </div>
+      <nav id="nav2">
+        <button class="nav-btn" data-page="inventory">
+          <span class="nav-icon">📦</span> 재고 현황
+        </button>
+        <button class="nav-btn" data-page="inout">
+          <span class="nav-icon">🔄</span> 입출고 관리
+        </button>
+      </nav>
+
+      <div class="sidebar-divider"></div>
+
+      <div class="nav-section">
+        <div class="nav-section-title">보고</div>
+      </div>
+      <nav id="nav3">
+        <button class="nav-btn" data-page="summary">
+          <span class="nav-icon">📊</span> 요약 보고
+        </button>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div style="display:flex; gap:4px; margin-bottom:8px;">
+          <button class="btn btn-ghost btn-sm" id="btn-backup" style="color:rgba(255,255,255,0.5); font-size:11px;" title="데이터 백업">💾 백업</button>
+          <button class="btn btn-ghost btn-sm" id="btn-restore" style="color:rgba(255,255,255,0.5); font-size:11px;" title="데이터 복원">📥 복원</button>
+        </div>
+        <input type="file" id="restore-input" accept=".json" style="display:none" />
+        ERP-Lite v1.0<br/>
+        © 2026
+      </div>
+    </aside>
+
+    <!-- 메인 콘텐츠 -->
+    <main id="main-content"></main>
+  </div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
