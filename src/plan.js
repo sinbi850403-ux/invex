@@ -20,7 +20,7 @@ export const PLANS = {
     userLimit: 1,
     // Free에서 접근 가능한 페이지
     pages: [
-      'home', 'upload', 'mapping', 'inventory', 'inout', 'settings',
+      'home', 'upload', 'mapping', 'inventory', 'inout', 'settings', 'billing',
     ],
   },
   pro: {
@@ -37,7 +37,7 @@ export const PLANS = {
     pages: [
       'home', 'upload', 'mapping', 'inventory', 'inout', 'settings',
       'bulk', 'scanner', 'labels', 'transfer', 'stocktake', 'vendors',
-      'summary', 'dashboard', 'costing', 'accounts', 'ledger', 'documents', 'auditlog',
+      'summary', 'dashboard', 'costing', 'accounts', 'ledger', 'documents', 'auditlog', 'billing',
     ],
   },
   enterprise: {
@@ -59,7 +59,7 @@ export const PLANS = {
 const PAGE_MIN_PLAN = {
   // Free 기능
   home: 'free', upload: 'free', mapping: 'free',
-  inventory: 'free', inout: 'free', settings: 'free',
+  inventory: 'free', inout: 'free', settings: 'free', billing: 'free',
   // Pro 기능
   bulk: 'pro', scanner: 'pro', labels: 'pro', transfer: 'pro',
   stocktake: 'pro', vendors: 'pro', summary: 'pro', dashboard: 'pro',

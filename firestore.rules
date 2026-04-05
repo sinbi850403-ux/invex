@@ -1,0 +1,132 @@
+// Firestore 보안 규칙
+// 배포: Firebase 콘솔 → Firestore → 규칙 탭에 복사/붙여넣기
+// 또는: firebase deploy --only firestore:rules
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ============================================
+    // 🔐 공통 함수
+    // ============================================
+
+    // 로그인한 사용자인지 확인
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // 본인 데이터인지 확인
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+
+    // 관리자인지 확인 (커스텀 클레임 기반)
+    function isAdmin() {
+      return request.auth.token.admin == true;
+    }
+
+    // 요청 데이터 크기 제한 (DoS 방지)
+    function isReasonableSize() {
+      return request.resource.data.keys().size() < 50;
+    }
+
+    // ============================================
+    // 📦 사용자별 데이터 (핵심 보안 규칙)
+    // ============================================
+
+    // 사용자 프로필
+    match /users/{userId} {
+      // 본인만 읽기/쓰기 가능
+      allow read: if isAuthenticated() && isOwner(userId);
+      allow create: if isAuthenticated() && isOwner(userId);
+      allow update: if isAuthenticated() && isOwner(userId);
+      allow delete: if isAuthenticated() && isOwner(userId);
+    }
+
+    // 사용자의 재고 데이터
+    match /users/{userId}/inventory/{itemId} {
+      allow read: if isAuthenticated() && isOwner(userId);
+      allow write: if isAuthenticated() && isOwner(userId) && isReasonableSize();
+    }
+
+    // 사용자의 입출고 내역
+    match /users/{userId}/transactions/{txId} {
+      allow read: if isAuthenticated() && isOwner(userId);
+      allow write: if isAuthenticated() && isOwner(userId);
+    }
+
+    // 사용자의 거래처
+    match /users/{userId}/vendors/{vendorId} {
+      allow read: if isAuthenticated() && isOwner(userId);
+      allow write: if isAuthenticated() && isOwner(userId);
+    }
+
+    // 사용자의 창고
+    match /users/{userId}/warehouses/{warehouseId} {
+      allow read: if isAuthenticated() && isOwner(userId);
+      allow write: if isAuthenticated() && isOwner(userId);
+    }
+
+    // 사용자의 설정
+    match /users/{userId}/settings/{settingId} {
+      allow read: if isAuthenticated() && isOwner(userId);
+      allow write: if isAuthenticated() && isOwner(userId);
+    }
+
+    // 사용자의 감사 로그 (쓰기만 가능, 삭제 불가 = 위변조 방지)
+    match /users/{userId}/auditLogs/{logId} {
+      allow read: if isAuthenticated() && isOwner(userId);
+      allow create: if isAuthenticated() && isOwner(userId);
+      // update, delete 불허 → 감사 로그 무결성 보장
+    }
+
+    // ============================================
+    // 👥 팀/조직 데이터 (Enterprise)
+    // ============================================
+
+    // 조직 문서
+    match /organizations/{orgId} {
+      // 조직 멤버만 읽기 가능
+      allow read: if isAuthenticated()
+        && resource.data.members.hasAny([request.auth.uid]);
+
+      // 관리자만 수정 가능
+      allow write: if isAuthenticated()
+        && resource.data.admins.hasAny([request.auth.uid]);
+    }
+
+    // 조직의 공유 데이터
+    match /organizations/{orgId}/sharedData/{docId} {
+      allow read: if isAuthenticated()
+        && get(/databases/$(database)/documents/organizations/$(orgId)).data.members.hasAny([request.auth.uid]);
+
+      allow write: if isAuthenticated()
+        && get(/databases/$(database)/documents/organizations/$(orgId)).data.admins.hasAny([request.auth.uid]);
+    }
+
+    // ============================================
+    // 💳 구독/결제 (서버만 접근)
+    // ============================================
+
+    // 구독 정보 — 클라이언트 읽기만, 쓰기는 서버만
+    match /subscriptions/{userId} {
+      allow read: if isAuthenticated() && isOwner(userId);
+      // write는 Cloud Functions / 서버에서만 처리
+      allow write: if false;
+    }
+
+    // 결제 이력 — 읽기만 허용
+    match /payments/{paymentId} {
+      allow read: if isAuthenticated()
+        && resource.data.userId == request.auth.uid;
+      allow write: if false;
+    }
+
+    // ============================================
+    // 🚫 기본 거부 (위에 매치되지 않는 모든 경로)
+    // ============================================
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

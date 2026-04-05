@@ -55,6 +55,10 @@ const DEFAULT_STATE = {
   activeWarehouseFilter: '',
   // 현재 요금제 (free / pro / enterprise)
   currentPlan: 'free',
+  // 구독 정보
+  subscription: {},       // {planId, status, startDate, nextPayDate, cardLast4, ...}
+  // 결제 이력
+  paymentHistory: [],     // [{id, date, planName, amount, status, method}]
 };
 
 let state = { ...DEFAULT_STATE };

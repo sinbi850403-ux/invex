@@ -27,6 +27,7 @@ import { renderAccountsPage } from './page-accounts.js';
 import { renderWarehousesPage } from './page-warehouses.js';
 import { renderRolesPage } from './page-roles.js';
 import { renderApiPage } from './page-api.js';
+import { renderBillingPage } from './page-billing.js';
 import { initGlobalSearch, toggleGlobalSearch } from './global-search.js';
 import { initTheme, toggleTheme } from './theme.js';
 import { initAuth, getCurrentUser, getUserProfileData, loginWithGoogle, logout } from './firebase-auth.js';
@@ -76,6 +77,7 @@ const pages = {
   warehouses: renderWarehousesPage,
   roles: renderRolesPage,
   api: renderApiPage,
+  billing: renderBillingPage,
 };
 
 /**
