@@ -13,6 +13,46 @@
   <link rel="icon" type="image/png" href="/icons/icon-192.png" />
 </head>
 <body>
+  <!-- 🔒 로그인 게이트: 인증 전에는 앱 전체를 가림 -->
+  <div id="auth-gate" style="
+    position:fixed; inset:0; z-index:9999;
+    background:var(--bg-primary, #0f172a);
+    display:flex; align-items:center; justify-content:center;
+    transition: opacity 0.3s ease;
+  ">
+    <div style="text-align:center; max-width:420px; padding:40px 24px;">
+      <div style="font-size:56px; margin-bottom:16px; filter:drop-shadow(0 4px 12px rgba(59,130,246,0.3));">📦</div>
+      <h1 style="font-size:32px; font-weight:800; margin-bottom:4px; background:linear-gradient(135deg,#3b82f6,#8b5cf6); background-clip:text; -webkit-background-clip:text; -webkit-text-fill-color:transparent;">INVEX</h1>
+      <p style="font-size:13px; color:var(--text-muted, #94a3b8); margin-bottom:32px; line-height:1.6;">
+        Inventory Expert<br/>중소기업 맞춤 재고·경영 관리 시스템
+      </p>
+      <button id="gate-google-login" style="
+        width:100%; padding:14px 24px; border:none; border-radius:10px;
+        background:linear-gradient(135deg,#3b82f6,#2563eb); color:#fff;
+        font-size:15px; font-weight:600; cursor:pointer;
+        display:flex; align-items:center; justify-content:center; gap:10px;
+        transition:transform 0.2s, box-shadow 0.2s;
+        box-shadow:0 4px 16px rgba(59,130,246,0.3);
+      " onmouseover="this.style.transform='translateY(-1px)'; this.style.boxShadow='0 6px 24px rgba(59,130,246,0.4)';"
+         onmouseout="this.style.transform=''; this.style.boxShadow='0 4px 16px rgba(59,130,246,0.3)';">
+        <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="20" height="20" alt="" />
+        Google 계정으로 시작하기
+      </button>
+      <div id="gate-loading" style="display:none; margin-top:20px;">
+        <div style="font-size:14px; color:var(--text-muted, #94a3b8);">🔄 인증 확인 중...</div>
+      </div>
+      <p style="color:var(--text-muted, #64748b); font-size:11px; margin-top:24px; line-height:1.6;">
+        로그인하면 <a href="#" style="color:#3b82f6;">이용약관</a> 및 
+        <a href="#" style="color:#3b82f6;">개인정보처리방침</a>에 동의하는 것으로 간주됩니다.
+      </p>
+      <div style="margin-top:24px; padding-top:16px; border-top:1px solid rgba(255,255,255,0.06);">
+        <p style="font-size:11px; color:var(--text-muted, #475569);">
+          🔒 모든 데이터는 암호화되어 안전하게 보관됩니다
+        </p>
+      </div>
+    </div>
+  </div>
+
   <!-- 모바일 토글 버튼 -->
   <button class="mobile-toggle" id="mobile-toggle">☰</button>
   <div class="sidebar-overlay" id="sidebar-overlay"></div>

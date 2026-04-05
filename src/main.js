@@ -39,14 +39,51 @@ import { canAccessPage, getPageBadge, showUpgradeModal, getCurrentPlan, PLANS, s
 // 다크 모드 초기화
 initTheme();
 
-// Firebase 인증 초기화 — 로그인 상태 변경 시 동기화 시작/중지
+// Firebase 인증 초기화 — 로그인 상태에 따라 앱 접근 제어
+let isAuthReady = false;
+
+// 게이트 로그인 버튼 이벤트
+document.getElementById('gate-google-login')?.addEventListener('click', async () => {
+  const btn = document.getElementById('gate-google-login');
+  const loadingEl = document.getElementById('gate-loading');
+  if (btn) btn.style.display = 'none';
+  if (loadingEl) loadingEl.style.display = 'block';
+  
+  const user = await loginWithGoogle();
+  
+  // 로그인 실패 시 버튼 복원
+  if (!user) {
+    if (btn) btn.style.display = 'flex';
+    if (loadingEl) loadingEl.style.display = 'none';
+  }
+});
+
 initAuth((user, profile) => {
+  const gate = document.getElementById('auth-gate');
+  
   if (user) {
+    // ✅ 로그인 성공 → 게이트 숨기고 앱 표시
+    if (gate) {
+      gate.style.opacity = '0';
+      setTimeout(() => { gate.style.display = 'none'; }, 300);
+    }
     startSync(user.uid);
     updateUserUI(user, profile);
+    
+    // 최초 로그인 시에만 앱 초기화 (중복 방지)
+    if (!isAuthReady) {
+      isAuthReady = true;
+      initAppAfterAuth();
+    }
   } else {
+    // ❌ 미로그인 → 게이트 표시
     stopSync();
     updateUserUI(null, null);
+    if (gate) {
+      gate.style.display = 'flex';
+      gate.style.opacity = '1';
+    }
+    isAuthReady = false;
   }
 });
 
@@ -354,13 +391,25 @@ restoreInput?.addEventListener('change', (e) => {
   e.target.value = '';
 });
 
-// 앱 초기화 (IndexedDB 복원은 비동기)
-async function initApp() {
+// 앱 초기화 (로그인 완료 후 호출)
+// 왜 분리? → 인증 확인 전에 IndexedDB 복원하면 빈 데이터가 로드될 수 있음
+async function initAppAfterAuth() {
   await restoreState();
+  // 요금제 배지 & 표시 최신화
+  updateSidebarBadges();
+  updatePlanDisplay();
   navigateTo(currentPage);
 }
 
-initApp();
+// Firebase 미설정(로컬 개발) 시에는 게이트 자동 해제
+// isConfigured가 false면 initAuth에서 user=null로 콜백 → 게이트가 뜨지만, 
+// 로컬 개발을 위해 자동 해제
+import { isConfigured } from './firebase-config.js';
+if (!isConfigured) {
+  const gate = document.getElementById('auth-gate');
+  if (gate) gate.style.display = 'none';
+  initAppAfterAuth();
+}
 
 // 사용자 UI 업데이트 (로그인/로그아웃 시 호출)
 function updateUserUI(user, profile) {
