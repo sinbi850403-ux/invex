@@ -172,7 +172,7 @@ export function showUpgradeModal(pageId) {
         </div>
 
         <div style="margin-top:16px; font-size:11px; color:var(--text-muted);">
-          * 무료 체험 기간 중에는 모든 기능을 사용할 수 있습니다
+          Pro 플랜부터 모든 고급 기능을 사용할 수 있습니다
         </div>
       </div>
     </div>
