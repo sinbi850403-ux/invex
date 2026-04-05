@@ -21,6 +21,7 @@ export const PLANS = {
     // Free에서 접근 가능한 페이지
     pages: [
       'home', 'upload', 'mapping', 'inventory', 'inout', 'settings', 'billing', 'admin',
+      'mypage', 'guide', 'support',
     ],
   },
   pro: {
@@ -38,6 +39,7 @@ export const PLANS = {
       'home', 'upload', 'mapping', 'inventory', 'inout', 'settings',
       'bulk', 'scanner', 'labels', 'transfer', 'stocktake', 'vendors',
       'summary', 'dashboard', 'costing', 'accounts', 'ledger', 'documents', 'auditlog', 'billing', 'admin',
+      'mypage', 'guide', 'support',
     ],
   },
   enterprise: {
