@@ -4,7 +4,7 @@
  * 왜 필요? → 다중 사용자, 계정별 데이터 분리, 유료 구독 관리의 기초
  */
 
-import { signInWithPopup, signOut, onAuthStateChanged } from 'firebase/auth';
+import { signInWithPopup, signOut, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile, sendPasswordResetEmail } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { auth, db, googleProvider, isConfigured } from './firebase-config.js';
 import { showToast } from './toast.js';
@@ -91,6 +91,82 @@ export async function loginWithGoogle() {
       showToast('로그인에 실패했습니다: ' + error.message, 'error');
     }
     return null;
+  }
+}
+
+/**
+ * 이메일/비밀번호 회원가입
+ * 왜? → Google 계정 없는 사용자도 서비스 이용 가능
+ */
+export async function signupWithEmail(email, password, name) {
+  if (!isConfigured) {
+    showToast('Firebase 설정이 필요합니다.', 'warning');
+    return null;
+  }
+
+  try {
+    const result = await createUserWithEmailAndPassword(auth, email, password);
+    // 사용자 displayName 설정
+    await updateProfile(result.user, { displayName: name || '사용자' });
+    showToast(`${name || '사용자'}님, 가입을 환영합니다! 🎉`, 'success');
+    return result.user;
+  } catch (error) {
+    // 사용자 친화적 에러 메시지
+    const messages = {
+      'auth/email-already-in-use': '이미 가입된 이메일입니다. 로그인을 시도해주세요.',
+      'auth/weak-password': '비밀번호가 너무 짧습니다. 6자 이상 입력해주세요.',
+      'auth/invalid-email': '올바른 이메일 형식이 아닙니다.',
+    };
+    showToast(messages[error.code] || '회원가입 실패: ' + error.message, 'error');
+    return null;
+  }
+}
+
+/**
+ * 이메일/비밀번호 로그인
+ */
+export async function loginWithEmail(email, password) {
+  if (!isConfigured) {
+    showToast('Firebase 설정이 필요합니다.', 'warning');
+    return null;
+  }
+
+  try {
+    const result = await signInWithEmailAndPassword(auth, email, password);
+    showToast(`${result.user.displayName || '사용자'}님, 환영합니다! 🎉`, 'success');
+    return result.user;
+  } catch (error) {
+    const messages = {
+      'auth/user-not-found': '등록되지 않은 이메일입니다.',
+      'auth/wrong-password': '비밀번호가 올바르지 않습니다.',
+      'auth/invalid-credential': '이메일 또는 비밀번호가 올바르지 않습니다.',
+      'auth/too-many-requests': '너무 많은 로그인 시도. 잠시 후 다시 시도해주세요.',
+    };
+    showToast(messages[error.code] || '로그인 실패: ' + error.message, 'error');
+    return null;
+  }
+}
+
+/**
+ * 비밀번호 재설정 이메일 전송
+ */
+export async function resetPassword(email) {
+  if (!isConfigured) {
+    showToast('Firebase 설정이 필요합니다.', 'warning');
+    return false;
+  }
+
+  try {
+    await sendPasswordResetEmail(auth, email);
+    showToast('비밀번호 재설정 이메일이 전송되었습니다. 📧', 'success');
+    return true;
+  } catch (error) {
+    const messages = {
+      'auth/user-not-found': '등록되지 않은 이메일입니다.',
+      'auth/invalid-email': '올바른 이메일 형식이 아닙니다.',
+    };
+    showToast(messages[error.code] || '전송 실패: ' + error.message, 'error');
+    return false;
   }
 }
 

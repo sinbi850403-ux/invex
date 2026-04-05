@@ -31,7 +31,7 @@ import { renderBillingPage } from './page-billing.js';
 import { renderAdminPage } from './page-admin.js';
 import { initGlobalSearch, toggleGlobalSearch } from './global-search.js';
 import { initTheme, toggleTheme } from './theme.js';
-import { initAuth, getCurrentUser, getUserProfileData, loginWithGoogle, logout } from './firebase-auth.js';
+import { initAuth, getCurrentUser, getUserProfileData, loginWithGoogle, loginWithEmail, signupWithEmail, resetPassword, logout } from './firebase-auth.js';
 import { startSync, stopSync, syncToCloud, getSyncStatus } from './firebase-sync.js';
 import { renderNotificationPanel, getNotificationCount } from './notifications.js';
 import { showToast } from './toast.js';
@@ -43,20 +43,72 @@ initTheme();
 // Firebase 인증 초기화 — 로그인 상태에 따라 앱 접근 제어
 let isAuthReady = false;
 
-// 게이트 로그인 버튼 이벤트
+// === 로그인 게이트 이벤트 ===
+
+// 탭 전환 (로그인 ↔ 회원가입)
+document.getElementById('tab-login')?.addEventListener('click', () => {
+  document.getElementById('form-login').style.display = 'block';
+  document.getElementById('form-signup').style.display = 'none';
+  document.getElementById('tab-login').style.background = 'rgba(59,130,246,0.15)';
+  document.getElementById('tab-login').style.color = '#3b82f6';
+  document.getElementById('tab-signup').style.background = 'transparent';
+  document.getElementById('tab-signup').style.color = 'var(--text-muted, #94a3b8)';
+});
+
+document.getElementById('tab-signup')?.addEventListener('click', () => {
+  document.getElementById('form-login').style.display = 'none';
+  document.getElementById('form-signup').style.display = 'block';
+  document.getElementById('tab-signup').style.background = 'rgba(139,92,246,0.15)';
+  document.getElementById('tab-signup').style.color = '#8b5cf6';
+  document.getElementById('tab-login').style.background = 'transparent';
+  document.getElementById('tab-login').style.color = 'var(--text-muted, #94a3b8)';
+});
+
+// 이메일 로그인
+document.getElementById('gate-email-login')?.addEventListener('click', async () => {
+  const email = document.getElementById('login-email').value.trim();
+  const password = document.getElementById('login-password').value;
+  if (!email || !password) { showToast('이메일과 비밀번호를 입력하세요.', 'warning'); return; }
+  await loginWithEmail(email, password);
+});
+
+// Enter 키로 로그인
+document.getElementById('login-password')?.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') document.getElementById('gate-email-login')?.click();
+});
+
+// 이메일 회원가입
+document.getElementById('gate-email-signup')?.addEventListener('click', async () => {
+  const name = document.getElementById('signup-name').value.trim();
+  const email = document.getElementById('signup-email').value.trim();
+  const pw = document.getElementById('signup-password').value;
+  const pw2 = document.getElementById('signup-password2').value;
+  if (!name) { showToast('이름을 입력하세요.', 'warning'); return; }
+  if (!email) { showToast('이메일을 입력하세요.', 'warning'); return; }
+  if (pw.length < 6) { showToast('비밀번호는 6자 이상이어야 합니다.', 'warning'); return; }
+  if (pw !== pw2) { showToast('비밀번호가 일치하지 않습니다.', 'warning'); return; }
+  await signupWithEmail(email, pw, name);
+});
+
+// Enter 키로 회원가입
+document.getElementById('signup-password2')?.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') document.getElementById('gate-email-signup')?.click();
+});
+
+// 비밀번호 찾기
+document.getElementById('btn-forgot-pw')?.addEventListener('click', async (e) => {
+  e.preventDefault();
+  const email = document.getElementById('login-email').value.trim();
+  if (!email) { showToast('이메일 주소를 먼저 입력해주세요.', 'warning'); return; }
+  await resetPassword(email);
+});
+
+// Google 소셜 로그인
 document.getElementById('gate-google-login')?.addEventListener('click', async () => {
-  const btn = document.getElementById('gate-google-login');
   const loadingEl = document.getElementById('gate-loading');
-  if (btn) btn.style.display = 'none';
   if (loadingEl) loadingEl.style.display = 'block';
-  
   const user = await loginWithGoogle();
-  
-  // 로그인 실패 시 버튼 복원
-  if (!user) {
-    if (btn) btn.style.display = 'flex';
-    if (loadingEl) loadingEl.style.display = 'none';
-  }
+  if (!user && loadingEl) loadingEl.style.display = 'none';
 });
 
 initAuth((user, profile) => {
