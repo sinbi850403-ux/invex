@@ -29,6 +29,9 @@ import { renderRolesPage } from './page-roles.js';
 import { renderApiPage } from './page-api.js';
 import { renderBillingPage } from './page-billing.js';
 import { renderAdminPage, isAdmin } from './page-admin.js';
+import { renderMyPage } from './page-mypage.js';
+import { renderGuidePage } from './page-guide.js';
+import { renderSupportPage } from './page-support.js';
 import { initGlobalSearch, toggleGlobalSearch } from './global-search.js';
 import { initTheme, toggleTheme } from './theme.js';
 import { initAuth, getCurrentUser, getUserProfileData, loginWithGoogle, loginWithEmail, signupWithEmail, resetPassword, logout } from './firebase-auth.js';
@@ -300,6 +303,9 @@ const pages = {
   api: renderApiPage,
   billing: renderBillingPage,
   admin: renderAdminPage,
+  mypage: renderMyPage,
+  guide: renderGuidePage,
+  support: renderSupportPage,
 };
 
 /**
