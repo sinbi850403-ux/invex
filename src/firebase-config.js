@@ -17,7 +17,7 @@ import { getFirestore } from 'firebase/firestore';
 // === Firebase 설정 ===
 // TODO: Firebase Console에서 발급받은 값으로 교체해주세요
 const firebaseConfig = {
-  apiKey: "AIzaSyDuMCWvrJbGcdvovNvY-fQ6hR4kSyoc9dk",
+  apiKey: "AIzaSyDuMCWvrJbGCdvovNvY-fQ6hR4kSyoc9dk",
   authDomain: "erp-lite-9e83a.firebaseapp.com",
   projectId: "erp-lite-9e83a",
   storageBucket: "erp-lite-9e83a.firebasestorage.app",
