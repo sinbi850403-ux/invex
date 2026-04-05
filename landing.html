@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ERP-Lite | 중소기업 맞춤 재고·경영 관리 시스템</title>
+  <meta name="description" content="엑셀만 업로드하면 끝. 바코드 스캔, 원가분석, 자동발주까지. 10분이면 시작하는 클라우드 ERP." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <style>
+    /* === 리셋 & 기본 === */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0a0e17;
+      --bg-card: #111827;
+      --bg-card-hover: #1a2332;
+      --accent: #3b82f6;
+      --accent-light: #60a5fa;
+      --accent-glow: rgba(59, 130, 246, 0.3);
+      --text: #f0f4f8;
+      --text-dim: #8899aa;
+      --gradient-start: #3b82f6;
+      --gradient-end: #8b5cf6;
+      --success: #10b981;
+      --font: 'Noto Sans KR', system-ui, sans-serif;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.7;
+      overflow-x: hidden;
+    }
+
+    .container { max-width: 1180px; margin: 0 auto; padding: 0 24px; }
+
+    /* === 헤더 === */
+    header {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 100;
+      background: rgba(10, 14, 23, 0.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+
+    header .container {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 64px;
+    }
+
+    .logo {
+      font-size: 20px;
+      font-weight: 800;
+      background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .header-nav { display: flex; gap: 32px; align-items: center; }
+    .header-nav a {
+      color: var(--text-dim);
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 500;
+      transition: color 0.2s;
+    }
+    .header-nav a:hover { color: #fff; }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 10px 24px;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 14px;
+      font-family: var(--font);
+      text-decoration: none;
+      cursor: pointer;
+      border: none;
+      transition: all 0.2s;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
+      color: #fff;
+      box-shadow: 0 4px 20px var(--accent-glow);
+    }
+    .btn-primary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 8px 30px var(--accent-glow);
+    }
+
+    .btn-outline {
+      background: transparent;
+      color: var(--text);
+      border: 1px solid rgba(255,255,255,0.15);
+    }
+    .btn-outline:hover {
+      background: rgba(255,255,255,0.05);
+      border-color: rgba(255,255,255,0.3);
+    }
+
+    .btn-lg { padding: 14px 32px; font-size: 16px; border-radius: 10px; }
+
+    /* === 히어로 === */
+    .hero {
+      padding: 140px 0 100px;
+      text-align: center;
+      position: relative;
+    }
+
+    .hero::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 50%;
+      transform: translateX(-50%);
+      width: 600px; height: 600px;
+      background: radial-gradient(circle, rgba(59,130,246,0.12) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 16px;
+      border-radius: 20px;
+      background: rgba(59, 130, 246, 0.12);
+      border: 1px solid rgba(59, 130, 246, 0.25);
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--accent-light);
+      margin-bottom: 24px;
+    }
+
+    .hero h1 {
+      font-size: clamp(36px, 5vw, 56px);
+      font-weight: 900;
+      line-height: 1.2;
+      margin-bottom: 20px;
+    }
+
+    .hero h1 .gradient {
+      background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .hero p {
+      font-size: 18px;
+      color: var(--text-dim);
+      max-width: 600px;
+      margin: 0 auto 36px;
+      line-height: 1.8;
+    }
+
+    .hero-buttons { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+
+    .hero-stats {
+      display: flex;
+      gap: 48px;
+      justify-content: center;
+      margin-top: 60px;
+      flex-wrap: wrap;
+    }
+
+    .hero-stat .num {
+      font-size: 32px;
+      font-weight: 800;
+      background: linear-gradient(135deg, #fff, var(--accent-light));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .hero-stat .label {
+      font-size: 13px;
+      color: var(--text-dim);
+    }
+
+    /* === 스크린 목업 === */
+    .screen-mockup {
+      max-width: 900px;
+      margin: 60px auto 0;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,0.08);
+      overflow: hidden;
+      box-shadow: 0 20px 80px rgba(0,0,0,0.5);
+      background: var(--bg-card);
+    }
+
+    .screen-bar {
+      display: flex;
+      gap: 6px;
+      padding: 12px 16px;
+      background: rgba(255,255,255,0.04);
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+
+    .screen-dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+    }
+    .screen-dot.red { background: #ff5f57; }
+    .screen-dot.yellow { background: #ffbd2e; }
+    .screen-dot.green { background: #28c840; }
+
+    .screen-body {
+      padding: 32px;
+      text-align: left;
+      font-size: 13px;
+      color: var(--text-dim);
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 16px;
+    }
+
+    .mock-card {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.05);
+      border-radius: 8px;
+      padding: 16px;
+    }
+
+    .mock-card .mc-title { font-size: 11px; color: var(--text-dim); margin-bottom: 4px; }
+    .mock-card .mc-value { font-size: 22px; font-weight: 700; color: #fff; }
+    .mock-card .mc-sub { font-size: 11px; color: var(--success); margin-top: 2px; }
+
+    /* === 기능 섹션 === */
+    .section {
+      padding: 100px 0;
+    }
+
+    .section-title {
+      text-align: center;
+      margin-bottom: 60px;
+    }
+
+    .section-title h2 {
+      font-size: 32px;
+      font-weight: 800;
+      margin-bottom: 12px;
+    }
+
+    .section-title p {
+      font-size: 16px;
+      color: var(--text-dim);
+      max-width: 550px;
+      margin: 0 auto;
+    }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 20px;
+    }
+
+    .feature-card {
+      background: var(--bg-card);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 12px;
+      padding: 28px;
+      transition: all 0.3s;
+    }
+
+    .feature-card:hover {
+      background: var(--bg-card-hover);
+      border-color: rgba(59, 130, 246, 0.2);
+      transform: translateY(-4px);
+      box-shadow: 0 12px 40px rgba(0,0,0,0.3);
+    }
+
+    .feature-icon {
+      font-size: 32px;
+      margin-bottom: 14px;
+    }
+
+    .feature-card h3 {
+      font-size: 16px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .feature-card p {
+      font-size: 13px;
+      color: var(--text-dim);
+      line-height: 1.6;
+    }
+
+    /* === 요금제 === */
+    .pricing-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    .price-card {
+      background: var(--bg-card);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 16px;
+      padding: 32px;
+      text-align: center;
+      transition: all 0.3s;
+    }
+
+    .price-card.featured {
+      border-color: var(--accent);
+      background: linear-gradient(180deg, rgba(59,130,246,0.08) 0%, var(--bg-card) 50%);
+      transform: scale(1.03);
+    }
+
+    .price-badge {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
+      color: #fff;
+      margin-bottom: 12px;
+    }
+
+    .price-name { font-size: 18px; font-weight: 700; margin-bottom: 4px; }
+    .price-desc { font-size: 13px; color: var(--text-dim); margin-bottom: 20px; }
+
+    .price-amount {
+      font-size: 36px;
+      font-weight: 900;
+      margin-bottom: 4px;
+    }
+
+    .price-period { font-size: 13px; color: var(--text-dim); margin-bottom: 24px; }
+
+    .price-features {
+      list-style: none;
+      text-align: left;
+      margin-bottom: 24px;
+    }
+
+    .price-features li {
+      padding: 6px 0;
+      font-size: 13px;
+      color: var(--text-dim);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .price-features li::before {
+      content: '✓';
+      color: var(--success);
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    /* === CTA === */
+    .cta {
+      text-align: center;
+      padding: 80px 0 100px;
+    }
+
+    .cta h2 { font-size: 28px; font-weight: 800; margin-bottom: 12px; }
+    .cta p { color: var(--text-dim); margin-bottom: 28px; }
+
+    /* === 푸터 === */
+    footer {
+      border-top: 1px solid rgba(255,255,255,0.06);
+      padding: 32px 0;
+      text-align: center;
+      font-size: 13px;
+      color: var(--text-dim);
+    }
+
+    /* 모바일 */
+    @media (max-width: 768px) {
+      .header-nav { display: none; }
+      .pricing-grid { grid-template-columns: 1fr; }
+      .screen-body { grid-template-columns: 1fr; }
+      .hero-stats { gap: 24px; }
+      .price-card.featured { transform: none; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 헤더 -->
+  <header>
+    <div class="container">
+      <div class="logo">ERP-Lite</div>
+      <nav class="header-nav">
+        <a href="#features">기능</a>
+        <a href="#pricing">요금</a>
+        <a href="https://erp-lite-eight.vercel.app/" class="btn btn-primary" id="cta-header">무료로 시작하기</a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- 히어로 -->
+  <section class="hero">
+    <div class="container">
+      <div class="hero-badge">🚀 v3.0 출시 — 30개 이상의 기능</div>
+      <h1>
+        엑셀만 올리면<br/>
+        <span class="gradient">경영이 보입니다</span>
+      </h1>
+      <p>
+        복잡한 ERP는 이제 그만. 엑셀 파일 하나면<br/>
+        재고, 원가, 거래처, 감사 추적까지 한번에.
+      </p>
+      <div class="hero-buttons">
+        <a href="https://erp-lite-eight.vercel.app/" class="btn btn-primary btn-lg" id="cta-hero">
+          ⚡ 무료로 시작하기
+        </a>
+        <a href="#features" class="btn btn-outline btn-lg">기능 살펴보기 →</a>
+      </div>
+
+      <div class="hero-stats">
+        <div class="hero-stat">
+          <div class="num">30+</div>
+          <div class="label">기능</div>
+        </div>
+        <div class="hero-stat">
+          <div class="num">0원</div>
+          <div class="label">시작 비용</div>
+        </div>
+        <div class="hero-stat">
+          <div class="num">10분</div>
+          <div class="label">설정 시간</div>
+        </div>
+      </div>
+
+      <!-- 스크린 목업 -->
+      <div class="screen-mockup">
+        <div class="screen-bar">
+          <div class="screen-dot red"></div>
+          <div class="screen-dot yellow"></div>
+          <div class="screen-dot green"></div>
+        </div>
+        <div class="screen-body">
+          <div class="mock-card">
+            <div class="mc-title">등록 품목</div>
+            <div class="mc-value">142</div>
+            <div class="mc-sub">총 8,250개</div>
+          </div>
+          <div class="mock-card">
+            <div class="mc-title">총 재고 가치</div>
+            <div class="mc-value">₩47,320,000</div>
+            <div class="mc-sub">▲ 12.5% 전월 대비</div>
+          </div>
+          <div class="mock-card">
+            <div class="mc-title">오늘 입출고</div>
+            <div class="mc-value">+23 / -18</div>
+            <div class="mc-sub">5건 자동 발주 추천</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 기능 -->
+  <section class="section" id="features">
+    <div class="container">
+      <div class="section-title">
+        <h2>비즈니스에 필요한 모든 것</h2>
+        <p>월 수백만 원짜리 ERP의 핵심 기능을, 10분이면 시작할 수 있습니다.</p>
+      </div>
+
+      <div class="features-grid">
+        <div class="feature-card">
+          <div class="feature-icon">📊</div>
+          <h3>실시간 대시보드</h3>
+          <p>재고 현황, 입출고 추이, 분류별 비율을 한눈에. 경영 현황을 즉시 파악합니다.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">📦</div>
+          <h3>스마트 재고 관리</h3>
+          <p>엑셀 업로드 → 자동 매핑. 안전재고 알림, LOT 추적, 유통기한 관리까지.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">📱</div>
+          <h3>바코드 스캔</h3>
+          <p>스마트폰 카메라로 바코드를 스캔하면 즉시 입출고. 별도 장비 불필요.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">💰</div>
+          <h3>원가 분석</h3>
+          <p>FIFO, 이동평균법, 최종매입원가법 — 3가지 방식으로 정확한 수익성 파악.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">🤖</div>
+          <h3>AI 자동 발주</h3>
+          <p>30일 출고 패턴을 분석해서 소진 예상일, 추천 발주량을 자동 계산합니다.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">📝</div>
+          <h3>감사 추적</h3>
+          <p>누가, 언제, 뭘 변경했는지 자동 기록. 세무 감사, 내부 통제의 기초.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">💳</div>
+          <h3>매출/매입 장부</h3>
+          <p>미수금·미지급 현황, 만기일 관리, 거래처별 정산 추적.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">🏷️</div>
+          <h3>라벨 인쇄</h3>
+          <p>3가지 크기의 바코드 라벨을 직접 생성하고 프린터로 인쇄.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">🌙</div>
+          <h3>다크 모드</h3>
+          <p>야간/창고 근무자를 위한 눈 보호 모드. 시스템 설정 자동 감지.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 요금제 -->
+  <section class="section" id="pricing" style="background: rgba(255,255,255,0.01);">
+    <div class="container">
+      <div class="section-title">
+        <h2>투명한 요금제</h2>
+        <p>사업 규모에 맞는 요금제를 선택하세요. 숨겨진 비용은 없습니다.</p>
+      </div>
+
+      <div class="pricing-grid">
+        <div class="price-card">
+          <div class="price-name">Free</div>
+          <div class="price-desc">1인 사업자·스타트업</div>
+          <div class="price-amount">₩0</div>
+          <div class="price-period">영구 무료</div>
+          <ul class="price-features">
+            <li>품목 100개까지</li>
+            <li>기본 재고 관리</li>
+            <li>입출고 관리</li>
+            <li>엑셀 업로드</li>
+            <li>다크 모드</li>
+          </ul>
+          <a href="https://erp-lite-eight.vercel.app/" class="btn btn-outline" style="width:100%;">시작하기</a>
+        </div>
+
+        <div class="price-card featured">
+          <div class="price-badge">인기</div>
+          <div class="price-name">Pro</div>
+          <div class="price-desc">중소기업·소매점</div>
+          <div class="price-amount">₩290,000</div>
+          <div class="price-period">월</div>
+          <ul class="price-features">
+            <li>품목 무제한</li>
+            <li>AI 자동 발주 추천</li>
+            <li>원가 분석 (FIFO)</li>
+            <li>매출/매입 장부</li>
+            <li>감사 추적</li>
+            <li>바코드 라벨 인쇄</li>
+            <li>사용자 5명</li>
+          </ul>
+          <a href="https://erp-lite-eight.vercel.app/" class="btn btn-primary" style="width:100%;">무료 체험 →</a>
+        </div>
+
+        <div class="price-card">
+          <div class="price-name">Enterprise</div>
+          <div class="price-desc">다점포·유통업</div>
+          <div class="price-amount">₩490,000</div>
+          <div class="price-period">월</div>
+          <ul class="price-features">
+            <li>Pro 전체 기능</li>
+            <li>다중 창고 관리</li>
+            <li>사용자 무제한</li>
+            <li>권한 관리</li>
+            <li>API 연동</li>
+            <li>전담 고객 지원</li>
+            <li>SLA 99.9%</li>
+          </ul>
+          <a href="mailto:support@erp-lite.kr" class="btn btn-outline" style="width:100%;">상담 신청</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="cta">
+    <div class="container">
+      <h2>지금 바로 시작하세요</h2>
+      <p>설치 없이, 신용카드 없이, 10분이면 시작합니다.</p>
+      <a href="https://erp-lite-eight.vercel.app/" class="btn btn-primary btn-lg" id="cta-bottom">⚡ 무료로 시작하기</a>
+    </div>
+  </section>
+
+  <!-- 푸터 -->
+  <footer>
+    <div class="container">
+      ERP-Lite v3.0 © 2026 — 중소기업을 위한 스마트 경영 관리
+    </div>
+  </footer>
+
+</body>
+</html>
