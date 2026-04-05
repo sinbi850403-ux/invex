@@ -8,7 +8,10 @@ import { getState } from './store.js';
 import { showToast } from './toast.js';
 import { downloadExcel } from './excel.js';
 import { jsPDF } from 'jspdf';
-import 'jspdf-autotable';
+import { applyPlugin } from 'jspdf-autotable';
+
+// jsPDF에 autoTable 플러그인 연결 (ESM 환경에서 필수)
+applyPlugin(jsPDF);
 
 export function renderLedgerPage(container, navigateTo) {
   const state = getState();
