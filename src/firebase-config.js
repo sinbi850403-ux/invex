@@ -18,7 +18,7 @@ import { getFirestore } from 'firebase/firestore';
 // TODO: Firebase Console에서 발급받은 값으로 교체해주세요
 const firebaseConfig = {
   apiKey: "AIzaSyDuMCWvrJbGCdvovNvY-fQ6hR4kSyoc9dk",
-  authDomain: "invex.io.kr",
+  authDomain: "erp-lite-9e83a.firebaseapp.com",
   projectId: "erp-lite-9e83a",
   storageBucket: "erp-lite-9e83a.firebasestorage.app",
   messagingSenderId: "141493032",
