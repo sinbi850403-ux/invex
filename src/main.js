@@ -20,9 +20,17 @@ import { renderSettingsPage } from './page-settings.js';
 import { renderVendorsPage } from './page-vendors.js';
 import { renderStocktakePage } from './page-stocktake.js';
 import { renderBulkPage } from './page-bulk.js';
+import { renderAuditLogPage } from './audit-log.js';
+import { renderCostingPage } from './page-costing.js';
+import { renderLabelsPage } from './page-labels.js';
+import { renderAccountsPage } from './page-accounts.js';
 import { initGlobalSearch, toggleGlobalSearch } from './global-search.js';
+import { initTheme, toggleTheme } from './theme.js';
 import { renderNotificationPanel, getNotificationCount } from './notifications.js';
 import { showToast } from './toast.js';
+
+// 다크 모드 초기화
+initTheme();
 
 // 현재 페이지 (홈을 기본으로)
 let currentPage = 'home';
@@ -44,6 +52,10 @@ const pages = {
   vendors: renderVendorsPage,
   stocktake: renderStocktakePage,
   bulk: renderBulkPage,
+  auditlog: renderAuditLogPage,
+  costing: renderCostingPage,
+  labels: renderLabelsPage,
+  accounts: renderAccountsPage,
 };
 
 /**
@@ -105,6 +117,14 @@ document.getElementById('btn-notifications')?.addEventListener('click', (e) => {
 initGlobalSearch(navigateTo);
 document.getElementById('btn-global-search')?.addEventListener('click', () => {
   toggleGlobalSearch();
+});
+
+// 다크모드 토글 버튼
+document.getElementById('btn-theme-toggle')?.addEventListener('click', () => {
+  toggleTheme();
+  const isDark = document.documentElement.classList.contains('dark-mode');
+  const btn = document.getElementById('btn-theme-toggle');
+  if (btn) btn.textContent = isDark ? '☀️ 라이트' : '🌙 다크';
 });
 
 // === 모바일 토글 ===

@@ -31,6 +31,16 @@ const DEFAULT_STATE = {
   vendorMaster: [],     // [{name, type, bizNumber, ceoName, contactName, phone, ...}]
   // 재고 실사 이력
   stocktakeHistory: [], // [{date, inspector, adjustCount, totalItems}]
+  // 감사 추적
+  auditLogs: [],        // [{id, timestamp, action, target, detail, user}]
+  // 원가 계산 방식
+  costMethod: 'weighted-avg', // 'weighted-avg' | 'fifo' | 'latest'
+  // 매출/매입 전표
+  accountEntries: [],   // [{id, type, vendorName, amount, currency, date, ...}]
+  // 통화 설정
+  currency: { code: 'KRW', symbol: '₩', rate: 1 },
+  // 사용자명
+  userName: '관리자',
 };
 
 let state = { ...DEFAULT_STATE };

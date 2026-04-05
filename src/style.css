@@ -65,6 +65,71 @@
   --radius-xl: 12px;
 }
 
+/* === 다크 모드 === */
+html.dark-mode {
+  --bg-main: #0f1419;
+  --bg-sidebar: #0d1117;
+  --bg-sidebar-hover: rgba(255,255,255,0.08);
+  --bg-card: #161b22;
+  --bg-header: #161b22;
+  --text-primary: #e6edf3;
+  --text-secondary: #8b949e;
+  --text-muted: #6e7681;
+  --text-sidebar: #8b949e;
+  --text-sidebar-active: #ffffff;
+  --border: #30363d;
+  --border-light: #21262d;
+  --accent: #58a6ff;
+  --accent-hover: #79c0ff;
+  --accent-light: rgba(88,166,255,0.1);
+  --success: #3fb950;
+  --success-light: rgba(63,185,80,0.1);
+  --warning: #d29922;
+  --warning-light: rgba(210,153,34,0.1);
+  --danger: #f85149;
+  --danger-light: rgba(248,81,73,0.1);
+  --info: #58a6ff;
+  --info-light: rgba(88,166,255,0.1);
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.3);
+  --shadow-md: 0 2px 8px rgba(0,0,0,0.4);
+  --shadow-lg: 0 4px 16px rgba(0,0,0,0.5);
+  --shadow: 0 2px 8px rgba(0,0,0,0.4);
+}
+
+html.dark-mode .sidebar-logo {
+  border-bottom-color: #21262d;
+}
+
+html.dark-mode .data-table thead th {
+  background: #1c2129;
+  border-color: #30363d;
+}
+
+html.dark-mode .data-table tbody td {
+  border-color: #21262d;
+}
+
+html.dark-mode .data-table tbody tr:hover {
+  background: rgba(88,166,255,0.04);
+}
+
+html.dark-mode .form-input,
+html.dark-mode .form-select {
+  background: #0d1117;
+  border-color: #30363d;
+  color: #e6edf3;
+}
+
+html.dark-mode .btn-outline {
+  border-color: #30363d;
+  color: #8b949e;
+}
+
+html.dark-mode .btn-outline:hover {
+  background: #21262d;
+  color: #e6edf3;
+}
+
 html, body {
   height: 100%;
   font-family: var(--font-family);
@@ -73,6 +138,7 @@ html, body {
   background: var(--bg-main);
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
+  transition: background-color 0.2s, color 0.2s;
 }
 
 /* --- 앱 레이아웃 --- */
