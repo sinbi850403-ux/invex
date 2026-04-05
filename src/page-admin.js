@@ -1,16 +1,20 @@
 /**
- * page-admin.js - 관리자 대시보드
- * 역할: 사용자 관리, 시스템 현황, 요금제 변경, 공지사항, 로그 확인
- * 왜 필요? → SaaS 운영자가 사용자/매출을 한눈에 관리
- * 접근 제한: 관리자 이메일만 접근 가능
+ * page-admin.js - 총관리자 대시보드 (Pro Edition)
+ * 역할: Firebase에서 실제 사용자 데이터를 조회하여 SaaS 전체를 관리
+ * 왜 Firebase 직접 조회? → 실시간 사용자 현황과 정확한 통계 제공
+ * 접근 제한: 총관리자 이메일만 접근 가능, 일반 사용자에게는 메뉴 자체가 숨김
  */
 
 import { getState, setState } from './store.js';
 import { showToast } from './toast.js';
 import { getCurrentUser } from './firebase-auth.js';
-import { PLANS, getCurrentPlan, setPlan } from './plan.js';
+import { PLANS } from './plan.js';
+import { db, isConfigured } from './firebase-config.js';
+import { collection, getDocs, doc, updateDoc, deleteDoc, query, orderBy } from 'firebase/firestore';
 
+// ═══════════════════════════════════════════
 // 총관리자(사이트 소유자) 이메일 목록
+// ═══════════════════════════════════════════
 const ADMIN_EMAILS = [
   'sinbi0214@naver.com',     // 총관리자 (네이버)
   'sinbi850403@gmail.com',   // 총관리자 (구글)
@@ -19,31 +23,59 @@ const ADMIN_EMAILS = [
 
 /**
  * 관리자 권한 체크
- * 왜 이메일 기반? → Firebase Custom Claims 없이 간단하게 관리자 판별
  */
 export function isAdmin() {
   const user = getCurrentUser();
   if (!user) return false;
-  // 관리자 이메일이거나, 첫 번째 가입자(임시 관리자)
-  if (ADMIN_EMAILS.includes(user.email)) return true;
-  // 관리자 목록이 비어있으면 모든 로그인 사용자를 관리자로 (초기 셋업용)
-  if (ADMIN_EMAILS.length <= 1 && ADMIN_EMAILS[0] === 'admin@invex.io.kr') return true;
-  return false;
+  return ADMIN_EMAILS.includes(user.email);
 }
 
 /**
- * 날짜 포맷
+ * Firebase에서 모든 사용자 가져오기
+ * 왜? → 로컬 상태가 아닌 실제 가입된 사용자를 보여줘야 함
+ */
+async function fetchAllUsers() {
+  if (!isConfigured || !db) return [];
+  try {
+    const snap = await getDocs(collection(db, 'users'));
+    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  } catch (e) {
+    console.warn('사용자 목록 조회 실패:', e);
+    return [];
+  }
+}
+
+/**
+ * 날짜 포맷 유틸
  */
 function fmt(iso) {
   if (!iso) return '-';
-  return new Date(iso).toLocaleDateString('ko-KR', {
+  const d = new Date(iso);
+  return d.toLocaleDateString('ko-KR', {
     year: 'numeric', month: '2-digit', day: '2-digit',
     hour: '2-digit', minute: '2-digit',
   });
 }
 
-export function renderAdminPage(container, navigateTo) {
-  const state = getState();
+function timeAgo(iso) {
+  if (!iso) return '-';
+  const diff = Date.now() - new Date(iso).getTime();
+  const m = Math.floor(diff / 60000);
+  if (m < 1) return '방금 전';
+  if (m < 60) return `${m}분 전`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}시간 전`;
+  const d = Math.floor(h / 24);
+  if (d < 30) return `${d}일 전`;
+  return fmt(iso);
+}
+
+/**
+ * ═══════════════════════════════════════════
+ * 메인 렌더 함수
+ * ═══════════════════════════════════════════
+ */
+export async function renderAdminPage(container, navigateTo) {
   const user = getCurrentUser();
 
   // 관리자 아닌 경우 차단
@@ -53,127 +85,121 @@ export function renderAdminPage(container, navigateTo) {
         <div>
           <div style="font-size:64px; margin-bottom:16px;">🚫</div>
           <h2 style="font-size:20px; font-weight:700; margin-bottom:8px;">접근 권한이 없습니다</h2>
-          <p style="color:var(--text-muted);">관리자만 접근할 수 있는 페이지입니다.</p>
+          <p style="color:var(--text-muted);">총관리자만 접근할 수 있는 페이지입니다.</p>
         </div>
       </div>
     `;
     return;
   }
 
-  // 시스템 통계 계산
-  const users = state.adminUsers || [];
-  const totalUsers = users.length;
-  const freeUsers = users.filter(u => (u.plan || 'free') === 'free').length;
-  const proUsers = users.filter(u => u.plan === 'pro').length;
-  const entUsers = users.filter(u => u.plan === 'enterprise').length;
-  const monthlyRevenue = (proUsers * 290000) + (entUsers * 490000);
-  const paymentHistory = state.paymentHistory || [];
+  // 로딩 표시
+  container.innerHTML = `
+    <div style="display:flex; align-items:center; justify-content:center; min-height:40vh;">
+      <div style="text-align:center;">
+        <div style="font-size:32px; animation:spin 1s linear infinite;">⚙️</div>
+        <p style="margin-top:12px; color:var(--text-muted);">관리자 데이터를 불러오는 중...</p>
+      </div>
+    </div>
+  `;
+
+  // Firebase에서 실제 사용자 데이터 조회
+  const allUsers = await fetchAllUsers();
+  const state = getState();
   const notices = state.adminNotices || [];
+  const paymentHistory = state.paymentHistory || [];
   const totalItems = (state.mappedData || []).length;
   const totalTransactions = (state.transactions || []).length;
 
+  // 통계 계산
+  const totalUsers = allUsers.length;
+  const freeUsers = allUsers.filter(u => (u.plan || 'free') === 'free').length;
+  const proUsers = allUsers.filter(u => u.plan === 'pro').length;
+  const entUsers = allUsers.filter(u => u.plan === 'enterprise').length;
+  const paidUsers = proUsers + entUsers;
+  const conversionRate = totalUsers > 0 ? Math.round((paidUsers / totalUsers) * 100) : 0;
+  const monthlyRevenue = (proUsers * 290000) + (entUsers * 490000);
+
+  // 최근 활동 (최근 로그인 기준 정렬)
+  const recentUsers = [...allUsers]
+    .sort((a, b) => new Date(b.lastLogin || 0) - new Date(a.lastLogin || 0))
+    .slice(0, 8);
+
+  // 오늘 가입자
+  const today = new Date().toISOString().slice(0, 10);
+  const todaySignups = allUsers.filter(u => u.createdAt?.startsWith(today)).length;
+
+  // 7일 내 활성 사용자
+  const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+  const activeUsers = allUsers.filter(u => u.lastLogin && new Date(u.lastLogin).getTime() > weekAgo).length;
+
   container.innerHTML = `
-    <div class="page-header">
+    <!-- 헤더 -->
+    <div class="page-header" style="margin-bottom:20px;">
       <div>
-        <h1 class="page-title"><span class="title-icon">👑</span> 관리자 대시보드</h1>
-        <div class="page-desc">INVEX 시스템 관리 및 사용자 모니터링</div>
+        <h1 class="page-title" style="display:flex; align-items:center; gap:10px;">
+          <span style="background:linear-gradient(135deg,#f59e0b,#ef4444); padding:8px; border-radius:10px; font-size:20px; line-height:1;">👑</span>
+          총관리자 대시보드
+        </h1>
+        <div class="page-desc">INVEX 서비스 전체 관리 · ${user?.email || ''}</div>
       </div>
-      <div style="display:flex; gap:8px;">
-        <button class="btn btn-ghost btn-sm" id="btn-admin-refresh">🔄 새로고침</button>
-      </div>
-    </div>
-
-    <!-- 핵심 KPI -->
-    <div class="stats-grid" style="grid-template-columns:repeat(5, 1fr); margin-bottom:20px;">
-      <div class="stat-card">
-        <div class="stat-label">총 사용자</div>
-        <div class="stat-value" style="color:var(--accent);">${totalUsers}</div>
-        <div class="stat-sub">명</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">유료 전환율</div>
-        <div class="stat-value" style="color:#3b82f6;">${totalUsers > 0 ? Math.round(((proUsers + entUsers) / totalUsers) * 100) : 0}%</div>
-        <div class="stat-sub">Pro ${proUsers} / ENT ${entUsers}</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">예상 월 매출</div>
-        <div class="stat-value" style="color:var(--success);">₩${monthlyRevenue.toLocaleString()}</div>
-        <div class="stat-sub">월</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">총 등록 품목</div>
-        <div class="stat-value">${totalItems.toLocaleString()}</div>
-        <div class="stat-sub">건</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">총 거래</div>
-        <div class="stat-value">${totalTransactions.toLocaleString()}</div>
-        <div class="stat-sub">건</div>
+      <div style="display:flex; gap:8px; align-items:center;">
+        <span style="font-size:11px; color:var(--text-muted);">마지막 새로고침: ${new Date().toLocaleTimeString('ko-KR')}</span>
+        <button class="btn btn-ghost btn-sm" id="btn-admin-refresh" style="gap:4px;">🔄 새로고침</button>
       </div>
     </div>
 
-    <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:20px;">
-      <!-- 사용자 관리 -->
-      <div class="card" style="grid-column:1/3;">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
-          <div class="card-title" style="margin:0;">👥 사용자 관리</div>
-          <div style="display:flex; gap:8px;">
-            <input class="form-input" id="admin-user-search" placeholder="🔍 이메일/이름 검색" style="width:220px; font-size:12px;" />
-            <button class="btn btn-primary btn-sm" id="btn-add-user">➕ 사용자 추가</button>
+    <!-- KPI 카드 (6열) -->
+    <div style="display:grid; grid-template-columns:repeat(6, 1fr); gap:12px; margin-bottom:20px;">
+      ${kpiCard('👥', '전체 사용자', totalUsers, '명', '#3b82f6', `오늘 +${todaySignups}`)}
+      ${kpiCard('🟢', '활성 사용자', activeUsers, '명 (7일)', '#22c55e', `${totalUsers > 0 ? Math.round((activeUsers/totalUsers)*100) : 0}% 활동`)}
+      ${kpiCard('💎', '유료 전환율', conversionRate, '%', '#8b5cf6', `Pro ${proUsers} / ENT ${entUsers}`)}
+      ${kpiCard('💰', '예상 월 매출', '₩' + monthlyRevenue.toLocaleString(), '', '#f59e0b', '월간')}
+      ${kpiCard('📦', '등록 품목', totalItems.toLocaleString(), '건', '#06b6d4', '전체')}
+      ${kpiCard('📋', '총 거래', totalTransactions.toLocaleString(), '건', '#ec4899', '누적')}
+    </div>
+
+    <!-- 메인 2단 레이아웃 -->
+    <div style="display:grid; grid-template-columns:2fr 1fr; gap:16px; margin-bottom:20px;">
+
+      <!-- 왼쪽: 사용자 관리 테이블 -->
+      <div class="card" style="padding:0; overflow:hidden;">
+        <div style="padding:16px 20px; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border);">
+          <div style="display:flex; align-items:center; gap:10px;">
+            <span style="font-size:16px;">👥</span>
+            <div>
+              <div style="font-weight:700; font-size:14px;">사용자 관리</div>
+              <div style="font-size:11px; color:var(--text-muted);">총 ${totalUsers}명 등록</div>
+            </div>
+          </div>
+          <div style="display:flex; gap:8px; align-items:center;">
+            <div style="position:relative;">
+              <input class="form-input" id="admin-user-search" placeholder="🔍 검색..." style="width:180px; font-size:12px; padding:6px 10px; border-radius:6px;" />
+            </div>
+            <select class="form-input" id="admin-filter-plan" style="width:100px; font-size:12px; padding:6px 8px; border-radius:6px;">
+              <option value="all">전체 요금제</option>
+              <option value="free">🆓 Free</option>
+              <option value="pro">⭐ Pro</option>
+              <option value="enterprise">🏢 Enterprise</option>
+            </select>
           </div>
         </div>
-        <div class="table-wrapper" style="border:none; max-height:400px; overflow-y:auto;">
-          <table class="data-table" id="admin-users-table">
-            <thead><tr>
-              <th>사용자</th>
-              <th>이메일</th>
+        <div style="max-height:460px; overflow-y:auto;">
+          <table class="data-table" id="admin-users-table" style="margin:0;">
+            <thead style="position:sticky; top:0; z-index:1;"><tr>
+              <th style="padding-left:20px;">사용자</th>
               <th>요금제</th>
               <th>가입일</th>
               <th>최근 접속</th>
               <th>상태</th>
-              <th style="text-align:center;">관리</th>
+              <th style="text-align:center; width:120px;">관리</th>
             </tr></thead>
             <tbody>
-              ${users.length > 0 ? users.map(u => `
-                <tr data-uid="${u.uid || u.id}">
-                  <td>
-                    <div style="display:flex; align-items:center; gap:8px;">
-                      ${u.photoURL ? `<img src="${u.photoURL}" style="width:28px; height:28px; border-radius:50%;" />` : '<div style="width:28px; height:28px; border-radius:50%; background:var(--bg-secondary); display:flex; align-items:center; justify-content:center; font-size:12px;">👤</div>'}
-                      <div>
-                        <div style="font-weight:600; font-size:13px;">${u.name || '(이름 없음)'}</div>
-                        ${u.role === 'admin' ? '<span style="font-size:9px; background:#ef4444; color:#fff; padding:1px 4px; border-radius:3px;">관리자</span>' : ''}
-                      </div>
-                    </div>
-                  </td>
-                  <td style="font-size:12px; color:var(--text-muted);">${u.email || '-'}</td>
-                  <td>
-                    <span class="badge ${u.plan === 'enterprise' ? 'badge-purple' : u.plan === 'pro' ? 'badge-primary' : 'badge-default'}">
-                      ${(PLANS[u.plan || 'free']?.icon || '🆓')} ${(u.plan || 'free').toUpperCase()}
-                    </span>
-                  </td>
-                  <td style="font-size:11px; color:var(--text-muted);">${fmt(u.createdAt)}</td>
-                  <td style="font-size:11px; color:var(--text-muted);">${fmt(u.lastLogin)}</td>
-                  <td>
-                    <span class="badge ${u.status === 'suspended' ? 'badge-danger' : 'badge-success'}">
-                      ${u.status === 'suspended' ? '🚫 정지' : '✅ 활성'}
-                    </span>
-                  </td>
-                  <td style="text-align:center;">
-                    <div style="display:flex; gap:4px; justify-content:center;">
-                      <button class="btn btn-ghost btn-sm btn-edit-user" data-uid="${u.uid || u.id}" title="수정">✏️</button>
-                      <button class="btn btn-ghost btn-sm btn-plan-user" data-uid="${u.uid || u.id}" title="요금제 변경">💎</button>
-                      <button class="btn btn-ghost btn-sm btn-suspend-user" data-uid="${u.uid || u.id}" data-status="${u.status || 'active'}" title="정지/활성">
-                        ${u.status === 'suspended' ? '✅' : '🚫'}
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              `).join('') : `
+              ${allUsers.length > 0 ? allUsers.map(u => renderUserRow(u)).join('') : `
                 <tr>
-                  <td colspan="7" style="text-align:center; padding:32px; color:var(--text-muted);">
-                    <div style="font-size:28px; margin-bottom:8px;">👥</div>
-                    아직 등록된 사용자가 없습니다.<br/>
-                    <button class="btn btn-primary btn-sm" id="btn-add-demo-users" style="margin-top:12px;">📊 데모 데이터 생성</button>
+                  <td colspan="6" style="text-align:center; padding:48px; color:var(--text-muted);">
+                    <div style="font-size:36px; margin-bottom:12px;">👥</div>
+                    <div style="font-size:14px; font-weight:600; margin-bottom:4px;">아직 가입된 사용자가 없습니다</div>
+                    <div style="font-size:12px;">사용자가 회원가입하면 자동으로 이곳에 표시됩니다.</div>
                   </td>
                 </tr>
               `}
@@ -181,160 +207,165 @@ export function renderAdminPage(container, navigateTo) {
           </table>
         </div>
       </div>
+
+      <!-- 오른쪽 패널 -->
+      <div style="display:flex; flex-direction:column; gap:16px;">
+
+        <!-- 요금제 분포 차트 -->
+        <div class="card">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+            <div style="font-weight:700; font-size:14px;">📊 요금제 분포</div>
+          </div>
+          ${totalUsers > 0 ? `
+            <div style="display:flex; gap:6px; height:12px; border-radius:6px; overflow:hidden; margin-bottom:14px;">
+              ${freeUsers > 0 ? `<div style="flex:${freeUsers}; background:#64748b;" title="Free ${freeUsers}명"></div>` : ''}
+              ${proUsers > 0 ? `<div style="flex:${proUsers}; background:#3b82f6;" title="Pro ${proUsers}명"></div>` : ''}
+              ${entUsers > 0 ? `<div style="flex:${entUsers}; background:#8b5cf6;" title="Enterprise ${entUsers}명"></div>` : ''}
+            </div>
+            <div style="display:flex; flex-direction:column; gap:8px; font-size:12px;">
+              ${planRow('🆓', 'Free', freeUsers, totalUsers, '#64748b')}
+              ${planRow('⭐', 'Pro', proUsers, totalUsers, '#3b82f6')}
+              ${planRow('🏢', 'Enterprise', entUsers, totalUsers, '#8b5cf6')}
+            </div>
+          ` : `
+            <div style="text-align:center; padding:20px; color:var(--text-muted); font-size:12px;">데이터 없음</div>
+          `}
+        </div>
+
+        <!-- 최근 활동 -->
+        <div class="card">
+          <div style="font-weight:700; font-size:14px; margin-bottom:14px;">🕐 최근 활동</div>
+          <div style="display:flex; flex-direction:column; gap:2px; max-height:220px; overflow-y:auto;">
+            ${recentUsers.length > 0 ? recentUsers.map(u => `
+              <div style="display:flex; align-items:center; gap:8px; padding:8px 0; border-bottom:1px solid var(--border); font-size:12px;">
+                <div style="width:28px; height:28px; border-radius:50%; background:var(--bg-secondary); display:flex; align-items:center; justify-content:center; font-size:11px; flex-shrink:0;">
+                  ${u.photoURL ? `<img src="${u.photoURL}" style="width:28px; height:28px; border-radius:50%;" />` : u.name?.charAt(0) || '👤'}
+                </div>
+                <div style="flex:1; min-width:0;">
+                  <div style="font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${u.name || '사용자'}</div>
+                  <div style="color:var(--text-muted); font-size:10px;">${u.email || ''}</div>
+                </div>
+                <div style="color:var(--text-muted); font-size:10px; white-space:nowrap;">${timeAgo(u.lastLogin)}</div>
+              </div>
+            `).join('') : `
+              <div style="text-align:center; padding:20px; color:var(--text-muted); font-size:12px;">활동 없음</div>
+            `}
+          </div>
+        </div>
+      </div>
     </div>
 
-    <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:20px;">
-      <!-- 공지사항 관리 -->
+    <!-- 하단: 3단 레이아웃 -->
+    <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px; margin-bottom:20px;">
+
+      <!-- 공지사항 -->
       <div class="card">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-          <div class="card-title" style="margin:0;">📢 공지사항</div>
-          <button class="btn btn-ghost btn-sm" id="btn-add-notice">➕ 작성</button>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+          <div style="font-weight:700; font-size:14px;">📢 공지사항</div>
+          <button class="btn btn-ghost btn-sm" id="btn-add-notice" style="font-size:11px;">+ 작성</button>
         </div>
-        ${notices.length > 0 ? notices.slice(0, 5).map(n => `
-          <div style="padding:10px; border-bottom:1px solid var(--border); font-size:13px;">
+        ${notices.length > 0 ? notices.slice(0, 4).map(n => `
+          <div style="padding:8px 0; border-bottom:1px solid var(--border);">
             <div style="display:flex; justify-content:space-between; align-items:center;">
-              <strong>${n.title}</strong>
-              <span style="font-size:10px; color:var(--text-muted);">${fmt(n.date)}</span>
+              <strong style="font-size:12px;">${n.title}</strong>
+              <span style="font-size:9px; color:var(--text-muted);">${timeAgo(n.date)}</span>
             </div>
-            <div style="font-size:12px; color:var(--text-muted); margin-top:4px;">${n.content}</div>
+            <div style="font-size:11px; color:var(--text-muted); margin-top:2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${n.content}</div>
           </div>
         `).join('') : `
-          <div style="text-align:center; padding:24px; color:var(--text-muted);">
-            <div style="font-size:24px; margin-bottom:8px;">📢</div>
-            등록된 공지가 없습니다.
+          <div style="text-align:center; padding:24px; color:var(--text-muted); font-size:12px;">
+            공지를 작성해보세요.
           </div>
+        `}
+      </div>
+
+      <!-- 최근 결제 -->
+      <div class="card">
+        <div style="font-weight:700; font-size:14px; margin-bottom:14px;">💳 최근 결제</div>
+        ${paymentHistory.length > 0 ? paymentHistory.slice(0, 5).map(p => `
+          <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid var(--border); font-size:12px;">
+            <div>
+              <div style="font-weight:600;">${p.userName || '-'}</div>
+              <div style="color:var(--text-muted); font-size:10px;">${p.planName}</div>
+            </div>
+            <div style="text-align:right;">
+              <div style="font-weight:700; color:var(--success);">${p.amount}</div>
+              <div style="font-size:10px; color:var(--text-muted);">${timeAgo(p.date)}</div>
+            </div>
+          </div>
+        `).join('') : `
+          <div style="text-align:center; padding:24px; color:var(--text-muted); font-size:12px;">결제 내역 없음</div>
         `}
       </div>
 
       <!-- 시스템 정보 -->
       <div class="card">
-        <div class="card-title">🖥️ 시스템 정보</div>
-        <div style="font-size:13px; line-height:2.2;">
-          <div style="display:flex; justify-content:space-between; padding:4px 0; border-bottom:1px solid var(--border);">
-            <span style="color:var(--text-muted);">도메인</span>
-            <strong><a href="https://invex.io.kr" target="_blank" style="color:var(--accent);">invex.io.kr</a></strong>
-          </div>
-          <div style="display:flex; justify-content:space-between; padding:4px 0; border-bottom:1px solid var(--border);">
-            <span style="color:var(--text-muted);">서버</span>
-            <strong>Vercel Edge</strong>
-          </div>
-          <div style="display:flex; justify-content:space-between; padding:4px 0; border-bottom:1px solid var(--border);">
-            <span style="color:var(--text-muted);">데이터베이스</span>
-            <strong>Firebase Firestore</strong>
-          </div>
-          <div style="display:flex; justify-content:space-between; padding:4px 0; border-bottom:1px solid var(--border);">
-            <span style="color:var(--text-muted);">인증</span>
-            <strong>Firebase Auth (Google)</strong>
-          </div>
-          <div style="display:flex; justify-content:space-between; padding:4px 0; border-bottom:1px solid var(--border);">
-            <span style="color:var(--text-muted);">결제</span>
-            <strong>토스페이먼츠</strong>
-          </div>
-          <div style="display:flex; justify-content:space-between; padding:4px 0; border-bottom:1px solid var(--border);">
-            <span style="color:var(--text-muted);">버전</span>
-            <strong>v3.0</strong>
-          </div>
-          <div style="display:flex; justify-content:space-between; padding:4px 0;">
-            <span style="color:var(--text-muted);">현재 접속자</span>
-            <strong>${user?.email || '-'}</strong>
-          </div>
+        <div style="font-weight:700; font-size:14px; margin-bottom:14px;">🖥️ 시스템 정보</div>
+        <div style="font-size:12px; line-height:2;">
+          ${sysRow('도메인', '<a href="https://invex.io.kr" target="_blank" style="color:var(--accent);">invex.io.kr</a>')}
+          ${sysRow('호스팅', 'Vercel Edge')}
+          ${sysRow('데이터베이스', 'Cloud Firestore')}
+          ${sysRow('인증', 'Firebase Auth')}
+          ${sysRow('결제', '토스페이먼츠')}
+          ${sysRow('버전', '<span style="background:var(--accent); color:#fff; padding:1px 6px; border-radius:4px; font-size:10px;">v3.1</span>')}
+          ${sysRow('관리자', user?.email || '-')}
         </div>
       </div>
     </div>
-
-    <!-- 최근 결제 -->
-    <div class="card">
-      <div class="card-title">💰 최근 결제 내역</div>
-      ${paymentHistory.length > 0 ? `
-        <div class="table-wrapper" style="border:none;">
-          <table class="data-table">
-            <thead><tr><th>일시</th><th>사용자</th><th>요금제</th><th class="text-right">금액</th><th>상태</th></tr></thead>
-            <tbody>
-              ${paymentHistory.slice(0, 10).map(p => `
-                <tr>
-                  <td style="font-size:12px;">${fmt(p.date)}</td>
-                  <td>${p.userName || '-'}</td>
-                  <td><strong>${p.planName}</strong></td>
-                  <td class="text-right" style="font-weight:600;">${p.amount}</td>
-                  <td><span class="badge ${p.status === 'paid' ? 'badge-success' : 'badge-warning'}">${p.status === 'paid' ? '결제완료' : '환불'}</span></td>
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
-        </div>
-      ` : `
-        <div style="text-align:center; padding:24px; color:var(--text-muted);">
-          <div style="font-size:24px; margin-bottom:8px;">💰</div>
-          결제 내역이 없습니다.
-        </div>
-      `}
-    </div>
   `;
 
-  // === 이벤트 ===
+  // ═══════════════════════════════════════════
+  // 이벤트 바인딩
+  // ═══════════════════════════════════════════
 
   // 새로고침
   container.querySelector('#btn-admin-refresh')?.addEventListener('click', () => {
-    renderAdminPage(container, navigateTo);
-    showToast('새로고침 완료', 'info');
-  });
-
-  // 데모 사용자 생성
-  container.querySelector('#btn-add-demo-users')?.addEventListener('click', () => {
-    const demoUsers = [
-      { uid: 'u1', name: '김관리', email: 'admin@invex.io.kr', plan: 'enterprise', role: 'admin', status: 'active', createdAt: '2026-03-01T09:00:00Z', lastLogin: new Date().toISOString(), photoURL: '' },
-      { uid: 'u2', name: '이매니저', email: 'manager@company.com', plan: 'pro', role: 'manager', status: 'active', createdAt: '2026-03-05T10:30:00Z', lastLogin: '2026-04-04T14:20:00Z', photoURL: '' },
-      { uid: 'u3', name: '박사원', email: 'staff@company.com', plan: 'pro', role: 'staff', status: 'active', createdAt: '2026-03-10T08:00:00Z', lastLogin: '2026-04-05T09:15:00Z', photoURL: '' },
-      { uid: 'u4', name: '최인턴', email: 'intern@company.com', plan: 'free', role: 'viewer', status: 'active', createdAt: '2026-03-20T11:00:00Z', lastLogin: '2026-04-03T16:45:00Z', photoURL: '' },
-      { uid: 'u5', name: '정대리', email: 'jung@retail.kr', plan: 'pro', role: 'staff', status: 'suspended', createdAt: '2026-02-15T13:00:00Z', lastLogin: '2026-03-28T10:00:00Z', photoURL: '' },
-    ];
-    setState({ adminUsers: demoUsers });
-    showToast('데모 사용자 5명이 생성되었습니다.', 'success');
     renderAdminPage(container, navigateTo);
   });
 
   // 사용자 검색
   container.querySelector('#admin-user-search')?.addEventListener('input', (e) => {
-    const q = e.target.value.toLowerCase();
-    container.querySelectorAll('#admin-users-table tbody tr').forEach(row => {
-      const text = row.textContent.toLowerCase();
-      row.style.display = text.includes(q) ? '' : 'none';
-    });
+    filterUsers(container);
   });
 
-  // 사용자 추가
-  container.querySelector('#btn-add-user')?.addEventListener('click', () => {
-    showUserModal(null, container, navigateTo);
-  });
-
-  // 사용자 수정
-  container.querySelectorAll('.btn-edit-user').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const uid = btn.dataset.uid;
-      const u = users.find(x => (x.uid || x.id) === uid);
-      if (u) showUserModal(u, container, navigateTo);
-    });
+  // 요금제 필터
+  container.querySelector('#admin-filter-plan')?.addEventListener('change', () => {
+    filterUsers(container);
   });
 
   // 요금제 변경
   container.querySelectorAll('.btn-plan-user').forEach(btn => {
     btn.addEventListener('click', () => {
       const uid = btn.dataset.uid;
-      const u = users.find(x => (x.uid || x.id) === uid);
+      const u = allUsers.find(x => x.id === uid);
       if (u) showPlanChangeModal(u, container, navigateTo);
     });
   });
 
-  // 정지/활성
-  container.querySelectorAll('.btn-suspend-user').forEach(btn => {
+  // 사용자 상세
+  container.querySelectorAll('.btn-detail-user').forEach(btn => {
     btn.addEventListener('click', () => {
+      const uid = btn.dataset.uid;
+      const u = allUsers.find(x => x.id === uid);
+      if (u) showUserDetailModal(u);
+    });
+  });
+
+  // 사용자 정지/활성
+  container.querySelectorAll('.btn-suspend-user').forEach(btn => {
+    btn.addEventListener('click', async () => {
       const uid = btn.dataset.uid;
       const current = btn.dataset.status;
       const newStatus = current === 'suspended' ? 'active' : 'suspended';
-      const updated = users.map(u => (u.uid || u.id) === uid ? { ...u, status: newStatus } : u);
-      setState({ adminUsers: updated });
-      showToast(newStatus === 'suspended' ? '사용자가 정지되었습니다.' : '사용자가 활성화되었습니다.', newStatus === 'suspended' ? 'warning' : 'success');
-      renderAdminPage(container, navigateTo);
+      try {
+        if (isConfigured && db) {
+          await updateDoc(doc(db, 'users', uid), { status: newStatus });
+        }
+        showToast(newStatus === 'suspended' ? '사용자를 정지했습니다.' : '사용자를 활성화했습니다.', newStatus === 'suspended' ? 'warning' : 'success');
+        renderAdminPage(container, navigateTo);
+      } catch (e) {
+        showToast('처리 실패: ' + e.message, 'error');
+      }
     });
   });
 
@@ -344,80 +375,195 @@ export function renderAdminPage(container, navigateTo) {
   });
 }
 
-/**
- * 사용자 추가/수정 모달
- */
-function showUserModal(user, container, navigateTo) {
-  const isEdit = !!user;
+// ═══════════════════════════════════════════
+// 헬퍼: KPI 카드 생성
+// ═══════════════════════════════════════════
+function kpiCard(icon, label, value, unit, color, sub) {
+  return `
+    <div class="card" style="padding:16px; text-align:center; position:relative; overflow:hidden;">
+      <div style="position:absolute; top:-8px; right:-8px; font-size:42px; opacity:0.06;">${icon}</div>
+      <div style="font-size:11px; color:var(--text-muted); margin-bottom:6px;">${label}</div>
+      <div style="font-size:22px; font-weight:800; color:${color}; line-height:1.2;">${value}<span style="font-size:11px; font-weight:400; color:var(--text-muted);">${unit}</span></div>
+      <div style="font-size:10px; color:var(--text-muted); margin-top:4px;">${sub}</div>
+    </div>
+  `;
+}
+
+// 요금제 분포 행
+function planRow(icon, name, count, total, color) {
+  const pct = total > 0 ? Math.round((count / total) * 100) : 0;
+  return `
+    <div style="display:flex; align-items:center; gap:8px;">
+      <span>${icon}</span>
+      <span style="width:70px;">${name}</span>
+      <div style="flex:1; height:6px; background:rgba(255,255,255,0.06); border-radius:3px; overflow:hidden;">
+        <div style="width:${pct}%; height:100%; background:${color}; border-radius:3px; transition:width 0.4s;"></div>
+      </div>
+      <span style="width:32px; text-align:right; font-weight:600;">${count}</span>
+      <span style="width:32px; text-align:right; color:var(--text-muted);">${pct}%</span>
+    </div>
+  `;
+}
+
+// 시스템 행
+function sysRow(label, value) {
+  return `
+    <div style="display:flex; justify-content:space-between; padding:2px 0; border-bottom:1px solid var(--border);">
+      <span style="color:var(--text-muted);">${label}</span>
+      <strong>${value}</strong>
+    </div>
+  `;
+}
+
+// ═══════════════════════════════════════════
+// 사용자 테이블 행
+// ═══════════════════════════════════════════
+function renderUserRow(u) {
+  const planId = u.plan || 'free';
+  const planInfo = PLANS[planId] || PLANS.free;
+  const isActive = u.status !== 'suspended';
+  const isOnline = u.lastLogin && (Date.now() - new Date(u.lastLogin).getTime()) < 15 * 60 * 1000;
+
+  return `
+    <tr data-uid="${u.id}" data-plan="${planId}" data-email="${u.email || ''}" data-name="${u.name || ''}">
+      <td style="padding-left:20px;">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <div style="position:relative;">
+            ${u.photoURL
+              ? `<img src="${u.photoURL}" style="width:32px; height:32px; border-radius:50%; object-fit:cover;" />`
+              : `<div style="width:32px; height:32px; border-radius:50%; background:linear-gradient(135deg,${planInfo.color}30,${planInfo.color}15); display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:700; color:${planInfo.color};">${(u.name || '?').charAt(0)}</div>`
+            }
+            ${isOnline ? `<div style="position:absolute; bottom:0; right:0; width:8px; height:8px; border-radius:50%; background:#22c55e; border:2px solid var(--bg-primary);"></div>` : ''}
+          </div>
+          <div>
+            <div style="font-weight:600; font-size:13px;">${u.name || '(이름 없음)'}</div>
+            <div style="font-size:10px; color:var(--text-muted);">${u.email || '-'}</div>
+          </div>
+        </div>
+      </td>
+      <td>
+        <span style="
+          display:inline-flex; align-items:center; gap:3px;
+          padding:3px 8px; border-radius:5px; font-size:11px; font-weight:600;
+          background:${planInfo.color}15; color:${planInfo.color};
+        ">
+          ${planInfo.icon} ${planId.toUpperCase()}
+        </span>
+      </td>
+      <td style="font-size:11px; color:var(--text-muted);">${fmt(u.createdAt)}</td>
+      <td>
+        <div style="font-size:11px; ${isOnline ? 'color:#22c55e; font-weight:600;' : 'color:var(--text-muted);'}">
+          ${isOnline ? '🟢 온라인' : timeAgo(u.lastLogin)}
+        </div>
+      </td>
+      <td>
+        <span style="
+          display:inline-flex; align-items:center; gap:3px;
+          padding:2px 7px; border-radius:4px; font-size:10px; font-weight:600;
+          background:${isActive ? '#22c55e15' : '#ef444415'}; color:${isActive ? '#22c55e' : '#ef4444'};
+        ">
+          ${isActive ? '● 활성' : '● 정지'}
+        </span>
+      </td>
+      <td style="text-align:center;">
+        <div style="display:flex; gap:2px; justify-content:center;">
+          <button class="btn btn-ghost btn-sm btn-detail-user" data-uid="${u.id}" title="상세 보기" style="font-size:12px; padding:4px 6px;">👁️</button>
+          <button class="btn btn-ghost btn-sm btn-plan-user" data-uid="${u.id}" title="요금제 변경" style="font-size:12px; padding:4px 6px;">💎</button>
+          <button class="btn btn-ghost btn-sm btn-suspend-user" data-uid="${u.id}" data-status="${u.status || 'active'}" title="${isActive ? '정지' : '활성화'}" style="font-size:12px; padding:4px 6px;">
+            ${isActive ? '🚫' : '✅'}
+          </button>
+        </div>
+      </td>
+    </tr>
+  `;
+}
+
+// ═══════════════════════════════════════════
+// 필터링
+// ═══════════════════════════════════════════
+function filterUsers(container) {
+  const q = (container.querySelector('#admin-user-search')?.value || '').toLowerCase();
+  const plan = container.querySelector('#admin-filter-plan')?.value || 'all';
+
+  container.querySelectorAll('#admin-users-table tbody tr').forEach(row => {
+    const email = (row.dataset.email || '').toLowerCase();
+    const name = (row.dataset.name || '').toLowerCase();
+    const rowPlan = row.dataset.plan || 'free';
+
+    const matchText = !q || email.includes(q) || name.includes(q);
+    const matchPlan = plan === 'all' || rowPlan === plan;
+
+    row.style.display = (matchText && matchPlan) ? '' : 'none';
+  });
+}
+
+// ═══════════════════════════════════════════
+// 사용자 상세 모달
+// ═══════════════════════════════════════════
+function showUserDetailModal(u) {
+  const planInfo = PLANS[u.plan || 'free'] || PLANS.free;
   const modal = document.createElement('div');
   modal.className = 'modal-overlay';
   modal.style.display = 'flex';
   modal.innerHTML = `
-    <div class="modal" style="max-width:420px;">
-      <div class="modal-header">
-        <h3>${isEdit ? '✏️ 사용자 수정' : '➕ 사용자 추가'}</h3>
+    <div class="modal" style="max-width:480px;">
+      <div class="modal-header" style="background:linear-gradient(135deg,${planInfo.color}20,transparent); border-bottom:1px solid var(--border);">
+        <div style="display:flex; align-items:center; gap:12px;">
+          ${u.photoURL
+            ? `<img src="${u.photoURL}" style="width:48px; height:48px; border-radius:50%;" />`
+            : `<div style="width:48px; height:48px; border-radius:50%; background:${planInfo.color}25; display:flex; align-items:center; justify-content:center; font-size:20px; font-weight:800; color:${planInfo.color};">${(u.name || '?').charAt(0)}</div>`
+          }
+          <div>
+            <h3 style="margin:0; font-size:16px;">${u.name || '사용자'}</h3>
+            <div style="font-size:12px; color:var(--text-muted);">${u.email || '-'}</div>
+          </div>
+        </div>
         <button class="btn btn-ghost btn-sm modal-close">✕</button>
       </div>
-      <div class="modal-body">
-        <div class="form-group">
-          <label class="form-label">이름</label>
-          <input class="form-input" id="mu-name" value="${user?.name || ''}" placeholder="홍길동" />
+      <div class="modal-body" style="padding:20px;">
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; font-size:13px;">
+          <div style="padding:12px; background:var(--bg-secondary); border-radius:8px;">
+            <div style="font-size:10px; color:var(--text-muted); margin-bottom:4px;">요금제</div>
+            <div style="font-weight:700; color:${planInfo.color};">${planInfo.icon} ${planInfo.name}</div>
+          </div>
+          <div style="padding:12px; background:var(--bg-secondary); border-radius:8px;">
+            <div style="font-size:10px; color:var(--text-muted); margin-bottom:4px;">상태</div>
+            <div style="font-weight:700; color:${u.status === 'suspended' ? '#ef4444' : '#22c55e'};">${u.status === 'suspended' ? '🚫 정지' : '✅ 활성'}</div>
+          </div>
+          <div style="padding:12px; background:var(--bg-secondary); border-radius:8px;">
+            <div style="font-size:10px; color:var(--text-muted); margin-bottom:4px;">역할</div>
+            <div style="font-weight:700;">${u.role === 'admin' ? '👑 관리자' : u.role === 'manager' ? '📋 매니저' : '👤 일반'}</div>
+          </div>
+          <div style="padding:12px; background:var(--bg-secondary); border-radius:8px;">
+            <div style="font-size:10px; color:var(--text-muted); margin-bottom:4px;">UID</div>
+            <div style="font-weight:500; font-size:10px; word-break:break-all;">${u.id || u.uid || '-'}</div>
+          </div>
         </div>
-        <div class="form-group">
-          <label class="form-label">이메일</label>
-          <input class="form-input" type="email" id="mu-email" value="${user?.email || ''}" placeholder="user@company.com" />
+        <div style="margin-top:16px; font-size:12px; line-height:2.2;">
+          <div style="display:flex; justify-content:space-between; border-bottom:1px solid var(--border);">
+            <span style="color:var(--text-muted);">가입일</span>
+            <strong>${fmt(u.createdAt)}</strong>
+          </div>
+          <div style="display:flex; justify-content:space-between; border-bottom:1px solid var(--border);">
+            <span style="color:var(--text-muted);">최근 접속</span>
+            <strong>${fmt(u.lastLogin)}</strong>
+          </div>
+          <div style="display:flex; justify-content:space-between;">
+            <span style="color:var(--text-muted);">접속 방법</span>
+            <strong>${u.photoURL ? '🌐 Google' : '📧 이메일'}</strong>
+          </div>
         </div>
-        <div class="form-group">
-          <label class="form-label">역할</label>
-          <select class="form-input" id="mu-role">
-            <option value="viewer" ${user?.role === 'viewer' ? 'selected' : ''}>👁️ 뷰어</option>
-            <option value="staff" ${user?.role === 'staff' ? 'selected' : ''}>📝 편집자</option>
-            <option value="manager" ${user?.role === 'manager' ? 'selected' : ''}>📋 매니저</option>
-            <option value="admin" ${user?.role === 'admin' ? 'selected' : ''}>👑 관리자</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label class="form-label">요금제</label>
-          <select class="form-input" id="mu-plan">
-            ${Object.values(PLANS).map(p => `<option value="${p.id}" ${user?.plan === p.id ? 'selected' : ''}>${p.icon} ${p.name}</option>`).join('')}
-          </select>
-        </div>
-      </div>
-      <div class="modal-footer" style="display:flex; gap:8px; justify-content:flex-end;">
-        <button class="btn btn-ghost modal-close">취소</button>
-        <button class="btn btn-primary" id="mu-save">${isEdit ? '저장' : '추가'}</button>
       </div>
     </div>
   `;
   document.body.appendChild(modal);
-
-  modal.querySelectorAll('.modal-close').forEach(b => b.addEventListener('click', () => modal.remove()));
+  modal.querySelector('.modal-close').addEventListener('click', () => modal.remove());
   modal.addEventListener('click', (e) => { if (e.target === modal) modal.remove(); });
-
-  modal.querySelector('#mu-save').addEventListener('click', () => {
-    const name = modal.querySelector('#mu-name').value.trim();
-    const email = modal.querySelector('#mu-email').value.trim();
-    const role = modal.querySelector('#mu-role').value;
-    const plan = modal.querySelector('#mu-plan').value;
-    if (!name || !email) { showToast('이름과 이메일을 입력하세요.', 'warning'); return; }
-
-    const state = getState();
-    let users = state.adminUsers || [];
-    if (isEdit) {
-      users = users.map(u => (u.uid || u.id) === (user.uid || user.id) ? { ...u, name, email, role, plan } : u);
-    } else {
-      users.push({ uid: 'u' + Date.now(), name, email, role, plan, status: 'active', createdAt: new Date().toISOString(), lastLogin: null, photoURL: '' });
-    }
-    setState({ adminUsers: users });
-    modal.remove();
-    showToast(isEdit ? '사용자 정보가 수정되었습니다.' : '사용자가 추가되었습니다.', 'success');
-    renderAdminPage(container, navigateTo);
-  });
 }
 
-/**
- * 요금제 변경 모달
- */
+// ═══════════════════════════════════════════
+// 요금제 변경 모달
+// ═══════════════════════════════════════════
 function showPlanChangeModal(user, container, navigateTo) {
   const modal = document.createElement('div');
   modal.className = 'modal-overlay';
@@ -425,7 +571,7 @@ function showPlanChangeModal(user, container, navigateTo) {
   modal.innerHTML = `
     <div class="modal" style="max-width:500px;">
       <div class="modal-header">
-        <h3>💎 요금제 변경 — ${user.name}</h3>
+        <h3>💎 요금제 변경 — ${user.name || '사용자'}</h3>
         <button class="btn btn-ghost btn-sm modal-close">✕</button>
       </div>
       <div class="modal-body">
@@ -435,10 +581,11 @@ function showPlanChangeModal(user, container, navigateTo) {
               border:2px solid ${(user.plan || 'free') === p.id ? p.color : 'var(--border)'};
               border-radius:10px; padding:16px; text-align:center; cursor:pointer;
               background:${(user.plan || 'free') === p.id ? p.color + '15' : 'var(--bg-secondary)'};
-            ">
+              transition:all 0.2s;
+            " onmouseover="this.style.borderColor='${p.color}'" onmouseout="this.style.borderColor='${(user.plan || 'free') === p.id ? p.color : 'var(--border)'}'" >
               <div style="font-size:24px;">${p.icon}</div>
-              <div style="font-size:14px; font-weight:700;">${p.name}</div>
-              <div style="font-size:16px; font-weight:800; color:${p.color};">${p.price}</div>
+              <div style="font-size:13px; font-weight:700; margin:4px 0;">${p.name}</div>
+              <div style="font-size:15px; font-weight:800; color:${p.color};">${p.price}</div>
               ${(user.plan || 'free') === p.id ? '<div style="font-size:10px; color:var(--success); margin-top:4px;">✓ 현재</div>' : ''}
             </div>
           `).join('')}
@@ -447,28 +594,29 @@ function showPlanChangeModal(user, container, navigateTo) {
     </div>
   `;
   document.body.appendChild(modal);
-
-  modal.querySelectorAll('.modal-close').forEach(b => b.addEventListener('click', () => modal.remove()));
+  modal.querySelector('.modal-close').addEventListener('click', () => modal.remove());
   modal.addEventListener('click', (e) => { if (e.target === modal) modal.remove(); });
 
   modal.querySelectorAll('.plan-card-admin').forEach(card => {
-    card.addEventListener('click', () => {
+    card.addEventListener('click', async () => {
       const planId = card.dataset.plan;
-      const state = getState();
-      const users = (state.adminUsers || []).map(u =>
-        (u.uid || u.id) === (user.uid || user.id) ? { ...u, plan: planId } : u
-      );
-      setState({ adminUsers: users });
-      modal.remove();
-      showToast(`${user.name}님의 요금제가 ${PLANS[planId].name}으로 변경되었습니다.`, 'success');
-      renderAdminPage(container, navigateTo);
+      try {
+        if (isConfigured && db) {
+          await updateDoc(doc(db, 'users', user.id), { plan: planId });
+        }
+        modal.remove();
+        showToast(`${user.name || '사용자'}님의 요금제를 ${PLANS[planId].name}으로 변경했습니다.`, 'success');
+        renderAdminPage(container, navigateTo);
+      } catch (e) {
+        showToast('변경 실패: ' + e.message, 'error');
+      }
     });
   });
 }
 
-/**
- * 공지사항 작성 모달
- */
+// ═══════════════════════════════════════════
+// 공지사항 모달
+// ═══════════════════════════════════════════
 function showNoticeModal(container, navigateTo) {
   const modal = document.createElement('div');
   modal.className = 'modal-overlay';
@@ -496,7 +644,6 @@ function showNoticeModal(container, navigateTo) {
     </div>
   `;
   document.body.appendChild(modal);
-
   modal.querySelectorAll('.modal-close').forEach(b => b.addEventListener('click', () => modal.remove()));
   modal.addEventListener('click', (e) => { if (e.target === modal) modal.remove(); });
 
