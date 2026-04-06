@@ -20,6 +20,8 @@ const ALL_FIELDS = [
   { key: 'quantity',   label: '수량',      numeric: true  },
   { key: 'unit',       label: '단위',      numeric: false },
   { key: 'unitPrice',  label: '단가',      numeric: true  },
+  { key: 'supplyValue',label: '공급가액',  numeric: true  },
+  { key: 'vat',        label: '부가세',    numeric: true  },
   { key: 'totalPrice', label: '합계금액',  numeric: true  },
   { key: 'warehouse',  label: '창고/위치', numeric: false },
   { key: 'expiryDate', label: '유통기한',  numeric: false },
@@ -127,7 +129,15 @@ export function renderInventoryPage(container, navigateTo) {
         <div class="stat-value" id="stat-qty">${calcTotalQty(data)}</div>
       </div>
       <div class="stat-card">
-        <div class="stat-label">총 금액</div>
+        <div class="stat-label">합계 공급가액</div>
+        <div class="stat-value" id="stat-supply" style="color:var(--info);">${calcTotalSupply(data)}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">합계 부가세</div>
+        <div class="stat-value" id="stat-vat" style="color:var(--warning);">${calcTotalVat(data)}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">총 합계금액</div>
         <div class="stat-value text-success" id="stat-price">${calcTotalPrice(data)}</div>
       </div>
       <div class="stat-card">
@@ -344,7 +354,13 @@ export function renderInventoryPage(container, navigateTo) {
           if (field === 'quantity' || field === 'unitPrice') {
             const q = parseFloat(data[idx].quantity) || 0;
             const p = parseFloat(data[idx].unitPrice) || 0;
-            updateItem(idx, { totalPrice: q * p });
+            const supply = q * p;
+            const vat = Math.floor(supply * 0.1);
+            updateItem(idx, { 
+              supplyValue: supply,
+              vat: vat,
+              totalPrice: supply + vat 
+            });
           }
           renderTable();
           updateStats();
@@ -430,14 +446,22 @@ export function renderInventoryPage(container, navigateTo) {
     const ss = getState().safetyStock || {};
     container.querySelector('#stat-total').textContent = d.length;
     container.querySelector('#stat-qty').textContent = calcTotalQty(d);
+    const supplyEl = container.querySelector('#stat-supply');
+    if(supplyEl) supplyEl.textContent = calcTotalSupply(d);
+    const vatEl = container.querySelector('#stat-vat');
+    if(vatEl) vatEl.textContent = calcTotalVat(d);
     container.querySelector('#stat-price').textContent = calcTotalPrice(d);
     const wc = d.filter(r => {
       const min = ss[r.itemName];
       return min !== undefined && (parseFloat(r.quantity) || 0) <= min;
     }).length;
+    // warningCount 엘리먼트는 위에서 제가 display:none 하거나 아예 뺐는데... (어이쿠 뺐네요)
+    // 다시 생각해 보니 재고 부족 경고 카드는 중요합니다.
     const warnEl = container.querySelector('#stat-warn');
-    warnEl.textContent = wc > 0 ? wc + '건' : '없음';
-    warnEl.className = `stat-value ${wc > 0 ? 'text-danger' : ''}`;
+    if (warnEl) {
+      warnEl.textContent = wc > 0 ? wc + '건' : '없음';
+      warnEl.className = `stat-value ${wc > 0 ? 'text-danger' : ''}`;
+    }
   }
 
   // === 컬럼 설정 패널 이벤트 ===
@@ -637,6 +661,20 @@ function openItemModal(container, navigateTo, editIdx = null) {
             <input class="form-input" type="number" id="f-unitPrice" value="${item.unitPrice ?? ''}" placeholder="0" />
           </div>
         </div>
+        <div class="form-row" style="background:#f8f9fa; padding:10px; border-radius:6px; margin-bottom:12px;">
+          <div class="form-group">
+            <label class="form-label" style="font-size:12px;">공급가액</label>
+            <input class="form-input" type="number" id="f-supplyValue" value="${item.supplyValue ?? ''}" disabled style="background:#eef1f5;" />
+          </div>
+          <div class="form-group">
+            <label class="form-label" style="font-size:12px;">부가세</label>
+            <input class="form-input" type="number" id="f-vat" value="${item.vat ?? ''}" disabled style="background:#eef1f5;" />
+          </div>
+          <div class="form-group">
+            <label class="form-label" style="font-size:12px;">합계금액</label>
+            <input class="form-input" type="number" id="f-totalPrice" value="${item.totalPrice ?? ''}" disabled style="background:#eef1f5;" />
+          </div>
+        </div>
         <div class="form-row">
           <div class="form-group">
             <label class="form-label">창고/위치</label>
@@ -663,6 +701,21 @@ function openItemModal(container, navigateTo, editIdx = null) {
   overlay.querySelector('#modal-cancel').addEventListener('click', close);
   overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
 
+  // 실시간 계산
+  const qtyInput = overlay.querySelector('#f-quantity');
+  const priceInput = overlay.querySelector('#f-unitPrice');
+  const calcTotals = () => {
+    const q = parseFloat(qtyInput.value) || 0;
+    const p = parseFloat(priceInput.value) || 0;
+    const supply = q * p;
+    const vat = Math.floor(supply * 0.1);
+    overlay.querySelector('#f-supplyValue').value = supply;
+    overlay.querySelector('#f-vat').value = vat;
+    overlay.querySelector('#f-totalPrice').value = supply + vat;
+  };
+  qtyInput.addEventListener('input', calcTotals);
+  priceInput.addEventListener('input', calcTotals);
+
   // 저장
   overlay.querySelector('#modal-save').addEventListener('click', () => {
     const name = overlay.querySelector('#f-itemName').value.trim();
@@ -686,7 +739,9 @@ function openItemModal(container, navigateTo, editIdx = null) {
       note: overlay.querySelector('#f-note').value.trim(),
     };
     // 합계 자동 계산
-    newItem.totalPrice = newItem.quantity * newItem.unitPrice;
+    newItem.supplyValue = newItem.quantity * newItem.unitPrice;
+    newItem.vat = Math.floor(newItem.supplyValue * 0.1);
+    newItem.totalPrice = newItem.supplyValue + newItem.vat;
 
     if (isEdit) {
       updateItem(editIdx, newItem);
@@ -709,10 +764,10 @@ function openItemModal(container, navigateTo, editIdx = null) {
 
 function formatCell(key, value) {
   if (value === '' || value === null || value === undefined) return '';
-  if (['quantity', 'unitPrice', 'totalPrice'].includes(key)) {
+  if (['quantity', 'unitPrice', 'supplyValue', 'vat', 'totalPrice'].includes(key)) {
     const num = parseFloat(value);
     if (!isNaN(num)) {
-      if (key === 'unitPrice' || key === 'totalPrice') {
+      if (key === 'unitPrice' || key === 'supplyValue' || key === 'vat' || key === 'totalPrice') {
         return '₩' + num.toLocaleString('ko-KR');
       }
       return num.toLocaleString('ko-KR');
@@ -727,6 +782,16 @@ function calcTotalQty(data) {
 
 function calcTotalPrice(data) {
   const total = data.reduce((s, r) => s + (parseFloat(r.totalPrice) || 0), 0);
+  return total > 0 ? '₩' + total.toLocaleString('ko-KR') : '-';
+}
+
+function calcTotalSupply(data) {
+  const total = data.reduce((s, r) => s + (parseFloat(r.supplyValue) || 0), 0);
+  return total > 0 ? '₩' + total.toLocaleString('ko-KR') : '-';
+}
+
+function calcTotalVat(data) {
+  const total = data.reduce((s, r) => s + (parseFloat(r.vat) || 0), 0);
   return total > 0 ? '₩' + total.toLocaleString('ko-KR') : '-';
 }
 

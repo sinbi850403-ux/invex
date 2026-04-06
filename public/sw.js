@@ -3,7 +3,7 @@
  * 왜 필요? → 인터넷 없는 창고 현장에서도 앱 사용 가능
  */
 
-const CACHE_NAME = 'erp-lite-v1.5';
+const CACHE_NAME = 'erp-lite-v1.6';
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',

@@ -220,7 +220,9 @@ export function addTransaction(tx) {
     }
     // 합계금액 재계산
     const price = parseFloat(item.unitPrice) || 0;
-    item.totalPrice = item.quantity * price;
+    item.supplyValue = item.quantity * price;
+    item.vat = Math.floor(item.supplyValue * 0.1);
+    item.totalPrice = item.supplyValue + item.vat;
   }
 
   saveToDB();
