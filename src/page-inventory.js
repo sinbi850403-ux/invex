@@ -7,6 +7,7 @@
 import { getState, setState, addItem, updateItem, deleteItem, setSafetyStock } from './store.js';
 import { showToast } from './toast.js';
 import { downloadExcel } from './excel.js';
+import { generateInventoryPDF } from './pdf-generator.js';
 
 // 페이지당 행 수
 const PAGE_SIZE = 20;
@@ -119,7 +120,8 @@ export function renderInventoryPage(container, navigateTo) {
         <div class="page-desc">${state.fileName ? `📄 ${state.fileName}` : ''} 총 ${data.length}개 품목</div>
       </div>
       <div class="page-actions">
-        <button class="btn btn-outline" id="btn-export">📥 엑셀 내보내기</button>
+        <button class="btn btn-outline" id="btn-export">📥 엑셀</button>
+        <button class="btn btn-outline" id="btn-export-pdf">📄 PDF</button>
         <button class="btn btn-primary" id="btn-add-item">+ 품목 추가</button>
       </div>
     </div>
@@ -602,6 +604,11 @@ export function renderInventoryPage(container, navigateTo) {
     } catch (err) {
       showToast(err.message, 'error');
     }
+  });
+
+  // PDF 내보내기
+  container.querySelector('#btn-export-pdf')?.addEventListener('click', () => {
+    generateInventoryPDF(data);
   });
 
   // 품목 추가 버튼

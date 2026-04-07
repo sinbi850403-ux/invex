@@ -7,6 +7,7 @@
 
 import { getState, setState } from './store.js';
 import { showToast } from './toast.js';
+import { generatePurchaseOrderPDF } from './pdf-generator.js';
 
 export function renderOrdersPage(container, navigateTo) {
   const state = getState();
@@ -98,6 +99,7 @@ export function renderOrdersPage(container, navigateTo) {
                         <button class="btn btn-sm btn-primary btn-send" data-id="${order.id}">발주</button>
                         <button class="btn-icon btn-icon-danger btn-delete" data-id="${order.id}" title="삭제">🗑️</button>
                       ` : ''}
+                      <button class="btn btn-sm btn-outline btn-pdf" data-id="${order.id}" title="PDF">📄</button>
                     </td>
                   </tr>
                 `;
@@ -279,6 +281,14 @@ export function renderOrdersPage(container, navigateTo) {
       setState({ purchaseOrders: orders.filter(o => o.id !== id) });
       showToast('발주서를 삭제했습니다.', 'info');
       renderOrdersPage(container, navigateTo);
+    });
+  });
+
+  // PDF 다운로드
+  container.querySelectorAll('.btn-pdf').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const order = orders.find(o => o.id === btn.dataset.id);
+      if (order) generatePurchaseOrderPDF(order);
     });
   });
 }
