@@ -151,10 +151,10 @@ export function renderHomePage(container, navigateTo) {
         <div class="card">
           <div class="card-title">⚡ 빠른 실행</div>
           <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">
-            <button class="btn btn-success btn-lg" style="width:100%;" data-nav="scanner">📱 바코드 스캔</button>
             <button class="btn btn-primary btn-lg" style="width:100%;" data-nav="inout">🔄 입출고 등록</button>
             <button class="btn btn-outline" style="width:100%;" data-nav="documents">📄 문서 생성</button>
             <button class="btn btn-outline" style="width:100%;" data-nav="ledger">📒 수불부</button>
+            <button class="btn btn-outline" style="width:100%;" data-nav="vendors">🤝 거래처 관리</button>
           </div>
         </div>
 

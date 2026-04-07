@@ -172,18 +172,23 @@ html.dark-mode .data-table thead th {
 html.dark-mode .data-table tbody td {
   border-color: #21262d;
   color: #e6edf3;
+}
+
+/* 줄무늬 및 기본 배경 — CSS 변수로 다크 모드 적용 */
+html.dark-mode {
+  --table-stripe: #161b22;
+  --table-hover: #1c2128;
+}
+
+html.dark-mode .data-table tbody tr {
   background: #161b22;
 }
 
-html.dark-mode .data-table tbody tr:nth-child(even) td {
+html.dark-mode .data-table tbody tr:nth-child(even) {
   background: #161b22;
 }
 
-html.dark-mode .data-table tbody tr:nth-child(odd) td {
-  background: #161b22;
-}
-
-html.dark-mode .data-table tbody tr:hover td {
+html.dark-mode .data-table tbody tr:hover {
   background: #1c2128;
 }
 
@@ -773,11 +778,11 @@ a:hover {
 }
 
 .data-table tbody tr:nth-child(even) {
-  background: #fafbfc;
+  background: var(--table-stripe, #fafbfc);
 }
 
 .data-table tbody tr:hover {
-  background: #eef2ff;
+  background: var(--table-hover, #eef2ff);
 }
 
 .data-table .text-right {

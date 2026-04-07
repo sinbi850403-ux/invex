@@ -218,7 +218,8 @@ function updatePreviewHighlight(container, mapping, headers) {
   table.querySelectorAll('tr').forEach(row => {
     const cells = row.querySelectorAll('th, td');
     cells.forEach((cell, ci) => {
-      if (ci > 0 && mapped.has(ci - 1)) cell.style.background = 'var(--accent-light)';
+      // 매핑된 컬럼 강조 — 다크 모드에서도 텍스트가 보이도록 투명도 낮은 색상 사용
+      if (ci > 0 && mapped.has(ci - 1)) cell.style.background = 'rgba(37,99,235,0.15)';
     });
   });
 }
