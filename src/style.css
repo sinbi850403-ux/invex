@@ -11,6 +11,41 @@
   padding: 0;
 }
 
+/* 폼 요소 기본 스타일 리셋 (Chrome, Edge, Safari, Firefox) */
+input, button, select, textarea {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-card);
+  color: var(--text-primary);
+  font-family: var(--font-family);
+  font-size: var(--font-size-sm);
+  padding: 8px 12px;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+input:focus, button:focus, select:focus, textarea:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(37,99,235,0.2);
+}
+
+button {
+  cursor: pointer;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+}
+
+button:hover {
+  background: var(--accent-hover);
+}
+
+
+
+
 :root {
   /* 색상: 프로 ERP 수준의 차분한 톤 */
   --bg-main: #f0f2f5;
@@ -150,7 +185,8 @@ html.dark-mode select {
 
 html.dark-mode .form-input::placeholder,
 html.dark-mode input::placeholder,
-html.dark-mode textarea::placeholder {
+html.dark-mode textarea::placeholder,
+html.dark-mode input::-ms-input-placeholder {
   color: #484f58 !important;
 }
 
@@ -355,6 +391,15 @@ html, body {
   border-right: 1px solid rgba(255,255,255,0.04);
 }
 
+/* 링크 색상 통일 */
+a, a:visited {
+  color: var(--accent);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+
 .sidebar-logo {
   color: #fff;
   font-size: var(--font-size-xl);
@@ -378,6 +423,58 @@ html, body {
   height: 1px;
   background: rgba(255,255,255,0.08);
   margin: 12px 16px;
+
+/* === 모바일 반응형 레이아웃 === */
+@media (max-width: 768px) {
+  /* 사이드바 숨김 및 토글 */
+  #sidebar {
+    width: 220px;
+    left: -220px; /* 화면 밖으로 이동 */
+    transition: left 0.3s ease;
+  }
+  #sidebar.open {
+    left: 0; /* 토글 시 표시 */
+  }
+  .sidebar-overlay {
+    display: none;
+  }
+  .sidebar-overlay.active {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 90;
+  }
+  /* 메인 콘텐츠 마진 제거 */
+  #main-content {
+    margin-left: 0;
+    padding: var(--space-md) var(--space-lg);
+  }
+  /* 모바일 토글 버튼 보이기 */
+  .mobile-toggle {
+    display: block;
+    position: fixed;
+    top: 12px;
+    left: 12px;
+    z-index: 110;
+    background: var(--bg-sidebar);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius);
+    padding: 8px 12px;
+    font-size: 18px;
+  }
+  /* 통계 카드 그리드 단일 열 */
+  .stat-grid {
+    grid-template-columns: 1fr;
+  }
+  /* 네비게이션 버튼 전체 너비 */
+  .nav-btn {
+    width: 100%;
+    justify-content: flex-start;
+  }
+}
+
 }
 
 .nav-section {
