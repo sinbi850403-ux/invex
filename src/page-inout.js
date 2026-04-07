@@ -61,7 +61,7 @@ export function renderInoutPage(container, navigateTo) {
       </select>
       <select class="filter-select" id="tx-vendor-filter">
         <option value="">전체 거래처</option>
-        ${getVendorList(items).map(v => `<option value="${v}">${v}</option>`).join('')}
+        ${getVendorOptions(transactions, items).map(v => `<option value="${v}">${v}</option>`).join('')}
       </select>
       <select class="filter-select" id="tx-code-filter">
         <option value="">전체 품목코드</option>
@@ -79,6 +79,7 @@ export function renderInoutPage(container, navigateTo) {
             <tr>
               <th class="col-num">#</th>
               <th>구분</th>
+              <th>거래처</th>
               <th>품목명</th>
               <th>품목코드</th>
               <th class="text-right">수량</th>
@@ -113,11 +114,10 @@ export function renderInoutPage(container, navigateTo) {
       )) return false;
       if (filter.type && tx.type !== filter.type) return false;
       if (filter.date && tx.date !== filter.date) return false;
-      // 거래처 필터: 해당 품목의 거래처를 items에서 찾아서 비교
-      if (filter.vendor) {
-        const matchItem = items.find(item => item.itemName === tx.itemName || item.itemCode === tx.itemCode);
-        if (!matchItem || matchItem.vendor !== filter.vendor) return false;
-      }
+      // 거래처 필터: 트랜잭션에 직접 기록된 거래처로 필터링
+      // 왜 직접 필터? → 기존에는 품목 기준 간접 비교였지만,
+      //   같은 품목을 여러 거래처에서 입고할 수 있으므로 트랜잭션 기준이 정확
+      if (filter.vendor && tx.vendor !== filter.vendor) return false;
       // 품목코드 필터
       if (filter.itemCode && tx.itemCode !== filter.itemCode) return false;
       return true;
@@ -133,7 +133,7 @@ export function renderInoutPage(container, navigateTo) {
 
     const tbody = container.querySelector('#tx-body');
     if (filtered.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; padding:32px; color:var(--text-muted);">
+      tbody.innerHTML = `<tr><td colspan="10" style="text-align:center; padding:32px; color:var(--text-muted);">
         ${transactions.length === 0 ? '아직 입출고 기록이 없습니다. 위의 버튼으로 등록하세요.' : '검색 결과가 없습니다.'}
       </td></tr>`;
     } else {
@@ -145,6 +145,7 @@ export function renderInoutPage(container, navigateTo) {
               ${tx.type === 'in' ? '📥 입고' : '📤 출고'}
             </span>
           </td>
+          <td style="font-size:12px;">${tx.vendor || '<span style="color:var(--text-muted)">-</span>'}</td>
           <td><strong>${tx.itemName || '-'}</strong></td>
           <td style="color:var(--text-muted);">${tx.itemCode || '-'}</td>
           <td class="text-right">
@@ -244,6 +245,7 @@ export function renderInoutPage(container, navigateTo) {
     }
     const exportData = transactions.map(tx => ({
       '구분': tx.type === 'in' ? '입고' : '출고',
+      '거래처': tx.vendor || '',
       '품목명': tx.itemName,
       '품목코드': tx.itemCode || '',
       '수량': tx.quantity,
@@ -265,6 +267,12 @@ export function renderInoutPage(container, navigateTo) {
  */
 function openTxModal(container, navigateTo, type, items) {
   const today = new Date().toISOString().split('T')[0];
+  // 거래처 목록: 입고→매입처, 출고→매출처
+  // 왜 구분? → 물건을 사오는 곳(매입처)과 파는 곳(매출처)이 다르므로
+  const state = getState();
+  const vendors = (state.vendorMaster || []).filter(v => 
+    type === 'in' ? v.type === 'supplier' : v.type === 'customer'
+  );
 
   const overlay = document.createElement('div');
   overlay.className = 'modal-overlay';
@@ -275,6 +283,14 @@ function openTxModal(container, navigateTo, type, items) {
         <button class="modal-close" id="modal-close">✕</button>
       </div>
       <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">${type === 'in' ? '매입처 (어디서 입고?)' : '매출처 (어디에 출고?)'}</label>
+          <select class="form-select" id="tx-vendor">
+            <option value="">-- 거래처 선택 (선택사항) --</option>
+            ${vendors.map(v => `<option value="${v.name}">${v.name}${v.contactName ? ` (${v.contactName})` : ''}</option>`).join('')}
+          </select>
+          ${vendors.length === 0 ? `<div style="font-size:11px; color:var(--text-muted); margin-top:4px;">💡 거래처 관리에서 ${type === 'in' ? '매입처' : '매출처'}를 먼저 등록하세요.</div>` : ''}
+        </div>
         <div class="form-group">
           <label class="form-label">품목 선택 <span class="required">*</span></label>
           ${items.length > 0 ? `
@@ -382,8 +398,11 @@ function openTxModal(container, navigateTo, type, items) {
       }
     }
 
+    // 선택된 거래처 포함하여 트랜잭션 저장
+    const vendor = overlay.querySelector('#tx-vendor')?.value || '';
     addTransaction({
       type,
+      vendor,
       itemName,
       itemCode,
       quantity: qty,
@@ -419,11 +438,14 @@ function countToday(transactions, type) {
 }
 
 /**
- * 등록된 품목들의 거래처 목록 추출
- * 왜? → 입출고 이력을 거래처별로 필터링하기 위해 필요
+ * 거래처 필터 옵션 추출
+ * 왜 트랜잭션과 품목 모두에서? → 기존 트랜잭션에 vendor가 없을 수 있으므로
+ *   품목의 vendor도 포함하여 빈틈없이 필터링
  */
-function getVendorList(items) {
-  return [...new Set(items.map(i => i.vendor).filter(Boolean))].sort();
+function getVendorOptions(transactions, items) {
+  const fromTx = transactions.map(tx => tx.vendor).filter(Boolean);
+  const fromItems = items.map(i => i.vendor).filter(Boolean);
+  return [...new Set([...fromTx, ...fromItems])].sort();
 }
 
 /**
