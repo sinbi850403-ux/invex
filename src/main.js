@@ -43,6 +43,8 @@ import { renderAutoOrderPage } from './page-auto-order.js';
 import { renderProfitPage } from './page-profit.js';
 import { renderBackupPage } from './page-backup.js';
 import { renderOrdersPage } from './page-orders.js';
+import { renderForecastPage } from './page-forecast.js';
+import { checkAndShowOnboarding } from './onboarding.js';
 import { initGlobalSearch, toggleGlobalSearch } from './global-search.js';
 import { initTheme, toggleTheme } from './theme.js';
 import { initAuth, getCurrentUser, getUserProfileData, loginWithGoogle, loginWithEmail, signupWithEmail, resetPassword, logout } from './firebase-auth.js';
@@ -62,6 +64,24 @@ injectGetUserProfile(getUserProfileData);
 
 // Firebase 인증 초기화 — 로그인 상태에 따라 앱 접근 제어
 let isAuthReady = false;
+
+// === 랜딩 페이지 이벤트 ===
+// 왜? → 랜딩에서 "무료로 시작하기" 클릭 → 랜딩 숨기고 로그인 게이트 표시
+function showAuthGate() {
+  const landing = document.getElementById('landing-page');
+  const gate = document.getElementById('auth-gate');
+  if (landing) landing.style.display = 'none';
+  if (gate) { gate.style.display = 'flex'; gate.style.opacity = '1'; }
+}
+
+['landing-goto-login', 'landing-cta-signup', 'landing-cta-bottom'].forEach(id => {
+  document.getElementById(id)?.addEventListener('click', showAuthGate);
+});
+
+// "기능 둘러보기" → #features로 스크롤
+document.getElementById('landing-cta-demo')?.addEventListener('click', () => {
+  document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' });
+});
 
 // === 로그인 게이트 이벤트 ===
 
@@ -266,7 +286,9 @@ initAuth((user, profile) => {
   const gate = document.getElementById('auth-gate');
   
   if (user) {
-    // ✅ 로그인 성공 → 게이트 숨기고 앱 표시
+    // ✅ 로그인 성공 → 랜딩 + 게이트 숨기고 앱 표시
+    const landing = document.getElementById('landing-page');
+    if (landing) landing.style.display = 'none';
     if (gate) {
       gate.style.opacity = '0';
       setTimeout(() => { gate.style.display = 'none'; }, 300);
@@ -297,9 +319,11 @@ initAuth((user, profile) => {
     updateUserUI(null, null);
     clearMonitorUser();
     if (gate) {
-      gate.style.display = 'flex';
-      gate.style.opacity = '1';
+      gate.style.display = 'none';
     }
+    // 미로그인 → 랜딩 페이지 표시
+    const landing = document.getElementById('landing-page');
+    if (landing) landing.style.display = 'block';
     isAuthReady = false;
   }
 });
@@ -342,6 +366,7 @@ const pages = {
   profit: renderProfitPage,
   backup: renderBackupPage,
   orders: renderOrdersPage,
+  forecast: renderForecastPage,
 };
 
 /**
@@ -626,6 +651,8 @@ async function initAppAfterAuth() {
   updateSidebarBadges();
   updatePlanDisplay();
   navigateTo(currentPage);
+  // 첫 로그인 사용자에게 온보딩 마법사 표시
+  checkAndShowOnboarding(navigateTo);
 }
 
 // Firebase 미설정(로컬 개발) 시에는 게이트 자동 해제

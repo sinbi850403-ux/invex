@@ -67,7 +67,7 @@ const PAGE_MIN_PLAN = {
   bulk: 'pro', scanner: 'pro', labels: 'pro', transfer: 'pro',
   stocktake: 'pro', vendors: 'pro', summary: 'pro', dashboard: 'pro',
   costing: 'pro', accounts: 'pro', ledger: 'pro', documents: 'pro', auditlog: 'pro',
-  'tax-reports': 'pro', 'auto-order': 'pro', orders: 'pro', profit: 'pro',
+  'tax-reports': 'pro', 'auto-order': 'pro', orders: 'pro', profit: 'pro', forecast: 'pro',
   // Enterprise 기능
   warehouses: 'enterprise', roles: 'enterprise', api: 'enterprise',
 };
