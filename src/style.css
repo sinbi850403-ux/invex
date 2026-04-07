@@ -27,6 +27,24 @@ input, button, select, textarea {
   transition: border-color 0.2s, box-shadow 0.2s;
 }
 
+/* Chrome autofill 가시성 보정 */
+input:-webkit-autofill,
+textarea:-webkit-autofill,
+select:-webkit-autofill {
+  -webkit-box-shadow: 0 0 0px 1000px var(--bg-card) inset !important;
+  -webkit-text-fill-color: var(--text-primary) !important;
+  background-color: var(--bg-card) !important;
+}
+
+/* 다크 모드에서 autofill */
+html.dark-mode input:-webkit-autofill,
+html.dark-mode textarea:-webkit-autofill,
+html.dark-mode select:-webkit-autofill {
+  -webkit-box-shadow: 0 0 0px 1000px var(--bg-card) inset !important;
+  -webkit-text-fill-color: var(--text-primary) !important;
+  background-color: var(--bg-card) !important;
+}
+
 input:focus, button:focus, select:focus, textarea:focus {
   border-color: var(--accent);
   box-shadow: 0 0 0 2px rgba(37,99,235,0.2);
