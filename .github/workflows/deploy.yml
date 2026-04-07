@@ -7,7 +7,7 @@ name: CI 자동 배포
 
 on:
   push:
-    branches: [main]
+    branches: [main, master]
   workflow_dispatch: # 수동 실행도 가능
 
 jobs:
