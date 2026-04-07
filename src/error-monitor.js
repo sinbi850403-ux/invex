@@ -34,7 +34,7 @@ export function initErrorMonitor() {
   try {
     Sentry.init({
       dsn: SENTRY_DSN,
-      environment: window.location.hostname === 'invex.co.kr' ? 'production' : 'development',
+      environment: window.location.hostname === 'invex.io.kr' ? 'production' : 'development',
       // 왜 0.5? → 무료 플랜은 월 5,000건 제한이므로 50%만 샘플링
       tracesSampleRate: 0.5,
       // 민감한 사용자 정보는 수집하지 않음
