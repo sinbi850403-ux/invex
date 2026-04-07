@@ -62,6 +62,7 @@ const PAGE_MIN_PLAN = {
   // Free 기능
   home: 'free', upload: 'free', mapping: 'free',
   inventory: 'free', inout: 'free', settings: 'free', billing: 'free', admin: 'free',
+  mypage: 'free', guide: 'free', support: 'free', team: 'free',
   // Pro 기능
   bulk: 'pro', scanner: 'pro', labels: 'pro', transfer: 'pro',
   stocktake: 'pro', vendors: 'pro', summary: 'pro', dashboard: 'pro',
@@ -72,6 +73,50 @@ const PAGE_MIN_PLAN = {
 
 // 요금제 등급 순서 (비교용)
 const PLAN_RANK = { free: 0, pro: 1, enterprise: 2 };
+
+// 1년 무료 이용 기간 (일)
+const FREE_PERIOD_DAYS = 365;
+
+/**
+ * 1년 무료 기간 내 여부 체크
+ * 왜? → 가입 후 1년간 모든 기능 무료 개방. 1년 후 요금제 제한 적용.
+ */
+let _getUserProfile = null;
+export function injectGetUserProfile(fn) { _getUserProfile = fn; }
+
+function isInFreePeriod() {
+  const profile = _getUserProfile?.();
+  if (!profile || !profile.createdAt) return true; // 프로필 없으면 일단 허용
+
+  const created = new Date(profile.createdAt);
+  const now = new Date();
+  const daysSinceCreation = Math.floor((now - created) / (1000 * 60 * 60 * 24));
+
+  return daysSinceCreation <= FREE_PERIOD_DAYS;
+}
+
+/**
+ * 무료 기간 정보 반환 (외부에서 D-day 표시용)
+ */
+export function getFreePeriodStatus() {
+  const profile = _getUserProfile?.();
+  if (!profile || !profile.createdAt) {
+    return { inFree: true, daysLeft: FREE_PERIOD_DAYS, endDate: '-' };
+  }
+
+  const created = new Date(profile.createdAt);
+  const freeEnd = new Date(created);
+  freeEnd.setDate(freeEnd.getDate() + FREE_PERIOD_DAYS);
+  const now = new Date();
+  const daysLeft = Math.max(0, Math.ceil((freeEnd - now) / (1000 * 60 * 60 * 24)));
+
+  return {
+    inFree: daysLeft > 0,
+    daysLeft,
+    endDate: freeEnd.toLocaleDateString('ko-KR'),
+    startDate: created.toLocaleDateString('ko-KR'),
+  };
+}
 
 /**
  * 현재 요금제 조회
@@ -101,6 +146,10 @@ export function canAccessPage(pageId) {
   const user = _getCurrentUser?.();
   if (user && SUPER_ADMINS.includes(user.email)) return true;
 
+  // 1년 무료 기간 체크 — 가입일 기준 365일 이내면 모든 기능 개방
+  // 왜? → 1년 무료 오픈이므로 요금제 제한을 걸면 안 됨
+  if (isInFreePeriod()) return true;
+
   const currentPlan = getCurrentPlan();
   const plan = PLANS[currentPlan];
   if (!plan) return false;
@@ -123,10 +172,13 @@ export function getPageMinPlan(pageId) {
  * 페이지용 배지 텍스트 반환 (현재 요금제보다 높은 것만)
  */
 export function getPageBadge(pageId) {
+  // 1년 무료 기간이면 배지 숨김 (모든 기능 열림)
+  if (isInFreePeriod()) return null;
+
   const minPlan = getPageMinPlan(pageId);
   const current = getCurrentPlan();
 
-  if (PLAN_RANK[minPlan] <= PLAN_RANK[current]) return null; // 접근 가능 → 배지 없음
+  if (PLAN_RANK[minPlan] <= PLAN_RANK[current]) return null;
 
   if (minPlan === 'pro') return { text: 'PRO', color: '#3b82f6' };
   if (minPlan === 'enterprise') return { text: 'ENT', color: '#8b5cf6' };
