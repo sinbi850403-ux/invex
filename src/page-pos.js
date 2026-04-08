@@ -12,6 +12,7 @@ import { getState, setState } from './store.js';
 import { showToast } from './toast.js';
 import { readExcelFile, downloadExcel } from './excel.js';
 import { isAdmin } from './page-admin.js';
+import * as XLSX from 'xlsx';
 
 // POS 필드 정의 — POS 시스템에서 내보내는 일반적인 컬럼들
 const POS_FIELDS = [
@@ -369,9 +370,12 @@ function openPosUploadModal(container, navigateTo) {
       <div class="modal-body">
         <div class="alert alert-info" style="margin-bottom:16px; font-size:12px;">
           <strong>📌 사용 방법:</strong><br/>
-          ① POS 시스템에서 매출 내역을 엑셀로 내보내세요<br/>
-          ② 파일을 아래에 업로드하면 자동으로 헤더를 인식합니다<br/>
+          ① 아래 '양식 다운로드'로 POS 엑셀 양식을 받으세요<br/>
+          ② POS 시스템 데이터를 양식에 맞게 붙여넣거나 직접 업로드하세요<br/>
           ③ 매핑 결과를 확인하고 '등록' 버튼을 누르세요
+        </div>
+        <div style="margin-bottom:16px;">
+          <button class="btn btn-outline" id="btn-pos-template">📋 POS 양식 다운로드</button>
         </div>
         <div style="border:2px dashed var(--border); border-radius:8px; padding:40px; text-align:center; cursor:pointer; transition:border-color 0.2s;" id="pos-dropzone">
           <div style="font-size:36px; margin-bottom:8px;">📂</div>
@@ -388,6 +392,11 @@ function openPosUploadModal(container, navigateTo) {
   const close = () => overlay.remove();
   overlay.querySelector('#pos-modal-close').addEventListener('click', close);
   overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+
+  // POS 양식 다운로드
+  overlay.querySelector('#btn-pos-template').addEventListener('click', () => {
+    downloadPosTemplate();
+  });
 
   // 파일 업로드 이벤트
   const dropzone = overlay.querySelector('#pos-dropzone');
@@ -547,4 +556,100 @@ async function processPosFile(file, overlay, container, navigateTo, closeModal) 
   } catch (err) {
     previewEl.innerHTML = `<div class="alert alert-danger">파일 처리 중 오류: ${err.message}</div>`;
   }
+}
+
+/**
+ * POS 엑셀 양식 생성 & 다운로드
+ * 왜 별도 양식? → POS 시스템마다 내보내기 포맷이 달라서
+ *   표준 양식을 제공하면 수동 입력/복사-붙여넣기가 쉬워짐
+ */
+function downloadPosTemplate() {
+  const wb = XLSX.utils.book_new();
+  const today = new Date().toISOString().split('T')[0];
+  const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+
+  // 데이터 시트
+  const headers = ['판매일자', '매장명', '구분', '총매출액', '매출금액', '부가세', '카드', '현금', '포인트', '환불/할인', '순매출', '품목명', '수량', '단가', 'POS번호', '비고'];
+  const sampleRows = [
+    [today, '본점', '정상', 750000, 681819, 68181, 450000, 300000, 0, 0, 750000, '', '', '', '0001', '1일차 매출'],
+    [today, '본점', '정상', 500000, 454545, 45455, 500000, 0, 0, 0, 500000, '', '', '', '0002', '카드 100%'],
+    [today, '본점', '정상', 150000, 136364, 13636, 0, 100000, 50000, 0, 150000, '', '', '', '0003', '현금+포인트'],
+    [today, '본점', '소계', 1400000, 1272728, 127272, 950000, 400000, 50000, 0, 1400000, '', '', '', '', '본점 소계'],
+    [today, '2호점', '정상', 320000, 290909, 29091, 320000, 0, 0, 0, 320000, '', '', '', '0004', ''],
+    [today, '2호점', '정상', 180000, 163636, 16364, 100000, 80000, 0, 0, 180000, '', '', '', '0005', ''],
+    [today, '2호점', '환불', -50000, -45455, -4545, -50000, 0, 0, 50000, -50000, '', '', '', '0006', '불량 환불'],
+    [today, '2호점', '소계', 450000, 409090, 40910, 370000, 80000, 0, 50000, 450000, '', '', '', '', '2호점 소계'],
+    [yesterday, '본점', '정상', 620000, 563636, 56364, 400000, 220000, 0, 0, 620000, '', '', '', '0007', '전일 매출'],
+    [yesterday, '본점', '정상', 280000, 254545, 25455, 280000, 0, 0, 0, 280000, '', '', '', '0008', ''],
+  ];
+
+  const ws = XLSX.utils.aoa_to_sheet([headers, ...sampleRows]);
+  ws['!cols'] = [
+    { wch: 12 },  // 판매일자
+    { wch: 10 },  // 매장명
+    { wch: 8 },   // 구분
+    { wch: 14 },  // 총매출액
+    { wch: 14 },  // 매출금액
+    { wch: 12 },  // 부가세
+    { wch: 12 },  // 카드
+    { wch: 12 },  // 현금
+    { wch: 10 },  // 포인트
+    { wch: 12 },  // 환불/할인
+    { wch: 14 },  // 순매출
+    { wch: 16 },  // 품목명
+    { wch: 8 },   // 수량
+    { wch: 10 },  // 단가
+    { wch: 10 },  // POS번호
+    { wch: 20 },  // 비고
+  ];
+  XLSX.utils.book_append_sheet(wb, ws, 'POS 매출 데이터');
+
+  // 안내 시트
+  const guideData = [
+    ['📌 INVEX POS 매출 양식 사용 안내'],
+    [''],
+    ['✅ 이 양식에 POS 매출 데이터를 작성하여 INVEX에 업로드하세요.'],
+    [''],
+    ['━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'],
+    ['■ 작성 방법'],
+    [''],
+    ['  ① 판매일자 : YYYY-MM-DD 형식 (예: 2026-04-08)'],
+    ['  ② 매장명   : 매장 이름 (본점, 2호점 등)'],
+    ['  ③ 구분     : 정상, 소계, 환불 등'],
+    ['  ④ 총매출액 : 해당 건의 총 매출 (부가세 포함)'],
+    ['  ⑤ 매출금액 : 부가세 제외 공급가액'],
+    ['  ⑥ 부가세   : 부가가치세 금액'],
+    ['  ⑦ 카드     : 카드 결제 금액'],
+    ['  ⑧ 현금     : 현금 결제 금액'],
+    ['  ⑨ 포인트   : 포인트 사용 금액'],
+    [''],
+    ['━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'],
+    ['■ POS 시스템에서 가져오기'],
+    [''],
+    ['  → POS 관리 프로그램에서 "매출 내역 조회" → "엑셀 내보내기"'],
+    ['  → 내보낸 파일을 그대로 INVEX에 업로드해도 자동 인식됩니다!'],
+    ['  → 이 양식은 POS 데이터가 없을 때 수동 입력용입니다.'],
+    [''],
+    ['━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'],
+    ['■ 환불 처리'],
+    [''],
+    ['  → 환불 건은 금액을 음수(-)로 입력하세요'],
+    ['  → 구분 컬럼에 "환불"이라고 적어주세요'],
+    [''],
+    ['━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'],
+    ['■ 자동 인식되는 헤더 이름 (헤더가 조금 달라도 OK!)'],
+    [''],
+    ['  총매출: 총매출액, 총매출, 매출합계, 합계금액, 합계'],
+    ['  카드:   카드, 카드금액, 카드매출, 신용카드'],
+    ['  현금:   현금, 현금금액, 현금매출'],
+    ['  부가세: 부가세, 세액, 부가가치세'],
+    [''],
+    ['📎 자세한 사용법: https://invex.io.kr'],
+  ];
+  const guideWs = XLSX.utils.aoa_to_sheet(guideData);
+  guideWs['!cols'] = [{ wch: 55 }];
+  XLSX.utils.book_append_sheet(wb, guideWs, '📖 작성방법');
+
+  XLSX.writeFile(wb, 'INVEX_POS매출_양식.xlsx');
+  showToast('POS 양식을 다운로드했습니다.', 'success');
 }
