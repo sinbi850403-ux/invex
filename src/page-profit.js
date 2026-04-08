@@ -7,6 +7,31 @@
 
 import { getState } from './store.js';
 import { renderWeeklyTrendChart, renderMonthlyChart, renderCategoryChart } from './charts.js';
+import { calcSaleAmount, calcPurchaseAmount } from './price-utils.js';
+
+// 기본 마진(예: 20%)을 적용해 판매가격이 없을 경우 추정 판매가격을 계산합니다.
+const DEFAULT_MARGIN = 0.2; // 20% 마진
+
+/**
+ * 판매가격을 반환합니다. tx.unitPrice가 있으면 그대로 사용하고, 없으면 단가에 마진을 적용해 추정합니다.
+ * @param {Object} tx - 거래 객체
+ * @returns {number} 판매가격
+ */
+function getSalePrice(tx) {
+  const unitPrice = parseFloat(tx.unitPrice);
+  if (!isNaN(unitPrice) && unitPrice > 0) return unitPrice;
+  const unitCost = parseFloat(tx.unitCost) || parseFloat(tx.unitPrice) || 0;
+  return unitCost * (1 + DEFAULT_MARGIN);
+}
+
+/**
+ * 판매 금액을 계산합니다. 수량 * 추정/실제 판매가격
+ * @param {Object} tx - 거래 객체
+ * @returns {number}
+ */
+function calcSaleAmount(tx) {
+  return (parseFloat(tx.quantity) || 0) * getSalePrice(tx);
+}
 
 export function renderProfitPage(container, navigateTo) {
   const state = getState();
@@ -19,17 +44,17 @@ export function renderProfitPage(container, navigateTo) {
 
   // === 전체 기간 손익 ===
   const totalPurchase = transactions.filter(tx => tx.type === 'in')
-    .reduce((s, tx) => s + calcAmount(tx), 0);
+    .reduce((s, tx) => s + calcPurchaseAmount(tx), 0);
   const totalSales = transactions.filter(tx => tx.type === 'out')
-    .reduce((s, tx) => s + calcAmount(tx), 0);
+    .reduce((s, tx) => s + calcSaleAmount(tx), 0);
   const totalProfit = totalSales - totalPurchase;
   const profitRate = totalSales > 0 ? ((totalProfit / totalSales) * 100).toFixed(1) : '0';
 
   // === 이번 달 손익 ===
   const prefix = `${currentYear}-${String(currentMonth).padStart(2, '0')}`;
   const monthTx = transactions.filter(tx => (tx.date || '').startsWith(prefix));
-  const monthPurchase = monthTx.filter(tx => tx.type === 'in').reduce((s, tx) => s + calcAmount(tx), 0);
-  const monthSales = monthTx.filter(tx => tx.type === 'out').reduce((s, tx) => s + calcAmount(tx), 0);
+  const monthPurchase = monthTx.filter(tx => tx.type === 'in').reduce((s, tx) => s + calcPurchaseAmount(tx), 0);
+  const monthSales = monthTx.filter(tx => tx.type === 'out').reduce((s, tx) => s + calcSaleAmount(tx), 0);
   const monthProfit = monthSales - monthPurchase;
   const monthRate = monthSales > 0 ? ((monthProfit / monthSales) * 100).toFixed(1) : '0';
 
@@ -42,8 +67,8 @@ export function renderProfitPage(container, navigateTo) {
     const m = d.getMonth() + 1;
     const p = `${y}-${String(m).padStart(2, '0')}`;
     const mTx = transactions.filter(tx => (tx.date || '').startsWith(p));
-    const mIn = mTx.filter(tx => tx.type === 'in').reduce((s, tx) => s + calcAmount(tx), 0);
-    const mOut = mTx.filter(tx => tx.type === 'out').reduce((s, tx) => s + calcAmount(tx), 0);
+    const mIn = mTx.filter(tx => tx.type === 'in').reduce((s, tx) => s + calcPurchaseAmount(tx), 0);
+    const mOut = mTx.filter(tx => tx.type === 'out').reduce((s, tx) => s + calcSaleAmount(tx), 0);
     monthlyData.push({ label: `${m}월`, purchase: mIn, sales: mOut, profit: mOut - mIn });
   }
 
@@ -52,8 +77,11 @@ export function renderProfitPage(container, navigateTo) {
   transactions.forEach(tx => {
     const name = tx.itemName || '미분류';
     if (!itemProfitMap[name]) itemProfitMap[name] = { purchase: 0, sales: 0 };
-    if (tx.type === 'in') itemProfitMap[name].purchase += calcAmount(tx);
-    else itemProfitMap[name].sales += calcAmount(tx);
+    if (tx.type === 'in') {
+      itemProfitMap[name].purchase += calcPurchaseAmount(tx);
+    } else {
+      itemProfitMap[name].sales += calcSaleAmount(tx);
+    }
   });
 
   const itemProfits = Object.entries(itemProfitMap)
@@ -69,8 +97,11 @@ export function renderProfitPage(container, navigateTo) {
   transactions.forEach(tx => {
     const v = tx.vendor || '(미지정)';
     if (!vendorProfitMap[v]) vendorProfitMap[v] = { purchase: 0, sales: 0 };
-    if (tx.type === 'in') vendorProfitMap[v].purchase += calcAmount(tx);
-    else vendorProfitMap[v].sales += calcAmount(tx);
+    if (tx.type === 'in') {
+      vendorProfitMap[v].purchase += calcPurchaseAmount(tx);
+    } else {
+      vendorProfitMap[v].sales += calcSaleAmount(tx);
+    }
   });
 
   const vendorProfits = Object.entries(vendorProfitMap)
