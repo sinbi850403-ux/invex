@@ -135,15 +135,15 @@ export function renderInventoryPage(container, navigateTo) {
       </div>
       <div class="stat-card">
         <div class="stat-label">총 수량</div>
-        <div class="stat-value" id="stat-qty">${calcTotalQty(data)}</div>
+        <div class="stat-value text-accent" id="stat-qty">${calcTotalQty(data)}</div>
       </div>
       <div class="stat-card">
         <div class="stat-label">합계 공급가액</div>
-        <div class="stat-value" id="stat-supply" style="color:var(--info);">${calcTotalSupply(data)}</div>
+        <div class="stat-value text-accent" id="stat-supply">${calcTotalSupply(data)}</div>
       </div>
       <div class="stat-card">
         <div class="stat-label">합계 부가세</div>
-        <div class="stat-value" id="stat-vat" style="color:var(--warning);">${calcTotalVat(data)}</div>
+        <div class="stat-value text-accent" id="stat-vat">${calcTotalVat(data)}</div>
       </div>
       <div class="stat-card">
         <div class="stat-label">총 합계금액</div>
@@ -239,7 +239,7 @@ export function renderInventoryPage(container, navigateTo) {
             ${FIELD_LABELS[key]}
           </th>
         `).join('')}
-        <th class="text-center" style="width:50px;" title="안전재고 설정">⚙️</th>
+        <th class="text-center" style="width:70px;">안전재고</th>
         <th class="col-actions">관리</th>
       </tr>
     `;
@@ -301,8 +301,10 @@ export function renderInventoryPage(container, navigateTo) {
             `).join('')}
             <td class="text-center">
               <button class="btn-icon btn-safety" data-name="${row.itemName}" data-min="${min ?? ''}"
-                title="안전재고: ${min !== undefined ? min : '미설정'}">
-                ${min !== undefined ? '🔔' : '➖'}
+                title="클릭하여 안전재고 수량 설정"
+                style="font-size:11px; padding:2px 6px; border-radius:4px;
+                  ${min !== undefined ? 'background:rgba(63,185,80,0.15); color:var(--success);' : 'color:var(--text-muted);'}">
+                ${min !== undefined ? `🔔 ${min}` : '설정'}
               </button>
             </td>
             <td class="col-actions">
