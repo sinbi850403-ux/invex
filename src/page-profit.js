@@ -9,29 +9,6 @@ import { getState } from './store.js';
 import { renderWeeklyTrendChart, renderMonthlyChart, renderCategoryChart } from './charts.js';
 import { calcSaleAmount, calcPurchaseAmount } from './price-utils.js';
 
-// 기본 마진(예: 20%)을 적용해 판매가격이 없을 경우 추정 판매가격을 계산합니다.
-const DEFAULT_MARGIN = 0.2; // 20% 마진
-
-/**
- * 판매가격을 반환합니다. tx.unitPrice가 있으면 그대로 사용하고, 없으면 단가에 마진을 적용해 추정합니다.
- * @param {Object} tx - 거래 객체
- * @returns {number} 판매가격
- */
-function getSalePrice(tx) {
-  const unitPrice = parseFloat(tx.unitPrice);
-  if (!isNaN(unitPrice) && unitPrice > 0) return unitPrice;
-  const unitCost = parseFloat(tx.unitCost) || parseFloat(tx.unitPrice) || 0;
-  return unitCost * (1 + DEFAULT_MARGIN);
-}
-
-/**
- * 판매 금액을 계산합니다. 수량 * 추정/실제 판매가격
- * @param {Object} tx - 거래 객체
- * @returns {number}
- */
-function calcSaleAmount(tx) {
-  return (parseFloat(tx.quantity) || 0) * getSalePrice(tx);
-}
 
 export function renderProfitPage(container, navigateTo) {
   const state = getState();
@@ -225,9 +202,7 @@ export function renderProfitPage(container, navigateTo) {
   }, 50);
 }
 
-function calcAmount(tx) {
-  return (parseFloat(tx.quantity) || 0) * (parseFloat(tx.unitPrice) || 0);
-}
+
 
 /**
  * 손익 추이 차트 (매출/매입/이익 3선)
