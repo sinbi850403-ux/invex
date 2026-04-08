@@ -23,7 +23,7 @@ export function getSalePrice(tx) {
 
   // 2순위: 매입단가에 기본 마진을 적용해 추정
   const unitCost = parseFloat(tx.unitCost) || parseFloat(tx.unitPrice) || 0;
-  if (unitCost > 0) return unitCost * (1 + DEFAULT_MARGIN);
+  if (unitCost > 0) return Math.round(unitCost * (1 + DEFAULT_MARGIN));
 
   // 둘 다 없으면 0 반환
   return 0;
@@ -36,7 +36,7 @@ export function getSalePrice(tx) {
  * @returns {number} 판매 금액 (원)
  */
 export function calcSaleAmount(tx) {
-  return (parseFloat(tx.quantity) || 0) * getSalePrice(tx);
+  return Math.round((parseFloat(tx.quantity) || 0) * getSalePrice(tx));
 }
 
 /**
@@ -46,5 +46,5 @@ export function calcSaleAmount(tx) {
  * @returns {number} 매입 금액 (원)
  */
 export function calcPurchaseAmount(tx) {
-  return (parseFloat(tx.quantity) || 0) * (parseFloat(tx.unitCost) || parseFloat(tx.unitPrice) || 0);
+  return Math.round((parseFloat(tx.quantity) || 0) * (parseFloat(tx.unitCost) || parseFloat(tx.unitPrice) || 0));
 }

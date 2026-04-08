@@ -194,8 +194,10 @@ function calculateCosts(items, transactions, method) {
         break;
     }
 
-    const totalCost = qty * unitCost;
-    const marketValue = qty * sellPrice;
+    // 왜 Math.round? → 원단위 반올림으로 소수점 제거 (한국 회계 기준)
+    unitCost = Math.round(unitCost);
+    const totalCost = Math.round(qty * unitCost);
+    const marketValue = Math.round(qty * sellPrice);
     const profit = marketValue - totalCost;
 
     return {
@@ -204,7 +206,7 @@ function calculateCosts(items, transactions, method) {
       qty,
       unitCost,
       totalCost,
-      sellPrice,
+      sellPrice: Math.round(sellPrice),
       marketValue,
       profit,
     };

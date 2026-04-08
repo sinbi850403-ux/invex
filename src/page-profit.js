@@ -31,9 +31,9 @@ export function renderProfitPage(container, navigateTo) {
     const salePrice = getSalePrice(item);                    // 판매가 (없으면 20% 마진 추정)
     const hasRealSalePrice = parseFloat(item.salePrice) > 0; // 실제 판매가 입력 여부
 
-    const totalCost = qty * costPrice;                       // 매입 총액
-    const totalRevenue = qty * salePrice;                    // 매출 총액 (예상)
-    const profit = totalRevenue - totalCost;                 // 이익
+    const totalCost = Math.round(qty * costPrice);            // 매입 총액 (원단위 반올림)
+    const totalRevenue = Math.round(qty * salePrice);          // 매출 총액 (원단위 반올림)
+    const profit = totalRevenue - totalCost;                   // 이익
     const profitRate = totalRevenue > 0 ? (profit / totalRevenue * 100) : 0; // 이익률(%)
     const marginRate = totalCost > 0 ? (profit / totalCost * 100) : 0;      // 마진율(%)
 
