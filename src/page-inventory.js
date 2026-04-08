@@ -20,8 +20,8 @@ const ALL_FIELDS = [
   { key: 'vendor',     label: '거래처',    numeric: false },
   { key: 'quantity',   label: '수량',      numeric: true  },
   { key: 'unit',       label: '단위',      numeric: false },
-  { key: 'unitPrice',  label: '단가(매입)', numeric: true  },
-  { key: 'salePrice',  label: '판매단가',  numeric: true  },
+  { key: 'unitPrice',  label: '매입가(원가)', numeric: true  },
+  { key: 'salePrice',  label: '판매가(소가)',  numeric: true  },
   { key: 'supplyValue',label: '공급가액',  numeric: true  },
   { key: 'vat',        label: '부가세',    numeric: true  },
   { key: 'totalPrice', label: '합계금액',  numeric: true  },
@@ -673,7 +673,7 @@ function openItemModal(container, navigateTo, editIdx = null) {
             <input class="form-input" id="f-unit" value="${item.unit || ''}" placeholder="EA, KG, M ..." />
           </div>
           <div class="form-group">
-            <label class="form-label">단가(매입)</label>
+            <label class="form-label">매입가(원가)</label>
             <input class="form-input" type="number" id="f-unitPrice" value="${item.unitPrice ?? ''}" placeholder="0" />
           </div>
         </div>

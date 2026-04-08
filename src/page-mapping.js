@@ -15,8 +15,8 @@ const ERP_FIELDS = [
   { key: 'vendor', label: '거래처', required: false },
   { key: 'quantity', label: '수량', required: true },
   { key: 'unit', label: '단위', required: false },
-  { key: 'unitPrice', label: '단가(매입)', required: false },
-  { key: 'salePrice', label: '판매단가', required: false },
+  { key: 'unitPrice', label: '매입가(원가)', required: false },
+  { key: 'salePrice', label: '판매가(소가)', required: false },
   { key: 'supplyValue', label: '공급가액', required: false },
   { key: 'vat', label: '부가세', required: false },
   { key: 'totalPrice', label: '합계금액', required: false },
@@ -187,17 +187,19 @@ function renderMappingRow(field, headers, mapping) {
 
 function autoMap(headers, mapping) {
   const lower = headers.map(h => (h || '').toString().toLowerCase().trim());
+  // 왜 usedIdx? → 하나의 엑셀 컬럼이 두 개 필드에 중복 매핑되는 것을 방지
+  const usedIdx = new Set();
   const keywords = {
-    itemName: ['품목', '품명', '제품명', '상품명', '이름', 'name', 'item', '자재명', '자재'],
-    itemCode: ['코드', 'code', '품번', '품목코드', 'sku', '자재코드'],
+    itemName: ['품목명', '품목', '품명', '제품명', '상품명', '이름', 'name', 'item', '자재명', '자재'],
+    itemCode: ['품목코드', '코드', 'code', '품번', 'sku', '자재코드'],
     category: ['분류', '카테고리', 'category', '유형', '종류', '구분'],
     quantity: ['수량', 'qty', 'quantity', '재고', '개수', '입고수량', '출고수량', '현재고'],
     unit: ['단위', 'unit', 'uom'],
-    unitPrice: ['매입가', '원가', '단가', 'price', '가격', '매입단가', '입고단가', '입고가', '사입가', '도매가', 'cost'],
+    unitPrice: ['매입가', '원가', '단가', '매입단가', '입고단가', '입고가', '사입가', '도매가', 'cost', 'price'],
     salePrice: ['판매가', '소가', '판매단가', '소비자가', '외상단가', '출고단가', '출고가', '매출단가', '매출가', '소매가', 'sale', 'selling'],
-    supplyValue: ['공급가액', '공급가', '금액'],
+    supplyValue: ['공급가액', '공급가'],
     vat: ['부가세', '세액', 'vat', 'tax'],
-    totalPrice: ['합계', 'total', '합계금액', '총액', '총금액'],
+    totalPrice: ['합계금액', '총금액', '합계', 'total', '총액'],
     warehouse: ['창고', '위치', 'warehouse', 'location', '보관', '저장위치'],
     vendor: ['거래처', '업체', '업체명', '공급업체', '공급처', '매입처', 'vendor', 'supplier', '거래선'],
     expiryDate: ['유통기한', '유효기한', '만료일', 'expiry', 'exp', '사용기한'],
@@ -207,8 +209,12 @@ function autoMap(headers, mapping) {
 
   ERP_FIELDS.forEach(field => {
     const kws = keywords[field.key] || [];
-    const matchIdx = lower.findIndex(h => kws.some(kw => h.includes(kw)));
-    if (matchIdx >= 0) mapping[field.key] = matchIdx;
+    // 이미 사용된 컬럼은 건너뛰고 다음 매칭 검색
+    const matchIdx = lower.findIndex((h, idx) => !usedIdx.has(idx) && kws.some(kw => h.includes(kw)));
+    if (matchIdx >= 0) {
+      mapping[field.key] = matchIdx;
+      usedIdx.add(matchIdx);
+    }
   });
 }
 
