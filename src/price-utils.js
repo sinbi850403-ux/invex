@@ -17,11 +17,16 @@ export const DEFAULT_MARGIN = 0.2;
  * @returns {number} 판매가격 (원)
  */
 export function getSalePrice(tx) {
-  const unitPrice = parseFloat(tx.unitPrice);
-  if (!isNaN(unitPrice) && unitPrice > 0) return unitPrice;
-  // 단가가 없을 경우 0 으로 간주하고 마진만 적용합니다.
+  // 1순위: salePrice 필드 (판매단가가 직접 입력된 경우)
+  const salePrice = parseFloat(tx.salePrice);
+  if (!isNaN(salePrice) && salePrice > 0) return salePrice;
+
+  // 2순위: 매입단가에 기본 마진을 적용해 추정
   const unitCost = parseFloat(tx.unitCost) || parseFloat(tx.unitPrice) || 0;
-  return unitCost * (1 + DEFAULT_MARGIN);
+  if (unitCost > 0) return unitCost * (1 + DEFAULT_MARGIN);
+
+  // 둘 다 없으면 0 반환
+  return 0;
 }
 
 /**

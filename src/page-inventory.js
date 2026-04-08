@@ -20,7 +20,8 @@ const ALL_FIELDS = [
   { key: 'vendor',     label: '거래처',    numeric: false },
   { key: 'quantity',   label: '수량',      numeric: true  },
   { key: 'unit',       label: '단위',      numeric: false },
-  { key: 'unitPrice',  label: '단가',      numeric: true  },
+  { key: 'unitPrice',  label: '단가(매입)', numeric: true  },
+  { key: 'salePrice',  label: '판매단가',  numeric: true  },
   { key: 'supplyValue',label: '공급가액',  numeric: true  },
   { key: 'vat',        label: '부가세',    numeric: true  },
   { key: 'totalPrice', label: '합계금액',  numeric: true  },
@@ -358,8 +359,8 @@ export function renderInventoryPage(container, navigateTo) {
         const save = () => {
           const newVal = input.value;
           updateItem(idx, { [field]: newVal });
-          // 합계 재계산
-          if (field === 'quantity' || field === 'unitPrice') {
+          // 합계 재계산 (매입단가 또는 판매단가 변경 시)
+          if (field === 'quantity' || field === 'unitPrice' || field === 'salePrice') {
             const q = parseFloat(data[idx].quantity) || 0;
             const p = parseFloat(data[idx].unitPrice) || 0;
             const supply = q * p;
@@ -670,8 +671,17 @@ function openItemModal(container, navigateTo, editIdx = null) {
             <input class="form-input" id="f-unit" value="${item.unit || ''}" placeholder="EA, KG, M ..." />
           </div>
           <div class="form-group">
-            <label class="form-label">단가</label>
+            <label class="form-label">단가(매입)</label>
             <input class="form-input" type="number" id="f-unitPrice" value="${item.unitPrice ?? ''}" placeholder="0" />
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">판매단가 <span style="font-size:11px;color:var(--text-muted);">(소가)</span></label>
+            <input class="form-input" type="number" id="f-salePrice" value="${item.salePrice ?? ''}" placeholder="판매 시 가격" />
+          </div>
+          <div class="form-group" style="display:flex;align-items:flex-end;">
+            <div style="font-size:11px;color:var(--text-muted);padding-bottom:8px;">💡 판매단가를 입력하면 정확한 이익률을 계산할 수 있습니다.</div>
           </div>
         </div>
         <div class="form-row" style="background:#f8f9fa; padding:10px; border-radius:6px; margin-bottom:12px;">
@@ -748,10 +758,11 @@ function openItemModal(container, navigateTo, editIdx = null) {
       quantity: qty === '' ? 0 : parseFloat(qty),
       unit: overlay.querySelector('#f-unit').value.trim(),
       unitPrice: parseFloat(overlay.querySelector('#f-unitPrice').value) || 0,
+      salePrice: parseFloat(overlay.querySelector('#f-salePrice').value) || 0,
       warehouse: overlay.querySelector('#f-warehouse').value.trim(),
       note: overlay.querySelector('#f-note').value.trim(),
     };
-    // 합계 자동 계산
+    // 합계 자동 계산 (매입가 기준)
     newItem.supplyValue = newItem.quantity * newItem.unitPrice;
     newItem.vat = Math.floor(newItem.supplyValue * 0.1);
     newItem.totalPrice = newItem.supplyValue + newItem.vat;
@@ -777,10 +788,10 @@ function openItemModal(container, navigateTo, editIdx = null) {
 
 function formatCell(key, value) {
   if (value === '' || value === null || value === undefined) return '';
-  if (['quantity', 'unitPrice', 'supplyValue', 'vat', 'totalPrice'].includes(key)) {
+  if (['quantity', 'unitPrice', 'salePrice', 'supplyValue', 'vat', 'totalPrice'].includes(key)) {
     const num = parseFloat(value);
     if (!isNaN(num)) {
-      if (key === 'unitPrice' || key === 'supplyValue' || key === 'vat' || key === 'totalPrice') {
+      if (key === 'unitPrice' || key === 'salePrice' || key === 'supplyValue' || key === 'vat' || key === 'totalPrice') {
         return '₩' + num.toLocaleString('ko-KR');
       }
       return num.toLocaleString('ko-KR');
