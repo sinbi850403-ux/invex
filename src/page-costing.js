@@ -8,6 +8,77 @@ import { getState, setState } from './store.js';
 import { downloadExcel } from './excel.js';
 import { showToast } from './toast.js';
 
+const DEFAULT_COST_SORT = { key: 'profit', direction: 'desc' };
+const COST_TEXT_SORT_KEYS = new Set(['itemName', 'itemCode']);
+
+let costingSortState = { ...DEFAULT_COST_SORT };
+
+function getCostDefaultDirection(key) {
+  return COST_TEXT_SORT_KEYS.has(key) ? 'asc' : 'desc';
+}
+
+function toggleCostSort(key) {
+  if (costingSortState.key === key) {
+    costingSortState = {
+      key,
+      direction: costingSortState.direction === 'desc' ? 'asc' : 'desc',
+    };
+    return;
+  }
+
+  costingSortState = {
+    key,
+    direction: getCostDefaultDirection(key),
+  };
+}
+
+function getCostSortIcon(key) {
+  if (costingSortState.key !== key) {
+    return '<span style="margin-left:4px; color:var(--text-muted); font-size:10px;">↕</span>';
+  }
+
+  return `<span style="margin-left:4px; color:var(--accent); font-size:10px;">${costingSortState.direction === 'desc' ? '▼' : '▲'}</span>`;
+}
+
+function getCostSortValue(row, key) {
+  switch (key) {
+    case 'itemName': return row.itemName || '';
+    case 'itemCode': return row.itemCode || '';
+    case 'qty': return row.qty;
+    case 'unitCost': return row.unitCost;
+    case 'totalCost': return row.totalCost;
+    case 'sellPrice': return row.sellPrice;
+    case 'marketValue': return row.marketValue;
+    case 'profit': return row.profit;
+    case 'margin': return row.marketValue > 0 ? ((row.profit / row.marketValue) * 100) : 0;
+    default: return row.profit;
+  }
+}
+
+function compareCostValues(a, b, direction) {
+  const dir = direction === 'desc' ? -1 : 1;
+
+  if (typeof a === 'string' || typeof b === 'string') {
+    return String(a || '').localeCompare(String(b || ''), 'ko') * dir;
+  }
+
+  return ((Number(a) || 0) - (Number(b) || 0)) * dir;
+}
+
+function sortCostRows(rows) {
+  return [...rows].sort((a, b) => {
+    const primary = compareCostValues(
+      getCostSortValue(a, costingSortState.key),
+      getCostSortValue(b, costingSortState.key),
+      costingSortState.direction
+    );
+
+    if (primary !== 0) return primary;
+
+    return String(a.itemName || '').localeCompare(String(b.itemName || ''), 'ko');
+  });
+}
+
 export function renderCostingPage(container, navigateTo) {
   const state = getState();
   const items = state.mappedData || [];
@@ -18,6 +89,7 @@ export function renderCostingPage(container, navigateTo) {
 
   // 원가 계산 실행
   const costData = calculateCosts(items, transactions, costMethod);
+  const sortedCostData = sortCostRows(costData);
 
   // 전체 요약
   const totalCost = costData.reduce((s, r) => s + r.totalCost, 0);
@@ -81,24 +153,25 @@ export function renderCostingPage(container, navigateTo) {
         <strong>💰 품목별 원가 분석</strong>
         <span style="color:var(--text-muted); font-size:12px; margin-left:8px;">(${costData.length}개 품목)</span>
       </div>
+      <div style="padding:0 16px 12px; font-size:11px; color:var(--text-muted);">헤더를 클릭하면 품목명·금액·마진율 기준으로 정렬됩니다.</div>
       <div class="table-wrapper" style="border:none; border-radius:0;">
         <table class="data-table">
           <thead>
             <tr>
               <th style="width:40px;">#</th>
-              <th>품목명</th>
-              <th>코드</th>
-              <th class="text-right">재고수량</th>
-              <th class="text-right">단위원가</th>
-              <th class="text-right">총 원가</th>
-              <th class="text-right">판매단가</th>
-              <th class="text-right">시가환산</th>
-              <th class="text-right">예상이익</th>
-              <th class="text-right">마진율</th>
+              <th data-cost-sort="itemName" style="cursor:pointer; user-select:none;">품목명 ${getCostSortIcon('itemName')}</th>
+              <th data-cost-sort="itemCode" style="cursor:pointer; user-select:none;">코드 ${getCostSortIcon('itemCode')}</th>
+              <th class="text-right" data-cost-sort="qty" style="cursor:pointer; user-select:none;">재고수량 ${getCostSortIcon('qty')}</th>
+              <th class="text-right" data-cost-sort="unitCost" style="cursor:pointer; user-select:none;">단위원가 ${getCostSortIcon('unitCost')}</th>
+              <th class="text-right" data-cost-sort="totalCost" style="cursor:pointer; user-select:none;">총 원가 ${getCostSortIcon('totalCost')}</th>
+              <th class="text-right" data-cost-sort="sellPrice" style="cursor:pointer; user-select:none;">판매단가 ${getCostSortIcon('sellPrice')}</th>
+              <th class="text-right" data-cost-sort="marketValue" style="cursor:pointer; user-select:none;">시가환산 ${getCostSortIcon('marketValue')}</th>
+              <th class="text-right" data-cost-sort="profit" style="cursor:pointer; user-select:none;">예상이익 ${getCostSortIcon('profit')}</th>
+              <th class="text-right" data-cost-sort="margin" style="cursor:pointer; user-select:none;">마진율 ${getCostSortIcon('margin')}</th>
             </tr>
           </thead>
           <tbody>
-            ${costData.map((r, i) => {
+            ${sortedCostData.map((r, i) => {
               const margin = r.marketValue > 0 ? ((r.profit / r.marketValue) * 100).toFixed(1) : '-';
               return `
                 <tr class="${parseFloat(margin) < 0 ? 'row-danger' : parseFloat(margin) < 10 ? 'row-warning' : ''}">
@@ -129,10 +202,17 @@ export function renderCostingPage(container, navigateTo) {
     });
   });
 
+  container.querySelectorAll('[data-cost-sort]').forEach(header => {
+    header.addEventListener('click', () => {
+      toggleCostSort(header.dataset.costSort);
+      renderCostingPage(container, navigateTo);
+    });
+  });
+
   // 내보내기
   container.querySelector('#btn-cost-export').addEventListener('click', () => {
     if (costData.length === 0) { showToast('데이터가 없습니다.', 'warning'); return; }
-    const data = costData.map(r => ({
+    const data = sortedCostData.map(r => ({
       '품목명': r.itemName,
       '코드': r.itemCode || '',
       '재고수량': r.qty,
