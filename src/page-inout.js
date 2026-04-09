@@ -233,24 +233,36 @@ export function renderInoutPage(container, navigateTo) {
     thead.innerHTML = `
       <tr>
         <th class="col-num">#</th>
-        <th class="sortable-header ${sort.key === 'type' ? 'is-active' : ''}" data-sort-key="type">
-          <span>구분</span><span class="sort-indicator">${getSortIndicator('type')}</span>
+        <th class="sortable-header ${sort.key === 'type' ? 'is-active' : ''}" data-sort-key="type" title="클릭하여 정렬" aria-sort="${sort.key === 'type' ? (sort.direction === 'asc' ? 'ascending' : sort.direction === 'desc' ? 'descending' : 'none') : 'none'}">
+          <button type="button" class="sort-hitbox" tabindex="-1" aria-hidden="true">
+            <span class="sort-label">구분</span><span class="sort-indicator">${getSortIndicator('type')}</span>
+          </button>
         </th>
-        <th class="sortable-header ${sort.key === 'vendor' ? 'is-active' : ''}" data-sort-key="vendor">
-          <span>거래처</span><span class="sort-indicator">${getSortIndicator('vendor')}</span>
+        <th class="sortable-header ${sort.key === 'vendor' ? 'is-active' : ''}" data-sort-key="vendor" title="클릭하여 정렬" aria-sort="${sort.key === 'vendor' ? (sort.direction === 'asc' ? 'ascending' : sort.direction === 'desc' ? 'descending' : 'none') : 'none'}">
+          <button type="button" class="sort-hitbox" tabindex="-1" aria-hidden="true">
+            <span class="sort-label">거래처</span><span class="sort-indicator">${getSortIndicator('vendor')}</span>
+          </button>
         </th>
-        <th class="sortable-header ${sort.key === 'itemName' ? 'is-active' : ''}" data-sort-key="itemName">
-          <span>품목명</span><span class="sort-indicator">${getSortIndicator('itemName')}</span>
+        <th class="sortable-header ${sort.key === 'itemName' ? 'is-active' : ''}" data-sort-key="itemName" title="클릭하여 정렬" aria-sort="${sort.key === 'itemName' ? (sort.direction === 'asc' ? 'ascending' : sort.direction === 'desc' ? 'descending' : 'none') : 'none'}">
+          <button type="button" class="sort-hitbox" tabindex="-1" aria-hidden="true">
+            <span class="sort-label">품목명</span><span class="sort-indicator">${getSortIndicator('itemName')}</span>
+          </button>
         </th>
         <th>품목코드</th>
-        <th class="sortable-header text-right ${sort.key === 'quantity' ? 'is-active' : ''}" data-sort-key="quantity">
-          <span>수량</span><span class="sort-indicator">${getSortIndicator('quantity')}</span>
+        <th class="sortable-header text-right ${sort.key === 'quantity' ? 'is-active' : ''}" data-sort-key="quantity" title="클릭하여 정렬" aria-sort="${sort.key === 'quantity' ? (sort.direction === 'asc' ? 'ascending' : sort.direction === 'desc' ? 'descending' : 'none') : 'none'}">
+          <button type="button" class="sort-hitbox" tabindex="-1" aria-hidden="true">
+            <span class="sort-label">수량</span><span class="sort-indicator">${getSortIndicator('quantity')}</span>
+          </button>
         </th>
-        <th class="sortable-header text-right ${sort.key === 'unitPrice' ? 'is-active' : ''}" data-sort-key="unitPrice">
-          <span>단가</span><span class="sort-indicator">${getSortIndicator('unitPrice')}</span>
+        <th class="sortable-header text-right ${sort.key === 'unitPrice' ? 'is-active' : ''}" data-sort-key="unitPrice" title="클릭하여 정렬" aria-sort="${sort.key === 'unitPrice' ? (sort.direction === 'asc' ? 'ascending' : sort.direction === 'desc' ? 'descending' : 'none') : 'none'}">
+          <button type="button" class="sort-hitbox" tabindex="-1" aria-hidden="true">
+            <span class="sort-label">단가</span><span class="sort-indicator">${getSortIndicator('unitPrice')}</span>
+          </button>
         </th>
-        <th class="sortable-header ${sort.key === 'date' ? 'is-active' : ''}" data-sort-key="date">
-          <span>일자</span><span class="sort-indicator">${getSortIndicator('date')}</span>
+        <th class="sortable-header ${sort.key === 'date' ? 'is-active' : ''}" data-sort-key="date" title="클릭하여 정렬" aria-sort="${sort.key === 'date' ? (sort.direction === 'asc' ? 'ascending' : sort.direction === 'desc' ? 'descending' : 'none') : 'none'}">
+          <button type="button" class="sort-hitbox" tabindex="-1" aria-hidden="true">
+            <span class="sort-label">일자</span><span class="sort-indicator">${getSortIndicator('date')}</span>
+          </button>
         </th>
         <th>비고</th>
         <th style="width:50px;">삭제</th>
@@ -258,6 +270,8 @@ export function renderInoutPage(container, navigateTo) {
     `;
 
     container.querySelectorAll('.sortable-header[data-sort-key]').forEach(header => {
+      header.setAttribute('tabindex', '0');
+      header.setAttribute('role', 'button');
       header.addEventListener('click', () => {
         const key = header.dataset.sortKey;
         if (!key) return;
@@ -273,6 +287,12 @@ export function renderInoutPage(container, navigateTo) {
         currentPageNum = 1;
         renderTxHeader();
         renderTxTable();
+      });
+
+      header.addEventListener('keydown', event => {
+        if (event.key !== 'Enter' && event.key !== ' ') return;
+        event.preventDefault();
+        header.click();
       });
     });
   }

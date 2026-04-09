@@ -420,6 +420,8 @@ export function renderInventoryPage(container, navigateTo) {
 
   function attachSortHeaderEvents() {
     container.querySelectorAll('.sortable-header[data-sort-key]').forEach(header => {
+      header.setAttribute('tabindex', '0');
+      header.setAttribute('role', 'button');
       header.addEventListener('click', () => {
         const key = header.dataset.sortKey;
         if (!key) return;
@@ -440,6 +442,12 @@ export function renderInventoryPage(container, navigateTo) {
         renderTableHeader();
         renderTable();
       });
+
+      header.addEventListener('keydown', event => {
+        if (event.key !== 'Enter' && event.key !== ' ') return;
+        event.preventDefault();
+        header.click();
+      });
     });
   }
 
@@ -454,9 +462,12 @@ export function renderInventoryPage(container, navigateTo) {
             class="sortable-header ${ALL_FIELDS.find(f => f.key === key)?.numeric ? 'text-right' : ''} ${currentSort.key === key ? 'is-active' : ''}"
             data-sort-key="${key}"
             title="클릭하여 정렬"
+            aria-sort="${currentSort.key === key ? (currentSort.direction === 'asc' ? 'ascending' : currentSort.direction === 'desc' ? 'descending' : 'none') : 'none'}"
           >
-            <span>${FIELD_LABELS[key]}</span>
-            <span class="sort-indicator">${getSortIndicator(key)}</span>
+            <button type="button" class="sort-hitbox" tabindex="-1" aria-hidden="true">
+              <span class="sort-label">${FIELD_LABELS[key]}</span>
+              <span class="sort-indicator">${getSortIndicator(key)}</span>
+            </button>
           </th>
         `).join('')}
         <th class="text-center" style="width:70px;">안전재고</th>

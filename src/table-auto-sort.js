@@ -117,9 +117,16 @@ function decorateHeaders(table) {
     cell.dataset.autoSortKey = String(index);
     cell.classList.add('sortable-header');
     cell.title = '클릭해서 정렬';
+    cell.setAttribute('tabindex', '0');
+    cell.setAttribute('role', 'button');
 
     if (!cell.dataset.autoSortBound) {
       cell.addEventListener('click', () => toggleTableSort(table, index));
+      cell.addEventListener('keydown', event => {
+        if (event.key !== 'Enter' && event.key !== ' ') return;
+        event.preventDefault();
+        toggleTableSort(table, index);
+      });
       cell.dataset.autoSortBound = '1';
     }
   });
@@ -190,8 +197,10 @@ function renderHeaderState(table) {
       direction === 'asc' ? 'ascending' : direction === 'desc' ? 'descending' : 'none'
     );
     cell.innerHTML = `
-      <span>${escapeHtml(label)}</span>
-      <span class="sort-indicator">${direction === 'asc' ? '↑' : direction === 'desc' ? '↓' : '↕'}</span>
+      <button type="button" class="sort-hitbox" aria-hidden="true" tabindex="-1">
+        <span class="sort-label">${escapeHtml(label)}</span>
+        <span class="sort-indicator">${direction === 'asc' ? '↑' : direction === 'desc' ? '↓' : '↕'}</span>
+      </button>
     `;
   });
 }
