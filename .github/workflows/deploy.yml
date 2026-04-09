@@ -39,7 +39,7 @@ jobs:
   deploy-vercel:
     runs-on: ubuntu-latest
     needs: build
-    if: github.event_name != 'pull_request'
+    if: github.event_name != 'pull_request' && github.ref_name == 'master'
 
     steps:
       - name: Explain deploy path when Vercel secrets are missing
