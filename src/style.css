@@ -1120,6 +1120,131 @@ a:hover {
   box-shadow: 0 0 0 3px rgba(37,99,235,0.1);
 }
 
+.search-input.filter-active {
+  border-color: var(--accent);
+  background-color: var(--accent-light);
+}
+
+.filter-summary {
+  margin-bottom: var(--space-md);
+}
+
+.filter-summary-row {
+  display: flex;
+  gap: var(--space-sm);
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+
+.filter-summary-count {
+  font-size: var(--font-size-sm);
+  color: var(--text-muted);
+}
+
+.filter-summary-chips {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.filter-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  font-size: var(--font-size-xs);
+}
+
+.filter-chip-muted {
+  opacity: 0.8;
+}
+
+.sortable-header {
+  cursor: pointer;
+  user-select: none;
+}
+
+.sortable-header > span {
+  display: inline-block;
+  vertical-align: middle;
+}
+
+.sort-indicator {
+  margin-left: 6px;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.sortable-header:hover {
+  background: var(--accent-light) !important;
+  color: var(--accent);
+}
+
+.sortable-header.is-active {
+  color: var(--accent) !important;
+}
+
+.sortable-header.is-active .sort-indicator {
+  color: var(--accent);
+}
+
+.quick-start-card {
+  margin-bottom: var(--space-md);
+}
+
+.quick-start-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.quick-start-title {
+  font-size: var(--font-size-md);
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.quick-start-desc {
+  font-size: var(--font-size-sm);
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.quick-start-steps {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.quick-start-step {
+  padding: 9px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg-main);
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+}
+
+.quick-start-step.is-done {
+  border-color: rgba(22, 163, 74, 0.3);
+  background: rgba(22, 163, 74, 0.08);
+  color: var(--success);
+  font-weight: 600;
+}
+
+.quick-start-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 /* --- 빈 상태 --- */
 .empty-state {
   text-align: center;

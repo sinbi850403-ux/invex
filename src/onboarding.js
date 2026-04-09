@@ -15,6 +15,12 @@ import { showToast } from './toast.js';
 export function checkAndShowOnboarding(navigateTo) {
   const state = getState();
 
+  // 초보자 도움 모드가 꺼져 있으면 온보딩 생략
+  if (state.beginnerMode === false) {
+    if (!state._onboardingDone) setState({ _onboardingDone: true });
+    return;
+  }
+
   // 이미 온보딩 완료한 사용자면 스킵
   if (state._onboardingDone) return;
 
@@ -91,6 +97,17 @@ function showOnboardingModal(navigateTo) {
             2️⃣ 입출고 기록 (입출고 관리)<br/>
             3️⃣ 보고서 확인 (손익 분석 / 요약 보고)
           </div>
+          <div style="display:flex; gap:8px; margin-top:12px; flex-wrap:wrap;">
+            <button class="onb-action-btn onb-go-inventory" style="flex:1; min-width:120px; background:linear-gradient(135deg,#2563eb,#1d4ed8); color:#fff; border:none; padding:10px; border-radius:10px; cursor:pointer; font-size:13px; font-weight:600;">
+              📦 재고 현황
+            </button>
+            <button class="onb-action-btn onb-go-inout" style="flex:1; min-width:120px; background:linear-gradient(135deg,#0ea5e9,#0284c7); color:#fff; border:none; padding:10px; border-radius:10px; cursor:pointer; font-size:13px; font-weight:600;">
+              🔄 입출고 관리
+            </button>
+            <button class="onb-action-btn onb-go-guide" style="flex:1; min-width:120px; background:#f8f9fc; color:#334155; border:1px solid #dbe1e8; padding:10px; border-radius:10px; cursor:pointer; font-size:13px; font-weight:600;">
+              📖 사용 가이드
+            </button>
+          </div>
         </div>
       `,
       btnText: '시작하기! 🚀',
@@ -164,6 +181,18 @@ function showOnboardingModal(navigateTo) {
     overlay.querySelector('.onb-skip-btn')?.addEventListener('click', () => {
       currentStep++;
       render();
+    });
+    overlay.querySelector('.onb-go-inventory')?.addEventListener('click', () => {
+      finish();
+      navigateTo('inventory');
+    });
+    overlay.querySelector('.onb-go-inout')?.addEventListener('click', () => {
+      finish();
+      navigateTo('inout');
+    });
+    overlay.querySelector('.onb-go-guide')?.addEventListener('click', () => {
+      finish();
+      navigateTo('guide');
     });
   }
 

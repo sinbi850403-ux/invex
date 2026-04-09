@@ -79,12 +79,31 @@ export function renderSettingsPage(container, navigateTo) {
   const state = getState();
   const customFields = state.customFields || [];
   const currentTemplate = state.industryTemplate || 'general';
+  const beginnerMode = state.beginnerMode !== false;
 
   container.innerHTML = `
     <div class="page-header">
       <div>
         <h1 class="page-title"><span class="title-icon">⚙️</span> 설정</h1>
         <div class="page-desc">커스텀 필드와 업종별 템플릿을 관리합니다.</div>
+      </div>
+    </div>
+
+    <!-- 사용성 설정 -->
+    <div class="card">
+      <div class="card-title">🧭 사용성 설정</div>
+      <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap;">
+        <div style="min-width:220px;">
+          <div style="font-size:14px; font-weight:600; color:var(--text-primary);">초보자 도움 모드</div>
+          <div style="font-size:12px; color:var(--text-muted); margin-top:2px;">온보딩과 빠른 시작 가이드를 화면에 표시합니다.</div>
+        </div>
+        <label style="display:flex; align-items:center; gap:8px; cursor:pointer; user-select:none;">
+          <input type="checkbox" id="beginner-mode-toggle" ${beginnerMode ? 'checked' : ''} />
+          <span style="font-size:13px; color:var(--text-secondary);">${beginnerMode ? '켜짐' : '꺼짐'}</span>
+        </label>
+      </div>
+      <div style="display:flex; gap:8px; margin-top:12px; flex-wrap:wrap;">
+        <button class="btn btn-outline btn-sm" id="btn-reset-view-prefs">정렬/필터 기본값으로 되돌리기</button>
       </div>
     </div>
 
@@ -160,6 +179,29 @@ export function renderSettingsPage(container, navigateTo) {
 
   // === 선택된 템플릿 상태 ===
   let selectedTemplate = currentTemplate;
+
+  // 초보자 도움 모드 토글
+  container.querySelector('#beginner-mode-toggle')?.addEventListener('change', (e) => {
+    const enabled = !!e.target.checked;
+    setState({ beginnerMode: enabled });
+    showToast(`초보자 도움 모드가 ${enabled ? '켜졌습니다' : '꺼졌습니다'}.`, 'success');
+    renderSettingsPage(container, navigateTo);
+  });
+
+  // 정렬/필터 설정 초기화
+  container.querySelector('#btn-reset-view-prefs')?.addEventListener('click', () => {
+    setState({
+      inventoryViewPrefs: {
+        filter: { keyword: '', category: '', warehouse: '', stock: '', itemCode: '', vendor: '' },
+        sort: { key: '', direction: '' },
+      },
+      inoutViewPrefs: {
+        filter: { keyword: '', type: '', date: '', vendor: '', itemCode: '' },
+        sort: { key: 'date', direction: 'desc' },
+      },
+    });
+    showToast('정렬/필터 설정을 기본값으로 되돌렸습니다.', 'info');
+  });
 
   // 템플릿 선택
   container.querySelectorAll('.template-card').forEach(card => {
@@ -255,8 +297,18 @@ export function renderSettingsPage(container, navigateTo) {
       customFields: [],
       columnMapping: {},
       visibleColumns: null,
+      beginnerMode: true,
+      inventoryViewPrefs: {
+        filter: { keyword: '', category: '', warehouse: '', stock: '', itemCode: '', vendor: '' },
+        sort: { key: '', direction: '' },
+      },
+      inoutViewPrefs: {
+        filter: { keyword: '', type: '', date: '', vendor: '', itemCode: '' },
+        sort: { key: 'date', direction: 'desc' },
+      },
       fileName: '',
       currentStep: 1,
+      _onboardingDone: false,
     });
     showToast('전체 데이터가 초기화되었습니다.', 'info');
     navigateTo('home');
