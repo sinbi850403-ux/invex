@@ -1,43 +1,76 @@
-# GitHub Actions 워크플로우: 코드 변경 시 자동 커밋, 푸시, 배포
-# 파일 위치: .github/workflows/deploy.yml
-# 이 워크플로우는 main 브랜치에 푸시될 때마다 Vercel에 배포합니다.
-# Vercel 프로젝트와 연동된 토큰(VERCEL_TOKEN)과 프로젝트 ID(VERCEL_PROJECT_ID)를 GitHub Secrets에 추가해야 합니다.
-
-name: CI 자동 배포
+name: CI and Vercel Fallback Deploy
 
 on:
   push:
-    branches: [main, master]
-  workflow_dispatch: # 수동 실행도 가능
+    branches:
+      - master
+      - main
+  pull_request:
+    branches:
+      - master
+      - main
+  workflow_dispatch:
+
+env:
+  VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+  VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+  VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
 
 jobs:
-  build-and-deploy:
+  build:
     runs-on: ubuntu-latest
-    steps:
-      - name: 리포지토리 체크아웃
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
-      - name: Node.js 설정
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Use Node.js 24
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'npm'
+          node-version: "24"
+          cache: npm
 
-      - name: 의존성 설치
+      - name: Install dependencies
         run: npm ci
 
-      - name: 빌드 실행
+      - name: Build app
         run: npm run build
 
-      - name: Vercel 배포
-        env:
-          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+  deploy-vercel:
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.event_name != 'pull_request'
+
+    steps:
+      - name: Explain deploy path when Vercel secrets are missing
+        if: env.VERCEL_TOKEN == '' || env.VERCEL_ORG_ID == '' || env.VERCEL_PROJECT_ID == ''
         run: |
-          npm i -g vercel
-          vercel pull --yes --environment production --token $VERCEL_TOKEN
-          vercel build --prod --token $VERCEL_TOKEN
-          vercel deploy --prebuilt --prod --token $VERCEL_TOKEN
+          echo "GitHub Secrets for Vercel are not configured."
+          echo "Skipping CLI deploy and relying on Vercel Git auto deployments for this push."
+
+      - name: Checkout repository
+        if: env.VERCEL_TOKEN != '' && env.VERCEL_ORG_ID != '' && env.VERCEL_PROJECT_ID != ''
+        uses: actions/checkout@v4
+
+      - name: Use Node.js 24
+        if: env.VERCEL_TOKEN != '' && env.VERCEL_ORG_ID != '' && env.VERCEL_PROJECT_ID != ''
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+
+      - name: Install Vercel CLI
+        if: env.VERCEL_TOKEN != '' && env.VERCEL_ORG_ID != '' && env.VERCEL_PROJECT_ID != ''
+        run: npm install --global vercel@latest
+
+      - name: Pull Vercel environment
+        if: env.VERCEL_TOKEN != '' && env.VERCEL_ORG_ID != '' && env.VERCEL_PROJECT_ID != ''
+        run: vercel pull --yes --environment production --token "${VERCEL_TOKEN}"
+
+      - name: Build with Vercel
+        if: env.VERCEL_TOKEN != '' && env.VERCEL_ORG_ID != '' && env.VERCEL_PROJECT_ID != ''
+        run: vercel build --prod --token "${VERCEL_TOKEN}"
+
+      - name: Deploy prebuilt output
+        if: env.VERCEL_TOKEN != '' && env.VERCEL_ORG_ID != '' && env.VERCEL_PROJECT_ID != ''
+        run: vercel deploy --prebuilt --prod --token "${VERCEL_TOKEN}"
