@@ -20,6 +20,17 @@ const DEFAULT_STATE = {
   safetyStock: {},      // { 품목명: 최소수량 }
   // 컬럼 표시 설정
   visibleColumns: null, // ['itemName','quantity','unitPrice'] 형태
+  // 초보자 도움 모드
+  beginnerMode: true,
+  // 화면별 필터/정렬 뷰 설정 (사용자 편의 저장)
+  inventoryViewPrefs: {
+    filter: { keyword: '', category: '', warehouse: '', stock: '', itemCode: '', vendor: '' },
+    sort: { key: '', direction: '' },
+  },
+  inoutViewPrefs: {
+    filter: { keyword: '', type: '', date: '', vendor: '', itemCode: '' },
+    sort: { key: 'date', direction: 'desc' },
+  },
   // 각 mappedData row에는 expiryDate, lotNumber 필드도 포함 가능
   // 창고 간 이동 이력
   transfers: [],        // [{date, fromWarehouse, toWarehouse, itemName, quantity, ...}]
@@ -114,6 +125,9 @@ async function saveToDB() {
         safetyStock: state.safetyStock,
         fileName: state.fileName,
         currentStep: state.currentStep,
+        beginnerMode: state.beginnerMode,
+        inventoryViewPrefs: state.inventoryViewPrefs,
+        inoutViewPrefs: state.inoutViewPrefs,
       };
       localStorage.setItem('invex-fallback', JSON.stringify(slim));
     } catch (_) { /* 무시 */ }

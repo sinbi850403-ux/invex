@@ -4,7 +4,7 @@
  * 핵심: 입출고를 기록하면 재고 현황의 수량이 자동으로 증감됨
  */
 
-import { getState, addTransaction, deleteTransaction } from './store.js';
+import { getState, setState, addTransaction, deleteTransaction } from './store.js';
 import { showToast } from './toast.js';
 import { downloadExcel, readExcelFile } from './excel.js';
 
@@ -17,6 +17,15 @@ export function renderInoutPage(container, navigateTo) {
   const state = getState();
   const items = state.mappedData || [];
   const transactions = state.transactions || [];
+  const beginnerMode = state.beginnerMode !== false;
+  const sortOptions = [
+    { value: 'date:desc', label: '최신 일자 순' },
+    { value: 'date:asc', label: '오래된 일자 순' },
+    { value: 'quantity:desc', label: '수량 많은 순' },
+    { value: 'quantity:asc', label: '수량 적은 순' },
+    { value: 'itemName:asc', label: '품목명 가나다순' },
+    { value: 'vendor:asc', label: '거래처 가나다순' },
+  ];
 
   container.innerHTML = `
     <div class="page-header">
@@ -52,6 +61,33 @@ export function renderInoutPage(container, navigateTo) {
       </div>
     </div>
 
+    ${beginnerMode && (items.length === 0 || transactions.length === 0) ? `
+      <div class="card quick-start-card">
+        <div class="quick-start-head">
+          <div>
+            <div class="quick-start-title">입출고 빠른 시작</div>
+            <div class="quick-start-desc">처음이라면 아래 순서로 진행해 주세요.</div>
+          </div>
+          <span class="badge badge-warning">가이드</span>
+        </div>
+        <div class="quick-start-steps">
+          <div class="quick-start-step ${items.length > 0 ? 'is-done' : ''}">
+            1) 재고 품목 등록 (${items.length > 0 ? '완료' : '필요'})
+          </div>
+          <div class="quick-start-step ${transactions.length > 0 ? 'is-done' : ''}">
+            2) 첫 입고/출고 기록 (${transactions.length > 0 ? '완료' : '필요'})
+          </div>
+          <div class="quick-start-step">3) 요약 보고에서 흐름 확인</div>
+        </div>
+        <div class="quick-start-actions">
+          ${items.length === 0 ? '<button class="btn btn-primary btn-sm" id="btn-quick-item">품목 먼저 등록</button>' : ''}
+          ${items.length > 0 ? '<button class="btn btn-primary btn-sm" id="btn-quick-first-tx">첫 입출고 등록</button>' : ''}
+          <button class="btn btn-outline btn-sm" id="btn-quick-guide">사용 가이드</button>
+          <button class="btn btn-ghost btn-sm" id="btn-quick-summary">요약 보고 이동</button>
+        </div>
+      </div>
+    ` : ''}
+
     <!-- 필터 -->
     <div class="toolbar">
       <input type="text" class="search-input" id="tx-search" placeholder="품목명, 코드로 검색..." />
@@ -69,27 +105,18 @@ export function renderInoutPage(container, navigateTo) {
         ${getCodeList(items).map(c => `<option value="${c}">${c}</option>`).join('')}
       </select>
       <input type="date" class="filter-select" id="tx-date-filter" style="padding:7px 10px;" />
+      <select class="filter-select" id="tx-sort-filter">
+        ${sortOptions.map(option => `<option value="${option.value}">${option.label}</option>`).join('')}
+      </select>
       <button class="btn btn-ghost btn-sm" id="tx-filter-reset" title="필터 초기화">🔄 초기화</button>
     </div>
+    <div class="filter-summary" id="tx-filter-summary"></div>
 
     <!-- 이력 테이블 -->
     <div class="card card-flush">
       <div class="table-wrapper" style="border:none;">
         <table class="data-table">
-          <thead>
-            <tr>
-              <th class="col-num">#</th>
-              <th>구분</th>
-              <th>거래처</th>
-              <th>품목명</th>
-              <th>품목코드</th>
-              <th class="text-right">수량</th>
-              <th class="text-right">단가</th>
-              <th>일자</th>
-              <th>비고</th>
-              <th style="width:50px;">삭제</th>
-            </tr>
-          </thead>
+          <thead id="tx-head"></thead>
           <tbody id="tx-body"></tbody>
         </table>
       </div>
@@ -104,7 +131,151 @@ export function renderInoutPage(container, navigateTo) {
   `;
 
   let currentPageNum = 1;
-  let filter = { keyword: '', type: '', date: '', vendor: '', itemCode: '' };
+  const defaultFilter = { keyword: '', type: '', date: '', vendor: '', itemCode: '' };
+  const defaultSort = { key: 'date', direction: 'desc' };
+  const savedViewPrefs = state.inoutViewPrefs || {};
+  let filter = sanitizeInoutFilter(savedViewPrefs.filter);
+  let sort = sanitizeInoutSort(savedViewPrefs.sort);
+  let persistTimer = null;
+
+  function sanitizeInoutFilter(raw) {
+    const candidate = raw || {};
+    return {
+      keyword: typeof candidate.keyword === 'string' ? candidate.keyword : '',
+      type: candidate.type === 'in' || candidate.type === 'out' ? candidate.type : '',
+      date: typeof candidate.date === 'string' ? candidate.date : '',
+      vendor: typeof candidate.vendor === 'string' ? candidate.vendor : '',
+      itemCode: typeof candidate.itemCode === 'string' ? candidate.itemCode : '',
+    };
+  }
+
+  function sanitizeInoutSort(raw) {
+    const candidate = raw || {};
+    const allowedKeys = new Set(['date', 'quantity', 'itemName', 'vendor', 'type', 'unitPrice']);
+    const direction = candidate.direction === 'asc' || candidate.direction === 'desc' ? candidate.direction : '';
+    if (!candidate.key || !direction || !allowedKeys.has(candidate.key)) {
+      return { ...defaultSort };
+    }
+    return { key: candidate.key, direction };
+  }
+
+  function persistInoutPrefs({ debounced = false } = {}) {
+    const payload = {
+      filter: { ...filter },
+      sort: { ...sort },
+    };
+    if (debounced) {
+      clearTimeout(persistTimer);
+      persistTimer = setTimeout(() => {
+        setState({ inoutViewPrefs: payload });
+      }, 250);
+      return;
+    }
+    clearTimeout(persistTimer);
+    setState({ inoutViewPrefs: payload });
+  }
+
+  function parseSortPreset(value) {
+    const [key, direction] = String(value || '').split(':');
+    if (!key || !direction) return { ...defaultSort };
+    return { key, direction };
+  }
+
+  function getSortPresetValue(currentSort) {
+    const value = `${currentSort.key}:${currentSort.direction}`;
+    const hasPreset = sortOptions.some(option => option.value === value);
+    return hasPreset ? value : 'date:desc';
+  }
+
+  function getSortIndicator(key) {
+    if (sort.key !== key) return '↕';
+    return sort.direction === 'asc' ? '↑' : '↓';
+  }
+
+  function getSortOptionLabel(currentSort) {
+    const value = `${currentSort.key}:${currentSort.direction}`;
+    const matched = sortOptions.find(option => option.value === value);
+    if (matched) return matched.label;
+    return '정렬 없음';
+  }
+
+  function getComparableTxValue(tx, key) {
+    const raw = tx[key];
+    if (key === 'date') {
+      const source = tx.date || tx.createdAt;
+      if (!source) return 0;
+      const ts = new Date(source).getTime();
+      return Number.isNaN(ts) ? 0 : ts;
+    }
+    if (key === 'quantity' || key === 'unitPrice') {
+      const num = parseFloat(raw);
+      return Number.isNaN(num) ? 0 : num;
+    }
+    if (!raw) return '';
+    return String(raw).toLowerCase();
+  }
+
+  function sortTxRows(rows) {
+    const multiplier = sort.direction === 'asc' ? 1 : -1;
+    return [...rows].sort((a, b) => {
+      const av = getComparableTxValue(a, sort.key);
+      const bv = getComparableTxValue(b, sort.key);
+
+      if (typeof av === 'number' && typeof bv === 'number') {
+        return (av - bv) * multiplier;
+      }
+      return String(av).localeCompare(String(bv), 'ko-KR', { numeric: true, sensitivity: 'base' }) * multiplier;
+    });
+  }
+
+  function renderTxHeader() {
+    const thead = container.querySelector('#tx-head');
+    thead.innerHTML = `
+      <tr>
+        <th class="col-num">#</th>
+        <th class="sortable-header ${sort.key === 'type' ? 'is-active' : ''}" data-sort-key="type">
+          <span>구분</span><span class="sort-indicator">${getSortIndicator('type')}</span>
+        </th>
+        <th class="sortable-header ${sort.key === 'vendor' ? 'is-active' : ''}" data-sort-key="vendor">
+          <span>거래처</span><span class="sort-indicator">${getSortIndicator('vendor')}</span>
+        </th>
+        <th class="sortable-header ${sort.key === 'itemName' ? 'is-active' : ''}" data-sort-key="itemName">
+          <span>품목명</span><span class="sort-indicator">${getSortIndicator('itemName')}</span>
+        </th>
+        <th>품목코드</th>
+        <th class="sortable-header text-right ${sort.key === 'quantity' ? 'is-active' : ''}" data-sort-key="quantity">
+          <span>수량</span><span class="sort-indicator">${getSortIndicator('quantity')}</span>
+        </th>
+        <th class="sortable-header text-right ${sort.key === 'unitPrice' ? 'is-active' : ''}" data-sort-key="unitPrice">
+          <span>단가</span><span class="sort-indicator">${getSortIndicator('unitPrice')}</span>
+        </th>
+        <th class="sortable-header ${sort.key === 'date' ? 'is-active' : ''}" data-sort-key="date">
+          <span>일자</span><span class="sort-indicator">${getSortIndicator('date')}</span>
+        </th>
+        <th>비고</th>
+        <th style="width:50px;">삭제</th>
+      </tr>
+    `;
+
+    container.querySelectorAll('.sortable-header[data-sort-key]').forEach(header => {
+      header.addEventListener('click', () => {
+        const key = header.dataset.sortKey;
+        if (!key) return;
+        if (sort.key !== key) {
+          sort = { key, direction: 'asc' };
+        } else if (sort.direction === 'asc') {
+          sort = { key, direction: 'desc' };
+        } else {
+          sort = { ...defaultSort };
+        }
+        container.querySelector('#tx-sort-filter').value = getSortPresetValue(sort);
+        persistInoutPrefs();
+        currentPageNum = 1;
+        renderTxHeader();
+        renderTxTable();
+      });
+    });
+  }
 
   function getFilteredTx() {
     return transactions.filter(tx => {
@@ -125,15 +296,50 @@ export function renderInoutPage(container, navigateTo) {
     });
   }
 
+  function renderFilterSummary(filteredCount) {
+    const summaryEl = container.querySelector('#tx-filter-summary');
+    if (!summaryEl) return;
+
+    const chips = [];
+    if (filter.keyword) chips.push(`검색: ${filter.keyword}`);
+    if (filter.type) chips.push(`구분: ${filter.type === 'in' ? '입고' : '출고'}`);
+    if (filter.vendor) chips.push(`거래처: ${filter.vendor}`);
+    if (filter.itemCode) chips.push(`품목코드: ${filter.itemCode}`);
+    if (filter.date) chips.push(`일자: ${filter.date}`);
+    chips.push(`정렬: ${getSortOptionLabel(sort)}`);
+
+    summaryEl.innerHTML = `
+      <div class="filter-summary-row">
+        <div class="filter-summary-count">표시 ${filteredCount}건 / 전체 ${transactions.length}건</div>
+        <div class="filter-summary-chips">
+          ${chips.map(text => `<span class="filter-chip">${text}</span>`).join('')}
+        </div>
+      </div>
+    `;
+  }
+
+  function highlightActiveFilters() {
+    const selectIds = ['tx-type-filter', 'tx-vendor-filter', 'tx-code-filter', 'tx-date-filter', 'tx-sort-filter'];
+    selectIds.forEach(id => {
+      const el = container.querySelector(`#${id}`);
+      if (!el) return;
+      const active = id === 'tx-sort-filter' ? (el.value && el.value !== 'date:desc') : !!el.value;
+      el.classList.toggle('filter-active', active);
+    });
+    const searchEl = container.querySelector('#tx-search');
+    if (searchEl) searchEl.classList.toggle('filter-active', !!filter.keyword);
+  }
+
   function renderTxTable() {
     const filtered = getFilteredTx();
-    const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+    const sorted = sortTxRows(filtered);
+    const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
     if (currentPageNum > totalPages) currentPageNum = totalPages;
     const start = (currentPageNum - 1) * PAGE_SIZE;
-    const pageData = filtered.slice(start, start + PAGE_SIZE);
+    const pageData = sorted.slice(start, start + PAGE_SIZE);
 
     const tbody = container.querySelector('#tx-body');
-    if (filtered.length === 0) {
+    if (sorted.length === 0) {
       tbody.innerHTML = `<tr><td colspan="10" style="text-align:center; padding:32px; color:var(--text-muted);">
         ${transactions.length === 0 ? '아직 입출고 기록이 없습니다. 위의 버튼으로 등록하세요.' : '검색 결과가 없습니다.'}
       </td></tr>`;
@@ -164,10 +370,13 @@ export function renderInoutPage(container, navigateTo) {
       `).join('');
     }
 
+    renderFilterSummary(sorted.length);
+
     // 페이지네이션
     const pagEl = container.querySelector('#tx-pagination');
+    const pageStart = sorted.length === 0 ? 0 : start + 1;
     pagEl.innerHTML = `
-      <span>${filtered.length}건</span>
+      <span>${sorted.length}건 중 ${pageStart}~${Math.min(start + PAGE_SIZE, sorted.length)}</span>
       <div class="pagination-btns">
         <button class="page-btn" id="tx-prev" ${currentPageNum <= 1 ? 'disabled' : ''}>← 이전</button>
         <span style="padding:4px 8px; color:var(--text-muted); font-size:13px;">${currentPageNum} / ${totalPages}</span>
@@ -191,43 +400,72 @@ export function renderInoutPage(container, navigateTo) {
     pagEl.querySelector('#tx-next')?.addEventListener('click', () => { currentPageNum++; renderTxTable(); });
   }
 
-  // 필터 이벤트
+  container.querySelector('#btn-quick-item')?.addEventListener('click', () => navigateTo('inventory'));
+  container.querySelector('#btn-quick-first-tx')?.addEventListener('click', () => openTxModal(container, navigateTo, 'in', items));
+  container.querySelector('#btn-quick-guide')?.addEventListener('click', () => navigateTo('guide'));
+  container.querySelector('#btn-quick-summary')?.addEventListener('click', () => navigateTo('summary'));
+
+  // 필터/정렬 이벤트
   container.querySelector('#tx-search').addEventListener('input', (e) => {
     filter.keyword = e.target.value;
     currentPageNum = 1;
     renderTxTable();
+    highlightActiveFilters();
+    persistInoutPrefs({ debounced: true });
   });
   container.querySelector('#tx-type-filter').addEventListener('change', (e) => {
     filter.type = e.target.value;
     currentPageNum = 1;
     renderTxTable();
+    highlightActiveFilters();
+    persistInoutPrefs();
   });
   container.querySelector('#tx-vendor-filter').addEventListener('change', (e) => {
     filter.vendor = e.target.value;
     currentPageNum = 1;
     renderTxTable();
+    highlightActiveFilters();
+    persistInoutPrefs();
   });
   container.querySelector('#tx-code-filter').addEventListener('change', (e) => {
     filter.itemCode = e.target.value;
     currentPageNum = 1;
     renderTxTable();
+    highlightActiveFilters();
+    persistInoutPrefs();
   });
   container.querySelector('#tx-date-filter').addEventListener('change', (e) => {
     filter.date = e.target.value;
     currentPageNum = 1;
     renderTxTable();
+    highlightActiveFilters();
+    persistInoutPrefs();
   });
-  // 필터 초기화
+  container.querySelector('#tx-sort-filter').addEventListener('change', (e) => {
+    sort = sanitizeInoutSort(parseSortPreset(e.target.value));
+    currentPageNum = 1;
+    renderTxHeader();
+    renderTxTable();
+    highlightActiveFilters();
+    persistInoutPrefs();
+  });
+
+  // 필터/정렬 초기화
   container.querySelector('#tx-filter-reset').addEventListener('click', () => {
-    filter = { keyword: '', type: '', date: '', vendor: '', itemCode: '' };
+    filter = { ...defaultFilter };
+    sort = { ...defaultSort };
     container.querySelector('#tx-search').value = '';
     container.querySelector('#tx-type-filter').value = '';
     container.querySelector('#tx-vendor-filter').value = '';
     container.querySelector('#tx-code-filter').value = '';
     container.querySelector('#tx-date-filter').value = '';
+    container.querySelector('#tx-sort-filter').value = getSortPresetValue(sort);
     currentPageNum = 1;
+    renderTxHeader();
     renderTxTable();
-    showToast('필터를 초기화했습니다.', 'info');
+    highlightActiveFilters();
+    persistInoutPrefs();
+    showToast('필터와 정렬을 초기화했습니다.', 'info');
   });
 
   // 입고/출고 등록 버튼
@@ -265,7 +503,15 @@ export function renderInoutPage(container, navigateTo) {
   });
 
   // 초기 렌더링
+  container.querySelector('#tx-search').value = filter.keyword;
+  container.querySelector('#tx-type-filter').value = filter.type;
+  container.querySelector('#tx-vendor-filter').value = filter.vendor;
+  container.querySelector('#tx-code-filter').value = filter.itemCode;
+  container.querySelector('#tx-date-filter').value = filter.date;
+  container.querySelector('#tx-sort-filter').value = getSortPresetValue(sort);
+  renderTxHeader();
   renderTxTable();
+  highlightActiveFilters();
 }
 
 /**

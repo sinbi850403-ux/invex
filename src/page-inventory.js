@@ -114,6 +114,17 @@ export function renderInventoryPage(container, navigateTo) {
     const qtyStr = typeof d.quantity === 'string' ? d.quantity.replace(/,/g, '') : d.quantity;
     return min !== undefined && (parseFloat(qtyStr) || 0) <= min;
   }).length;
+  const beginnerMode = state.beginnerMode !== false;
+  const hasTransactions = (state.transactions || []).length > 0;
+  const sortOptions = [
+    { value: 'default', label: '정렬 없음 (원본 순서)' },
+    { value: 'itemName:asc', label: '품목명 오름차순' },
+    { value: 'quantity:desc', label: '수량 많은 순' },
+    { value: 'quantity:asc', label: '수량 적은 순' },
+    { value: 'totalPrice:desc', label: '합계금액 높은 순' },
+    { value: 'vendor:asc', label: '거래처 가나다순' },
+    { value: '__lowStock:desc', label: '재고 부족 우선' },
+  ];
 
   container.innerHTML = `
     <div class="page-header">
@@ -158,7 +169,29 @@ export function renderInventoryPage(container, navigateTo) {
       </div>
     </div>
 
-    <!-- 검색/필터 + 컬럼 설정 -->
+    ${beginnerMode && !hasTransactions ? `
+    <div class="card quick-start-card">
+      <div class="quick-start-head">
+        <div>
+          <div class="quick-start-title">처음 사용자 추천 흐름</div>
+          <div class="quick-start-desc">3단계만 따라하면 바로 실무 운영이 가능합니다.</div>
+        </div>
+        <span class="badge badge-info">초보 모드</span>
+      </div>
+      <div class="quick-start-steps">
+        <div class="quick-start-step is-done">1) 재고 품목 확인 완료</div>
+        <div class="quick-start-step">2) 첫 입출고 등록</div>
+        <div class="quick-start-step">3) 대시보드에서 현황 확인</div>
+      </div>
+      <div class="quick-start-actions">
+        <button class="btn btn-primary btn-sm" id="btn-quick-inout">첫 입출고 등록</button>
+        <button class="btn btn-outline btn-sm" id="btn-quick-guide">사용 가이드</button>
+        <button class="btn btn-ghost btn-sm" id="btn-quick-dashboard">대시보드 이동</button>
+      </div>
+    </div>
+    ` : ''}
+
+    <!-- 검색/필터 + 정렬 + 컬럼 설정 -->
     <div class="toolbar">
       <input type="text" class="search-input" id="search-input"
         placeholder="품목명, 코드, 분류로 검색..." />
@@ -181,6 +214,9 @@ export function renderInventoryPage(container, navigateTo) {
       <select class="filter-select" id="filter-stock">
         <option value="">전체 재고</option>
         <option value="low">⚠️ 부족 항목만</option>
+      </select>
+      <select class="filter-select" id="sort-preset" title="정렬">
+        ${sortOptions.map(option => `<option value="${option.value}">${option.label}</option>`).join('')}
       </select>
       <button class="btn btn-ghost btn-sm" id="btn-filter-reset" title="필터 초기화">🔄 초기화</button>
       <div class="col-settings-wrap" style="position:relative;">
@@ -208,6 +244,7 @@ export function renderInventoryPage(container, navigateTo) {
         </div>
       </div>
     </div>
+    <div class="filter-summary" id="inventory-filter-summary"></div>
 
     <!-- 데이터 테이블 -->
     <div class="card card-flush">
@@ -226,8 +263,185 @@ export function renderInventoryPage(container, navigateTo) {
   `;
 
   // === 상태 변수 ===
-  let currentFilter = { keyword: '', category: '', warehouse: '', stock: '', itemCode: '', vendor: '' };
+  const defaultFilter = { keyword: '', category: '', warehouse: '', stock: '', itemCode: '', vendor: '' };
+  const defaultSort = { key: '', direction: '' };
+  const savedViewPrefs = state.inventoryViewPrefs || {};
+  let currentFilter = sanitizeInventoryFilter(savedViewPrefs.filter);
   let currentPageNum = 1;
+  let currentSort = sanitizeInventorySort(savedViewPrefs.sort);
+  let persistTimer = null;
+
+  function sanitizeInventoryFilter(raw) {
+    const candidate = raw || {};
+    return {
+      keyword: typeof candidate.keyword === 'string' ? candidate.keyword : '',
+      category: typeof candidate.category === 'string' ? candidate.category : '',
+      warehouse: typeof candidate.warehouse === 'string' ? candidate.warehouse : '',
+      stock: candidate.stock === 'low' ? 'low' : '',
+      itemCode: typeof candidate.itemCode === 'string' ? candidate.itemCode : '',
+      vendor: typeof candidate.vendor === 'string' ? candidate.vendor : '',
+    };
+  }
+
+  function sanitizeInventorySort(raw) {
+    const candidate = raw || {};
+    const allowedKeys = new Set(['__lowStock', ...ALL_FIELDS.map(field => field.key)]);
+    const direction = candidate.direction === 'asc' || candidate.direction === 'desc' ? candidate.direction : '';
+    if (!candidate.key || !direction || !allowedKeys.has(candidate.key)) {
+      return { ...defaultSort };
+    }
+    return { key: candidate.key, direction };
+  }
+
+  function persistInventoryPrefs({ debounced = false } = {}) {
+    const payload = {
+      filter: { ...currentFilter },
+      sort: { ...currentSort },
+    };
+    if (debounced) {
+      clearTimeout(persistTimer);
+      persistTimer = setTimeout(() => {
+        setState({ inventoryViewPrefs: payload });
+      }, 250);
+      return;
+    }
+    clearTimeout(persistTimer);
+    setState({ inventoryViewPrefs: payload });
+  }
+
+  // === 정렬 유틸 ===
+  function getSortOptionLabel(sort) {
+    if (!sort.key || !sort.direction) return '정렬 없음';
+    const option = sortOptions.find(opt => opt.value === `${sort.key}:${sort.direction}`);
+    if (option) return option.label;
+    if (sort.key === '__lowStock') return '재고 부족 우선';
+    const label = FIELD_LABELS[sort.key] || sort.key;
+    return `${label} ${sort.direction === 'asc' ? '오름차순' : '내림차순'}`;
+  }
+
+  function getSortIndicator(key) {
+    if (currentSort.key !== key) return '↕';
+    return currentSort.direction === 'asc' ? '↑' : '↓';
+  }
+
+  function getSortPresetValue(sort) {
+    if (!sort.key || !sort.direction) return 'default';
+    const value = `${sort.key}:${sort.direction}`;
+    const hasPreset = sortOptions.some(option => option.value === value);
+    return hasPreset ? value : 'default';
+  }
+
+  function parseSortPreset(value) {
+    if (!value || value === 'default') return { key: '', direction: '' };
+    const [key, direction] = value.split(':');
+    if (!key || !direction) return { key: '', direction: '' };
+    return { key, direction };
+  }
+
+  function getNumericValue(value) {
+    if (value === '' || value === null || value === undefined) return null;
+    const cleaned = typeof value === 'string' ? value.replace(/,/g, '') : value;
+    const num = parseFloat(cleaned);
+    return Number.isNaN(num) ? null : num;
+  }
+
+  function isLowStockRow(row) {
+    const min = safetyStock[row.itemName];
+    const qty = getNumericValue(row.quantity) || 0;
+    return min !== undefined && qty <= min;
+  }
+
+  function getComparableValue(row, key) {
+    if (key === '__lowStock') {
+      return isLowStockRow(row) ? 1 : 0;
+    }
+
+    const field = ALL_FIELDS.find(f => f.key === key);
+    const raw = row[key];
+    if (field?.numeric) {
+      return getNumericValue(raw);
+    }
+
+    if (key === 'expiryDate' && raw) {
+      const ts = new Date(raw).getTime();
+      return Number.isNaN(ts) ? String(raw).toLowerCase() : ts;
+    }
+
+    if (raw === '' || raw === null || raw === undefined) return '';
+    return String(raw).toLowerCase();
+  }
+
+  function sortRows(rows) {
+    if (!currentSort.key || !currentSort.direction) return rows;
+
+    const multiplier = currentSort.direction === 'asc' ? 1 : -1;
+    return [...rows].sort((a, b) => {
+      const av = getComparableValue(a, currentSort.key);
+      const bv = getComparableValue(b, currentSort.key);
+
+      if ((av === null || av === '') && (bv === null || bv === '')) return 0;
+      if (av === null || av === '') return 1;
+      if (bv === null || bv === '') return -1;
+
+      let compareResult = 0;
+      if (typeof av === 'number' && typeof bv === 'number') {
+        compareResult = av - bv;
+      } else {
+        compareResult = String(av).localeCompare(String(bv), 'ko-KR', { numeric: true, sensitivity: 'base' });
+      }
+      return compareResult * multiplier;
+    });
+  }
+
+  function renderFilterSummary(filteredCount, totalCount) {
+    const summaryEl = container.querySelector('#inventory-filter-summary');
+    if (!summaryEl) return;
+
+    const chips = [];
+    if (currentFilter.keyword) chips.push(`검색: ${currentFilter.keyword}`);
+    if (currentFilter.itemCode) chips.push(`품목코드: ${currentFilter.itemCode}`);
+    if (currentFilter.vendor) chips.push(`거래처: ${currentFilter.vendor}`);
+    if (currentFilter.category) chips.push(`분류: ${currentFilter.category}`);
+    if (currentFilter.warehouse) chips.push(`창고: ${currentFilter.warehouse}`);
+    if (currentFilter.stock === 'low') chips.push('부족 항목만');
+    if (currentSort.key && currentSort.direction) chips.push(`정렬: ${getSortOptionLabel(currentSort)}`);
+
+    const chipsHtml = chips.length > 0
+      ? chips.map(text => `<span class="filter-chip">${text}</span>`).join('')
+      : '<span class="filter-chip filter-chip-muted">필터 없음</span>';
+
+    summaryEl.innerHTML = `
+      <div class="filter-summary-row">
+        <div class="filter-summary-count">표시 ${filteredCount}건 / 전체 ${totalCount}건</div>
+        <div class="filter-summary-chips">${chipsHtml}</div>
+      </div>
+    `;
+  }
+
+  function attachSortHeaderEvents() {
+    container.querySelectorAll('.sortable-header[data-sort-key]').forEach(header => {
+      header.addEventListener('click', () => {
+        const key = header.dataset.sortKey;
+        if (!key) return;
+
+        if (currentSort.key !== key) {
+          currentSort = { key, direction: 'asc' };
+        } else if (currentSort.direction === 'asc') {
+          currentSort = { key, direction: 'desc' };
+        } else {
+          currentSort = { key: '', direction: '' };
+        }
+
+        const sortSelect = container.querySelector('#sort-preset');
+        if (sortSelect) sortSelect.value = getSortPresetValue(currentSort);
+
+        persistInventoryPrefs();
+        currentPageNum = 1;
+        renderTableHeader();
+        renderTable();
+      });
+    });
+  }
 
   // === 테이블 헤더 렌더링 (컬럼 변경 시 재호출) ===
   function renderTableHeader() {
@@ -236,14 +450,20 @@ export function renderInventoryPage(container, navigateTo) {
       <tr>
         <th class="col-num">#</th>
         ${activeFields.map(key => `
-          <th class="${ALL_FIELDS.find(f => f.key === key)?.numeric ? 'text-right' : ''}">
-            ${FIELD_LABELS[key]}
+          <th
+            class="sortable-header ${ALL_FIELDS.find(f => f.key === key)?.numeric ? 'text-right' : ''} ${currentSort.key === key ? 'is-active' : ''}"
+            data-sort-key="${key}"
+            title="클릭하여 정렬"
+          >
+            <span>${FIELD_LABELS[key]}</span>
+            <span class="sort-indicator">${getSortIndicator(key)}</span>
           </th>
         `).join('')}
         <th class="text-center" style="width:70px;">안전재고</th>
         <th class="col-actions">관리</th>
       </tr>
     `;
+    attachSortHeaderEvents();
   }
 
   // === 필터링 ===
@@ -260,11 +480,7 @@ export function renderInventoryPage(container, navigateTo) {
       if (currentFilter.warehouse && row.warehouse !== currentFilter.warehouse) return false;
       if (currentFilter.itemCode && row.itemCode !== currentFilter.itemCode) return false;
       if (currentFilter.vendor && row.vendor !== currentFilter.vendor) return false;
-      if (currentFilter.stock === 'low') {
-        const min = safetyStock[row.itemName];
-        const qtyStr = typeof row.quantity === 'string' ? row.quantity.replace(/,/g, '') : row.quantity;
-        if (min === undefined || (parseFloat(qtyStr) || 0) > min) return false;
-      }
+      if (currentFilter.stock === 'low' && !isLowStockRow(row)) return false;
       return true;
     });
   }
@@ -272,14 +488,15 @@ export function renderInventoryPage(container, navigateTo) {
   // === 테이블 바디 렌더링 ===
   function renderTable() {
     const filtered = getFilteredData();
-    const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+    const sorted = sortRows(filtered);
+    const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
     if (currentPageNum > totalPages) currentPageNum = totalPages;
 
     const start = (currentPageNum - 1) * PAGE_SIZE;
-    const pageData = filtered.slice(start, start + PAGE_SIZE);
+    const pageData = sorted.slice(start, start + PAGE_SIZE);
 
     const tbody = container.querySelector('#inventory-body');
-    if (filtered.length === 0) {
+    if (sorted.length === 0) {
       tbody.innerHTML = `<tr><td colspan="${activeFields.length + 3}" style="text-align:center; padding:32px; color:var(--text-muted);">
         검색 결과가 없습니다.
       </td></tr>`;
@@ -319,10 +536,13 @@ export function renderInventoryPage(container, navigateTo) {
       }).join('');
     }
 
+    renderFilterSummary(sorted.length, data.length);
+
     // 페이지네이션
     const paginationEl = container.querySelector('#pagination');
+    const pageStart = sorted.length === 0 ? 0 : start + 1;
     paginationEl.innerHTML = `
-      <span>${filtered.length}건 중 ${start + 1}~${Math.min(start + PAGE_SIZE, filtered.length)}</span>
+      <span>${sorted.length}건 중 ${pageStart}~${Math.min(start + PAGE_SIZE, sorted.length)}</span>
       <div class="pagination-btns">
         <button class="page-btn" id="page-prev" ${currentPageNum <= 1 ? 'disabled' : ''}>← 이전</button>
         ${Array.from({length: Math.min(totalPages, 7)}, (_, i) => {
@@ -532,69 +752,96 @@ export function renderInventoryPage(container, navigateTo) {
     showToast(`${checked.length}개 항목 표시`, 'success');
   });
 
-  // === 검색/필터 이벤트 ===
+  // 초심자 빠른 액션
+  container.querySelector('#btn-quick-inout')?.addEventListener('click', () => navigateTo('inout'));
+  container.querySelector('#btn-quick-guide')?.addEventListener('click', () => navigateTo('guide'));
+  container.querySelector('#btn-quick-dashboard')?.addEventListener('click', () => navigateTo('home'));
+
+  // === 검색/필터/정렬 이벤트 ===
   container.querySelector('#search-input').addEventListener('input', (e) => {
     currentFilter.keyword = e.target.value;
     currentPageNum = 1;
     renderTable();
+    highlightActiveFilters();
+    persistInventoryPrefs({ debounced: true });
   });
   container.querySelector('#filter-item-code').addEventListener('change', (e) => {
     currentFilter.itemCode = e.target.value;
     currentPageNum = 1;
     renderTable();
     highlightActiveFilters();
+    persistInventoryPrefs();
   });
   container.querySelector('#filter-vendor').addEventListener('change', (e) => {
     currentFilter.vendor = e.target.value;
     currentPageNum = 1;
     renderTable();
     highlightActiveFilters();
+    persistInventoryPrefs();
   });
   container.querySelector('#filter-category').addEventListener('change', (e) => {
     currentFilter.category = e.target.value;
     currentPageNum = 1;
     renderTable();
     highlightActiveFilters();
+    persistInventoryPrefs();
   });
   container.querySelector('#filter-warehouse').addEventListener('change', (e) => {
     currentFilter.warehouse = e.target.value;
     currentPageNum = 1;
     renderTable();
     highlightActiveFilters();
+    persistInventoryPrefs();
   });
   container.querySelector('#filter-stock').addEventListener('change', (e) => {
     currentFilter.stock = e.target.value;
     currentPageNum = 1;
     renderTable();
     highlightActiveFilters();
+    persistInventoryPrefs();
+  });
+  container.querySelector('#sort-preset').addEventListener('change', (e) => {
+    currentSort = sanitizeInventorySort(parseSortPreset(e.target.value));
+    currentPageNum = 1;
+    renderTableHeader();
+    renderTable();
+    persistInventoryPrefs();
   });
 
-  // 필터 초기화 버튼
+  // 필터/정렬 초기화 버튼
   container.querySelector('#btn-filter-reset').addEventListener('click', () => {
-    currentFilter = { keyword: '', category: '', warehouse: '', stock: '', itemCode: '', vendor: '' };
+    currentFilter = { ...defaultFilter };
+    currentSort = { ...defaultSort };
     container.querySelector('#search-input').value = '';
     container.querySelector('#filter-item-code').value = '';
     container.querySelector('#filter-vendor').value = '';
     container.querySelector('#filter-category').value = '';
     container.querySelector('#filter-warehouse').value = '';
     container.querySelector('#filter-stock').value = '';
+    container.querySelector('#sort-preset').value = 'default';
     currentPageNum = 1;
+    renderTableHeader();
     renderTable();
     highlightActiveFilters();
-    showToast('필터를 초기화했습니다.', 'info');
+    persistInventoryPrefs();
+    showToast('필터와 정렬을 초기화했습니다.', 'info');
   });
 
   // 필터 활성 상태 시각적 표시
   function highlightActiveFilters() {
-    const filterIds = ['filter-item-code', 'filter-vendor', 'filter-category', 'filter-warehouse', 'filter-stock'];
+    const filterIds = ['filter-item-code', 'filter-vendor', 'filter-category', 'filter-warehouse', 'filter-stock', 'sort-preset'];
     filterIds.forEach(id => {
       const el = container.querySelector(`#${id}`);
-      if (el && el.value) {
+      const isSort = id === 'sort-preset';
+      const active = isSort ? (el && el.value && el.value !== 'default') : (el && el.value);
+      if (active) {
         el.classList.add('filter-active');
       } else if (el) {
         el.classList.remove('filter-active');
       }
     });
+    const searchEl = container.querySelector('#search-input');
+    if (searchEl) searchEl.classList.toggle('filter-active', !!currentFilter.keyword);
   }
 
   // 엑셀 내보내기 — 현재 표시 중인 컬럼만 내보내기
@@ -624,8 +871,16 @@ export function renderInventoryPage(container, navigateTo) {
   });
 
   // === 초기 렌더링 ===
+  container.querySelector('#search-input').value = currentFilter.keyword;
+  container.querySelector('#filter-item-code').value = currentFilter.itemCode;
+  container.querySelector('#filter-vendor').value = currentFilter.vendor;
+  container.querySelector('#filter-category').value = currentFilter.category;
+  container.querySelector('#filter-warehouse').value = currentFilter.warehouse;
+  container.querySelector('#filter-stock').value = currentFilter.stock;
+  container.querySelector('#sort-preset').value = getSortPresetValue(currentSort);
   renderTableHeader();
   renderTable();
+  highlightActiveFilters();
 }
 
 // === 품목 추가/편집 모달 ===
