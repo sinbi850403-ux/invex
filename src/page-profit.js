@@ -18,6 +18,100 @@
 import { getState } from './store.js';
 import { getSalePrice } from './price-utils.js';
 
+const DEFAULT_PROFIT_SORT = {
+  category: { key: 'profit', direction: 'desc' },
+  item: { key: 'profit', direction: 'desc' },
+};
+
+let profitSortState = {
+  category: { ...DEFAULT_PROFIT_SORT.category },
+  item: { ...DEFAULT_PROFIT_SORT.item },
+};
+
+const TEXT_SORT_KEYS = new Set(['name', 'category', 'code']);
+
+function getProfitDefaultDirection(key) {
+  return TEXT_SORT_KEYS.has(key) ? 'asc' : 'desc';
+}
+
+function toggleProfitSort(section, key) {
+  const current = profitSortState[section];
+  if (current.key === key) {
+    profitSortState[section] = {
+      key,
+      direction: current.direction === 'desc' ? 'asc' : 'desc',
+    };
+    return;
+  }
+
+  profitSortState[section] = {
+    key,
+    direction: getProfitDefaultDirection(key),
+  };
+}
+
+function getProfitSortIcon(section, key) {
+  const current = profitSortState[section];
+  if (current.key !== key) {
+    return '<span style="margin-left:4px; color:var(--text-muted); font-size:10px;">↕</span>';
+  }
+
+  return `<span style="margin-left:4px; color:var(--accent); font-size:10px;">${current.direction === 'desc' ? '▼' : '▲'}</span>`;
+}
+
+function compareProfitValues(a, b, direction) {
+  const dir = direction === 'desc' ? -1 : 1;
+
+  if (typeof a === 'string' || typeof b === 'string') {
+    return String(a || '').localeCompare(String(b || ''), 'ko') * dir;
+  }
+
+  return ((Number(a) || 0) - (Number(b) || 0)) * dir;
+}
+
+function sortProfitRows(rows, section, getValue) {
+  const current = profitSortState[section];
+
+  return [...rows].sort((a, b) => {
+    const primary = compareProfitValues(
+      getValue(a, current.key),
+      getValue(b, current.key),
+      current.direction
+    );
+
+    if (primary !== 0) return primary;
+
+    return String(a.name || '').localeCompare(String(b.name || ''), 'ko');
+  });
+}
+
+function getCategorySortValue(row, key) {
+  switch (key) {
+    case 'name': return row.name || '';
+    case 'count': return row.count;
+    case 'cost': return row.cost;
+    case 'revenue': return row.revenue;
+    case 'profit': return row.profit;
+    case 'rate': return parseFloat(row.rate) || 0;
+    default: return row.profit;
+  }
+}
+
+function getItemSortValue(row, key) {
+  switch (key) {
+    case 'name': return row.name || '';
+    case 'category': return row.category || '';
+    case 'qty': return row.qty;
+    case 'costPrice': return row.costPrice;
+    case 'salePrice': return row.salePrice;
+    case 'perUnitProfit': return row.salePrice - row.costPrice;
+    case 'profitRate': return row.profitRate;
+    case 'marginRate': return row.marginRate;
+    case 'profit': return row.profit;
+    default: return row.profit;
+  }
+}
+
 export function renderProfitPage(container, navigateTo) {
   const state = getState();
   const transactions = state.transactions || [];
@@ -66,8 +160,8 @@ export function renderProfitPage(container, navigateTo) {
     ? Math.round(salePriceCount / inventoryAnalysis.length * 100) : 0;
 
   // === 이익 TOP 5 / 마진 낮은 TOP 5 ===
-  const sorted = [...inventoryAnalysis].sort((a, b) => b.profit - a.profit);
-  const top5 = sorted.slice(0, 5);
+  const profitRanking = [...inventoryAnalysis].sort((a, b) => b.profit - a.profit);
+  const top5 = profitRanking.slice(0, 5);
   const lowMargin = [...inventoryAnalysis]
     .filter(d => d.totalCost > 0 && d.hasRealSalePrice)
     .sort((a, b) => a.profitRate - b.profitRate)
@@ -87,8 +181,10 @@ export function renderProfitPage(container, navigateTo) {
     .map(([name, d]) => ({
       name, ...d,
       rate: d.revenue > 0 ? (d.profit / d.revenue * 100).toFixed(1) : '0',
-    }))
-    .sort((a, b) => b.profit - a.profit);
+    }));
+
+  const sortedCategoryData = sortProfitRows(categoryData, 'category', getCategorySortValue);
+  const sortedInventoryAnalysis = sortProfitRows(inventoryAnalysis, 'item', getItemSortValue);
 
   // === 거래 기반 손익 (월별) ===
   const now = new Date();
@@ -216,20 +312,21 @@ export function renderProfitPage(container, navigateTo) {
     <!-- ━━━ 4. 분류별 이익 분석 ━━━ -->
     <div class="card" style="margin-top:16px;">
       <div class="card-title">📋 분류별 이익 분석</div>
+      <div style="padding:0 16px 12px; font-size:11px; color:var(--text-muted);">헤더를 클릭하면 오름차순/내림차순으로 정렬됩니다.</div>
       <div class="table-wrapper" style="border:none;">
         <table class="data-table">
           <thead>
             <tr>
-              <th>분류</th>
-              <th class="text-right">품목수</th>
-              <th class="text-right">매입 총액</th>
-              <th class="text-right">매출 총액 (예상)</th>
-              <th class="text-right">이익</th>
-              <th class="text-right">이익률</th>
+              <th data-profit-sort="category" data-sort-key="name" style="cursor:pointer; user-select:none;">분류 ${getProfitSortIcon('category', 'name')}</th>
+              <th class="text-right" data-profit-sort="category" data-sort-key="count" style="cursor:pointer; user-select:none;">품목수 ${getProfitSortIcon('category', 'count')}</th>
+              <th class="text-right" data-profit-sort="category" data-sort-key="cost" style="cursor:pointer; user-select:none;">매입 총액 ${getProfitSortIcon('category', 'cost')}</th>
+              <th class="text-right" data-profit-sort="category" data-sort-key="revenue" style="cursor:pointer; user-select:none;">매출 총액 (예상) ${getProfitSortIcon('category', 'revenue')}</th>
+              <th class="text-right" data-profit-sort="category" data-sort-key="profit" style="cursor:pointer; user-select:none;">이익 ${getProfitSortIcon('category', 'profit')}</th>
+              <th class="text-right" data-profit-sort="category" data-sort-key="rate" style="cursor:pointer; user-select:none;">이익률 ${getProfitSortIcon('category', 'rate')}</th>
             </tr>
           </thead>
           <tbody>
-            ${categoryData.map(c => `
+            ${sortedCategoryData.map(c => `
               <tr>
                 <td><strong>${c.name}</strong></td>
                 <td class="text-right">${c.count}개</td>
@@ -243,7 +340,7 @@ export function renderProfitPage(container, navigateTo) {
                 </td>
               </tr>
             `).join('')}
-            ${categoryData.length === 0 ? '<tr><td colspan="6" style="text-align:center; padding:20px; color:var(--text-muted);">분류 데이터가 없습니다</td></tr>' : ''}
+            ${sortedCategoryData.length === 0 ? '<tr><td colspan="6" style="text-align:center; padding:20px; color:var(--text-muted);">분류 데이터가 없습니다</td></tr>' : ''}
           </tbody>
           <tfoot>
             <tr style="font-weight:700; background:var(--bg-card);">
@@ -264,24 +361,25 @@ export function renderProfitPage(container, navigateTo) {
     <!-- ━━━ 5. 전체 품목 이익률 상세 ━━━ -->
     <div class="card" style="margin-top:16px;">
       <div class="card-title">📦 품목별 이익률 상세 (${inventoryAnalysis.length}개)</div>
+      <div style="padding:0 16px 12px; font-size:11px; color:var(--text-muted);">헤더를 클릭하면 원하는 기준으로 바로 정렬됩니다.</div>
       <div class="table-wrapper" style="border:none;">
         <table class="data-table">
           <thead>
             <tr>
               <th>#</th>
-              <th>품목명</th>
-              <th>분류</th>
-              <th class="text-right">수량</th>
-              <th class="text-right">매입가</th>
-              <th class="text-right">판매가</th>
-              <th class="text-right">개당 이익</th>
-              <th class="text-right">이익률(%)</th>
-              <th class="text-right">마진율(%)</th>
-              <th class="text-right">총 이익</th>
+              <th data-profit-sort="item" data-sort-key="name" style="cursor:pointer; user-select:none;">품목명 ${getProfitSortIcon('item', 'name')}</th>
+              <th data-profit-sort="item" data-sort-key="category" style="cursor:pointer; user-select:none;">분류 ${getProfitSortIcon('item', 'category')}</th>
+              <th class="text-right" data-profit-sort="item" data-sort-key="qty" style="cursor:pointer; user-select:none;">수량 ${getProfitSortIcon('item', 'qty')}</th>
+              <th class="text-right" data-profit-sort="item" data-sort-key="costPrice" style="cursor:pointer; user-select:none;">매입가 ${getProfitSortIcon('item', 'costPrice')}</th>
+              <th class="text-right" data-profit-sort="item" data-sort-key="salePrice" style="cursor:pointer; user-select:none;">판매가 ${getProfitSortIcon('item', 'salePrice')}</th>
+              <th class="text-right" data-profit-sort="item" data-sort-key="perUnitProfit" style="cursor:pointer; user-select:none;">개당 이익 ${getProfitSortIcon('item', 'perUnitProfit')}</th>
+              <th class="text-right" data-profit-sort="item" data-sort-key="profitRate" style="cursor:pointer; user-select:none;">이익률(%) ${getProfitSortIcon('item', 'profitRate')}</th>
+              <th class="text-right" data-profit-sort="item" data-sort-key="marginRate" style="cursor:pointer; user-select:none;">마진율(%) ${getProfitSortIcon('item', 'marginRate')}</th>
+              <th class="text-right" data-profit-sort="item" data-sort-key="profit" style="cursor:pointer; user-select:none;">총 이익 ${getProfitSortIcon('item', 'profit')}</th>
             </tr>
           </thead>
           <tbody>
-            ${sorted.map((d, i) => {
+            ${sortedInventoryAnalysis.map((d, i) => {
               const perUnitProfit = d.salePrice - d.costPrice;
               return `
               <tr>
@@ -321,4 +419,11 @@ export function renderProfitPage(container, navigateTo) {
       • 재고 현황에서 <strong>판매단가</strong>를 입력하면 정확한 분석이 가능합니다.
     </div>
   `;
+
+  container.querySelectorAll('[data-profit-sort]').forEach(header => {
+    header.addEventListener('click', () => {
+      toggleProfitSort(header.dataset.profitSort, header.dataset.sortKey);
+      renderProfitPage(container, navigateTo);
+    });
+  });
 }
