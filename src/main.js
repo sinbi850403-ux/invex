@@ -371,7 +371,7 @@ async function navigateTo(pageName) {
   mainContent.innerHTML = `
     <div class="card">
       <div class="empty-state" style="padding:32px 20px;">
-        <div class="msg">?섏씠吏瑜?遺덈윭?ㅻ뒗 以묒엯?덈떎.</div>
+        <div class="msg">페이지를 불러오는 중입니다.</div>
       </div>
     </div>
   `;
@@ -388,12 +388,12 @@ async function navigateTo(pageName) {
     mainContent.innerHTML = `
       <div class="card">
         <div class="empty-state" style="padding:32px 20px;">
-          <div class="msg">?섏씠吏瑜?遺덈윭?ㅼ? 紐삵뻽?듬땲??</div>
-          <div class="sub">?좎떆 ???ㅼ떆 ?쒕룄??二쇱꽭??</div>
+          <div class="msg">페이지를 불러오지 못했습니다.</div>
+          <div class="sub">잠시 후 다시 시도해 주세요.</div>
         </div>
       </div>
     `;
-    showToast('?섏씠吏瑜?遺덈윭?ㅼ? 紐삵뻽?듬땲??', 'warning');
+    showToast('페이지를 불러오지 못했습니다.', 'warning');
     return;
   }
 
