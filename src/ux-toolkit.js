@@ -14,52 +14,56 @@ function renderAction(action) {
   if (action.nav) attrs.push(`data-nav="${action.nav}"`);
   if (action.value) attrs.push(`data-value="${escapeHtml(action.value)}"`);
   if (action.extraAttrs) attrs.push(action.extraAttrs);
-  return `<button class="btn ${variant} btn-sm" ${attrs.join(' ')}>${escapeHtml(action.label || '실행')}</button>`;
+  return `<button class="btn ${variant} btn-sm" ${attrs.join(' ')}>${escapeHtml(action.label || '?�행')}</button>`;
 }
 
 export function renderGuidedPanel({
-  eyebrow = '빠른 흐름',
+  eyebrow = '빠른 ?�름',
   title,
   desc = '',
   badge = '',
   tone = 'info',
   steps = [],
   actions = [],
+  foldId = '',
+  open = true,
 }) {
+  const foldAttr = foldId ? ` data-fold-id="${escapeHtml(foldId)}"` : '';
   return `
-    <div class="card mission-panel mission-panel-${tone}">
-      <div class="mission-panel-head">
+    <details class="card mission-panel mission-panel-${tone} fold-card"${foldAttr} ${open ? 'open' : ''}>
+      <summary class="fold-card-summary mission-panel-head">
         <div>
           <div class="mission-panel-eyebrow">${escapeHtml(eyebrow)}</div>
           <div class="mission-panel-title">${escapeHtml(title)}</div>
-          <div class="mission-panel-desc">${escapeHtml(desc)}</div>
         </div>
         ${badge ? `<span class="mission-badge">${escapeHtml(badge)}</span>` : ''}
-      </div>
-      ${steps.length > 0 ? `
-        <div class="mission-step-list">
-          ${steps.map(step => `
-            <div class="mission-step ${step.done ? 'is-done' : ''}">
-              <span class="mission-step-index">${escapeHtml(step.kicker || '')}</span>
-              <div>
-                <div class="mission-step-title">${escapeHtml(step.title || '')}</div>
-                ${step.desc ? `<div class="mission-step-desc">${escapeHtml(step.desc)}</div>` : ''}
+      </summary>
+      <div class="fold-card-body">
+        ${desc ? `<div class="mission-panel-desc">${escapeHtml(desc)}</div>` : ''}
+        ${steps.length > 0 ? `
+          <div class="mission-step-list">
+            ${steps.map(step => `
+              <div class="mission-step ${step.done ? 'is-done' : ''}">
+                <span class="mission-step-index">${escapeHtml(step.kicker || '')}</span>
+                <div>
+                  <div class="mission-step-title">${escapeHtml(step.title || '')}</div>
+                  ${step.desc ? `<div class="mission-step-desc">${escapeHtml(step.desc)}</div>` : ''}
+                </div>
               </div>
-            </div>
-          `).join('')}
-        </div>
-      ` : ''}
-      ${actions.length > 0 ? `
-        <div class="mission-actions">
-          ${actions.map(renderAction).join('')}
-        </div>
-      ` : ''}
-    </div>
+            `).join('')}
+          </div>
+        ` : ''}
+        ${actions.length > 0 ? `
+          <div class="mission-actions">
+            ${actions.map(renderAction).join('')}
+          </div>
+        ` : ''}
+      </div>
+    </details>
   `;
 }
-
 export function renderInsightHero({
-  eyebrow = '핵심 요약',
+  eyebrow = '?�심 ?�약',
   title,
   desc = '',
   tone = 'default',

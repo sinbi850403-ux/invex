@@ -741,6 +741,58 @@ a:hover {
   font-weight: 400;
 }
 
+.fold-card {
+  padding: 0;
+}
+
+.fold-card > summary {
+  list-style: none;
+  cursor: pointer;
+  padding: var(--space-lg);
+  padding-right: calc(var(--space-lg) + 20px);
+  position: relative;
+}
+
+.fold-card > summary::-webkit-details-marker {
+  display: none;
+}
+
+.fold-card > summary::after {
+  content: '▾';
+  position: absolute;
+  right: var(--space-lg);
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 12px;
+  color: var(--text-muted);
+  transition: transform 0.2s ease;
+}
+
+.fold-card[open] > summary {
+  border-bottom: 1px solid var(--border);
+}
+
+.fold-card[open] > summary::after {
+  transform: translateY(-50%) rotate(180deg);
+}
+
+.fold-card-body {
+  padding: var(--space-lg);
+  padding-top: 0;
+}
+
+.fold-card-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.fold-card-meta {
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
 /* --- 버튼 --- */
 .btn {
   display: inline-flex;
