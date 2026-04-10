@@ -535,6 +535,66 @@ a:hover {
   padding: 0 12px;
 }
 
+#nav3.report-nav {
+  gap: 8px;
+  padding: 4px 12px 0;
+}
+
+#nav3.report-nav .nav-btn-report {
+  border: 1px solid rgba(126, 156, 193, 0.24);
+  background: rgba(14, 26, 43, 0.55);
+  border-radius: 12px;
+  padding: 9px 10px;
+  gap: 9px;
+  align-items: flex-start;
+  min-height: 52px;
+}
+
+#nav3.report-nav .nav-btn-report:hover {
+  border-color: rgba(126, 171, 231, 0.52);
+  background: rgba(23, 41, 67, 0.75);
+}
+
+#nav3.report-nav .nav-btn-report .nav-icon {
+  width: 18px;
+  font-size: 14px;
+  margin-top: 1px;
+}
+
+#nav3.report-nav .nav-copy {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.2;
+}
+
+#nav3.report-nav .nav-main {
+  color: rgba(238, 247, 255, 0.98);
+  font-size: 13px;
+  font-weight: 650;
+  letter-spacing: -0.2px;
+}
+
+#nav3.report-nav .nav-sub {
+  color: rgba(176, 199, 230, 0.88);
+  font-size: 10.5px;
+  margin-top: 3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#nav3.report-nav .nav-btn-report.active {
+  border-color: rgba(116, 186, 255, 0.88);
+  background: linear-gradient(135deg, rgba(75, 146, 228, 0.95), rgba(56, 125, 209, 0.95));
+  box-shadow: 0 3px 12px rgba(17, 53, 95, 0.45);
+}
+
+#nav3.report-nav .nav-btn-report.active .nav-main,
+#nav3.report-nav .nav-btn-report.active .nav-sub {
+  color: #f8fbff;
+}
+
 #quick-access-nav {
   display: flex;
   flex-direction: column;
