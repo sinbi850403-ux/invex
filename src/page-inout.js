@@ -4,7 +4,7 @@
  * ?듭떖: ?낆텧怨좊? 湲곕줉?섎㈃ ?ш퀬 ?꾪솴???섎웾???먮룞?쇰줈 利앷컧??
  */
 
-import { getState, setState, addTransaction, deleteTransaction } from './store.js';
+import { getState, setState, addTransaction, deleteTransaction, restoreTransaction } from './store.js';
 import { showToast } from './toast.js';
 import { downloadExcel, readExcelFile } from './excel.js';
 import { escapeHtml, renderGuidedPanel, renderInsightHero, renderQuickFilterRow } from './ux-toolkit.js';
@@ -478,11 +478,22 @@ export function renderInoutPage(container, navigateTo) {
     // ??젣 ?대깽??
     container.querySelectorAll('.btn-del-tx').forEach(btn => {
       btn.addEventListener('click', () => {
-        if (confirm('이 기록을 삭제하시겠습니까?\n재고 수량은 자동으로 되돌아가지 않습니다.')) {
-          deleteTransaction(btn.dataset.id);
-          showToast('기록을 삭제했습니다.', 'info');
-          renderInoutPage(container, navigateTo);
+        const removed = deleteTransaction(btn.dataset.id);
+        if (!removed?.deleted) {
+          showToast('삭제할 기록을 찾지 못했습니다.', 'warning');
+          return;
         }
+
+        const itemName = removed.deleted.itemName || '선택 기록';
+        renderInoutPage(container, navigateTo);
+        showToast(`"${itemName}" 기록을 삭제했습니다.`, 'info', 5000, {
+          actionLabel: '실행 취소',
+          onAction: () => {
+            restoreTransaction(removed.deleted, removed.index);
+            renderInoutPage(container, navigateTo);
+            showToast(`"${itemName}" 기록을 복원했습니다.`, 'success');
+          },
+        });
       });
     });
 

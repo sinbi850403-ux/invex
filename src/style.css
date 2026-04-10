@@ -2386,6 +2386,30 @@ html.dark-mode .report-spotlight-card {
   align-items: center;
   gap: 8px;
 }
+.toast-message {
+  flex: 1;
+  min-width: 0;
+}
+.toast-action {
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  background: rgba(255, 255, 255, 0.16);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  border-radius: 999px;
+  padding: 5px 10px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+.toast-action:hover {
+  background: rgba(255, 255, 255, 0.26);
+  border-color: rgba(255, 255, 255, 0.7);
+}
+.toast-action:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.85);
+  outline-offset: 2px;
+}
 .toast.info    { background: #334155; }
 .toast.success { background: var(--success); }
 .toast.warning { background: var(--warning); }

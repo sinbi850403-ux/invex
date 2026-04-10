@@ -264,8 +264,25 @@ export function addTransaction(tx) {
  * 입출고 기록 삭제
  */
 export function deleteTransaction(id) {
-  state.transactions = state.transactions.filter(t => t.id !== id);
+  const index = state.transactions.findIndex(t => t.id === id);
+  if (index < 0) return null;
+  const [deleted] = state.transactions.splice(index, 1);
   saveToDB();
+  return { deleted, index };
+}
+
+/**
+ * 입출고 기록 복원
+ */
+export function restoreTransaction(tx, index = 0) {
+  if (!tx) return null;
+  if (!Array.isArray(state.transactions)) state.transactions = [];
+  const safeIndex = Number.isInteger(index)
+    ? Math.max(0, Math.min(index, state.transactions.length))
+    : 0;
+  state.transactions.splice(safeIndex, 0, tx);
+  saveToDB();
+  return tx;
 }
 
 /**
@@ -300,6 +317,23 @@ export function updateItem(index, item) {
  * 품목 삭제
  */
 export function deleteItem(index) {
-  state.mappedData.splice(index, 1);
+  if (!Array.isArray(state.mappedData)) return null;
+  if (index < 0 || index >= state.mappedData.length) return null;
+  const [deleted] = state.mappedData.splice(index, 1);
   saveToDB();
+  return { deleted, index };
+}
+
+/**
+ * 품목 복원
+ */
+export function restoreItem(item, index = 0) {
+  if (!item) return null;
+  if (!Array.isArray(state.mappedData)) state.mappedData = [];
+  const safeIndex = Number.isInteger(index)
+    ? Math.max(0, Math.min(index, state.mappedData.length))
+    : 0;
+  state.mappedData.splice(safeIndex, 0, item);
+  saveToDB();
+  return item;
 }

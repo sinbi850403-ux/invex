@@ -4,7 +4,7 @@
  * **而щ읆 ?쒖떆 ?ㅼ젙**: ?ъ슜?먭? 蹂닿퀬 ?띠? 而щ읆留??좏깮?댁꽌 蹂????덉쓬
  */
 
-import { getState, setState, addItem, updateItem, deleteItem, setSafetyStock } from './store.js';
+import { getState, setState, addItem, updateItem, deleteItem, restoreItem, setSafetyStock } from './store.js';
 import { showToast } from './toast.js';
 import { downloadExcel } from './excel.js';
 import { generateInventoryPDF } from './pdf-generator.js';
@@ -865,12 +865,23 @@ export function renderInventoryPage(container, navigateTo) {
       btn.addEventListener('click', () => {
         const idx = parseInt(btn.dataset.idx);
         const name = data[idx]?.itemName || `${idx + 1}번 품목`;
-        if (confirm(`"${name}" 품목을 삭제하시겠습니까?`)) {
-          deleteItem(idx);
-          renderTable();
-          updateStats();
-          showToast(`"${name}" 품목을 삭제했습니다.`, 'info');
+        const removed = deleteItem(idx);
+        if (!removed?.deleted) {
+          showToast('삭제할 품목을 찾지 못했습니다.', 'warning');
+          return;
         }
+
+        renderTable();
+        updateStats();
+        showToast(`"${name}" 품목을 삭제했습니다.`, 'info', 5000, {
+          actionLabel: '실행 취소',
+          onAction: () => {
+            restoreItem(removed.deleted, removed.index);
+            renderTable();
+            updateStats();
+            showToast(`"${name}" 품목을 복원했습니다.`, 'success');
+          },
+        });
       });
     });
 
