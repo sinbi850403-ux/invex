@@ -382,6 +382,89 @@ function initNavigationShortcuts() {
   });
 }
 
+function isTypingContext(target) {
+  if (!target) return false;
+  const tag = target.tagName;
+  if (target.isContentEditable) return true;
+  return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
+}
+
+function closeTopModalOverlay() {
+  const overlays = Array.from(document.querySelectorAll('.modal-overlay'));
+  const topOverlay = overlays[overlays.length - 1];
+  if (!topOverlay) return false;
+
+  const closeButton = topOverlay.querySelector('.modal-close, #modal-close, #bulk-close, #plan-pick-close, #modal-cancel, #bulk-cancel');
+  if (closeButton && typeof closeButton.click === 'function') {
+    closeButton.click();
+  } else {
+    topOverlay.remove();
+  }
+  return true;
+}
+
+function triggerQuickWorkflow(action) {
+  if (action === 'new-item') {
+    if (currentPage === 'inventory') {
+      const addButton = document.getElementById('btn-add-item');
+      if (addButton) {
+        addButton.click();
+        return;
+      }
+    }
+    sessionStorage.setItem('invex:quick-open-item', '1');
+    navigateTo('inventory');
+    return;
+  }
+
+  if (action === 'inbound' || action === 'outbound') {
+    if (currentPage === 'inout') {
+      const triggerId = action === 'inbound' ? 'btn-in' : 'btn-out';
+      const triggerButton = document.getElementById(triggerId);
+      if (triggerButton) {
+        triggerButton.click();
+        return;
+      }
+    }
+    sessionStorage.setItem(action === 'inbound' ? 'invex:quick-open-inbound' : 'invex:quick-open-outbound', '1');
+    navigateTo('inout');
+  }
+}
+
+function openGlobalSearchWithFocus() {
+  toggleGlobalSearch();
+  setTimeout(() => {
+    document.getElementById('gs-input')?.focus();
+  }, 40);
+}
+
+function initWorkflowShortcuts() {
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && closeTopModalOverlay()) {
+      e.preventDefault();
+      return;
+    }
+
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    if (isTypingContext(document.activeElement)) return;
+
+    const key = String(e.key || '').toLowerCase();
+    if (key === 'n') {
+      e.preventDefault();
+      triggerQuickWorkflow('new-item');
+    } else if (key === 'i') {
+      e.preventDefault();
+      triggerQuickWorkflow('inbound');
+    } else if (key === 'o') {
+      e.preventDefault();
+      triggerQuickWorkflow('outbound');
+    } else if (e.key === '/') {
+      e.preventDefault();
+      openGlobalSearchWithFocus();
+    }
+  });
+}
+
 /**
  * ?섏씠吏 ?꾪솚
  * ?붽툑??泥댄겕 ???묎렐 遺덇? ???낃렇?덉씠??紐⑤떖 ?쒖떆
@@ -654,6 +737,7 @@ if (!isConfigured) {
 }
 
 initNavigationShortcuts();
+initWorkflowShortcuts();
 
 // ?ъ슜??UI ?낅뜲?댄듃 (濡쒓렇??濡쒓렇?꾩썐 ???몄텧)
 function updateUserUI(user, profile) {

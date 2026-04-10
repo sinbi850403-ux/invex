@@ -8,6 +8,7 @@ import { getState, setState, addItem, updateItem, deleteItem, restoreItem, setSa
 import { showToast } from './toast.js';
 import { downloadExcel } from './excel.js';
 import { generateInventoryPDF } from './pdf-generator.js';
+import { renderItemTimelineChart } from './charts.js';
 import { renderGuidedPanel, renderInsightHero, renderQuickFilterRow } from './ux-toolkit.js';
 
 // ?섏씠吏??????
@@ -206,6 +207,24 @@ export function renderInventoryPage(container, navigateTo) {
       </div>
     </div>
 
+    ${state.lastUploadDiff ? `
+      <div class="card upload-diff-card" id="upload-diff-card">
+        <div class="upload-diff-head">
+          <div>
+            <div class="card-title">업로드 변경 요약</div>
+            <div class="upload-diff-meta">${state.lastUploadDiff.fileName || state.fileName || '최근 업로드'} · ${new Date(state.lastUploadDiff.at || Date.now()).toLocaleString('ko-KR')}</div>
+          </div>
+          <button class="btn btn-ghost btn-sm" id="btn-dismiss-upload-diff">닫기</button>
+        </div>
+        <div class="upload-diff-grid">
+          <div class="upload-diff-item"><span>신규</span><strong>${state.lastUploadDiff.added || 0}건</strong></div>
+          <div class="upload-diff-item"><span>수정</span><strong>${state.lastUploadDiff.updated || 0}건</strong></div>
+          <div class="upload-diff-item"><span>유지</span><strong>${state.lastUploadDiff.unchanged || 0}건</strong></div>
+          <div class="upload-diff-item"><span>미포함</span><strong>${state.lastUploadDiff.removed || 0}건</strong></div>
+        </div>
+      </div>
+    ` : ''}
+
     ${renderInsightHero({
       eyebrow: '재고 운영 상태',
       title: '누가 봐도 바로 이해되는 재고 상태를 먼저 보여줍니다.',
@@ -318,6 +337,15 @@ export function renderInventoryPage(container, navigateTo) {
     </div>
     <div class="filter-summary" id="inventory-filter-summary"></div>
 
+    <div class="card inventory-bulk-bar" id="inventory-bulk-bar">
+      <div class="inventory-bulk-count" id="inventory-selected-count">선택 0개</div>
+      <div class="inventory-bulk-actions">
+        <button class="btn btn-outline btn-sm" id="btn-bulk-category" disabled>선택 분류 변경</button>
+        <button class="btn btn-outline btn-sm" id="btn-bulk-export" disabled>선택 엑셀 내보내기</button>
+        <button class="btn btn-danger btn-sm" id="btn-bulk-delete" disabled>선택 삭제</button>
+      </div>
+    </div>
+
     <!-- ?곗씠???뚯씠釉?-->
     <div class="card card-flush">
       <div class="table-wrapper" style="border:none;">
@@ -327,6 +355,22 @@ export function renderInventoryPage(container, navigateTo) {
         </table>
       </div>
       <div class="pagination" id="pagination"></div>
+    </div>
+
+    <div class="card inventory-timeline-card">
+      <div class="inventory-timeline-head">
+        <div>
+          <div class="card-title" id="item-timeline-title">품목 이력 타임라인</div>
+          <div class="chart-help-text" id="item-timeline-meta">테이블에서 품목을 선택하면 입출고 흐름과 최근 이력을 바로 확인할 수 있습니다.</div>
+        </div>
+        <button class="btn btn-ghost btn-sm" id="btn-item-history-inout">입출고 기록 열기</button>
+      </div>
+      <div class="inventory-timeline-grid">
+        <div class="inventory-timeline-chart">
+          <canvas id="chart-item-timeline"></canvas>
+        </div>
+        <div class="inventory-timeline-list" id="item-timeline-list"></div>
+      </div>
     </div>
 
     <div style="font-size:12px; color:var(--text-muted); margin-top:8px;">
@@ -342,6 +386,8 @@ export function renderInventoryPage(container, navigateTo) {
   let currentPageNum = 1;
   let currentSort = sanitizeInventorySort(savedViewPrefs.sort);
   let persistTimer = null;
+  let selectedIndexes = new Set();
+  let focusedItemKey = data[0] ? getItemKey(data[0]) : '';
 
   function sanitizeInventoryFilter(raw) {
     const candidate = raw || {};
@@ -416,6 +462,22 @@ export function renderInventoryPage(container, navigateTo) {
     const cleaned = typeof value === 'string' ? value.replace(/,/g, '') : value;
     const num = parseFloat(cleaned);
     return Number.isNaN(num) ? null : num;
+  }
+
+  function getItemKey(row) {
+    if (!row) return '';
+    const code = String(row.itemCode || '').trim();
+    const name = String(row.itemName || '').trim();
+    return `${code}::${name}`;
+  }
+
+  function escapeText(value) {
+    return String(value ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
   }
 
   function normalizeToken(value) {
@@ -678,6 +740,9 @@ export function renderInventoryPage(container, navigateTo) {
     const thead = container.querySelector('#inventory-thead');
     thead.innerHTML = `
       <tr>
+        <th class="col-check">
+          <input type="checkbox" class="table-row-check" id="inv-select-all" aria-label="현재 페이지 전체 선택" />
+        </th>
         <th class="col-num">#</th>
         ${activeFields.map(key => `
           <th
@@ -744,16 +809,20 @@ export function renderInventoryPage(container, navigateTo) {
     const sorted = sortRows(filtered);
     const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
     if (currentPageNum > totalPages) currentPageNum = totalPages;
+    if (sorted.length > 0 && !sorted.some(row => getItemKey(row) === focusedItemKey)) {
+      focusedItemKey = getItemKey(sorted[0]);
+    }
 
     const start = (currentPageNum - 1) * PAGE_SIZE;
     const pageData = sorted.slice(start, start + PAGE_SIZE);
 
     const tbody = container.querySelector('#inventory-body');
     if (sorted.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="${activeFields.length + 3}" style="text-align:center; padding:32px; color:var(--text-muted);">
+      tbody.innerHTML = `<tr><td colspan="${activeFields.length + 4}" style="text-align:center; padding:32px; color:var(--text-muted);">
         검색 결과가 없습니다.
       </td></tr>`;
     } else {
+      selectedIndexes = new Set([...selectedIndexes].filter(index => Number.isInteger(index) && index >= 0 && index < data.length));
       tbody.innerHTML = pageData.map((row, i) => {
         const realIdx = data.indexOf(row);
         const min = safetyStock[row.itemName];
@@ -761,9 +830,14 @@ export function renderInventoryPage(container, navigateTo) {
         const qty = parseFloat(qtyStr) || 0;
         const isLow = min !== undefined && qty <= min;
         const isDanger = min !== undefined && qty === 0;
+        const rowKey = getItemKey(row);
+        const isFocused = focusedItemKey === rowKey;
 
         return `
-          <tr class="${isDanger ? 'row-danger' : isLow ? 'row-warning' : ''}" data-idx="${realIdx}">
+          <tr class="${isDanger ? 'row-danger' : isLow ? 'row-warning' : ''} ${isFocused ? 'row-focused' : ''}" data-idx="${realIdx}" data-row-key="${rowKey}">
+            <td class="col-check">
+              <input type="checkbox" class="table-row-check inv-row-check" data-idx="${realIdx}" ${selectedIndexes.has(realIdx) ? 'checked' : ''} aria-label="행 선택" />
+            </td>
             <td class="col-num">${start + i + 1}</td>
             ${activeFields.map(key => `
               <td class="editable-cell ${ALL_FIELDS.find(f => f.key === key)?.numeric ? 'text-right' : ''}"
@@ -813,10 +887,230 @@ export function renderInventoryPage(container, navigateTo) {
     // ?대깽???ъ뿰寃?
     attachTableEvents();
     attachPaginationEvents();
+    updateSelectAllState(pageData);
+    refreshBulkActions();
+    renderItemTimelinePanel(sorted);
+  }
+
+  function updateSelectAllState(pageRows) {
+    const selectAll = container.querySelector('#inv-select-all');
+    if (!selectAll) return;
+
+    const pageIndexes = pageRows.map(row => data.indexOf(row)).filter(index => index >= 0);
+    if (pageIndexes.length === 0) {
+      selectAll.checked = false;
+      selectAll.indeterminate = false;
+      return;
+    }
+
+    const checkedCount = pageIndexes.filter(index => selectedIndexes.has(index)).length;
+    selectAll.checked = checkedCount === pageIndexes.length;
+    selectAll.indeterminate = checkedCount > 0 && checkedCount < pageIndexes.length;
+  }
+
+  function getCurrentPageRows() {
+    const sorted = sortRows(getFilteredData());
+    const start = (currentPageNum - 1) * PAGE_SIZE;
+    return sorted.slice(start, start + PAGE_SIZE);
+  }
+
+  function refreshBulkActions() {
+    const selectedCount = selectedIndexes.size;
+    const countEl = container.querySelector('#inventory-selected-count');
+    const bulkCategoryBtn = container.querySelector('#btn-bulk-category');
+    const bulkExportBtn = container.querySelector('#btn-bulk-export');
+    const bulkDeleteBtn = container.querySelector('#btn-bulk-delete');
+
+    if (countEl) countEl.textContent = `선택 ${selectedCount}개`;
+    if (bulkCategoryBtn) bulkCategoryBtn.disabled = selectedCount === 0;
+    if (bulkExportBtn) bulkExportBtn.disabled = selectedCount === 0;
+    if (bulkDeleteBtn) bulkDeleteBtn.disabled = selectedCount === 0;
+  }
+
+  function shiftSelectionAfterDelete(index) {
+    const next = new Set();
+    selectedIndexes.forEach(selectedIndex => {
+      if (selectedIndex === index) return;
+      next.add(selectedIndex > index ? selectedIndex - 1 : selectedIndex);
+    });
+    selectedIndexes = next;
+  }
+
+  function applyBulkCategory() {
+    if (selectedIndexes.size === 0) {
+      showToast('선택된 품목이 없습니다.', 'warning');
+      return;
+    }
+
+    const nextCategory = prompt(`선택한 ${selectedIndexes.size}개 품목에 적용할 분류를 입력해 주세요.`);
+    if (nextCategory === null) return;
+    const trimmed = nextCategory.trim();
+    if (!trimmed) {
+      showToast('분류 이름을 입력해 주세요.', 'warning');
+      return;
+    }
+
+    [...selectedIndexes].forEach(index => updateItem(index, { category: trimmed }));
+    showToast(`${selectedIndexes.size}개 품목의 분류를 "${trimmed}"로 변경했습니다.`, 'success');
+    renderTable();
+    updateStats();
+  }
+
+  function exportSelectedRows() {
+    if (selectedIndexes.size === 0) {
+      showToast('선택된 품목이 없습니다.', 'warning');
+      return;
+    }
+
+    const selectedRows = [...selectedIndexes]
+      .sort((a, b) => a - b)
+      .map(index => data[index])
+      .filter(Boolean);
+
+    const exportData = selectedRows.map(row => {
+      const obj = {};
+      activeFields.forEach(key => { obj[FIELD_LABELS[key]] = row[key]; });
+      return obj;
+    });
+
+    const baseName = (state.fileName || '재고현황').replace(/\.[^.]+$/, '');
+    downloadExcel(exportData, `${baseName}_선택품목`);
+    showToast(`선택한 ${selectedRows.length}개 품목을 내보냈습니다.`, 'success');
+  }
+
+  function deleteSelectedRows() {
+    if (selectedIndexes.size === 0) {
+      showToast('선택된 품목이 없습니다.', 'warning');
+      return;
+    }
+
+    const sortedIndexes = [...selectedIndexes].sort((a, b) => b - a);
+    const removedItems = [];
+    sortedIndexes.forEach(index => {
+      const removed = deleteItem(index);
+      if (removed?.deleted) removedItems.push({ index: removed.index, item: removed.deleted });
+    });
+
+    selectedIndexes.clear();
+    renderTable();
+    updateStats();
+
+    showToast(`${removedItems.length}개 품목을 삭제했습니다.`, 'info', 5000, {
+      actionLabel: '실행 취소',
+      onAction: () => {
+        removedItems
+          .sort((a, b) => a.index - b.index)
+          .forEach(({ item, index }) => restoreItem(item, index));
+        renderTable();
+        updateStats();
+        showToast(`${removedItems.length}개 품목을 복원했습니다.`, 'success');
+      },
+    });
+  }
+
+  function renderItemTimelinePanel(currentSortedRows) {
+    const timelineList = container.querySelector('#item-timeline-list');
+    const timelineTitle = container.querySelector('#item-timeline-title');
+    const timelineMeta = container.querySelector('#item-timeline-meta');
+    if (!timelineList || !timelineTitle || !timelineMeta) return;
+
+    const rows = currentSortedRows || [];
+    if (rows.length === 0) {
+      timelineTitle.textContent = '품목 이력 타임라인';
+      timelineMeta.textContent = '표시할 품목이 없습니다.';
+      timelineList.innerHTML = '<div class="dashboard-empty-note">필터 결과가 없어 이력을 표시할 수 없습니다.</div>';
+      renderItemTimelineChart('chart-item-timeline', []);
+      return;
+    }
+
+    const focusedRow = rows.find(row => getItemKey(row) === focusedItemKey) || rows[0];
+    focusedItemKey = getItemKey(focusedRow);
+
+    const allTransactions = (getState().transactions || [])
+      .filter((tx) => {
+        const sameCode = focusedRow.itemCode && tx.itemCode && String(focusedRow.itemCode) === String(tx.itemCode);
+        const sameName = String(focusedRow.itemName || '').trim() === String(tx.itemName || '').trim();
+        return sameCode || sameName;
+      })
+      .sort((left, right) => String(left.date || left.createdAt || '').localeCompare(String(right.date || right.createdAt || '')));
+
+    timelineTitle.textContent = `${focusedRow.itemName || '선택 품목'} 이력 타임라인`;
+    timelineMeta.textContent = `현재 재고 ${Math.round(getNumericValue(focusedRow.quantity) || 0).toLocaleString('ko-KR')}개 · 총 이력 ${allTransactions.length}건`;
+
+    if (allTransactions.length === 0) {
+      timelineList.innerHTML = '<div class="dashboard-empty-note">선택 품목의 입출고 이력이 아직 없습니다.</div>';
+      renderItemTimelineChart('chart-item-timeline', []);
+      return;
+    }
+
+    let runningQty = 0;
+    const chartSeries = allTransactions.map((tx, index) => {
+      const quantity = Math.abs(getNumericValue(tx.quantity) || 0);
+      const delta = tx.type === 'in' ? quantity : -quantity;
+      runningQty += delta;
+      return {
+        label: `${String(tx.date || tx.createdAt || '').slice(0, 10)} ${index + 1}`,
+        value: runningQty,
+        delta,
+      };
+    });
+    renderItemTimelineChart('chart-item-timeline', chartSeries);
+
+    const recentList = [...allTransactions].reverse().slice(0, 8);
+    timelineList.innerHTML = recentList.map((tx) => `
+      <div class="inventory-timeline-item">
+        <span class="badge ${tx.type === 'in' ? 'badge-success' : 'badge-danger'}">${tx.type === 'in' ? '입고' : '출고'}</span>
+        <div class="inventory-timeline-main">
+          <div class="inventory-timeline-line">${escapeText(tx.date || '-')} · ${Math.round(Math.abs(getNumericValue(tx.quantity) || 0)).toLocaleString('ko-KR')}개</div>
+          <div class="inventory-timeline-sub">${escapeText(tx.vendor || '거래처 미입력')} · ${escapeText(tx.note || '메모 없음')}</div>
+        </div>
+      </div>
+    `).join('');
   }
 
   // === ?뚯씠釉??대깽??(?몃씪???몄쭛, ??젣 ?? ===
   function attachTableEvents() {
+    const selectAll = container.querySelector('#inv-select-all');
+    selectAll?.addEventListener('change', () => {
+      const rowChecks = container.querySelectorAll('.inv-row-check');
+      rowChecks.forEach((check) => {
+        const idx = parseInt(check.dataset.idx, 10);
+        check.checked = selectAll.checked;
+        if (selectAll.checked) selectedIndexes.add(idx);
+        else selectedIndexes.delete(idx);
+      });
+      refreshBulkActions();
+      updateSelectAllState(getCurrentPageRows());
+    });
+
+    container.querySelectorAll('.inv-row-check').forEach(check => {
+      check.addEventListener('change', () => {
+        const idx = parseInt(check.dataset.idx, 10);
+        if (check.checked) selectedIndexes.add(idx);
+        else selectedIndexes.delete(idx);
+        refreshBulkActions();
+        updateSelectAllState(getCurrentPageRows());
+      });
+      check.addEventListener('click', event => event.stopPropagation());
+    });
+
+    const bulkCategoryBtn = container.querySelector('#btn-bulk-category');
+    const bulkExportBtn = container.querySelector('#btn-bulk-export');
+    const bulkDeleteBtn = container.querySelector('#btn-bulk-delete');
+    const timelineInoutBtn = container.querySelector('#btn-item-history-inout');
+    if (bulkCategoryBtn) bulkCategoryBtn.onclick = applyBulkCategory;
+    if (bulkExportBtn) bulkExportBtn.onclick = exportSelectedRows;
+    if (bulkDeleteBtn) bulkDeleteBtn.onclick = deleteSelectedRows;
+    if (timelineInoutBtn) timelineInoutBtn.onclick = () => navigateTo('inout');
+
+    container.querySelectorAll('#inventory-body tr[data-row-key]').forEach(rowEl => {
+      rowEl.addEventListener('click', (event) => {
+        if (event.target.closest('button, input, select, a, label, .editable-cell')) return;
+        focusedItemKey = rowEl.dataset.rowKey || focusedItemKey;
+        renderTable();
+      });
+    });
+
     // ?몃씪???몄쭛
     container.querySelectorAll('.editable-cell').forEach(cell => {
       cell.addEventListener('dblclick', () => {
@@ -871,6 +1165,7 @@ export function renderInventoryPage(container, navigateTo) {
           return;
         }
 
+        shiftSelectionAfterDelete(idx);
         renderTable();
         updateStats();
         showToast(`"${name}" 품목을 삭제했습니다.`, 'info', 5000, {
@@ -1021,6 +1316,10 @@ export function renderInventoryPage(container, navigateTo) {
   container.querySelector('#btn-quick-guide')?.addEventListener('click', () => navigateTo('guide'));
   container.querySelector('#btn-quick-dashboard')?.addEventListener('click', () => navigateTo('home'));
   container.querySelector('#btn-add-item-inline')?.addEventListener('click', () => openItemModal(container, navigateTo));
+  container.querySelector('#btn-dismiss-upload-diff')?.addEventListener('click', () => {
+    setState({ lastUploadDiff: null });
+    container.querySelector('#upload-diff-card')?.remove();
+  });
   container.querySelectorAll('[data-nav]').forEach(button => {
     button.addEventListener('click', () => navigateTo(button.dataset.nav));
   });
@@ -1202,6 +1501,11 @@ export function renderInventoryPage(container, navigateTo) {
   renderTable();
   highlightActiveFilters();
   syncFocusChips();
+
+  if (sessionStorage.getItem('invex:quick-open-item') === '1') {
+    sessionStorage.removeItem('invex:quick-open-item');
+    setTimeout(() => openItemModal(container, navigateTo), 20);
+  }
 }
 
 // === ?덈ぉ 異붽?/?몄쭛 紐⑤떖 ===

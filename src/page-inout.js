@@ -660,6 +660,16 @@ export function renderInoutPage(container, navigateTo) {
   renderTxTable();
   highlightActiveFilters();
   syncQuickFilterChips();
+
+  const quickOpenInbound = sessionStorage.getItem('invex:quick-open-inbound') === '1';
+  const quickOpenOutbound = sessionStorage.getItem('invex:quick-open-outbound') === '1';
+  if (quickOpenInbound || quickOpenOutbound) {
+    sessionStorage.removeItem('invex:quick-open-inbound');
+    sessionStorage.removeItem('invex:quick-open-outbound');
+    setTimeout(() => {
+      openTxModal(container, navigateTo, quickOpenInbound ? 'in' : 'out', items);
+    }, 20);
+  }
 }
 
 /**

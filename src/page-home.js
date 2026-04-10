@@ -170,6 +170,34 @@ export function renderHomePage(container, navigateTo) {
       </div>
     </div>
 
+    <div class="card dashboard-quick-card">
+      <div class="dashboard-quick-head">
+        <div>
+          <div class="card-title">홈에서 바로 실행</div>
+          <div class="chart-help-text">자주 쓰는 기능을 바로 열어 입력 단계 없이 즉시 시작할 수 있습니다.</div>
+        </div>
+        <span class="badge badge-info">빠른 액션</span>
+      </div>
+      <div class="dashboard-quick-grid">
+        <button class="dashboard-quick-action is-inbound" id="btn-home-quick-in">
+          <div class="dashboard-quick-title">빠른 입고</div>
+          <div class="dashboard-quick-meta">품목 선택 + 수량 입력 모달 바로 열기</div>
+        </button>
+        <button class="dashboard-quick-action is-outbound" id="btn-home-quick-out">
+          <div class="dashboard-quick-title">빠른 출고</div>
+          <div class="dashboard-quick-meta">출고 모달 즉시 열고 재고 차감 등록</div>
+        </button>
+        <button class="dashboard-quick-action" id="btn-home-quick-item">
+          <div class="dashboard-quick-title">새 품목 등록</div>
+          <div class="dashboard-quick-meta">현재 등록 품목 ${formatNumber(totalItems)}건</div>
+        </button>
+        <button class="dashboard-quick-action" id="btn-home-quick-alert">
+          <div class="dashboard-quick-title">실시간 알림 확인</div>
+          <div class="dashboard-quick-meta">미확인 알림 ${formatNumber(notifications.length)}건</div>
+        </button>
+      </div>
+    </div>
+
     ${beginnerMode ? renderGuidedPanel({
       eyebrow: '대시보드 읽는 순서',
       title: dashboardMode === 'executive' ? '경영자는 위험과 의사결정 포인트부터 보면 됩니다.' : '실무자는 오늘 처리 순서와 현장 우선 품목부터 보면 됩니다.',
@@ -376,6 +404,25 @@ export function renderHomePage(container, navigateTo) {
       setState({ dashboardMode: nextMode });
       renderHomePage(container, navigateTo);
     });
+  });
+
+  container.querySelector('#btn-home-quick-in')?.addEventListener('click', () => {
+    sessionStorage.setItem('invex:quick-open-inbound', '1');
+    navigateTo('inout');
+  });
+
+  container.querySelector('#btn-home-quick-out')?.addEventListener('click', () => {
+    sessionStorage.setItem('invex:quick-open-outbound', '1');
+    navigateTo('inout');
+  });
+
+  container.querySelector('#btn-home-quick-item')?.addEventListener('click', () => {
+    sessionStorage.setItem('invex:quick-open-item', '1');
+    navigateTo('inventory');
+  });
+
+  container.querySelector('#btn-home-quick-alert')?.addEventListener('click', () => {
+    renderNotificationPanel();
   });
 
   container.querySelector('#weekly-sort')?.addEventListener('change', event => {

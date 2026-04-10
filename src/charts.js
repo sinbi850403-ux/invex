@@ -275,6 +275,74 @@ export function renderMonthlyChart(canvasId, monthData) {
 /**
  * 모든 차트 제거 (페이지 전환 시 호출)
  */
+export function renderItemTimelineChart(canvasId, timelineData) {
+  destroyChart(canvasId);
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) return;
+
+  const { textColor, gridColor } = getThemeColors();
+  const labels = timelineData.map(point => point.label);
+  const values = timelineData.map(point => point.value);
+
+  chartInstances[canvasId] = new Chart(canvas, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: '누적 재고 흐름',
+          data: values,
+          borderColor: '#58a6ff',
+          backgroundColor: 'rgba(88,166,255,0.14)',
+          fill: true,
+          tension: 0.28,
+          borderWidth: 2,
+          pointRadius: 3,
+          pointHoverRadius: 5,
+          pointBackgroundColor: '#58a6ff',
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { intersect: false, mode: 'index' },
+      plugins: {
+        legend: {
+          labels: { color: textColor, font: { size: 11 }, usePointStyle: true, pointStyle: 'circle' },
+        },
+        tooltip: {
+          backgroundColor: isDark() ? '#21262d' : '#fff',
+          titleColor: isDark() ? '#e6edf3' : '#1a1a2e',
+          bodyColor: isDark() ? '#b1bac4' : '#5a6474',
+          borderColor: isDark() ? '#30363d' : '#e2e6eb',
+          borderWidth: 1,
+          padding: 10,
+          cornerRadius: 6,
+          callbacks: {
+            label: (ctx) => {
+              const point = timelineData[ctx.dataIndex];
+              const delta = Number(point?.delta || 0);
+              const deltaText = `${delta >= 0 ? '+' : ''}${Math.round(delta).toLocaleString('ko-KR')}`;
+              return ` 누적 ${Math.round(ctx.parsed.y).toLocaleString('ko-KR')}개 (변동 ${deltaText})`;
+            },
+          },
+        },
+      },
+      scales: {
+        x: {
+          ticks: { color: textColor, font: { size: 10 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 8 },
+          grid: { color: gridColor },
+        },
+        y: {
+          ticks: { color: textColor, font: { size: 10 } },
+          grid: { color: gridColor },
+        },
+      },
+    },
+  });
+}
+
 export function destroyAllCharts() {
   Object.keys(chartInstances).forEach(destroyChart);
 }

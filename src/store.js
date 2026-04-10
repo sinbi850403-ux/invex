@@ -35,6 +35,8 @@ const DEFAULT_STATE = {
     filter: { keyword: '', type: '', date: '', vendor: '', itemCode: '', quick: 'all' },
     sort: { key: 'date', direction: 'desc' },
   },
+  // 최근 업로드 변경 요약
+  lastUploadDiff: null, // {added, updated, unchanged, removed, fileName, at}
   // 각 mappedData row에는 expiryDate, lotNumber 필드도 포함 가능
   // 창고 간 이동 이력
   transfers: [],        // [{date, fromWarehouse, toWarehouse, itemName, quantity, ...}]
@@ -136,6 +138,7 @@ async function saveToDB() {
         tableSortPrefs: state.tableSortPrefs,
         inventoryViewPrefs: state.inventoryViewPrefs,
         inoutViewPrefs: state.inoutViewPrefs,
+        lastUploadDiff: state.lastUploadDiff,
       };
       localStorage.setItem('invex-fallback', JSON.stringify(slim));
     } catch (_) { /* 무시 */ }
