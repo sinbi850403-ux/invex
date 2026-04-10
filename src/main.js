@@ -312,6 +312,8 @@ const pageRendererCache = {};
 function getPageLabel(pageId) {
   const btn = document.querySelector(`.nav-btn[data-page="${pageId}"]`);
   if (!btn) return pageId;
+  const mainLabel = btn.querySelector('.nav-main');
+  if (mainLabel) return mainLabel.textContent.replace(/\s+/g, ' ').trim();
   return btn.textContent.replace(/\s+/g, ' ').trim();
 }
 
