@@ -80,7 +80,7 @@ document.getElementById('tab-signup')?.addEventListener('click', () => {
 document.getElementById('gate-email-login')?.addEventListener('click', async () => {
   const email = document.getElementById('login-email').value.trim();
   const password = document.getElementById('login-password').value;
-  if (!email || !password) { showToast('?대찓?쇨낵 鍮꾨?踰덊샇瑜??낅젰?섏꽭??', 'warning'); return; }
+  if (!email || !password) { showToast('이메일과 비밀번호를 입력해 주세요.', 'warning'); return; }
   await loginWithEmail(email, password);
 });
 
@@ -96,11 +96,11 @@ document.getElementById('gate-email-signup')?.addEventListener('click', async ()
   const pw = document.getElementById('signup-password').value;
   const pw2 = document.getElementById('signup-password2').value;
   const agreed = document.getElementById('signup-agree')?.checked;
-  if (!name) { showToast('?대쫫???낅젰?섏꽭??', 'warning'); return; }
-  if (!email) { showToast('?대찓?쇱쓣 ?낅젰?섏꽭??', 'warning'); return; }
-  if (pw.length < 6) { showToast('鍮꾨?踰덊샇??6???댁긽?댁뼱???⑸땲??', 'warning'); return; }
-  if (pw !== pw2) { showToast('鍮꾨?踰덊샇媛 ?쇱튂?섏? ?딆뒿?덈떎.', 'warning'); return; }
-  if (!agreed) { showToast('?댁슜?쎄? 諛?媛쒖씤?뺣낫泥섎━諛⑹묠???숈쓽?댁＜?몄슂.', 'warning'); return; }
+  if (!name) { showToast('이름을 입력해 주세요.', 'warning'); return; }
+  if (!email) { showToast('이메일을 입력해 주세요.', 'warning'); return; }
+  if (pw.length < 6) { showToast('비밀번호는 6자 이상이어야 합니다.', 'warning'); return; }
+  if (pw !== pw2) { showToast('비밀번호가 일치하지 않습니다.', 'warning'); return; }
+  if (!agreed) { showToast('이용약관 및 개인정보처리방침에 동의해 주세요.', 'warning'); return; }
   await signupWithEmail(email, pw, name);
 });
 
@@ -112,13 +112,13 @@ document.getElementById('signup-password2')?.addEventListener('keydown', (e) => 
 // ?댁슜?쎄? 紐⑤떖
 document.getElementById('link-terms')?.addEventListener('click', (e) => {
   e.preventDefault();
-  showLegalModal('?쒕퉬???댁슜?쎄?', getTermsContent());
+  showLegalModal('서비스 이용약관', getTermsContent());
 });
 
 // 媛쒖씤?뺣낫泥섎━諛⑹묠 紐⑤떖
 document.getElementById('link-privacy')?.addEventListener('click', (e) => {
   e.preventDefault();
-  showLegalModal('媛쒖씤?뺣낫泥섎━諛⑹묠', getPrivacyContent());
+  showLegalModal('개인정보처리방침', getPrivacyContent());
 });
 
 /**
@@ -132,8 +132,8 @@ function showLegalModal(title, content) {
   modal.innerHTML = `
     <div class="legal-modal">
       <div class="legal-modal-header">
-        <h3>?뱥 ${title}</h3>
-        <button class="legal-modal-close">??/button>
+        <h3>📘 ${title}</h3>
+        <button class="legal-modal-close" aria-label="닫기">닫기</button>
       </div>
       <div class="legal-modal-body">
         ${content}
@@ -146,92 +146,53 @@ function showLegalModal(title, content) {
 }
 
 function getTermsContent() {
-  // ???몃씪??style???쒓굅? ??CSS 蹂?섍? ?쇱씠??紐⑤뱶?먯꽌 ?대몢???됱쓣 諛섑솚?섏뿬
-  // ?대몢??紐⑤떖 諛곌꼍 ?꾩뿉 湲?먭? ??蹂댁씠??臾몄젣 諛쒖깮. auth.css??.legal-modal-body h4 洹쒖튃???곸슜??
   return `
-    <h4>??議?(紐⑹쟻)</h4>
-    <p>???쎄?? INVEX(?댄븯 "?쒕퉬??)媛 ?쒓났?섎뒗 ?ш퀬쨌寃쎌쁺 愿由??쒕퉬?ㅼ쓽 ?댁슜議곌굔 諛??덉감, ?뚯궗? ?댁슜?먯쓽 沅뚮━쨌?섎Т 諛?梨낆엫?ы빆??洹쒖젙?⑥쓣 紐⑹쟻?쇰줈 ?⑸땲??</p>
-    
-    <h4>??議?(?뺤쓽)</h4>
-    <p>??"?쒕퉬??? INVEX媛 ?쒓났?섎뒗 ??湲곕컲 ?ш퀬愿由? ?낆텧怨?泥섎━, ?먭?遺꾩꽍, 臾몄꽌?앹꽦 ?깆쓽 湲곕뒫??留먰빀?덈떎.<br/>
-    ??"?댁슜??? 蹂??쎄????곕씪 ?쒕퉬?ㅻ? ?댁슜?섎뒗 ?먮? 留먰빀?덈떎.<br/>
-    ??"怨꾩젙"?대? ?댁슜?먯쓽 ?앸퀎怨??쒕퉬???댁슜???꾪빐 ?댁슜?먭? ?ㅼ젙?섍퀬 ?뚯궗媛 ?뱀씤?섎뒗 ?대찓??諛?鍮꾨?踰덊샇??議고빀??留먰빀?덈떎.</p>
+    <h4>1. 목적</h4>
+    <p>이 약관은 INVEX가 제공하는 재고·입출고·문서 관리 서비스의 이용 조건과 회사 및 이용자의 권리, 의무, 책임 사항을 정하는 것을 목적으로 합니다.</p>
 
-    <h4>??議?(?쎄????⑤젰 諛?蹂寃?</h4>
-    <p>??蹂??쎄?? ?쒕퉬???붾㈃??寃뚯떆?섍굅???대찓???깆쓽 諛⑸쾿?쇰줈 ?댁슜?먯뿉寃?怨듭??⑥쑝濡쒖뜥 ?⑤젰??諛쒖깮?⑸땲??<br/>
-    ???뚯궗??愿??踰뺣졊???꾨같?섏? ?딅뒗 踰붿쐞?먯꽌 蹂??쎄???媛쒖젙?????덉뒿?덈떎.</p>
+    <h4>2. 서비스 내용</h4>
+    <p>서비스에는 재고 현황 관리, 입출고 기록, 거래처 연동, 보고서 작성, 문서 생성, 팀 협업 기능이 포함됩니다. 일부 기능은 요금제에 따라 제공 범위가 달라질 수 있습니다.</p>
 
-    <h4>??議?(?쒕퉬?ㅼ쓽 ?쒓났)</h4>
-    <p>???뚯궗???ㅼ쓬怨?媛숈? ?쒕퉬?ㅻ? ?쒓났?⑸땲??<br/>
-    - ?ш퀬 ?꾪솴 愿由?諛?紐⑤땲?곕쭅<br/>
-    - ?낆텧怨?泥섎━ 諛??대젰 愿由?br/>
-    - ?먭? 遺꾩꽍 諛?蹂닿퀬???앹꽦<br/>
-    - 諛붿퐫???ㅼ틪 諛??쇰꺼 ?몄뇙<br/>
-    - 嫄곕옒泥?愿由?br/>
-    ???쒕퉬?ㅻ뒗 Free, Pro, Enterprise ?붽툑?쒕줈 援щ텇?섎ŉ, 媛??붽툑?쒕퀎 ?쒓났 湲곕뒫???ㅻ쫭?덈떎.</p>
+    <h4>3. 계정과 이용자 책임</h4>
+    <p>이용자는 정확한 정보를 바탕으로 계정을 생성해야 하며, 계정 정보와 접근 권한을 안전하게 관리할 책임이 있습니다. 계정의 부정 사용이 의심되는 경우 즉시 비밀번호를 변경하고 회사에 알려야 합니다.</p>
 
-    <h4>??議?(?댁슜?먯쓽 ?섎Т)</h4>
-    <p>???댁슜?먮뒗 ??몄쓽 ?뺣낫瑜??꾩슜?섏뿬?쒕뒗 ???⑸땲??<br/>
-    ???댁슜?먮뒗 ?쒕퉬?ㅻ? ?댁슜?섏뿬 遺덈쾿?됱쐞瑜??섏뿬?쒕뒗 ???⑸땲??<br/>
-    ???댁슜?먮뒗 ?먯떊??怨꾩젙 ?뺣낫瑜??덉쟾?섍쾶 愿由ы븷 梨낆엫???덉뒿?덈떎.</p>
+    <h4>4. 제한 사항</h4>
+    <p>이용자는 서비스 운영을 방해하거나, 허위 데이터를 등록하거나, 관련 법령을 위반하는 방식으로 서비스를 사용해서는 안 됩니다. 회사는 필요한 경우 해당 계정의 이용을 제한할 수 있습니다.</p>
 
-    <h4>??議?(?쒕퉬???댁슜 ?쒗븳)</h4>
-    <p>?뚯궗???댁슜?먭? 蹂??쎄????꾨컲?섍굅???쒕퉬?ㅼ쓽 ?뺤긽?곸씤 ?댁쁺??諛⑺빐??寃쎌슦, ?쒕퉬???댁슜???쒗븳?섍굅??怨꾩젙????젣?????덉뒿?덈떎.</p>
+    <h4>5. 요금제와 변경</h4>
+    <p>서비스는 무료 또는 유료 요금제로 제공될 수 있으며, 기능 구성과 가격은 사전 고지 후 변경될 수 있습니다. 유료 기능 사용 여부는 계정 설정 및 결제 상태에 따라 반영됩니다.</p>
 
-    <h4>??議?(硫댁콉議고빆)</h4>
-    <p>??泥쒖옱吏蹂, ?꾩웳 ??遺덇???젰?쇰줈 ?명븳 ?쒕퉬??以묐떒??????뚯궗??梨낆엫??吏吏 ?딆뒿?덈떎.<br/>
-    ???댁슜?먯쓽 洹梨낆궗?좊줈 ?명븳 ?쒕퉬???댁슜 ?μ븷??????뚯궗??梨낆엫??吏吏 ?딆뒿?덈떎.</p>
+    <h4>6. 면책</h4>
+    <p>천재지변, 시스템 장애, 이용자의 입력 오류 또는 외부 서비스 장애로 인해 발생한 손해에 대해서는 관련 법령이 허용하는 범위에서 책임이 제한될 수 있습니다.</p>
 
-    <p class="legal-date">?쒗뻾?? 2026??4??1??/p>
+    <p class="legal-date">시행일: 2026년 4월 1일</p>
   `;
 }
 
 function getPrivacyContent() {
   return `
-    <h4>1. 媛쒖씤?뺣낫???섏쭛 諛??댁슜 紐⑹쟻</h4>
-    <p>INVEX(?댄븯 "?쒕퉬??)???ㅼ쓬??紐⑹쟻???꾪븯??媛쒖씤?뺣낫瑜?泥섎━?⑸땲??</p>
-    <p>???뚯썝 媛??諛?愿由? ?뚯썝 媛???섏궗 ?뺤씤, ?쒕퉬???쒓났???곕Ⅸ 蹂몄씤 ?앸퀎쨌?몄쬆, ?뚯썝?먭꺽 ?좎?쨌愿由?br/>
-    ???쒕퉬???쒓났: ?ш퀬愿由? ?낆텧怨?泥섎━, 蹂닿퀬???앹꽦 ???듭떖 ?쒕퉬???쒓났<br/>
-    ??怨좉컼 吏?? 誘쇱썝 泥섎━, 怨듭??ы빆 ?꾨떖</p>
+    <h4>1. 수집하는 정보</h4>
+    <p>서비스 이용을 위해 이름, 이메일 주소, 로그인 정보, 프로필 정보, 서비스 내 입력 데이터, 접속 기록 등의 정보가 처리될 수 있습니다.</p>
 
-    <h4>2. ?섏쭛?섎뒗 媛쒖씤?뺣낫 ??ぉ</h4>
-    <table>
-      <tr>
-        <td>?꾩닔??ぉ</td>
-        <td>?대쫫(?됰꽕??, ?대찓??二쇱냼, 鍮꾨?踰덊샇</td>
-      </tr>
-      <tr>
-        <td>?먮룞?섏쭛</td>
-        <td>?묒냽 IP, ?묒냽 ?쒓컙, 釉뚮씪?곗? ?뺣낫</td>
-      </tr>
-      <tr>
-        <td>?뚯뀥 濡쒓렇??/td>
-        <td>Google 怨꾩젙 ?대쫫, ?대찓?? ?꾨줈???ъ쭊</td>
-      </tr>
-    </table>
+    <h4>2. 이용 목적</h4>
+    <p>수집한 정보는 회원 식별, 로그인 처리, 재고 및 문서 기능 제공, 고객 문의 대응, 서비스 개선, 보안 및 오류 분석을 위해 사용됩니다.</p>
 
-    <h4>3. 媛쒖씤?뺣낫??蹂댁쑀 諛??댁슜 湲곌컙</h4>
-    <p>???뚯썝 ?덊눜 ?쒓퉴吏 蹂댁쑀?섎ŉ, ?덊눜 ??吏泥??놁씠 ?뚭린?⑸땲??<br/>
-    ???? 愿??踰뺣졊???곕씪 蹂댁〈???꾩슂??寃쎌슦 ?대떦 湲곌컙 ?숈븞 蹂댁〈?⑸땲??</p>
+    <h4>3. 보관 기간</h4>
+    <p>개인정보는 회원 탈퇴 또는 이용 목적 달성 시 지체 없이 삭제합니다. 다만 관계 법령에 따라 일정 기간 보관이 필요한 경우 해당 기간 동안 안전하게 보관합니다.</p>
 
-    <h4>4. 媛쒖씤?뺣낫???????쒓났</h4>
-    <p>?쒕퉬?ㅻ뒗 ?댁슜?먯쓽 媛쒖씤?뺣낫瑜??먯튃?곸쑝濡????먯뿉寃??쒓났?섏? ?딆뒿?덈떎. ?ㅻ쭔, ?ㅼ쓬??寃쎌슦?먮뒗 ?덉쇅濡??⑸땲??<br/>
-    ???댁슜?먭? ?ъ쟾???숈쓽??寃쎌슦<br/>
-    ??踰뺣졊??洹쒖젙???섍굅?섍굅???섏궗 紐⑹쟻?쇰줈 踰뺣졊???뺥빐吏??덉감???곕씪 ?붿껌???덈뒗 寃쎌슦</p>
+    <h4>4. 제3자 제공</h4>
+    <p>회사는 이용자의 개인정보를 원칙적으로 외부에 판매하거나 무단 제공하지 않습니다. 다만 이용자 동의가 있거나 법령에 따른 요청이 있는 경우에 한해 최소 범위 내에서 제공할 수 있습니다.</p>
 
-    <h4>5. 媛쒖씤?뺣낫???덉쟾???뺣낫 議곗튂</h4>
-    <p>?쒕퉬?ㅻ뒗 媛쒖씤?뺣낫???덉쟾???뺣낫瑜??꾪빐 ?ㅼ쓬怨?媛숈? 議곗튂瑜?痍⑦븯怨??덉뒿?덈떎.<br/>
-    ??鍮꾨?踰덊샇 ?뷀샇?????(Firebase Authentication)<br/>
-    ???곗씠???꾩넚 ??SSL/TLS ?뷀샇??br/>
-    ???묎렐 沅뚰븳 愿由?諛??묎렐 ?듭젣</p>
+    <h4>5. 보호 조치</h4>
+    <p>접근 권한 관리, 인증 정보 보호, 전송 구간 암호화, 운영 로그 관리 등 합리적인 수준의 보안 조치를 통해 개인정보를 보호합니다.</p>
 
-    <h4>6. ?댁슜?먯쓽 沅뚮━</h4>
-    <p>?댁슜?먮뒗 ?몄젣?좎? ?먯떊??媛쒖씤?뺣낫瑜?議고쉶, ?섏젙, ??젣?????덉쑝硫? ?뚯썝 ?덊눜瑜??듯빐 媛쒖씤?뺣낫 泥섎━???뺤?瑜??붿껌?????덉뒿?덈떎.</p>
+    <h4>6. 이용자 권리</h4>
+    <p>이용자는 본인의 개인정보에 대해 조회, 수정, 삭제 요청을 할 수 있으며, 서비스 내 계정 관리 기능 또는 고객 지원 채널을 통해 요청할 수 있습니다.</p>
 
-    <h4>7. 媛쒖씤?뺣낫 蹂댄샇梨낆엫??/h4>
-    <p>?대찓?? sinbi0214@naver.com</p>
+    <h4>7. 문의</h4>
+    <p>개인정보 관련 문의: sinbi0214@naver.com</p>
 
-    <p class="legal-date">?쒗뻾?? 2026??4??1??/p>
+    <p class="legal-date">시행일: 2026년 4월 1일</p>
   `;
 }
 
@@ -239,7 +200,7 @@ function getPrivacyContent() {
 document.getElementById('btn-forgot-pw')?.addEventListener('click', async (e) => {
   e.preventDefault();
   const email = document.getElementById('login-email').value.trim();
-  if (!email) { showToast('?대찓??二쇱냼瑜?癒쇱? ?낅젰?댁＜?몄슂.', 'warning'); return; }
+  if (!email) { showToast('이메일 주소를 먼저 입력해 주세요.', 'warning'); return; }
   await resetPassword(email);
 });
 
@@ -481,8 +442,8 @@ document.getElementById('plan-display')?.addEventListener('click', () => {
   modal.innerHTML = `
     <div class="modal" style="max-width:600px;">
       <div class="modal-header">
-        <h3>?뱥 ?붽툑???좏깮</h3>
-        <button class="btn btn-ghost btn-sm" id="plan-pick-close">??/button>
+        <h3>📦 요금제 선택</h3>
+        <button class="btn btn-ghost btn-sm" id="plan-pick-close">닫기</button>
       </div>
       <div class="modal-body">
         <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:12px;">
@@ -518,7 +479,7 @@ document.getElementById('plan-display')?.addEventListener('click', () => {
       const planId = card.dataset.plan;
       setPlan(planId);
       modal.remove();
-      showToast(`${PLANS[planId].icon} ${PLANS[planId].name} ?붽툑?쒕줈 蹂寃쎈릺?덉뒿?덈떎.`, 'success');
+      showToast(`${PLANS[planId].icon} ${PLANS[planId].name} 요금제로 변경되었습니다.`, 'success');
       // ?ъ씠?쒕컮 諛곗? + ?쒖떆 媛깆떊
       updateSidebarBadges();
       updatePlanDisplay();
@@ -638,7 +599,10 @@ function updateUserUI(user, profile) {
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/sw.js')
-      .then(() => console.log('SW registered'))
+      .then((registration) => {
+        registration.update?.();
+        console.log('SW registered');
+      })
       .catch((err) => console.log('SW failed:', err));
   });
 }

@@ -20,15 +20,15 @@ export function renderSummaryPage(container, navigateTo) {
   if (data.length === 0 && transactions.length === 0) {
     container.innerHTML = `
       <div class="page-header">
-        <h1 class="page-title"><span class="title-icon">?뱤</span> ?붿빟 蹂닿퀬</h1>
+        <h1 class="page-title"><span class="title-icon">📊</span> 요약 보고</h1>
       </div>
       <div class="card">
         <div class="empty-state">
-          <div class="icon">?뱤</div>
-          <div class="msg">?꾩쭅 蹂닿퀬???곗씠?곌? ?놁뒿?덈떎</div>
-          <div class="sub">?뚯씪???낅줈?쒗븯嫄곕굹 ?덈ぉ???깅줉?섎㈃ ?먮룞?쇰줈 蹂닿퀬?쒓? ?앹꽦?⑸땲??</div>
+          <div class="icon">📊</div>
+          <div class="msg">아직 보고할 데이터가 없습니다.</div>
+          <div class="sub">파일을 업로드하거나 품목을 등록하면 요약 보고가 자동으로 생성됩니다.</div>
           <br/>
-          <button class="btn btn-primary" id="btn-go-upload">?뚯씪 ?낅줈?쒗븯湲?/button>
+          <button class="btn btn-primary" id="btn-go-upload">파일 업로드하기</button>
         </div>
       </div>
     `;
@@ -41,12 +41,12 @@ export function renderSummaryPage(container, navigateTo) {
   container.innerHTML = `
     <div class="page-header">
       <div>
-        <h1 class="page-title"><span class="title-icon">?뱤</span> ?붿빟 蹂닿퀬</h1>
-        <div class="page-desc">?ш퀬 ?꾪솴 諛??낆텧怨??듦퀎瑜??쒕늿???뺤씤?⑸땲??</div>
+        <h1 class="page-title"><span class="title-icon">📊</span> 요약 보고</h1>
+        <div class="page-desc">재고 현황과 입출고 통계를 한눈에 확인합니다.</div>
       </div>
       <div class="page-actions">
-        <button class="btn btn-outline" id="btn-export-summary">?뱿 蹂닿퀬???대낫?닿린</button>
-        <button class="btn btn-outline" id="btn-print">?뼥截??몄뇙</button>
+        <button class="btn btn-outline" id="btn-export-summary">요약 보고서 내보내기</button>
+        <button class="btn btn-outline" id="btn-print">인쇄</button>
       </div>
     </div>
 
@@ -71,19 +71,19 @@ export function renderSummaryPage(container, navigateTo) {
     <!-- ?듭떖 吏??-->
     <div class="stat-grid">
       <div class="stat-card">
-        <div class="stat-label">?꾩껜 ?덈ぉ</div>
+        <div class="stat-label">전체 품목</div>
         <div class="stat-value text-accent">${data.length}</div>
       </div>
       <div class="stat-card">
-        <div class="stat-label">珥??섎웾</div>
+        <div class="stat-label">총 수량</div>
         <div class="stat-value">${summary.totalQty.toLocaleString('ko-KR')}</div>
       </div>
       <div class="stat-card">
-        <div class="stat-label">珥??ш퀬 湲덉븸</div>
+        <div class="stat-label">총 재고 금액</div>
         <div class="stat-value text-success">${summary.totalPrice > 0 ? '₩' + Math.round(summary.totalPrice).toLocaleString('ko-KR') : '-'}</div>
       </div>
       <div class="stat-card">
-        <div class="stat-label">遺꾨쪟 ??/div>
+        <div class="stat-label">분류 수</div>
         <div class="stat-value">${summary.categories.length}</div>
       </div>
     </div>
@@ -92,16 +92,16 @@ export function renderSummaryPage(container, navigateTo) {
     ${summary.warnings.length > 0 ? `
       <div class="card" style="border-left: 3px solid var(--danger);">
         <div class="card-title" style="color:var(--danger);">
-          ?좑툘 ?ш퀬 遺議?寃쎄퀬 <span class="badge badge-danger" style="margin-left:8px;">${summary.warnings.length}嫄?/span>
+          재고 부족 경고 <span class="badge badge-danger" style="margin-left:8px;">${summary.warnings.length}건</span>
         </div>
         <div class="table-wrapper" style="border:none;">
           <table class="data-table">
             <thead>
               <tr>
-                <th>?덈ぉ紐?/th>
-                <th class="text-right">?꾩옱 ?섎웾</th>
-                <th class="text-right">?덉쟾?ш퀬</th>
-                <th>?곹깭</th>
+                <th>품목명</th>
+                <th class="text-right">현재 수량</th>
+                <th class="text-right">안전재고</th>
+                <th>상태</th>
               </tr>
             </thead>
             <tbody>
@@ -112,8 +112,8 @@ export function renderSummaryPage(container, navigateTo) {
                   <td class="text-right">${w.min.toLocaleString('ko-KR')}</td>
                   <td>
                     ${w.qty === 0
-                      ? '<span class="badge badge-danger">?ш퀬 ?놁쓬</span>'
-                      : '<span class="badge badge-warning">遺議?/span>'
+                      ? '<span class="badge badge-danger">재고 없음</span>'
+                      : '<span class="badge badge-warning">부족</span>'
                     }
                   </td>
                 </tr>
@@ -129,7 +129,7 @@ export function renderSummaryPage(container, navigateTo) {
       <div style="display:grid; grid-template-columns: 1fr 1fr; gap:16px; margin-bottom:16px;">
         <!-- ?꾨꽋 李⑦듃: 遺꾨쪟蹂?湲덉븸 鍮꾩쑉 -->
         <div class="card">
-          <div class="card-title">?뮥 遺꾨쪟蹂?湲덉븸 鍮꾩쑉</div>
+          <div class="card-title">분류별 금액 비중</div>
           <div style="display:flex; align-items:center; gap:24px; padding:8px 0;">
             <div id="donut-chart" style="position:relative; width:140px; height:140px; flex-shrink:0;">
               ${buildDonutChart(summary.categories, summary.totalPrice)}
@@ -140,7 +140,7 @@ export function renderSummaryPage(container, navigateTo) {
                 const pct = summary.totalPrice > 0 ? Math.round((cat.price / summary.totalPrice) * 100) : 0;
                 return `<div style="display:flex; align-items:center; gap:8px; font-size:13px;">
                   <span style="width:10px; height:10px; border-radius:2px; background:${colors[i % colors.length]}; flex-shrink:0;"></span>
-                  <span style="flex:1; color:var(--text-secondary);">${cat.name || '(誘몃텇瑜?'}</span>
+                  <span style="flex:1; color:var(--text-secondary);">${cat.name || '(미분류)'}</span>
                   <strong>${pct}%</strong>
                 </div>`;
               }).join('')}
@@ -150,7 +150,7 @@ export function renderSummaryPage(container, navigateTo) {
 
         <!-- ?섑룊 諛?李⑦듃: 遺꾨쪟蹂??섎웾 -->
         <div class="card">
-          <div class="card-title">?벀 遺꾨쪟蹂??섎웾 遺꾪룷</div>
+          <div class="card-title">분류별 수량 분포</div>
           <div style="display:flex; flex-direction:column; gap:10px; padding:8px 0;">
             ${summary.categories.map((cat, i) => {
               const colors = ['#2563eb', '#16a34a', '#d97706', '#dc2626', '#7c3aed', '#0891b2', '#be185d', '#ca8a04'];
@@ -158,7 +158,7 @@ export function renderSummaryPage(container, navigateTo) {
               const barWidth = maxQty > 0 ? Math.max(2, (cat.qty / maxQty) * 100) : 0;
               return `<div>
                 <div style="display:flex; justify-content:space-between; font-size:12px; margin-bottom:3px;">
-                  <span style="color:var(--text-secondary);">${cat.name || '(誘몃텇瑜?'}</span>
+                  <span style="color:var(--text-secondary);">${cat.name || '(미분류)'}</span>
                   <strong>${cat.qty.toLocaleString('ko-KR')}</strong>
                 </div>
                 <div style="height:8px; background:var(--border-light); border-radius:4px; overflow:hidden;">
@@ -174,22 +174,22 @@ export function renderSummaryPage(container, navigateTo) {
     <!-- 遺꾨쪟蹂??꾪솴 -->
     ${summary.categories.length > 0 ? `
       <div class="card">
-        <div class="card-title">?뱛 遺꾨쪟蹂??꾪솴</div>
+        <div class="card-title">분류별 현황</div>
         <div class="table-wrapper" style="border:none;">
           <table class="data-table">
             <thead>
               <tr>
-                <th>遺꾨쪟</th>
-                <th class="text-right">?덈ぉ ??/th>
-                <th class="text-right">珥??섎웾</th>
-                <th class="text-right">珥?湲덉븸</th>
-                <th style="width:200px;">鍮꾩쑉</th>
+                <th>분류</th>
+                <th class="text-right">품목 수</th>
+                <th class="text-right">총 수량</th>
+                <th class="text-right">총 금액</th>
+                <th style="width:200px;">비율</th>
               </tr>
             </thead>
             <tbody>
               ${summary.categories.map(cat => `
                 <tr>
-                  <td><strong>${cat.name || '(誘몃텇瑜?'}</strong></td>
+                  <td><strong>${cat.name || '(미분류)'}</strong></td>
                   <td class="text-right">${cat.count}</td>
                   <td class="text-right">${cat.qty.toLocaleString('ko-KR')}</td>
                   <td class="text-right">${cat.price > 0 ? '₩' + Math.round(cat.price).toLocaleString('ko-KR') : '-'}</td>
@@ -212,21 +212,21 @@ export function renderSummaryPage(container, navigateTo) {
     <!-- 李쎄퀬/?꾩튂蹂?-->
     ${summary.warehouses.length > 0 ? `
       <div class="card">
-        <div class="card-title">?룫 李쎄퀬/?꾩튂蹂??꾪솴</div>
+        <div class="card-title">창고/위치별 현황</div>
         <div class="table-wrapper" style="border:none;">
           <table class="data-table">
             <thead>
               <tr>
-                <th>李쎄퀬/?꾩튂</th>
-                <th class="text-right">?덈ぉ ??/th>
-                <th class="text-right">珥??섎웾</th>
-                <th class="text-right">珥?湲덉븸</th>
+                <th>창고/위치</th>
+                <th class="text-right">품목 수</th>
+                <th class="text-right">총 수량</th>
+                <th class="text-right">총 금액</th>
               </tr>
             </thead>
             <tbody>
               ${summary.warehouses.map(wh => `
                 <tr>
-                  <td><strong>${wh.name || '(誘몄???'}</strong></td>
+                  <td><strong>${wh.name || '(미지정)'}</strong></td>
                   <td class="text-right">${wh.count}</td>
                   <td class="text-right">${wh.qty.toLocaleString('ko-KR')}</td>
                   <td class="text-right">${wh.price > 0 ? '₩' + Math.round(wh.price).toLocaleString('ko-KR') : '-'}</td>
@@ -241,21 +241,21 @@ export function renderSummaryPage(container, navigateTo) {
     <!-- 嫄곕옒泥섎퀎 ?꾪솴 -->
     ${summary.vendors.length > 0 ? `
       <div class="card">
-        <div class="card-title">?쩃 嫄곕옒泥섎퀎 ?꾪솴</div>
+        <div class="card-title">거래처별 현황</div>
         <div class="table-wrapper" style="border:none;">
           <table class="data-table">
             <thead>
               <tr>
-                <th>嫄곕옒泥?/th>
-                <th class="text-right">?덈ぉ ??/th>
-                <th class="text-right">珥??섎웾</th>
-                <th class="text-right">珥?湲덉븸</th>
+                <th>거래처</th>
+                <th class="text-right">품목 수</th>
+                <th class="text-right">총 수량</th>
+                <th class="text-right">총 금액</th>
               </tr>
             </thead>
             <tbody>
               ${summary.vendors.map(v => `
                 <tr>
-                  <td><strong>${v.name || '(誘몄???'}</strong></td>
+                  <td><strong>${v.name || '(미지정)'}</strong></td>
                   <td class="text-right">${v.count}</td>
                   <td class="text-right">${v.qty.toLocaleString('ko-KR')}</td>
                   <td class="text-right">${v.price > 0 ? '₩' + Math.round(v.price).toLocaleString('ko-KR') : '-'}</td>
@@ -270,17 +270,17 @@ export function renderSummaryPage(container, navigateTo) {
     <!-- ?낆텧怨?理쒓렐 ?숉뼢 -->
     ${transactions.length > 0 ? `
       <div class="card">
-        <div class="card-title">?봽 理쒓렐 ?낆텧怨??숉뼢 <span class="card-subtitle">(理쒓렐 7??</span></div>
+        <div class="card-title">최근 입출고 동향 <span class="card-subtitle">(최근 7일)</span></div>
         <div class="table-wrapper" style="border:none;">
           <table class="data-table">
             <thead>
               <tr>
-                <th>?좎쭨</th>
-                <th class="text-right">?낃퀬 嫄?/th>
-                <th class="text-right">?낃퀬 ?섎웾</th>
-                <th class="text-right">異쒓퀬 嫄?/th>
-                <th class="text-right">異쒓퀬 ?섎웾</th>
-                <th class="text-right">?쒕???/th>
+                <th>날짜</th>
+                <th class="text-right">입고 건수</th>
+                <th class="text-right">입고 수량</th>
+                <th class="text-right">출고 건수</th>
+                <th class="text-right">출고 수량</th>
+                <th class="text-right">순증감</th>
               </tr>
             </thead>
             <tbody>
@@ -304,24 +304,24 @@ export function renderSummaryPage(container, navigateTo) {
 
     <!-- ?섎웾 ?곸쐞 ?덈ぉ -->
     <div class="card">
-      <div class="card-title">?룇 ?섎웾 ?곸쐞 10媛??덈ぉ</div>
+      <div class="card-title">수량 상위 10개 품목</div>
       <div class="table-wrapper" style="border:none;">
         <table class="data-table">
           <thead>
             <tr>
-              <th style="width:40px;">?쒖쐞</th>
-              <th>?덈ぉ紐?/th>
-              <th>遺꾨쪟</th>
-              <th class="text-right">?섎웾</th>
-              <th class="text-right">?④?</th>
-              <th class="text-right">湲덉븸</th>
+              <th style="width:40px;">순위</th>
+              <th>품목명</th>
+              <th>분류</th>
+              <th class="text-right">수량</th>
+              <th class="text-right">단가</th>
+              <th class="text-right">금액</th>
             </tr>
           </thead>
           <tbody>
             ${summary.topByQty.map((item, i) => `
               <tr>
                 <td style="text-align:center; font-weight:700; color:var(--text-muted);">
-                  ${i < 3 ? ['?쪍','?쪎','?쪏'][i] : i + 1}
+                  ${i < 3 ? ['🥇','🥈','🥉'][i] : i + 1}
                 </td>
                 <td><strong>${item.itemName || '-'}</strong></td>
                 <td style="color:var(--text-muted);">${item.category || '-'}</td>
@@ -459,7 +459,7 @@ function buildDonutChart(categories, totalPrice) {
   const colors = ['#2563eb', '#16a34a', '#d97706', '#dc2626', '#7c3aed', '#0891b2', '#be185d', '#ca8a04'];
 
   if (totalPrice <= 0) {
-    return `<div style="width:140px; height:140px; border-radius:50%; background:#e5e7eb; display:flex; align-items:center; justify-content:center; color:var(--text-muted); font-size:12px;">?곗씠???놁쓬</div>`;
+    return `<div style="width:140px; height:140px; border-radius:50%; background:#e5e7eb; display:flex; align-items:center; justify-content:center; color:var(--text-muted); font-size:12px;">데이터 없음</div>`;
   }
 
   // conic-gradient ?멸렇癒쇳듃 怨꾩궛

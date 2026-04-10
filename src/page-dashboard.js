@@ -20,13 +20,13 @@ export function renderDashboardPage(container, navigateTo) {
   if (items.length === 0) {
     container.innerHTML = `
       <div class="page-header">
-        <h1 class="page-title"><span class="title-icon">?뱢</span> 怨좉툒 遺꾩꽍</h1>
+        <h1 class="page-title"><span class="title-icon">📈</span> 고급 분석</h1>
       </div>
       <div class="card">
         <div class="empty-state">
-          <div class="icon">?뱢</div>
-          <div class="msg">遺꾩꽍???곗씠?곌? ?놁뒿?덈떎</div>
-          <div class="sub">?덈ぉ???깅줉?섎㈃ ABC遺꾩꽍, ?뚯쟾???깆쓣 ?뺤씤?????덉뒿?덈떎.</div>
+          <div class="icon">📈</div>
+          <div class="msg">분석할 데이터가 없습니다.</div>
+          <div class="sub">품목을 등록하면 ABC 분석과 회전율을 바로 확인할 수 있습니다.</div>
         </div>
       </div>
     `;
@@ -50,44 +50,44 @@ export function renderDashboardPage(container, navigateTo) {
   container.innerHTML = `
     <div class="page-header">
       <div>
-        <h1 class="page-title"><span class="title-icon">?뱢</span> 怨좉툒 遺꾩꽍</h1>
-        <div class="page-desc">?ш퀬 ?곗씠??湲곕컲 寃쎌쁺 ?섏궗寃곗젙 ?꾧뎄</div>
+        <h1 class="page-title"><span class="title-icon">📈</span> 고급 분석</h1>
+        <div class="page-desc">재고 데이터를 바탕으로 운영 판단에 필요한 핵심 지표를 보여줍니다.</div>
       </div>
       <div class="page-actions">
-        <button class="btn btn-outline" id="btn-export-analysis">?뱿 遺꾩꽍 ?대낫?닿린</button>
+        <button class="btn btn-outline" id="btn-export-analysis">분석표 내보내기</button>
       </div>
     </div>
 
     <!-- KPI 移대뱶 -->
     <div class="stat-grid">
       <div class="stat-card">
-        <div class="stat-label">珥??ш퀬 媛移?/div>
+        <div class="stat-label">총 재고 가치</div>
         <div class="stat-value text-accent">${totalValue > 0 ? '₩' + Math.round(totalValue).toLocaleString('ko-KR') : '-'}</div>
       </div>
       <div class="stat-card">
-        <div class="stat-label">?됯퇏 ?뚯쟾??/div>
-        <div class="stat-value">${avgTurnover}??/div>
-        <div class="stat-change">理쒓렐 30??湲곗?</div>
+        <div class="stat-label">평균 회전율</div>
+        <div class="stat-value">${avgTurnover}회</div>
+        <div class="stat-change">최근 30일 기준</div>
       </div>
       <div class="stat-card">
-        <div class="stat-label">A?깃툒 ?덈ぉ</div>
-        <div class="stat-value text-success">${abcData.filter(d => d.grade === 'A').length}媛?/div>
-        <div class="stat-change">留ㅼ텧??80% 李⑥?</div>
+        <div class="stat-label">A등급 품목</div>
+        <div class="stat-value text-success">${abcData.filter(d => d.grade === 'A').length}개</div>
+        <div class="stat-change">가치 상위 80% 차지</div>
       </div>
       <div class="stat-card">
-        <div class="stat-label">鍮꾪솢???ш퀬</div>
-        <div class="stat-value ${deadStockCount > 0 ? 'text-danger' : ''}">${deadStockCount}媛?/div>
-        <div class="stat-change">30????異쒓퀬 ?놁쓬</div>
+        <div class="stat-label">비활성 재고</div>
+        <div class="stat-value ${deadStockCount > 0 ? 'text-danger' : ''}">${deadStockCount}개</div>
+        <div class="stat-change">30일간 출고 없음</div>
       </div>
     </div>
 
     <!-- ABC 遺꾩꽍 -->
     <div class="card">
-      <div class="card-title">?룇 ABC 遺꾩꽍 <span class="card-subtitle">湲덉븸 湲곗? ?덈ぉ ?깃툒 遺꾨쪟</span></div>
+      <div class="card-title">ABC 분석 <span class="card-subtitle">금액 기준 품목 등급 분류</span></div>
       <div style="display:flex; gap:12px; margin-bottom:16px;">
-        <span class="badge badge-success" style="padding:6px 14px;">A?깃툒: ?곸쐞 80%</span>
-        <span class="badge badge-warning" style="padding:6px 14px;">B?깃툒: 80~95%</span>
-        <span class="badge badge-default" style="padding:6px 14px;">C?깃툒: ?섎㉧吏</span>
+        <span class="badge badge-success" style="padding:6px 14px;">A등급: 상위 80%</span>
+        <span class="badge badge-warning" style="padding:6px 14px;">B등급: 80~95%</span>
+        <span class="badge badge-default" style="padding:6px 14px;">C등급: 나머지</span>
       </div>
 
       <!-- ABC ?쒓컖??諛?-->
@@ -109,20 +109,20 @@ export function renderDashboardPage(container, navigateTo) {
         <table class="data-table">
           <thead>
             <tr>
-              <th style="width:40px;">?쒖쐞</th>
-              <th>?깃툒</th>
-              <th>?덈ぉ紐?/th>
-              <th>肄붾뱶</th>
-              <th class="text-right">?섎웾</th>
-              <th class="text-right">湲덉븸</th>
-              <th class="text-right">?꾩쟻鍮꾩쑉</th>
+              <th style="width:40px;">순위</th>
+              <th>등급</th>
+              <th>품목명</th>
+              <th>코드</th>
+              <th class="text-right">수량</th>
+              <th class="text-right">금액</th>
+              <th class="text-right">누적비중</th>
             </tr>
           </thead>
           <tbody>
             ${abcData.slice(0, 20).map((d, i) => `
               <tr>
                 <td style="text-align:center; font-weight:600; color:var(--text-muted);">
-                  ${i < 3 ? ['?쪍','?쪎','?쪏'][i] : i + 1}
+                  ${i < 3 ? ['🥇','🥈','🥉'][i] : i + 1}
                 </td>
                 <td>
                   <span class="badge ${d.grade === 'A' ? 'badge-success' : d.grade === 'B' ? 'badge-warning' : 'badge-default'}">
@@ -148,18 +148,18 @@ export function renderDashboardPage(container, navigateTo) {
 
     <!-- ?ш퀬 ?뚯쟾??-->
     <div class="card">
-      <div class="card-title">?봽 ?ш퀬 ?뚯쟾??<span class="card-subtitle">理쒓렐 30??異쒓퀬 湲곗?</span></div>
+      <div class="card-title">재고 회전율 <span class="card-subtitle">최근 30일 출고 기준</span></div>
 
       <div class="table-wrapper" style="border:none;">
         <table class="data-table">
           <thead>
             <tr>
-              <th>?덈ぉ紐?/th>
-              <th>肄붾뱶</th>
-              <th class="text-right">?꾩옱 ?ш퀬</th>
-              <th class="text-right">30??異쒓퀬??/th>
-              <th class="text-right">?뚯쟾??/th>
-              <th>?곹깭</th>
+              <th>품목명</th>
+              <th>코드</th>
+              <th class="text-right">현재 재고</th>
+              <th class="text-right">30일 출고량</th>
+              <th class="text-right">회전율</th>
+              <th>상태</th>
             </tr>
           </thead>
           <tbody>
@@ -172,10 +172,10 @@ export function renderDashboardPage(container, navigateTo) {
                 <td class="text-right"><strong>${d.turnover.toFixed(1)}</strong></td>
                 <td>
                   ${d.turnover === 0
-                    ? '<span class="badge badge-danger">鍮꾪솢??/span>'
+                    ? '<span class="badge badge-danger">비활성</span>'
                     : d.turnover < 1
-                      ? '<span class="badge badge-warning">??뚯쟾</span>'
-                      : '<span class="badge badge-success">?뺤긽</span>'
+                      ? '<span class="badge badge-warning">저회전</span>'
+                      : '<span class="badge badge-success">정상</span>'
                   }
                 </td>
               </tr>
@@ -188,7 +188,7 @@ export function renderDashboardPage(container, navigateTo) {
     <!-- ?붾퀎 異붿씠 -->
     ${monthlyTrend.length > 0 ? `
     <div class="card">
-      <div class="card-title">?뱟 ?붾퀎 ?낆텧怨?異붿씠</div>
+      <div class="card-title">월별 입출고 추이</div>
       <div style="display:flex; flex-direction:column; gap:12px;">
         ${monthlyTrend.map(m => {
           const maxVal = Math.max(...monthlyTrend.map(t => Math.max(t.inQty, t.outQty))) || 1;
@@ -196,7 +196,7 @@ export function renderDashboardPage(container, navigateTo) {
             <div>
               <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px;">
                 <strong>${m.month}</strong>
-                <span>?낃퀬 <span class="type-in">${m.inQty.toLocaleString('ko-KR')}</span> | 異쒓퀬 <span class="type-out">${m.outQty.toLocaleString('ko-KR')}</span></span>
+                <span>입고 <span class="type-in">${m.inQty.toLocaleString('ko-KR')}</span> | 출고 <span class="type-out">${m.outQty.toLocaleString('ko-KR')}</span></span>
               </div>
               <div style="display:flex; gap:4px;">
                 <div style="height:12px; flex:1; background:var(--border-light); border-radius:3px; overflow:hidden;">
@@ -216,15 +216,15 @@ export function renderDashboardPage(container, navigateTo) {
     <!-- ?좏넻湲고븳 寃쎄퀬 -->
     ${expiryAlerts.length > 0 ? `
     <div class="card" style="border-left: 3px solid var(--warning);">
-      <div class="card-title" style="color:var(--warning);">?뱟 ?좏넻湲고븳 ?꾨컯 ?덈ぉ <span class="badge badge-warning">${expiryAlerts.length}嫄?/span></div>
+      <div class="card-title" style="color:var(--warning);">유통기한 임박 품목 <span class="badge badge-warning">${expiryAlerts.length}건</span></div>
       <div class="table-wrapper" style="border:none;">
         <table class="data-table">
           <thead>
             <tr>
-              <th>?덈ぉ紐?/th>
+              <th>품목명</th>
               <th>LOT</th>
-              <th class="text-right">?섎웾</th>
-              <th>?좏넻湲고븳</th>
+              <th class="text-right">수량</th>
+              <th>유통기한</th>
               <th>D-Day</th>
             </tr>
           </thead>
@@ -237,7 +237,7 @@ export function renderDashboardPage(container, navigateTo) {
                 <td>${e.expiryDate}</td>
                 <td>
                   ${e.daysLeft <= 0
-                    ? '<span class="badge badge-danger">留뚮즺??/span>'
+                    ? '<span class="badge badge-danger">만료</span>'
                     : e.daysLeft <= 7
                       ? `<span class="badge badge-danger">D-${e.daysLeft}</span>`
                       : `<span class="badge badge-warning">D-${e.daysLeft}</span>`

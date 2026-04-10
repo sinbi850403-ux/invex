@@ -79,20 +79,20 @@ export function renderInventoryPage(container, navigateTo) {
     container.innerHTML = `
       <div class="page-header">
         <div>
-          <h1 class="page-title"><span class="title-icon">?벀</span> ?ш퀬 ?꾪솴</h1>
-          <div class="page-desc">?덈ぉ???ш퀬 ?섎웾怨?湲덉븸??愿由ы빀?덈떎.</div>
+          <h1 class="page-title"><span class="title-icon">📦</span> 재고 현황</h1>
+          <div class="page-desc">품목별 재고 수량과 금액을 관리합니다.</div>
         </div>
         <div class="page-actions">
-          <button class="btn btn-primary" id="btn-add-item">+ ?덈ぉ 異붽?</button>
+          <button class="btn btn-primary" id="btn-add-item">+ 품목 추가</button>
         </div>
       </div>
       <div class="card">
         <div class="empty-state">
-          <div class="icon">?벀</div>
-          <div class="msg">?꾩쭅 ?깅줉???덈ぉ???놁뒿?덈떎</div>
-          <div class="sub">?뚯씪???낅줈?쒗븯嫄곕굹, ?꾩쓽 "?덈ぉ 異붽?" 踰꾪듉?쇰줈 吏곸젒 ?깅줉?섏꽭??</div>
+          <div class="icon">📦</div>
+          <div class="msg">아직 등록된 품목이 없습니다.</div>
+          <div class="sub">파일을 업로드하거나, 위의 "품목 추가" 버튼으로 직접 등록해 주세요.</div>
           <br/>
-          <button class="btn btn-outline" id="btn-go-upload">?뚯씪 ?낅줈?쒗븯湲?/button>
+          <button class="btn btn-outline" id="btn-go-upload">파일 업로드하기</button>
         </div>
       </div>
     `;
@@ -166,40 +166,40 @@ export function renderInventoryPage(container, navigateTo) {
   container.innerHTML = `
     <div class="page-header">
       <div>
-        <h1 class="page-title"><span class="title-icon">?벀</span> ?ш퀬 ?꾪솴</h1>
-        <div class="page-desc">${state.fileName ? `?뱞 ${state.fileName}` : ''} 珥?${data.length}媛??덈ぉ</div>
+        <h1 class="page-title"><span class="title-icon">📦</span> 재고 현황</h1>
+        <div class="page-desc">${state.fileName ? `📄 ${state.fileName}` : ''} 총 ${data.length}개 품목</div>
       </div>
       <div class="page-actions">
-        <button class="btn btn-outline" id="btn-export">?뱿 ?묒?</button>
-        <button class="btn btn-outline" id="btn-export-pdf">?뱞 PDF</button>
-        <button class="btn btn-primary" id="btn-add-item">+ ?덈ぉ 異붽?</button>
+        <button class="btn btn-outline" id="btn-export">엑셀 내보내기</button>
+        <button class="btn btn-outline" id="btn-export-pdf">PDF 내보내기</button>
+        <button class="btn btn-primary" id="btn-add-item">+ 품목 추가</button>
       </div>
     </div>
 
     <!-- ?듦퀎 移대뱶 -->
     <div class="stat-grid">
       <div class="stat-card">
-        <div class="stat-label">?꾩껜 ?덈ぉ</div>
+        <div class="stat-label">전체 품목</div>
         <div class="stat-value text-accent" id="stat-total">${data.length}</div>
       </div>
       <div class="stat-card">
-        <div class="stat-label">珥??섎웾</div>
+        <div class="stat-label">총 수량</div>
         <div class="stat-value text-accent" id="stat-qty">${calcTotalQty(data)}</div>
       </div>
       <div class="stat-card">
-        <div class="stat-label">?⑷퀎 怨듦툒媛??/div>
+        <div class="stat-label">합계 공급가액</div>
         <div class="stat-value text-accent" id="stat-supply">${calcTotalSupply(data)}</div>
       </div>
       <div class="stat-card">
-        <div class="stat-label">?⑷퀎 遺媛??/div>
+        <div class="stat-label">합계 부가세</div>
         <div class="stat-value text-accent" id="stat-vat">${calcTotalVat(data)}</div>
       </div>
       <div class="stat-card">
-        <div class="stat-label">珥??⑷퀎湲덉븸</div>
+        <div class="stat-label">총 합계금액</div>
         <div class="stat-value text-success" id="stat-price">${calcTotalPrice(data)}</div>
       </div>
       <div class="stat-card">
-        <div class="stat-label">?ш퀬 遺議?寃쎄퀬</div>
+        <div class="stat-label">재고 부족 경고</div>
         <div class="stat-value ${warningCount > 0 ? 'text-danger' : ''}" id="stat-warn">
           ${warningCount > 0 ? `${warningCount}건` : '없음'}
         </div>
@@ -207,20 +207,20 @@ export function renderInventoryPage(container, navigateTo) {
     </div>
 
     ${renderInsightHero({
-      eyebrow: '?ш퀬 ?댁쁺 ?곹깭',
-      title: '?꾧? 遊먮룄 諛붾줈 ?댄빐?섎뒗 ?ш퀬 嫄닿컯?꾨? 癒쇱? 蹂댁뿬以띾땲??',
-      desc: '?섎웾, 湲덉븸, 嫄곕옒泥??곌껐, ?꾩튂 ?낅젰 ?곹깭瑜???踰덉뿉 ?먭??댁꽌 珥덈낫?먮룄 臾댁뾿遺???뺣━?좎? 諛붾줈 ?????덇쾶 援ъ꽦?덉뒿?덈떎.',
+      eyebrow: '재고 운영 상태',
+      title: '누가 봐도 바로 이해되는 재고 상태를 먼저 보여줍니다.',
+      desc: '수량, 금액, 거래처 연결, 위치 입력 상태를 한 번에 묶어 초보자도 무엇부터 정리할지 바로 판단할 수 있게 구성했습니다.',
       tone: warningCount > 0 ? 'warning' : 'success',
       metrics: inventoryHealthMetrics,
       bullets: [
-        warningCount > 0 ? `遺議??덈ぉ ${warningCount}嫄댁? 癒쇱? 蹂댁땐 ?щ?瑜??먮떒?섏꽭??` : '遺議??덈ぉ? ?놁뒿?덈떎. ?꾩옱 ?ш퀬 ?먮쫫? ?덉젙?곸엯?덈떎.',
-        missingVendorCount > 0 ? `嫄곕옒泥섍? 鍮꾩뼱 ?덈뒗 ?덈ぉ ${missingVendorCount}嫄댁? 諛쒖＜? 臾몄꽌 ?곌껐???딄만 ???덉뒿?덈떎.` : '嫄곕옒泥??뺣낫??異⑸텇???곌껐?섏뼱 ?덉뒿?덈떎.',
-        missingWarehouseCount > 0 ? `?꾩튂媛 鍮꾩뼱 ?덉쑝硫??꾩옣 議고쉶媛 ?먮젮吏묐땲?? ?꾩튂 誘몄엯???덈ぉ???곗꽑 ?뺣━?섏꽭??` : '?꾩튂 ?뺣낫?????뺣━?섏뼱 ?덉뒿?덈떎.',
+        warningCount > 0 ? `부족 품목 ${warningCount}건을 먼저 보충할지 여부를 판단해 보세요.` : '부족 품목이 없습니다. 현재 재고 흐름이 안정적입니다.',
+        missingVendorCount > 0 ? `거래처가 비어 있는 품목 ${missingVendorCount}건은 발주와 문서 연결 전에 보완하는 것이 좋습니다.` : '거래처 정보가 충분히 연결되어 있습니다.',
+        missingWarehouseCount > 0 ? `위치가 비어 있으면 현장 조회가 느려집니다. 위치 미입력 품목을 우선 정리해 주세요.` : '위치 정보도 잘 정리되어 있습니다.',
       ],
       actions: [
-        { id: 'btn-add-item-inline', label: '???덈ぉ 諛붾줈 異붽?', variant: 'btn-primary' },
-        { nav: 'dashboard', label: '怨좉툒 遺꾩꽍 ?닿린', variant: 'btn-outline' },
-        { nav: 'guide', label: '?낅젰 媛?대뱶 蹂닿린', variant: 'btn-ghost' },
+        { id: 'btn-add-item-inline', label: '품목 바로 추가', variant: 'btn-primary' },
+        { nav: 'dashboard', label: '고급 분석 보기', variant: 'btn-outline' },
+        { nav: 'guide', label: '입력 가이드 보기', variant: 'btn-ghost' },
       ],
     })}
 
@@ -228,26 +228,26 @@ export function renderInventoryPage(container, navigateTo) {
     <div class="card quick-start-card">
       <div class="quick-start-head">
         <div>
-          <div class="quick-start-title">泥섏쓬 ?ъ슜??異붿쿇 ?먮쫫</div>
-          <div class="quick-start-desc">3?④퀎留??곕씪?섎㈃ 諛붾줈 ?ㅻТ ?댁쁺??媛?ν빀?덈떎.</div>
+          <div class="quick-start-title">처음 사용자 추천 흐름</div>
+          <div class="quick-start-desc">3단계만 따라가면 바로 재고 운영이 가능합니다.</div>
         </div>
-        <span class="badge badge-info">珥덈낫 紐⑤뱶</span>
+        <span class="badge badge-info">초보자 모드</span>
       </div>
       <div class="quick-start-steps">
-        <div class="quick-start-step is-done">1) ?ш퀬 ?덈ぉ ?뺤씤 ?꾨즺</div>
-        <div class="quick-start-step">2) 泥??낆텧怨??깅줉</div>
-        <div class="quick-start-step">3) ??쒕낫?쒖뿉???꾪솴 ?뺤씤</div>
+        <div class="quick-start-step is-done">1) 재고 품목 확인 완료</div>
+        <div class="quick-start-step">2) 첫 입출고 등록</div>
+        <div class="quick-start-step">3) 대시보드에서 현황 확인</div>
       </div>
       <div class="quick-start-actions">
-        <button class="btn btn-primary btn-sm" id="btn-quick-inout">泥??낆텧怨??깅줉</button>
-        <button class="btn btn-outline btn-sm" id="btn-quick-guide">?ъ슜 媛?대뱶</button>
-        <button class="btn btn-ghost btn-sm" id="btn-quick-dashboard">??쒕낫???대룞</button>
+        <button class="btn btn-primary btn-sm" id="btn-quick-inout">첫 입출고 등록</button>
+        <button class="btn btn-outline btn-sm" id="btn-quick-guide">사용 가이드</button>
+        <button class="btn btn-ghost btn-sm" id="btn-quick-dashboard">대시보드 이동</button>
       </div>
     </div>
     ` : ''}
 
     ${renderQuickFilterRow({
-      label: '鍮좊Ⅸ 蹂닿린',
+      label: '빠른 보기',
       attr: 'data-inventory-focus',
       chips: inventoryFocusChips.map(chip => ({ ...chip, active: chip.value === 'all' })),
     })}
@@ -255,39 +255,39 @@ export function renderInventoryPage(container, navigateTo) {
     <!-- 寃???꾪꽣 + ?뺣젹 + 而щ읆 ?ㅼ젙 -->
     <div class="toolbar">
       <input type="text" class="search-input" id="search-input"
-        placeholder="?덈ぉ紐? 肄붾뱶, 遺꾨쪟濡?寃??.." />
+        placeholder="품목명, 코드, 분류로 검색..." />
       <select class="filter-select" id="filter-item-code">
-        <option value="">?꾩껜 ?덈ぉ肄붾뱶</option>
+        <option value="">전체 품목코드</option>
         ${getItemCodes(data).map(c => `<option value="${c}">${c}</option>`).join('')}
       </select>
       <select class="filter-select" id="filter-vendor">
-        <option value="">?꾩껜 嫄곕옒泥?/option>
+        <option value="">전체 거래처</option>
         ${getVendors(data).map(v => `<option value="${v}">${v}</option>`).join('')}
       </select>
       <select class="filter-select" id="filter-category">
-        <option value="">?꾩껜 遺꾨쪟</option>
+        <option value="">전체 분류</option>
         ${getCategories(data).map(c => `<option value="${c}">${c}</option>`).join('')}
       </select>
       <select class="filter-select" id="filter-warehouse">
-        <option value="">?꾩껜 李쎄퀬</option>
+        <option value="">전체 창고</option>
         ${getWarehouses(data).map(w => `<option value="${w}">${w}</option>`).join('')}
       </select>
       <select class="filter-select" id="filter-stock">
-        <option value="">?꾩껜 ?ш퀬</option>
-        <option value="low">?좑툘 遺議???ぉ留?/option>
+        <option value="">전체 재고</option>
+        <option value="low">부족 항목만</option>
       </select>
-      <select class="filter-select" id="sort-preset" title="?뺣젹">
+      <select class="filter-select" id="sort-preset" title="정렬">
         ${sortOptions.map(option => `<option value="${option.value}">${option.label}</option>`).join('')}
       </select>
-      <button class="btn btn-ghost btn-sm" id="btn-filter-reset" title="?꾪꽣 珥덇린??>?봽 珥덇린??/button>
+      <button class="btn btn-ghost btn-sm" id="btn-filter-reset" title="필터 초기화">초기화</button>
       <div class="col-settings-wrap" style="position:relative;">
-        <button class="btn btn-outline btn-sm" id="btn-col-settings" title="?쒖떆??而щ읆 ?좏깮">
-          ?숋툘 ?쒖떆 ??ぉ
+        <button class="btn btn-outline btn-sm" id="btn-col-settings" title="표시 열 선택">
+          표시 항목 설정
         </button>
         <div class="col-settings-panel" id="col-settings-panel">
           <div class="col-settings-header">
-            <strong>?뱥 ?쒖떆????ぉ ?좏깮</strong>
-            <button class="col-settings-close" id="col-settings-close">??/button>
+            <strong>표시 항목 선택</strong>
+            <button class="col-settings-close" id="col-settings-close">닫기</button>
           </div>
           <div class="col-settings-body">
             ${allAvailableFields.map(f => `
@@ -299,8 +299,8 @@ export function renderInventoryPage(container, navigateTo) {
             `).join('')}
           </div>
           <div class="col-settings-footer">
-            <button class="btn btn-ghost btn-sm" id="col-select-all">?꾩껜 ?좏깮</button>
-            <button class="btn btn-primary btn-sm" id="col-apply">?곸슜</button>
+            <button class="btn btn-ghost btn-sm" id="col-select-all">전체 선택</button>
+            <button class="btn btn-primary btn-sm" id="col-apply">적용</button>
           </div>
         </div>
       </div>
@@ -319,7 +319,7 @@ export function renderInventoryPage(container, navigateTo) {
     </div>
 
     <div style="font-size:12px; color:var(--text-muted); margin-top:8px;">
-      ?뮕 ????붾툝?대┃?섎㈃ 吏곸젒 ?섏젙?????덉뒿?덈떎. | ?숋툘 ?쒖떆 ??ぉ 踰꾪듉?쇰줈 蹂닿퀬 ?띠? 而щ읆???좏깮?섏꽭??
+      두 번 클릭하면 값을 바로 수정할 수 있습니다. 표시 항목 설정 버튼으로 보고 싶은 열만 선택해 주세요.
     </div>
   `;
 
@@ -373,12 +373,12 @@ export function renderInventoryPage(container, navigateTo) {
 
   // === ?뺣젹 ?좏떥 ===
   function getSortOptionLabel(sort) {
-    if (!sort.key || !sort.direction) return '?뺣젹 ?놁쓬';
+    if (!sort.key || !sort.direction) return '정렬 없음';
     const option = sortOptions.find(opt => opt.value === `${sort.key}:${sort.direction}`);
     if (option) return option.label;
-    if (sort.key === '__lowStock') return '?ш퀬 遺議??곗꽑';
+    if (sort.key === '__lowStock') return '재고 부족 우선';
     const label = FIELD_LABELS[sort.key] || sort.key;
-    return `${label} ${sort.direction === 'asc' ? '?ㅻ쫫李⑥닚' : '?대┝李⑥닚'}`;
+    return `${label} ${sort.direction === 'asc' ? '오름차순' : '내림차순'}`;
   }
 
   function getSortIndicator(key) {
@@ -474,11 +474,11 @@ export function renderInventoryPage(container, navigateTo) {
 
     const chipsHtml = chips.length > 0
       ? chips.map(text => `<span class="filter-chip">${text}</span>`).join('')
-      : '<span class="filter-chip filter-chip-muted">?꾪꽣 ?놁쓬</span>';
+      : '<span class="filter-chip filter-chip-muted">필터 없음</span>';
 
     summaryEl.innerHTML = `
       <div class="filter-summary-row">
-        <div class="filter-summary-count">?쒖떆 ${filteredCount}嫄?/ ?꾩껜 ${totalCount}嫄?/div>
+        <div class="filter-summary-count">표시 ${filteredCount}건 / 전체 ${totalCount}건</div>
         <div class="filter-summary-chips">${chipsHtml}</div>
       </div>
     `;
@@ -527,7 +527,7 @@ export function renderInventoryPage(container, navigateTo) {
           <th
             class="sortable-header ${ALL_FIELDS.find(f => f.key === key)?.numeric ? 'text-right' : ''} ${currentSort.key === key ? 'is-active' : ''}"
             data-sort-key="${key}"
-            title="?대┃?섏뿬 ?뺣젹"
+            title="클릭하여 정렬"
             aria-sort="${currentSort.key === key ? (currentSort.direction === 'asc' ? 'ascending' : currentSort.direction === 'desc' ? 'descending' : 'none') : 'none'}"
           >
             <button type="button" class="sort-hitbox" tabindex="-1" aria-hidden="true">
@@ -536,8 +536,8 @@ export function renderInventoryPage(container, navigateTo) {
             </button>
           </th>
         `).join('')}
-        <th class="text-center" style="width:70px;">?덉쟾?ш퀬</th>
-        <th class="col-actions">愿由?/th>
+        <th class="text-center" style="width:70px;">안전재고</th>
+        <th class="col-actions">관리</th>
       </tr>
     `;
     attachSortHeaderEvents();
@@ -579,7 +579,7 @@ export function renderInventoryPage(container, navigateTo) {
     const tbody = container.querySelector('#inventory-body');
     if (sorted.length === 0) {
       tbody.innerHTML = `<tr><td colspan="${activeFields.length + 3}" style="text-align:center; padding:32px; color:var(--text-muted);">
-        寃??寃곌낵媛 ?놁뒿?덈떎.
+        검색 결과가 없습니다.
       </td></tr>`;
     } else {
       tbody.innerHTML = pageData.map((row, i) => {
@@ -597,20 +597,20 @@ export function renderInventoryPage(container, navigateTo) {
               <td class="editable-cell ${ALL_FIELDS.find(f => f.key === key)?.numeric ? 'text-right' : ''}"
                   data-field="${key}" data-idx="${realIdx}">
                 ${formatCell(key, row[key])}
-                ${key === 'quantity' && isLow ? ' <span class="badge badge-danger" style="font-size:10px;">遺議?/span>' : ''}
+                ${key === 'quantity' && isLow ? ' <span class="badge badge-danger" style="font-size:10px;">부족</span>' : ''}
               </td>
             `).join('')}
             <td class="text-center">
               <button class="btn-icon btn-safety" data-name="${row.itemName}" data-min="${min ?? ''}"
-                title="?대┃?섏뿬 ?덉쟾?ш퀬 ?섎웾 ?ㅼ젙"
+                title="클릭하여 안전재고 수량 설정"
                 style="font-size:11px; padding:2px 6px; border-radius:4px;
                   ${min !== undefined ? 'background:rgba(63,185,80,0.15); color:var(--success);' : 'color:var(--text-muted);'}">
-                ${min !== undefined ? `?뵒 ${min}` : '?ㅼ젙'}
+                ${min !== undefined ? `기준 ${min}` : '설정'}
               </button>
             </td>
             <td class="col-actions">
-              <button class="btn-icon btn-edit" data-idx="${realIdx}" title="?몄쭛">?륅툘</button>
-              <button class="btn-icon btn-icon-danger btn-del" data-idx="${realIdx}" title="??젣">?뿊截?/button>
+              <button class="btn-icon btn-edit" data-idx="${realIdx}" title="수정">수정</button>
+              <button class="btn-icon btn-icon-danger btn-del" data-idx="${realIdx}" title="삭제">삭제</button>
             </td>
           </tr>
         `;
@@ -623,9 +623,9 @@ export function renderInventoryPage(container, navigateTo) {
     const paginationEl = container.querySelector('#pagination');
     const pageStart = sorted.length === 0 ? 0 : start + 1;
     paginationEl.innerHTML = `
-      <span>${sorted.length}嫄?以?${pageStart}~${Math.min(start + PAGE_SIZE, sorted.length)}</span>
+      <span>${sorted.length}건 중 ${pageStart}~${Math.min(start + PAGE_SIZE, sorted.length)}</span>
       <div class="pagination-btns">
-        <button class="page-btn" id="page-prev" ${currentPageNum <= 1 ? 'disabled' : ''}>???댁쟾</button>
+        <button class="page-btn" id="page-prev" ${currentPageNum <= 1 ? 'disabled' : ''}>이전</button>
         ${Array.from({length: Math.min(totalPages, 7)}, (_, i) => {
           let p;
           if (totalPages <= 7) { p = i + 1; }
@@ -634,7 +634,7 @@ export function renderInventoryPage(container, navigateTo) {
           else { p = currentPageNum - 3 + i; }
           return `<button class="page-btn ${p === currentPageNum ? 'active' : ''}" data-p="${p}">${p}</button>`;
         }).join('')}
-        <button class="page-btn" id="page-next" ${currentPageNum >= totalPages ? 'disabled' : ''}>?ㅼ쓬 ??/button>
+        <button class="page-btn" id="page-next" ${currentPageNum >= totalPages ? 'disabled' : ''}>다음</button>
       </div>
     `;
 
@@ -692,12 +692,12 @@ export function renderInventoryPage(container, navigateTo) {
     container.querySelectorAll('.btn-del').forEach(btn => {
       btn.addEventListener('click', () => {
         const idx = parseInt(btn.dataset.idx);
-        const name = data[idx]?.itemName || `${idx + 1}踰???ぉ`;
-        if (confirm(`"${name}"??瑜? ??젣?섏떆寃좎뒿?덇퉴?`)) {
+        const name = data[idx]?.itemName || `${idx + 1}번 품목`;
+        if (confirm(`"${name}" 품목을 삭제하시겠습니까?`)) {
           deleteItem(idx);
           renderTable();
           updateStats();
-          showToast(`"${name}" ??ぉ????젣?덉뒿?덈떎.`, 'info');
+          showToast(`"${name}" 품목을 삭제했습니다.`, 'info');
         }
       });
     });
@@ -716,21 +716,21 @@ export function renderInventoryPage(container, navigateTo) {
         const name = btn.dataset.name;
         const currentMin = btn.dataset.min;
         const input = prompt(
-          `"${name}"???덉쟾?ш퀬(理쒖냼 ?섎웾)瑜??낅젰?섏꽭??\n鍮꾩썙?먮㈃ ?댁젣?⑸땲??`,
+          `"${name}" 품목의 안전재고(최소 수량)를 입력해 주세요.\n비워 두면 해제됩니다.`,
           currentMin
         );
         if (input === null) return; // 痍⑥냼
         if (input.trim() === '') {
           setSafetyStock(name, undefined);
-          showToast(`"${name}" ?덉쟾?ш퀬 ?댁젣`, 'info');
+          showToast(`"${name}" 안전재고를 해제했습니다.`, 'info');
         } else {
           const num = parseInt(input);
           if (isNaN(num) || num < 0) {
-            showToast('?レ옄瑜??낅젰??二쇱꽭??', 'warning');
+            showToast('숫자를 입력해 주세요.', 'warning');
             return;
           }
           setSafetyStock(name, num);
-          showToast(`"${name}" ?덉쟾?ш퀬瑜?${num}?쇰줈 ?ㅼ젙?덉뒿?덈떎.`, 'success');
+          showToast(`"${name}" 안전재고를 ${num}로 설정했습니다.`, 'success');
         }
         renderTable();
         updateStats();
@@ -815,7 +815,7 @@ export function renderInventoryPage(container, navigateTo) {
     });
 
     if (checked.length === 0) {
-      showToast('理쒖냼 1媛??댁긽????ぉ???좏깮??二쇱꽭??', 'warning');
+      showToast('최소 1개 이상의 항목을 선택해 주세요.', 'warning');
       return;
     }
 
@@ -830,7 +830,7 @@ export function renderInventoryPage(container, navigateTo) {
     renderTableHeader();
     renderTable();
     colPanel.classList.remove('open');
-    showToast(`${checked.length}媛???ぉ ?쒖떆`, 'success');
+    showToast(`${checked.length}개 항목을 표시하도록 적용했습니다.`, 'success');
   });
 
   // 珥덉떖??鍮좊Ⅸ ?≪뀡
@@ -944,7 +944,7 @@ export function renderInventoryPage(container, navigateTo) {
     highlightActiveFilters();
     syncFocusChips();
     persistInventoryPrefs();
-    showToast('?꾪꽣? ?뺣젹??珥덇린?뷀뻽?듬땲??', 'info');
+    showToast('필터와 정렬을 초기화했습니다.', 'info');
   });
 
   // ?꾪꽣 ?쒖꽦 ?곹깭 ?쒓컖???쒖떆
@@ -972,9 +972,9 @@ export function renderInventoryPage(container, navigateTo) {
         activeFields.forEach(key => { obj[FIELD_LABELS[key]] = row[key]; });
         return obj;
       });
-      const baseName = (state.fileName || '?ш퀬?꾪솴').replace(/\.[^.]+$/, '');
-      downloadExcel(exportData, `${baseName}_?ш퀬?꾪솴`);
-      showToast('?묒? ?뚯씪???ㅼ슫濡쒕뱶?덉뒿?덈떎.', 'success');
+      const baseName = (state.fileName || '재고현황').replace(/\.[^.]+$/, '');
+      downloadExcel(exportData, `${baseName}_재고현황`);
+      showToast('엑셀 파일을 내려받았습니다.', 'success');
     } catch (err) {
       showToast(err.message, 'error');
     }
