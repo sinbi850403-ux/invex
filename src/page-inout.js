@@ -951,6 +951,8 @@ function openTxModal(container, navigateTo, type, items) {
             <div class="form-group">
               <label class="form-label">품목 선택 <span class="required">*</span></label>
               ${items.length > 0 ? `
+                <input class="form-input" id="tx-item-search" placeholder="품목명/코드/거래처 검색" autocomplete="off" />
+                <div class="smart-inline-note" id="tx-item-search-meta">표시 ${items.length}개 / 전체 ${items.length}개</div>
                 <select class="form-select" id="tx-item">
                   <option value="">-- 품목 선택 --</option>
                   ${items.map((item, i) => `
@@ -1028,6 +1030,8 @@ function openTxModal(container, navigateTo, type, items) {
   document.body.appendChild(overlay);
 
   const itemSelect = overlay.querySelector('#tx-item');
+  const itemSearchInput = overlay.querySelector('#tx-item-search');
+  const itemSearchMeta = overlay.querySelector('#tx-item-search-meta');
   const inputs = {
     vendor: overlay.querySelector('#tx-vendor'),
     itemName: overlay.querySelector('#tx-item-name'),
@@ -1041,6 +1045,47 @@ function openTxModal(container, navigateTo, type, items) {
   const getSelectedItem = () => {
     if (!itemSelect || itemSelect.value === '') return null;
     return items[parseInt(itemSelect.value, 10)] || null;
+  };
+
+  const getOptionLabel = (item) => {
+    const qtyLabel = (parseFloat(item.quantity || 0) || 0).toLocaleString('ko-KR');
+    return `${escapeHtml(item.itemName || '-')}${item.itemCode ? ` (${escapeHtml(item.itemCode)})` : ''}${type === 'out' ? ` [현재 ${qtyLabel}]` : ''}`;
+  };
+
+  const renderItemOptions = (keyword = '') => {
+    if (!itemSelect) return;
+    const previousValue = itemSelect.value;
+    const query = String(keyword || '').trim().toLowerCase();
+    const matched = items
+      .map((item, index) => ({ item, index }))
+      .filter(({ item }) => {
+        if (!query) return true;
+        const haystack = `${item.itemName || ''} ${item.itemCode || ''} ${item.vendor || ''}`.toLowerCase();
+        return haystack.includes(query);
+      });
+
+    const visibleValues = new Set(['']);
+    let optionMarkup = '<option value="">-- 품목 선택 --</option>';
+
+    if (previousValue !== '' && !matched.some(({ index }) => String(index) === previousValue)) {
+      const selectedItem = items[parseInt(previousValue, 10)];
+      if (selectedItem) {
+        visibleValues.add(String(previousValue));
+        optionMarkup += `<option value="${previousValue}" data-code="${selectedItem.itemCode || ''}" data-price="${selectedItem.unitPrice || ''}" data-qty="${selectedItem.quantity || 0}">${getOptionLabel(selectedItem)} (현재 선택)</option>`;
+      }
+    }
+
+    optionMarkup += matched.map(({ item, index }) => {
+      visibleValues.add(String(index));
+      return `<option value="${index}" data-code="${item.itemCode || ''}" data-price="${item.unitPrice || ''}" data-qty="${item.quantity || 0}">${getOptionLabel(item)}</option>`;
+    }).join('');
+
+    itemSelect.innerHTML = optionMarkup;
+    itemSelect.value = visibleValues.has(previousValue) ? previousValue : '';
+
+    if (itemSearchMeta) {
+      itemSearchMeta.textContent = `표시 ${matched.length}개 / 전체 ${items.length}개`;
+    }
   };
 
   const refreshTxSummary = () => {
@@ -1076,11 +1121,18 @@ function openTxModal(container, navigateTo, type, items) {
   };
 
   if (itemSelect) {
+    renderItemOptions('');
     itemSelect.addEventListener('change', () => {
       const selectedItem = getSelectedItem();
       if (selectedItem && !inputs.price.value) {
         inputs.price.value = selectedItem.unitPrice || '';
       }
+      refreshTxSummary();
+    });
+  }
+  if (itemSearchInput && itemSelect) {
+    itemSearchInput.addEventListener('input', () => {
+      renderItemOptions(itemSearchInput.value);
       refreshTxSummary();
     });
   }
@@ -1155,7 +1207,12 @@ function openTxModal(container, navigateTo, type, items) {
 
   setTimeout(() => {
     if (items.length > 0) {
-      overlay.querySelector('#tx-item')?.focus();
+      const searchInput = overlay.querySelector('#tx-item-search');
+      if (searchInput) {
+        searchInput.focus();
+      } else {
+        overlay.querySelector('#tx-item')?.focus();
+      }
     } else {
       overlay.querySelector('#tx-item-name')?.focus();
     }
