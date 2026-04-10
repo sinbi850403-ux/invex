@@ -468,6 +468,10 @@ function updateNotifBadge() {
   }
 }
 
+window.addEventListener('notifications-updated', () => {
+  updateNotifBadge();
+});
+
 // ?ъ씠?쒕컮 硫붾돱???붽툑??諛곗? ?곸슜 + ?대깽???곌껐
 function updateSidebarBadges() {
   document.querySelectorAll('.nav-btn').forEach(btn => {

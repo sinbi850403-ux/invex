@@ -2802,8 +2802,29 @@ html.dark-mode .report-spotlight-card {
   font-size: var(--font-size-md);
 }
 
-.notif-close {
+.notif-actions {
   margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.notif-action-btn {
+  border: 1px solid var(--border);
+  background: var(--bg-main);
+  color: var(--text-secondary);
+  border-radius: var(--radius-sm);
+  padding: 4px 8px;
+  font-size: 11px;
+  line-height: 1;
+}
+
+.notif-action-btn:hover {
+  background: var(--accent-light);
+  color: var(--accent);
+}
+
+.notif-close {
   background: none;
   border: none;
   font-size: 16px;
@@ -2872,6 +2893,33 @@ html.dark-mode .report-spotlight-card {
 .notif-desc {
   font-size: var(--font-size-xs);
   color: var(--text-muted);
+}
+
+.notif-check-btn {
+  align-self: center;
+  border: 1px solid var(--border);
+  background: var(--bg-main);
+  color: var(--text-secondary);
+  border-radius: var(--radius-sm);
+  padding: 4px 8px;
+  font-size: 11px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.notif-check-btn:hover {
+  background: var(--accent-light);
+  border-color: rgba(37, 99, 235, 0.35);
+  color: var(--accent);
+}
+
+.dashboard-notif-trigger {
+  border: none;
+  cursor: pointer;
+}
+
+.dashboard-notif-trigger:hover {
+  opacity: 0.92;
 }
 
 /* --- 알림 뱃지 (사이드바) --- */

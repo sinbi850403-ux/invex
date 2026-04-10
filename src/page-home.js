@@ -1,5 +1,5 @@
 ﻿import { getState, setState } from './store.js';
-import { getNotifications } from './notifications.js';
+import { getNotifications, renderNotificationPanel } from './notifications.js';
 import {
   renderWeeklyTrendChart,
   renderCategoryChart,
@@ -146,7 +146,9 @@ export function renderHomePage(container, navigateTo) {
         <div class="page-desc">${today.toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' })} 운영 요약</div>
       </div>
       <div class="page-actions">
-        ${notifications.length > 0 ? `<span class="badge badge-danger">실시간 알림 ${notifications.length}건</span>` : '<span class="badge badge-success">알림 안정</span>'}
+        ${notifications.length > 0
+          ? `<button type="button" class="badge badge-danger dashboard-notif-trigger">실시간 알림 ${notifications.length}건</button>`
+          : '<span class="badge badge-success">알림 안정</span>'}
       </div>
     </div>
 
@@ -347,7 +349,24 @@ export function renderHomePage(container, navigateTo) {
   `;
 
   container.querySelectorAll('[data-nav]').forEach(element => {
-    element.addEventListener('click', () => navigateTo(element.dataset.nav));
+    element.addEventListener('click', (event) => {
+      const targetPage = element.dataset.nav;
+      if (targetPage === 'notifications') {
+        event.preventDefault();
+        event.stopPropagation();
+        renderNotificationPanel();
+        return;
+      }
+      navigateTo(targetPage);
+    });
+  });
+
+  container.querySelectorAll('.dashboard-notif-trigger').forEach(button => {
+    button.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      renderNotificationPanel();
+    });
   });
 
   container.querySelectorAll('[data-dashboard-mode]').forEach(button => {
@@ -725,8 +744,8 @@ function buildExecutiveDecisions(context) {
           kicker: '알림',
           title: `실시간 알림 ${formatNumber(context.notifications.length)}건`,
           desc: '현장 이슈 또는 운영 알림이 남아 있으니 의사결정 전에 먼저 확인해 주세요.',
-          nav: 'summary',
-          action: '요약 보고 열기',
+          nav: 'notifications',
+          action: '알림 센터 열기',
         }
       : {
           kicker: '분류',
@@ -815,7 +834,7 @@ function buildOperatorTasks(context) {
           kicker: '점검',
           title: `실시간 알림 ${formatNumber(context.notifications.length)}건 확인`,
           desc: '경고를 먼저 확인하면 누락되는 현장 이슈를 줄일 수 있습니다.',
-          nav: 'summary',
+          nav: 'notifications',
           action: '알림 확인',
         }
       : {
