@@ -132,6 +132,11 @@ export function renderHomePage(container, navigateTo) {
 
   const weekData = getLast7Days(transactions);
   const monthData = getLast6Months(transactions);
+  const chartSort = {
+    weekly: 'asc',
+    monthly: 'asc',
+    category: 'qty-desc',
+  };
 
   container.innerHTML = `
     <div class="page-header">
@@ -227,13 +232,37 @@ export function renderHomePage(container, navigateTo) {
 
     <div class="dashboard-chart-grid">
       <div class="card">
-        <div class="card-title">최근 7일 입출고 흐름</div>
+        <div class="chart-control-row">
+          <div>
+            <div class="card-title">최근 7일 입출고 흐름</div>
+            <div class="chart-help-text">오래된 날짜부터 볼지, 최신 날짜부터 볼지 바꿔서 확인할 수 있습니다.</div>
+          </div>
+          <div class="chart-control-inline">
+            <span class="chart-control-label">보기 순서</span>
+            <select class="filter-select chart-sort-select" id="weekly-sort">
+              <option value="asc">오래된 날짜부터</option>
+              <option value="desc">최신 날짜부터</option>
+            </select>
+          </div>
+        </div>
         <div style="height:240px; position:relative;">
           <canvas id="chart-weekly"></canvas>
         </div>
       </div>
       <div class="card">
-        <div class="card-title">최근 6개월 입출고 비교</div>
+        <div class="chart-control-row">
+          <div>
+            <div class="card-title">최근 6개월 입출고 비교</div>
+            <div class="chart-help-text">월 흐름도 시간순 또는 최신순으로 바꿔서 볼 수 있습니다.</div>
+          </div>
+          <div class="chart-control-inline">
+            <span class="chart-control-label">보기 순서</span>
+            <select class="filter-select chart-sort-select" id="monthly-sort">
+              <option value="asc">오래된 월부터</option>
+              <option value="desc">최신 월부터</option>
+            </select>
+          </div>
+        </div>
         <div style="height:240px; position:relative;">
           <canvas id="chart-monthly"></canvas>
         </div>
@@ -260,7 +289,20 @@ export function renderHomePage(container, navigateTo) {
 
       <div>
         <div class="card">
-          <div class="card-title">분류별 재고 비중</div>
+          <div class="chart-control-row">
+            <div>
+              <div class="card-title">분류별 재고 비중</div>
+              <div class="chart-help-text">분류 순서를 수량 기준이나 가나다순으로 바꿔서 볼 수 있습니다.</div>
+            </div>
+            <div class="chart-control-inline">
+              <span class="chart-control-label">정렬 기준</span>
+              <select class="filter-select chart-sort-select" id="category-sort">
+                <option value="qty-desc">수량 많은 순</option>
+                <option value="qty-asc">수량 적은 순</option>
+                <option value="name-asc">이름 가나다순</option>
+              </select>
+            </div>
+          </div>
           ${categories.length > 0
             ? `
               <div style="height:220px; position:relative;">
@@ -315,13 +357,32 @@ export function renderHomePage(container, navigateTo) {
     });
   });
 
+  container.querySelector('#weekly-sort')?.addEventListener('change', event => {
+    chartSort.weekly = event.target.value;
+    renderDashboardCharts();
+  });
+
+  container.querySelector('#monthly-sort')?.addEventListener('change', event => {
+    chartSort.monthly = event.target.value;
+    renderDashboardCharts();
+  });
+
+  container.querySelector('#category-sort')?.addEventListener('change', event => {
+    chartSort.category = event.target.value;
+    renderDashboardCharts();
+  });
+
   setTimeout(() => {
-    renderWeeklyTrendChart('chart-weekly', weekData);
-    renderMonthlyChart('chart-monthly', monthData);
-    if (categories.length > 0) {
-      renderCategoryChart('chart-category', categories);
-    }
+    renderDashboardCharts();
   }, 50);
+
+  function renderDashboardCharts() {
+    renderWeeklyTrendChart('chart-weekly', sortTimeSeriesData(weekData, chartSort.weekly));
+    renderMonthlyChart('chart-monthly', sortTimeSeriesData(monthData, chartSort.monthly));
+    if (categories.length > 0) {
+      renderCategoryChart('chart-category', sortCategorySeries(categories, chartSort.category));
+    }
+  }
 }
 
 function renderExecutiveView(context) {
@@ -825,6 +886,22 @@ function addDays(baseDate, delta) {
 
 function toDateKey(value) {
   return new Date(value).toISOString().split('T')[0];
+}
+
+function sortTimeSeriesData(rows, direction) {
+  const nextRows = [...rows];
+  return direction === 'desc' ? nextRows.reverse() : nextRows;
+}
+
+function sortCategorySeries(rows, mode) {
+  const nextRows = [...rows];
+  if (mode === 'qty-asc') {
+    return nextRows.sort((left, right) => left[1] - right[1]);
+  }
+  if (mode === 'name-asc') {
+    return nextRows.sort((left, right) => String(left[0] || '').localeCompare(String(right[0] || ''), 'ko'));
+  }
+  return nextRows.sort((left, right) => right[1] - left[1]);
 }
 
 function toNumber(value) {

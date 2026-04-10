@@ -256,15 +256,15 @@ export function renderDashboardPage(container, navigateTo) {
   container.querySelector('#btn-export-analysis')?.addEventListener('click', () => {
     try {
       const exportData = abcData.map(d => ({
-        '?깃툒': d.grade,
-        '?덈ぉ紐?: d.itemName,
-        '?덈ぉ肄붾뱶': d.itemCode || '',
-        '?섎웾': d.quantity,
-        '湲덉븸': d.totalPrice,
-        '?꾩쟻鍮꾩쑉(%)': d.cumPercent,
+        '등급': d.grade,
+        '품목명': d.itemName,
+        '품목코드': d.itemCode || '',
+        '수량': d.quantity,
+        '금액': d.totalPrice,
+        '누적비중(%)': d.cumPercent,
       }));
-      downloadExcel(exportData, 'ABC遺꾩꽍');
-      showToast('ABC 遺꾩꽍???대낫?덉뒿?덈떎.', 'success');
+      downloadExcel(exportData, 'ABC분석');
+      showToast('ABC 분석표를 내보냈습니다.', 'success');
     } catch (err) {
       showToast(err.message, 'error');
     }

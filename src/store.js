@@ -52,6 +52,8 @@ const DEFAULT_STATE = {
   costMethod: 'weighted-avg', // 'weighted-avg' | 'fifo' | 'latest'
   // 매출/매입 전표
   accountEntries: [],   // [{id, type, vendorName, amount, currency, date, ...}]
+  // 발주 이력
+  purchaseOrders: [],   // [{id, orderNo, vendor, items, status, paymentDueDate, ...}]
   // 통화 설정
   currency: { code: 'KRW', symbol: '₩', rate: 1 },
   // 사용자명

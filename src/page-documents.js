@@ -176,7 +176,7 @@ function renderPurchaseOrder(el, items, lowStockItems, vendors, safetyStock) {
     <div class="form-row" style="margin-bottom:16px;">
       <div class="form-group">
         <label class="form-label">諛쒖＜ ?뚯궗紐?/label>
-        <input class="form-input" id="po-company" placeholder="?곕━ ?뚯궗紐? />
+        <input class="form-input" id="po-company" placeholder="우리 회사명" />
       </div>
       <div class="form-group">
         <label class="form-label">?대떦??/label>
@@ -255,8 +255,8 @@ function renderPurchaseOrder(el, items, lowStockItems, vendors, safetyStock) {
 
     const info = {
       date: el.querySelector('#po-date').value,
-      vendor: el.querySelector('#po-vendor').value || '?꾩껜',
-      company: el.querySelector('#po-company').value || 'INVEX ?ъ슜??,
+      vendor: el.querySelector('#po-vendor').value || '전체 거래처',
+      company: el.querySelector('#po-company').value || 'INVEX 사용자',
       manager: el.querySelector('#po-manager').value || '',
       note: el.querySelector('#po-note').value || '',
     };
@@ -302,7 +302,7 @@ function renderQuote(el, items) {
       <div style="display:flex; gap:8px;">
         <select class="form-select" id="qt-item-select" style="flex:1;">
           <option value="">-- ?덈ぉ ?좏깮 --</option>
-          ${items.map((item, i) => `<option value="${i}">${item.itemName} (${item.itemCode || '-'}) - ??{Math.round(parseFloat(item.unitPrice || 0)).toLocaleString('ko-KR')}</option>`).join('')}
+          ${items.map((item, i) => `<option value="${i}">${item.itemName} (${item.itemCode || '-'}) - ₩${Math.round(parseFloat(item.unitPrice || 0)).toLocaleString('ko-KR')}</option>`).join('')}
         </select>
         <button class="btn btn-primary" id="btn-qt-add-item">+ 異붽?</button>
       </div>
@@ -404,8 +404,8 @@ function renderQuote(el, items) {
     }
     const info = {
       date: el.querySelector('#qt-date').value,
-      to: el.querySelector('#qt-to').value || '嫄곕옒泥?,
-      from: el.querySelector('#qt-from').value || 'INVEX ?ъ슜??,
+      to: el.querySelector('#qt-to').value || '거래처',
+      from: el.querySelector('#qt-from').value || 'INVEX 사용자',
       valid: el.querySelector('#qt-valid').value || '',
     };
     generateQuotePDF(quoteItems, info);
@@ -438,7 +438,7 @@ function renderStatement(el, items, transactions) {
     <div class="form-row" style="margin-bottom:16px;">
       <div class="form-group">
         <label class="form-label">怨듦툒??(?곕━ ?뚯궗)</label>
-        <input class="form-input" id="st-supplier" placeholder="?곕━ ?뚯궗紐? />
+        <input class="form-input" id="st-supplier" placeholder="우리 회사명" />
       </div>
       <div class="form-group">
         <label class="form-label">怨듦툒諛쏅뒗??/label>
@@ -469,8 +469,8 @@ function renderStatement(el, items, transactions) {
     const info = {
       from,
       to,
-      supplier: el.querySelector('#st-supplier').value || 'INVEX ?ъ슜??,
-      receiver: el.querySelector('#st-receiver').value || '嫄곕옒泥?,
+      supplier: el.querySelector('#st-supplier').value || 'INVEX 사용자',
+      receiver: el.querySelector('#st-receiver').value || '거래처',
     };
     generateStatementPDF(filteredTx, info);
   });
@@ -481,7 +481,7 @@ function renderStatement(el, items, transactions) {
       const from = el.querySelector('#st-from').value;
       const to = el.querySelector('#st-to').value;
       const count = transactions.filter(tx => tx.date >= from && tx.date <= to).length;
-      el.querySelector('#st-count').textContent = count + '嫄?;
+      el.querySelector('#st-count').textContent = `${count}건`;
     });
   });
 }
@@ -501,7 +501,7 @@ async function generatePurchaseOrderPDF(selectedItems, info) {
 
     // ?ㅻ뜑
     doc.setFontSize(20);
-    doc.text('諛?二???, 105, 20, { align: 'center' });
+    doc.text('발주서', 105, 20, { align: 'center' });
     doc.setFontSize(10);
     doc.text(`諛쒖＜?쇱옄: ${info.date}`, 15, 35);
     doc.text(`諛쒖＜?뚯궗: ${info.company}`, 15, 42);
@@ -519,9 +519,9 @@ async function generatePurchaseOrderPDF(selectedItems, info) {
 
     doc.autoTable({
       startY: 65,
-      head: [['No', '?덈ぉ紐?, '肄붾뱶', '?섎웾', '?④?', '湲덉븸']],
+      head: [['No', '품목명', '코드', '수량', '단가', '금액']],
       body: tableData,
-      foot: [['', '', '', '', '?⑷퀎', '₩' + total.toLocaleString()]],
+      foot: [['', '', '', '', '합계', '₩' + total.toLocaleString()]],
       theme: 'grid',
       headStyles: { fillColor: [37, 99, 235], ...fontStyle },
       bodyStyles: { ...fontStyle },
@@ -553,7 +553,7 @@ async function generateQuotePDF(quoteItems, info) {
     await applyKoreanFont(doc);
 
     doc.setFontSize(20);
-    doc.text('寃?????, 105, 20, { align: 'center' });
+    doc.text('견적서', 105, 20, { align: 'center' });
     doc.setFontSize(10);
     doc.text(`寃ъ쟻?쇱옄: ${info.date}`, 15, 35);
     doc.text(`?섏떊: ${info.to}`, 15, 42);
@@ -570,9 +570,9 @@ async function generateQuotePDF(quoteItems, info) {
 
     doc.autoTable({
       startY: 65,
-      head: [['No', '?덈ぉ紐?, '肄붾뱶', '?섎웾', '?④?', '湲덉븸']],
+      head: [['No', '품목명', '코드', '수량', '단가', '금액']],
       body: tableData,
-      foot: [['', '', '', '', '?⑷퀎', '₩' + total.toLocaleString()]],
+      foot: [['', '', '', '', '합계', '₩' + total.toLocaleString()]],
       theme: 'grid',
       headStyles: { fillColor: [22, 163, 74], ...fontStyle },
       bodyStyles: { ...fontStyle },
@@ -598,7 +598,7 @@ async function generateStatementPDF(transactions, info) {
     await applyKoreanFont(doc);
 
     doc.setFontSize(20);
-    doc.text('嫄???紐?????, 105, 20, { align: 'center' });
+    doc.text('거래명세서', 105, 20, { align: 'center' });
     doc.setFontSize(10);
     doc.text(`湲곌컙: ${info.from} ~ ${info.to}`, 15, 35);
     doc.text(`怨듦툒?? ${info.supplier}`, 15, 42);
@@ -617,7 +617,7 @@ async function generateStatementPDF(transactions, info) {
 
     doc.autoTable({
       startY: 58,
-      head: [['No', '?쇱옄', '援щ텇', '?덈ぉ紐?, '肄붾뱶', '?섎웾', '?④?', '湲덉븸']],
+      head: [['No', '일자', '구분', '품목명', '코드', '수량', '단가', '금액']],
       body: tableData,
       theme: 'grid',
       headStyles: { fillColor: [100, 100, 100], ...fontStyle },

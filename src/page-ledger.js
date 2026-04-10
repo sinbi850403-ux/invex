@@ -1,7 +1,6 @@
-﻿/**
- * page-ledger.js - ?섎텋遺 (?ш퀬 ?섎텋???
- * ??븷: 湲곌컙蹂??덈ぉ???낃퀬/異쒓퀬/?붾웾???λ? ?뺤떇?쇰줈 ?먮룞 ?앹꽦
- * ???꾩슂? ???쒓뎅 湲곗뾽 ?몃Т/?뚭퀎 蹂닿퀬???꾩닔 ?λ?. ?몃Т?ъ뿉寃??쒖텧?댁빞 ??
+/**
+ * page-ledger.js - 수불부 (재고수불대장)
+ * 역할: 기간별 품목 입고/출고/잔량을 장부 형식으로 자동 생성
  */
 
 import { getState } from './store.js';
@@ -9,18 +8,30 @@ import { showToast } from './toast.js';
 import { downloadExcel } from './excel.js';
 import { jsPDF } from 'jspdf';
 import { applyPlugin } from 'jspdf-autotable';
-import { renderInsightHero } from './ux-toolkit.js';
-
-// jsPDF??autoTable ?뚮윭洹몄씤 ?곌껐 (ESM ?섍꼍?먯꽌 ?꾩닔)
-applyPlugin(jsPDF);
 import { applyKoreanFont, getKoreanFontStyle } from './pdf-font.js';
+
+applyPlugin(jsPDF);
+
+const LEDGER_TEXT_COLLATOR = new Intl.Collator('ko', { numeric: true, sensitivity: 'base' });
+const LEDGER_SORT_FIELDS = [
+  { key: 'itemName', label: '품목명' },
+  { key: 'itemCode', label: '코드' },
+  { key: 'unit', label: '단위' },
+  { key: 'openingQty', label: '기초재고', numeric: true, align: 'text-right' },
+  { key: 'inQty', label: '입고', numeric: true, align: 'text-right', style: 'color:var(--success);' },
+  { key: 'outQty', label: '출고', numeric: true, align: 'text-right', style: 'color:var(--danger);' },
+  { key: 'closingQty', label: '기말재고', numeric: true, align: 'text-right', style: 'font-weight:700;' },
+  { key: 'unitPrice', label: '단가', numeric: true, align: 'text-right' },
+  { key: 'closingValue', label: '재고금액', numeric: true, align: 'text-right' },
+];
+const LEDGER_SORT_FIELD_MAP = Object.fromEntries(LEDGER_SORT_FIELDS.map(field => [field.key, field]));
+let ledgerSortState = { key: 'closingValue', direction: 'desc' };
 
 export function renderLedgerPage(container, navigateTo) {
   const state = getState();
   const items = state.mappedData || [];
   const transactions = state.transactions || [];
 
-  // 湲곕낯 湲곌컙: ?대쾲 ??
   const now = new Date();
   const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
   const lastDay = now.toISOString().split('T')[0];
@@ -28,215 +39,313 @@ export function renderLedgerPage(container, navigateTo) {
   container.innerHTML = `
     <div class="page-header">
       <div>
-        <h1 class="page-title"><span class="title-icon">?뱬</span> ?섎텋遺 (?ш퀬?섎텋???</h1>
-        <div class="page-desc">湲곌컙蹂??덈ぉ???낃퀬쨌異쒓퀬쨌?붾웾???λ? ?뺤떇?쇰줈 ?먮룞 ?앹꽦?⑸땲??</div>
+        <h1 class="page-title"><span class="title-icon">📒</span> 수불부 (재고수불대장)</h1>
+        <div class="page-desc">기간별 품목의 입고, 출고, 잔량을 장부 형식으로 자동 생성합니다.</div>
       </div>
       <div class="page-actions">
-        <button class="btn btn-outline" id="btn-ledger-excel">?뱿 ?묒? ?ㅼ슫濡쒕뱶</button>
-        <button class="btn btn-primary" id="btn-ledger-pdf">?뱞 PDF ?ㅼ슫濡쒕뱶</button>
+        <button class="btn btn-outline" id="btn-ledger-excel">📊 엑셀 다운로드</button>
+        <button class="btn btn-primary" id="btn-ledger-pdf">📄 PDF 다운로드</button>
       </div>
     </div>
 
-    <!-- 湲곌컙 ?좏깮 -->
     <div class="card card-compact" style="margin-bottom:12px;">
       <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
         <div class="form-group" style="margin:0;">
-          <label class="form-label">?쒖옉??/label>
+          <label class="form-label">시작일</label>
           <input class="form-input" type="date" id="ledger-from" value="${firstDay}" />
         </div>
         <div class="form-group" style="margin:0;">
-          <label class="form-label">醫낅즺??/label>
+          <label class="form-label">종료일</label>
           <input class="form-input" type="date" id="ledger-to" value="${lastDay}" />
         </div>
         <div class="form-group" style="margin:0;">
-          <label class="form-label">?덈ぉ ?꾪꽣</label>
+          <label class="form-label">품목 필터</label>
           <select class="form-select" id="ledger-item-filter">
-            <option value="">?꾩껜 ?덈ぉ</option>
+            <option value="">전체 품목</option>
             ${items.map(item => `<option value="${item.itemName}">${item.itemName} (${item.itemCode || '-'})</option>`).join('')}
           </select>
         </div>
-        <button class="btn btn-primary" id="btn-ledger-render" style="margin-top:18px;">議고쉶</button>
+        <button class="btn btn-primary" id="btn-ledger-render" style="margin-top:18px;">조회</button>
       </div>
     </div>
 
-    <!-- ?섎텋遺 ?뚯씠釉?-->
     <div class="card card-flush" id="ledger-table-area">
-      <div style="padding:24px; text-align:center; color:var(--text-muted);">議고쉶 踰꾪듉???뚮윭二쇱꽭??/div>
+      <div style="padding:24px; text-align:center; color:var(--text-muted);">조회 버튼을 눌러주세요.</div>
     </div>
   `;
 
-  // 珥덇린 ?뚮뜑留?
   renderLedgerTable();
+  container.querySelector('#btn-ledger-render')?.addEventListener('click', renderLedgerTable);
 
-  // 議고쉶 踰꾪듉
-  container.querySelector('#btn-ledger-render').addEventListener('click', renderLedgerTable);
-
-  function renderLedgerTable() {
-    const from = container.querySelector('#ledger-from').value;
-    const to = container.querySelector('#ledger-to').value;
-    const itemFilter = container.querySelector('#ledger-item-filter').value;
-
-    const ledgerData = buildLedger(items, transactions, from, to, itemFilter);
-    const tableArea = container.querySelector('#ledger-table-area');
-
-    if (ledgerData.length === 0) {
-      tableArea.innerHTML = '<div style="padding:40px; text-align:center; color:var(--text-muted);">?대떦 湲곌컙???곗씠?곌? ?놁뒿?덈떎.</div>';
+  container.querySelector('#btn-ledger-excel')?.addEventListener('click', () => {
+    const { from, to, rows } = getLedgerRows(container, items, transactions);
+    if (rows.length === 0) {
+      showToast('내보낼 데이터가 없습니다.', 'warning');
       return;
     }
 
-    tableArea.innerHTML = `
-      <div style="padding:16px 20px; border-bottom:1px solid var(--border); background:var(--bg-card);">
-        <strong>?뱬 ?섎텋???/strong>
-        <span style="color:var(--text-muted); font-size:13px; margin-left:8px;">${from} ~ ${to} (${ledgerData.length}媛??덈ぉ)</span>
-      </div>
-      <div class="table-wrapper" style="border:none; border-radius:0;">
-        <table class="data-table" id="ledger-data-table">
-          <thead>
-            <tr>
-              <th style="width:40px;">#</th>
-              <th>?덈ぉ紐?/th>
-              <th>肄붾뱶</th>
-              <th>?⑥쐞</th>
-              <th class="text-right">湲곗큹?ш퀬</th>
-              <th class="text-right" style="color:var(--success);">?낃퀬</th>
-              <th class="text-right" style="color:var(--danger);">異쒓퀬</th>
-              <th class="text-right" style="font-weight:700;">湲곕쭚?ш퀬</th>
-              <th class="text-right">?④?</th>
-              <th class="text-right">?ш퀬湲덉븸</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${ledgerData.map((row, i) => `
-              <tr>
-                <td class="col-num">${i + 1}</td>
-                <td><strong>${row.itemName}</strong></td>
-                <td style="color:var(--text-muted); font-size:12px;">${row.itemCode || '-'}</td>
-                <td>${row.unit || '-'}</td>
-                <td class="text-right">${row.openingQty.toLocaleString('ko-KR')}</td>
-                <td class="text-right type-in">${row.inQty > 0 ? '+' + row.inQty.toLocaleString('ko-KR') : '-'}</td>
-                <td class="text-right type-out">${row.outQty > 0 ? '-' + row.outQty.toLocaleString('ko-KR') : '-'}</td>
-                <td class="text-right" style="font-weight:700;">${row.closingQty.toLocaleString('ko-KR')}</td>
-                <td class="text-right">${row.unitPrice > 0 ? '₩' + Math.round(row.unitPrice).toLocaleString('ko-KR') : '-'}</td>
-                <td class="text-right">${row.closingValue > 0 ? '₩' + Math.round(row.closingValue).toLocaleString('ko-KR') : '-'}</td>
-              </tr>
-            `).join('')}
-          </tbody>
-          <tfoot>
-            <tr style="font-weight:700; background:var(--bg-card);">
-              <td colspan="4" class="text-right">?⑷퀎</td>
-              <td class="text-right">${ledgerData.reduce((s, r) => s + r.openingQty, 0).toLocaleString('ko-KR')}</td>
-              <td class="text-right type-in">+${ledgerData.reduce((s, r) => s + r.inQty, 0).toLocaleString('ko-KR')}</td>
-              <td class="text-right type-out">-${ledgerData.reduce((s, r) => s + r.outQty, 0).toLocaleString('ko-KR')}</td>
-              <td class="text-right">${ledgerData.reduce((s, r) => s + r.closingQty, 0).toLocaleString('ko-KR')}</td>
-              <td class="text-right"></td>
-              <td class="text-right">??{Math.round(ledgerData.reduce((s, r) => s + r.closingValue, 0)).toLocaleString('ko-KR')}</td>
-            </tr>
-          </tfoot>
-        </table>
-      </div>
-    `;
-  }
-
-  // ?묒? ?ㅼ슫濡쒕뱶
-  container.querySelector('#btn-ledger-excel').addEventListener('click', () => {
-    const from = container.querySelector('#ledger-from').value;
-    const to = container.querySelector('#ledger-to').value;
-    const itemFilter = container.querySelector('#ledger-item-filter').value;
-    const data = buildLedger(items, transactions, from, to, itemFilter);
-    if (data.length === 0) { showToast('내보낼 데이터가 없습니다.', 'warning'); return; }
-
-    const exportData = data.map(r => ({
-      '품목명': r.itemName,
-      '품목코드': r.itemCode || '',
-      '단위': r.unit || '',
-      '기초재고': r.openingQty,
-      '입고': r.inQty,
-      '출고': r.outQty,
-      '기말재고': r.closingQty,
-      '단가': r.unitPrice,
-      '재고금액': r.closingValue,
+    const exportRows = rows.map(row => ({
+      '품목명': row.itemName,
+      '품목코드': row.itemCode || '',
+      '단위': row.unit || '',
+      '기초재고': row.openingQty,
+      '입고수량': row.inQty,
+      '출고수량': row.outQty,
+      '기말재고': row.closingQty,
+      '단가': row.unitPrice,
+      '재고금액': row.closingValue,
     }));
-    downloadExcel(exportData, `수불부_${from}_${to}`);
-    showToast('수불부를 엑셀로 다운로드했습니다.', 'success');
+
+    downloadExcel(exportRows, `수불부_${from}_${to}`);
+    showToast('수불부를 엑셀로 내보냈습니다.', 'success');
   });
 
-  // PDF ?ㅼ슫濡쒕뱶
-  container.querySelector('#btn-ledger-pdf').addEventListener('click', async () => {
-    const from = container.querySelector('#ledger-from').value;
-    const to = container.querySelector('#ledger-to').value;
-    const itemFilter = container.querySelector('#ledger-item-filter').value;
-    const data = buildLedger(items, transactions, from, to, itemFilter);
-    if (data.length === 0) { showToast('?대낫???곗씠?곌? ?놁뒿?덈떎.', 'warning'); return; }
+  container.querySelector('#btn-ledger-pdf')?.addEventListener('click', async () => {
+    const { from, to, rows } = getLedgerRows(container, items, transactions);
+    if (rows.length === 0) {
+      showToast('내보낼 데이터가 없습니다.', 'warning');
+      return;
+    }
 
     try {
-      showToast('PDF ?앹꽦 以?.. (?고듃 濡쒕뵫)', 'info', 2000);
+      showToast('PDF 생성 중입니다. (폰트 로딩)', 'info', 2000);
+
       const doc = new jsPDF('landscape');
       const fontStyle = getKoreanFontStyle();
       await applyKoreanFont(doc);
 
       doc.setFontSize(16);
-      doc.text('?ш퀬 ?섎텋???, 148, 15, { align: 'center' });
+      doc.text('재고 수불대장', 148, 15, { align: 'center' });
       doc.setFontSize(10);
-      doc.text(`湲곌컙: ${from} ~ ${to}`, 14, 25);
+      doc.text(`기간: ${from} ~ ${to}`, 14, 25);
 
-      const tableData = data.map((r, i) => [
-        i + 1, r.itemName, r.itemCode || '-', r.unit || '-',
-        r.openingQty, r.inQty > 0 ? '+' + r.inQty : '-',
-        r.outQty > 0 ? '-' + r.outQty : '-', r.closingQty,
-        r.unitPrice > 0 ? '₩' + Math.round(r.unitPrice).toLocaleString() : '-',
-        r.closingValue > 0 ? '₩' + r.closingValue.toLocaleString() : '-',
+      const tableRows = rows.map((row, index) => [
+        index + 1,
+        row.itemName,
+        row.itemCode || '-',
+        row.unit || '-',
+        row.openingQty,
+        row.inQty > 0 ? `+${row.inQty}` : '-',
+        row.outQty > 0 ? `-${row.outQty}` : '-',
+        row.closingQty,
+        row.unitPrice > 0 ? formatLedgerMoney(row.unitPrice) : '-',
+        row.closingValue > 0 ? formatLedgerMoney(row.closingValue) : '-',
       ]);
 
       doc.autoTable({
         startY: 32,
-        head: [['No', '?덈ぉ紐?, '肄붾뱶', '?⑥쐞', '湲곗큹?ш퀬', '?낃퀬', '異쒓퀬', '湲곕쭚?ш퀬', '?④?', '?ш퀬湲덉븸']],
-        body: tableData,
+        head: [['No', '품목명', '코드', '단위', '기초재고', '입고', '출고', '기말재고', '단가', '재고금액']],
+        body: tableRows,
         theme: 'grid',
         headStyles: { fillColor: [37, 99, 235], ...fontStyle },
         bodyStyles: { ...fontStyle },
         styles: { fontSize: 8, ...fontStyle },
       });
 
-      doc.save(`?섎텋???${from}_${to}.pdf`);
-      showToast('?섎텋遺 PDF瑜??ㅼ슫濡쒕뱶?덉뒿?덈떎.', 'success');
-    } catch (err) {
-      showToast('PDF ?앹꽦 ?ㅽ뙣: ' + err.message, 'error');
+      doc.save(`수불대장_${from}_${to}.pdf`);
+      showToast('수불부 PDF를 다운로드했습니다.', 'success');
+    } catch (error) {
+      showToast(`PDF 생성 실패: ${error.message}`, 'error');
     }
   });
+
+  function renderLedgerTable() {
+    const tableArea = container.querySelector('#ledger-table-area');
+    const { from, to, rows } = getLedgerRows(container, items, transactions);
+
+    if (!tableArea) return;
+
+    if (rows.length === 0) {
+      tableArea.innerHTML = '<div style="padding:40px; text-align:center; color:var(--text-muted);">해당 기간의 데이터가 없습니다.</div>';
+      return;
+    }
+
+    tableArea.innerHTML = `
+      <div style="padding:16px 20px; border-bottom:1px solid var(--border); background:var(--bg-card);">
+        <strong>📒 수불대장</strong>
+        <span style="color:var(--text-muted); font-size:13px; margin-left:8px;">${from} ~ ${to} (${rows.length}개 품목)</span>
+        <span style="color:var(--text-muted); font-size:12px; margin-left:8px;">정렬: ${getLedgerSortSummary(ledgerSortState)}</span>
+      </div>
+      <div class="table-wrapper" style="border:none; border-radius:0;">
+        <table class="data-table" id="ledger-data-table">
+          <thead>
+            <tr>
+              <th style="width:40px;">#</th>
+              ${LEDGER_SORT_FIELDS.map(field => renderLedgerHeader(field, ledgerSortState)).join('')}
+            </tr>
+          </thead>
+          <tbody>
+            ${rows.map((row, index) => renderLedgerRow(row, index)).join('')}
+          </tbody>
+          <tfoot>
+            <tr style="font-weight:700; background:var(--bg-card);">
+              <td colspan="4" class="text-right">합계</td>
+              <td class="text-right">${rows.reduce((sum, row) => sum + row.openingQty, 0).toLocaleString('ko-KR')}</td>
+              <td class="text-right type-in">+${rows.reduce((sum, row) => sum + row.inQty, 0).toLocaleString('ko-KR')}</td>
+              <td class="text-right type-out">-${rows.reduce((sum, row) => sum + row.outQty, 0).toLocaleString('ko-KR')}</td>
+              <td class="text-right">${rows.reduce((sum, row) => sum + row.closingQty, 0).toLocaleString('ko-KR')}</td>
+              <td class="text-right"></td>
+              <td class="text-right">${formatLedgerMoney(rows.reduce((sum, row) => sum + row.closingValue, 0))}</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+      <div class="chart-help-text" style="padding:0 20px 16px;">표 제목을 누르면 품목명, 수량, 금액 기준으로 바로 정렬됩니다.</div>
+    `;
+
+    tableArea.querySelectorAll('.table-sort-btn[data-sort-key]').forEach(button => {
+      button.addEventListener('click', () => {
+        const nextKey = button.dataset.sortKey;
+        if (!nextKey) return;
+
+        ledgerSortState = getNextLedgerSortState(ledgerSortState, nextKey);
+        renderLedgerTable();
+      });
+    });
+  }
+}
+
+function getLedgerRows(container, items, transactions) {
+  const from = container.querySelector('#ledger-from')?.value || '';
+  const to = container.querySelector('#ledger-to')?.value || '';
+  const itemFilter = container.querySelector('#ledger-item-filter')?.value || '';
+  const ledgerRows = buildLedger(items, transactions, from, to, itemFilter);
+  const sortedRows = sortLedgerRows(ledgerRows, ledgerSortState);
+
+  return {
+    from,
+    to,
+    itemFilter,
+    rows: sortedRows,
+  };
+}
+
+function renderLedgerHeader(field, sortState) {
+  const classes = ['sortable-col'];
+  if (field.align) classes.push(field.align);
+
+  return `
+    <th class="${classes.join(' ')}">
+      <button
+        type="button"
+        class="table-sort-btn ${sortState.key === field.key ? 'active' : ''}"
+        data-sort-key="${field.key}"
+        style="${field.style || ''}"
+      >
+        <span>${field.label}</span>
+        <span class="table-sort-arrow">${getLedgerSortArrow(field.key, sortState)}</span>
+      </button>
+    </th>
+  `;
+}
+
+function renderLedgerRow(row, index) {
+  return `
+    <tr>
+      <td class="col-num">${index + 1}</td>
+      <td><strong>${row.itemName}</strong></td>
+      <td style="color:var(--text-muted); font-size:12px;">${row.itemCode || '-'}</td>
+      <td>${row.unit || '-'}</td>
+      <td class="text-right">${row.openingQty.toLocaleString('ko-KR')}</td>
+      <td class="text-right type-in">${row.inQty > 0 ? `+${row.inQty.toLocaleString('ko-KR')}` : '-'}</td>
+      <td class="text-right type-out">${row.outQty > 0 ? `-${row.outQty.toLocaleString('ko-KR')}` : '-'}</td>
+      <td class="text-right" style="font-weight:700;">${row.closingQty.toLocaleString('ko-KR')}</td>
+      <td class="text-right">${row.unitPrice > 0 ? formatLedgerMoney(row.unitPrice) : '-'}</td>
+      <td class="text-right">${row.closingValue > 0 ? formatLedgerMoney(row.closingValue) : '-'}</td>
+    </tr>
+  `;
+}
+
+function getLedgerSortArrow(key, sortState) {
+  if (sortState.key !== key) return '↕';
+  return sortState.direction === 'asc' ? '↑' : '↓';
+}
+
+function getLedgerSortSummary(sortState) {
+  const label = LEDGER_SORT_FIELD_MAP[sortState.key]?.label || '품목명';
+  return `${label} ${sortState.direction === 'asc' ? '오름차순' : '내림차순'}`;
+}
+
+function getNextLedgerSortState(currentSort, nextKey) {
+  if (currentSort.key === nextKey) {
+    return {
+      key: nextKey,
+      direction: currentSort.direction === 'asc' ? 'desc' : 'asc',
+    };
+  }
+
+  return {
+    key: nextKey,
+    direction: LEDGER_SORT_FIELD_MAP[nextKey]?.numeric ? 'desc' : 'asc',
+  };
+}
+
+function sortLedgerRows(rows, sortState) {
+  return [...rows].sort((left, right) => compareLedgerRows(left, right, sortState));
+}
+
+function compareLedgerRows(left, right, sortState) {
+  const leftValue = getLedgerSortValue(left, sortState.key);
+  const rightValue = getLedgerSortValue(right, sortState.key);
+
+  const leftEmpty = leftValue === null || leftValue === '';
+  const rightEmpty = rightValue === null || rightValue === '';
+  if (leftEmpty && rightEmpty) return LEDGER_TEXT_COLLATOR.compare(left.itemName || '', right.itemName || '');
+  if (leftEmpty) return 1;
+  if (rightEmpty) return -1;
+
+  let result = 0;
+  if (typeof leftValue === 'number' && typeof rightValue === 'number') {
+    result = leftValue - rightValue;
+  } else {
+    result = LEDGER_TEXT_COLLATOR.compare(String(leftValue), String(rightValue));
+  }
+
+  if (result === 0) {
+    result = LEDGER_TEXT_COLLATOR.compare(left.itemName || '', right.itemName || '');
+  }
+
+  return sortState.direction === 'desc' ? result * -1 : result;
+}
+
+function getLedgerSortValue(row, key) {
+  const value = row[key];
+  if (value === null || value === undefined || value === '') return null;
+  return LEDGER_SORT_FIELD_MAP[key]?.numeric ? Number(value) : String(value).trim();
+}
+
+function formatLedgerMoney(value) {
+  if (!value) return '-';
+  return `₩${Math.round(value).toLocaleString('ko-KR')}`;
 }
 
 /**
- * ?섎텋遺 ?곗씠???앹꽦
- * 濡쒖쭅: 湲곗큹?ш퀬 = ?꾩옱?ш퀬 - 湲곌컙?낃퀬 + 湲곌컙異쒓퀬
- * (嫄곕옒 ?대젰????궛?댁꽌 湲곗큹?ш퀬瑜?異붿젙)
+ * 수불부 데이터 생성
+ * 기초재고 = 현재재고 - 기간입고 + 기간출고
  */
 function buildLedger(items, transactions, from, to, itemFilter) {
-  // ?대떦 湲곌컙 嫄곕옒留??꾪꽣
-  const periodTx = transactions.filter(tx => tx.date >= from && tx.date <= to);
+  const periodTransactions = transactions.filter(tx => tx.date >= from && tx.date <= to);
+  const transactionMap = {};
 
-  // ?덈ぉ蹂??낆텧怨?吏묎퀎
-  const txMap = {};
-  periodTx.forEach(tx => {
+  periodTransactions.forEach(tx => {
     const key = tx.itemName;
-    if (!txMap[key]) txMap[key] = { inQty: 0, outQty: 0 };
+    if (!transactionMap[key]) transactionMap[key] = { inQty: 0, outQty: 0 };
+
     const qty = parseFloat(tx.quantity) || 0;
-    if (tx.type === 'in') txMap[key].inQty += qty;
-    else txMap[key].outQty += qty;
+    if (tx.type === 'in') transactionMap[key].inQty += qty;
+    else transactionMap[key].outQty += qty;
   });
 
-  // ?섎텋遺 ???앹꽦
-  let targetItems = items;
-  if (itemFilter) {
-    targetItems = items.filter(i => i.itemName === itemFilter);
-  }
+  const targetItems = itemFilter
+    ? items.filter(item => item.itemName === itemFilter)
+    : items;
 
   return targetItems.map(item => {
     const currentQty = parseFloat(item.quantity) || 0;
     const unitPrice = parseFloat(item.unitPrice) || 0;
-    const tx = txMap[item.itemName] || { inQty: 0, outQty: 0 };
+    const transaction = transactionMap[item.itemName] || { inQty: 0, outQty: 0 };
 
-    // 湲곗큹?ш퀬 ??궛: ?꾩옱?ш퀬 - 湲곌컙?낃퀬 + 湲곌컙異쒓퀬
-    const openingQty = currentQty - tx.inQty + tx.outQty;
+    const openingQty = currentQty - transaction.inQty + transaction.outQty;
     const closingQty = currentQty;
     const closingValue = closingQty * unitPrice;
 
@@ -246,11 +355,10 @@ function buildLedger(items, transactions, from, to, itemFilter) {
       unit: item.unit || '',
       unitPrice,
       openingQty: Math.max(0, openingQty),
-      inQty: tx.inQty,
-      outQty: tx.outQty,
+      inQty: transaction.inQty,
+      outQty: transaction.outQty,
       closingQty,
       closingValue,
     };
-  }).filter(r => r.openingQty > 0 || r.inQty > 0 || r.outQty > 0 || r.closingQty > 0);
+  }).filter(row => row.openingQty > 0 || row.inQty > 0 || row.outQty > 0 || row.closingQty > 0);
 }
-

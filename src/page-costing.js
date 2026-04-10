@@ -1,158 +1,270 @@
-﻿/**
- * page-costing.js - ?먭? 怨꾩궛 (FIFO / ?대룞?됯퇏踰?
- * ??븷: 留ㅼ엯 ?먭?瑜??먮룞 怨꾩궛?섏뿬 ?뺥솗???섏씡??遺꾩꽍 吏??
- * ???꾩닔? ???먭?瑜?紐⑤Ⅴ硫?留덉쭊??紐⑤Ⅴ怨? 留덉쭊??紐⑤Ⅴ硫?寃쎌쁺??紐삵븿
+/**
+ * page-costing.js - 원가 분석 (FIFO / 이동평균법)
+ * 역할: 매입 원가를 자동 계산하여 정확한 수익성 분석을 지원
  */
 
 import { getState, setState } from './store.js';
 import { downloadExcel } from './excel.js';
 import { showToast } from './toast.js';
 
+const COSTING_TEXT_COLLATOR = new Intl.Collator('ko', { numeric: true, sensitivity: 'base' });
+const COSTING_SORT_FIELDS = [
+  { key: 'itemName', label: '품목명' },
+  { key: 'itemCode', label: '코드' },
+  { key: 'qty', label: '재고수량', numeric: true, align: 'text-right' },
+  { key: 'unitCost', label: '단위원가', numeric: true, align: 'text-right' },
+  { key: 'totalCost', label: '총 원가', numeric: true, align: 'text-right' },
+  { key: 'sellPrice', label: '판매단가', numeric: true, align: 'text-right' },
+  { key: 'marketValue', label: '시가환산', numeric: true, align: 'text-right' },
+  { key: 'profit', label: '예상이익', numeric: true, align: 'text-right' },
+  { key: 'marginRate', label: '마진율', numeric: true, align: 'text-right' },
+];
+const COSTING_SORT_FIELD_MAP = Object.fromEntries(COSTING_SORT_FIELDS.map(field => [field.key, field]));
+let costingSortState = { key: 'totalCost', direction: 'desc' };
+
 export function renderCostingPage(container, navigateTo) {
   const state = getState();
   const items = state.mappedData || [];
   const transactions = state.transactions || [];
-
-  // ?먭? 怨꾩궛 諛⑹떇 (湲곕낯: ?대룞?됯퇏踰?
   const costMethod = state.costMethod || 'weighted-avg';
-
-  // ?먭? 怨꾩궛 ?ㅽ뻾
   const costData = calculateCosts(items, transactions, costMethod);
 
-  // ?꾩껜 ?붿빟
-  const totalCost = costData.reduce((s, r) => s + r.totalCost, 0);
-  const totalMarket = costData.reduce((s, r) => s + r.marketValue, 0);
+  const totalCost = costData.reduce((sum, row) => sum + row.totalCost, 0);
+  const totalMarket = costData.reduce((sum, row) => sum + row.marketValue, 0);
   const totalProfit = totalMarket - totalCost;
   const avgMargin = totalMarket > 0 ? ((totalProfit / totalMarket) * 100).toFixed(1) : '-';
+  const sortedCostData = sortCostRows(costData, costingSortState);
 
   container.innerHTML = `
     <div class="page-header">
       <div>
-        <h1 class="page-title"><span class="title-icon">?뮥</span> ?먭? 遺꾩꽍</h1>
-        <div class="page-desc">留ㅼ엯 ?먭?瑜??먮룞 怨꾩궛?섍퀬 ?섏씡?깆쓣 遺꾩꽍?⑸땲??</div>
+        <h1 class="page-title"><span class="title-icon">🧮</span> 원가 분석</h1>
+        <div class="page-desc">매입 원가와 예상 마진을 한눈에 정리합니다.</div>
       </div>
       <div class="page-actions">
-        <button class="btn btn-outline" id="btn-cost-export">?뱿 ?먭????대낫?닿린</button>
+        <button class="btn btn-outline" id="btn-cost-export">📊 원가표 내보내기</button>
       </div>
     </div>
 
-    <!-- ?먭? 怨꾩궛 諛⑹떇 ?좏깮 -->
     <div class="card card-compact" style="margin-bottom:12px;">
       <div style="display:flex; gap:16px; align-items:center; flex-wrap:wrap;">
-        <label class="form-label" style="margin:0; font-weight:600;">?먭? 怨꾩궛 諛⑹떇:</label>
+        <label class="form-label" style="margin:0; font-weight:600;">원가 계산 방식:</label>
         <label style="display:flex; align-items:center; gap:4px; cursor:pointer; font-size:13px;">
           <input type="radio" name="cost-method" value="weighted-avg" ${costMethod === 'weighted-avg' ? 'checked' : ''} />
-          ?대룞?됯퇏踰?<span style="color:var(--text-muted); font-size:11px;">(沅뚯옣)</span>
+          이동평균법 <span style="color:var(--text-muted); font-size:11px;">(권장)</span>
         </label>
         <label style="display:flex; align-items:center; gap:4px; cursor:pointer; font-size:13px;">
           <input type="radio" name="cost-method" value="fifo" ${costMethod === 'fifo' ? 'checked' : ''} />
-          ?좎엯?좎텧踰?(FIFO)
+          선입선출법 (FIFO)
         </label>
         <label style="display:flex; align-items:center; gap:4px; cursor:pointer; font-size:13px;">
           <input type="radio" name="cost-method" value="latest" ${costMethod === 'latest' ? 'checked' : ''} />
-          理쒖쥌留ㅼ엯?먭?踰?
+          최종매입원가법
         </label>
       </div>
     </div>
 
-    <!-- KPI -->
     <div class="stat-grid" style="grid-template-columns: repeat(4, 1fr);">
       <div class="stat-card">
-        <div class="stat-label">珥?留ㅼ엯?먭?</div>
-        <div class="stat-value">${totalCost > 0 ? '₩' + totalCost.toLocaleString('ko-KR') : '-'}</div>
+        <div class="stat-label">총 매입원가</div>
+        <div class="stat-value">${formatCostMoney(totalCost)}</div>
       </div>
       <div class="stat-card">
-        <div class="stat-label">?쒓? ?섏궛??/div>
-        <div class="stat-value">${totalMarket > 0 ? '₩' + totalMarket.toLocaleString('ko-KR') : '-'}</div>
+        <div class="stat-label">시가 환산액</div>
+        <div class="stat-value">${formatCostMoney(totalMarket)}</div>
       </div>
       <div class="stat-card">
-        <div class="stat-label">?덉긽 留덉쭊</div>
-        <div class="stat-value ${totalProfit >= 0 ? 'text-success' : 'text-danger'}">${totalProfit !== 0 ? '₩' + totalProfit.toLocaleString('ko-KR') : '-'}</div>
+        <div class="stat-label">예상 마진</div>
+        <div class="stat-value ${totalProfit >= 0 ? 'text-success' : 'text-danger'}">${formatSignedCostMoney(totalProfit)}</div>
       </div>
       <div class="stat-card">
-        <div class="stat-label">?됯퇏 留덉쭊??/div>
-        <div class="stat-value text-accent">${avgMargin}%</div>
+        <div class="stat-label">평균 마진율</div>
+        <div class="stat-value text-accent">${avgMargin === '-' ? '-' : `${avgMargin}%`}</div>
       </div>
     </div>
 
-    <!-- ?먭? ?뚯씠釉?-->
     <div class="card card-flush">
       <div style="padding:12px 16px; border-bottom:1px solid var(--border); background:var(--bg-card);">
-        <strong>?뮥 ?덈ぉ蹂??먭? 遺꾩꽍</strong>
-        <span style="color:var(--text-muted); font-size:12px; margin-left:8px;">(${costData.length}媛??덈ぉ)</span>
+        <strong>🧮 품목별 원가 분석</strong>
+        <span style="color:var(--text-muted); font-size:12px; margin-left:8px;">(${sortedCostData.length}개 품목)</span>
+        <span style="color:var(--text-muted); font-size:12px; margin-left:8px;">정렬: ${getCostSortSummary(costingSortState)}</span>
       </div>
       <div class="table-wrapper" style="border:none; border-radius:0;">
         <table class="data-table">
           <thead>
             <tr>
               <th style="width:40px;">#</th>
-              <th>?덈ぉ紐?/th>
-              <th>肄붾뱶</th>
-              <th class="text-right">?ш퀬?섎웾</th>
-              <th class="text-right">?⑥쐞?먭?</th>
-              <th class="text-right">珥??먭?</th>
-              <th class="text-right">?먮ℓ?④?</th>
-              <th class="text-right">?쒓??섏궛</th>
-              <th class="text-right">?덉긽?댁씡</th>
-              <th class="text-right">留덉쭊??/th>
+              ${COSTING_SORT_FIELDS.map(field => renderCostingHeader(field, costingSortState)).join('')}
             </tr>
           </thead>
           <tbody>
-            ${costData.map((r, i) => {
-              const margin = r.marketValue > 0 ? ((r.profit / r.marketValue) * 100).toFixed(1) : '-';
-              return `
-                <tr class="${parseFloat(margin) < 0 ? 'row-danger' : parseFloat(margin) < 10 ? 'row-warning' : ''}">
-                  <td class="col-num">${i + 1}</td>
-                  <td><strong>${r.itemName}</strong></td>
-                  <td style="color:var(--text-muted); font-size:12px;">${r.itemCode || '-'}</td>
-                  <td class="text-right">${r.qty.toLocaleString('ko-KR')}</td>
-                  <td class="text-right">??{r.unitCost.toLocaleString('ko-KR')}</td>
-                  <td class="text-right">??{r.totalCost.toLocaleString('ko-KR')}</td>
-                  <td class="text-right">${r.sellPrice > 0 ? '₩' + r.sellPrice.toLocaleString('ko-KR') : '-'}</td>
-                  <td class="text-right">${r.marketValue > 0 ? '₩' + r.marketValue.toLocaleString('ko-KR') : '-'}</td>
-                  <td class="text-right ${r.profit >= 0 ? 'type-in' : 'type-out'}">${r.profit !== 0 ? '₩' + r.profit.toLocaleString('ko-KR') : '-'}</td>
-                  <td class="text-right" style="font-weight:600;">${margin}%</td>
-                </tr>
-              `;
-            }).join('')}
+            ${sortedCostData.map((row, index) => renderCostingRow(row, index)).join('')}
           </tbody>
         </table>
       </div>
     </div>
+    <div class="chart-help-text">표 제목을 누르면 큰 값 순서나 가나다순으로 바로 정렬됩니다.</div>
   `;
 
-  // ?먭? 諛⑹떇 蹂寃?
   container.querySelectorAll('input[name="cost-method"]').forEach(radio => {
-    radio.addEventListener('change', (e) => {
-      setState({ costMethod: e.target.value });
+    radio.addEventListener('change', (event) => {
+      setState({ costMethod: event.target.value });
       renderCostingPage(container, navigateTo);
     });
   });
 
-  // ?대낫?닿린
-  container.querySelector('#btn-cost-export').addEventListener('click', () => {
-    if (costData.length === 0) { showToast('내보낼 데이터가 없습니다.', 'warning'); return; }
-    const data = costData.map(r => ({
-      '품목명': r.itemName,
-      '코드': r.itemCode || '',
-      '재고수량': r.qty,
-      '단위원가': r.unitCost,
-      '총 원가': r.totalCost,
-      '판매단가': r.sellPrice,
-      '시가환산': r.marketValue,
-      '예상이익': r.profit,
-      '마진율(%)': r.marketValue > 0 ? ((r.profit / r.marketValue) * 100).toFixed(1) : 0,
+  container.querySelectorAll('.table-sort-btn[data-sort-key]').forEach(button => {
+    button.addEventListener('click', () => {
+      const nextKey = button.dataset.sortKey;
+      if (!nextKey) return;
+
+      costingSortState = getNextCostSortState(costingSortState, nextKey);
+      renderCostingPage(container, navigateTo);
+    });
+  });
+
+  container.querySelector('#btn-cost-export')?.addEventListener('click', () => {
+    if (sortedCostData.length === 0) {
+      showToast('데이터가 없습니다.', 'warning');
+      return;
+    }
+
+    const exportRows = sortedCostData.map(row => ({
+      '품목명': row.itemName,
+      '코드': row.itemCode || '',
+      '재고수량': row.qty,
+      '단위원가': row.unitCost,
+      '총원가': row.totalCost,
+      '판매단가': row.sellPrice,
+      '시가환산': row.marketValue,
+      '예상이익': row.profit,
+      '마진율(%)': getCostMarginRate(row) ?? '',
     }));
-    downloadExcel(data, `원가분석_${new Date().toISOString().split('T')[0]}`);
-    showToast('원가 분석표를 엑셀로 내보냈습니다.', 'success');
+
+    downloadExcel(exportRows, `원가분석_${new Date().toISOString().split('T')[0]}`);
+    showToast('원가표를 내보냈습니다.', 'success');
   });
 }
 
+function renderCostingHeader(field, sortState) {
+  const classes = ['sortable-col'];
+  if (field.align) classes.push(field.align);
+
+  return `
+    <th class="${classes.join(' ')}">
+      <button type="button" class="table-sort-btn ${sortState.key === field.key ? 'active' : ''}" data-sort-key="${field.key}">
+        <span>${field.label}</span>
+        <span class="table-sort-arrow">${getCostSortArrow(field.key, sortState)}</span>
+      </button>
+    </th>
+  `;
+}
+
+function renderCostingRow(row, index) {
+  const marginRate = getCostMarginRate(row);
+  const marginText = marginRate === null ? '-' : `${marginRate.toFixed(1)}%`;
+  const rowClass = marginRate !== null && marginRate < 0
+    ? 'row-danger'
+    : marginRate !== null && marginRate < 10
+      ? 'row-warning'
+      : '';
+
+  return `
+    <tr class="${rowClass}">
+      <td class="col-num">${index + 1}</td>
+      <td><strong>${row.itemName}</strong></td>
+      <td style="color:var(--text-muted); font-size:12px;">${row.itemCode || '-'}</td>
+      <td class="text-right">${row.qty.toLocaleString('ko-KR')}</td>
+      <td class="text-right">${formatCostMoney(row.unitCost)}</td>
+      <td class="text-right">${formatCostMoney(row.totalCost)}</td>
+      <td class="text-right">${formatCostMoney(row.sellPrice)}</td>
+      <td class="text-right">${formatCostMoney(row.marketValue)}</td>
+      <td class="text-right ${row.profit >= 0 ? 'type-in' : 'type-out'}">${formatSignedCostMoney(row.profit)}</td>
+      <td class="text-right" style="font-weight:600;">${marginText}</td>
+    </tr>
+  `;
+}
+
+function getCostSortArrow(key, sortState) {
+  if (sortState.key !== key) return '↕';
+  return sortState.direction === 'asc' ? '↑' : '↓';
+}
+
+function getCostSortSummary(sortState) {
+  const label = COSTING_SORT_FIELD_MAP[sortState.key]?.label || '품목명';
+  return `${label} ${sortState.direction === 'asc' ? '오름차순' : '내림차순'}`;
+}
+
+function getNextCostSortState(currentSort, nextKey) {
+  if (currentSort.key === nextKey) {
+    return {
+      key: nextKey,
+      direction: currentSort.direction === 'asc' ? 'desc' : 'asc',
+    };
+  }
+
+  return {
+    key: nextKey,
+    direction: COSTING_SORT_FIELD_MAP[nextKey]?.numeric ? 'desc' : 'asc',
+  };
+}
+
+function sortCostRows(rows, sortState) {
+  return [...rows].sort((left, right) => compareCostRows(left, right, sortState));
+}
+
+function compareCostRows(left, right, sortState) {
+  const leftValue = getCostSortValue(left, sortState.key);
+  const rightValue = getCostSortValue(right, sortState.key);
+
+  const leftEmpty = leftValue === null || leftValue === '';
+  const rightEmpty = rightValue === null || rightValue === '';
+  if (leftEmpty && rightEmpty) return COSTING_TEXT_COLLATOR.compare(left.itemName || '', right.itemName || '');
+  if (leftEmpty) return 1;
+  if (rightEmpty) return -1;
+
+  let result = 0;
+  if (typeof leftValue === 'number' && typeof rightValue === 'number') {
+    result = leftValue - rightValue;
+  } else {
+    result = COSTING_TEXT_COLLATOR.compare(String(leftValue), String(rightValue));
+  }
+
+  if (result === 0) {
+    result = COSTING_TEXT_COLLATOR.compare(left.itemName || '', right.itemName || '');
+  }
+
+  return sortState.direction === 'desc' ? result * -1 : result;
+}
+
+function getCostSortValue(row, key) {
+  if (key === 'marginRate') return getCostMarginRate(row);
+
+  const value = row[key];
+  if (value === null || value === undefined || value === '') return null;
+  return COSTING_SORT_FIELD_MAP[key]?.numeric ? Number(value) : String(value).trim();
+}
+
+function getCostMarginRate(row) {
+  if (!row.marketValue) return null;
+  return Number((((row.profit || 0) / row.marketValue) * 100).toFixed(1));
+}
+
+function formatCostMoney(value) {
+  if (!value) return '-';
+  return `₩${Math.round(value).toLocaleString('ko-KR')}`;
+}
+
+function formatSignedCostMoney(value) {
+  if (!value) return '-';
+  return `${value < 0 ? '-₩' : '₩'}${Math.abs(Math.round(value)).toLocaleString('ko-KR')}`;
+}
+
 /**
- * ?먭? 怨꾩궛 濡쒖쭅
- * ?대룞?됯퇏踰? 湲곗〈 ?④? 洹몃?濡??ъ슜 (留ㅼ엯 ?쒖젏 ?됯퇏)
- * FIFO: 媛???ㅻ옒??留ㅼ엯 ?④?遺???곸슜
- * 理쒖쥌留ㅼ엯?먭?踰? 媛??理쒓렐 留ㅼ엯 ?④? ?곸슜
+ * 원가 계산 로직
+ * weighted-avg: 입고 평균가
+ * fifo: 가장 오래된 입고 단가
+ * latest: 가장 최근 입고 단가
  */
 function calculateCosts(items, transactions, method) {
   return items.map(item => {
@@ -160,41 +272,37 @@ function calculateCosts(items, transactions, method) {
     const unitPrice = parseFloat(item.unitPrice) || 0;
     const sellPrice = parseFloat(item.sellPrice) || unitPrice;
 
-    // ?대떦 ?덈ぉ???낃퀬 嫄곕옒
-    const inTx = transactions
+    const inTransactions = transactions
       .filter(tx => tx.type === 'in' && tx.itemName === item.itemName)
       .sort((a, b) => (a.date || '').localeCompare(b.date || ''));
 
-    let unitCost;
+    let unitCost = unitPrice;
 
     switch (method) {
       case 'fifo':
-        // FIFO: 媛???ㅻ옒??留ㅼ엯 ?④? (泥??낃퀬)
-        unitCost = inTx.length > 0 ? (parseFloat(inTx[0].unitPrice) || unitPrice) : unitPrice;
+        unitCost = inTransactions.length > 0 ? (parseFloat(inTransactions[0].unitPrice) || unitPrice) : unitPrice;
         break;
       case 'latest':
-        // 理쒖쥌留ㅼ엯?먭?: 媛??理쒓렐 ?낃퀬 ?④?
-        unitCost = inTx.length > 0 ? (parseFloat(inTx[inTx.length - 1].unitPrice) || unitPrice) : unitPrice;
+        unitCost = inTransactions.length > 0 ? (parseFloat(inTransactions[inTransactions.length - 1].unitPrice) || unitPrice) : unitPrice;
         break;
       case 'weighted-avg':
       default:
-        // ?대룞?됯퇏: ?꾩껜 ?낃퀬 媛以묓룊洹?(?놁쑝硫??꾩옱 ?④?)
-        if (inTx.length > 0) {
-          let totalQty = 0, totalVal = 0;
-          inTx.forEach(tx => {
+        if (inTransactions.length > 0) {
+          let totalQty = 0;
+          let totalValue = 0;
+
+          inTransactions.forEach(tx => {
             const txQty = parseFloat(tx.quantity) || 0;
             const txPrice = parseFloat(tx.unitPrice) || unitPrice;
             totalQty += txQty;
-            totalVal += txQty * txPrice;
+            totalValue += txQty * txPrice;
           });
-          unitCost = totalQty > 0 ? Math.round(totalVal / totalQty) : unitPrice;
-        } else {
-          unitCost = unitPrice;
+
+          unitCost = totalQty > 0 ? Math.round(totalValue / totalQty) : unitPrice;
         }
         break;
     }
 
-    // ??Math.round? ???먮떒??諛섏삱由쇱쑝濡??뚯닔???쒓굅 (?쒓뎅 ?뚭퀎 湲곗?)
     unitCost = Math.round(unitCost);
     const totalCost = Math.round(qty * unitCost);
     const marketValue = Math.round(qty * sellPrice);
@@ -212,4 +320,3 @@ function calculateCosts(items, transactions, method) {
     };
   });
 }
-

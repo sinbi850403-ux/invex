@@ -5,8 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:local": "vite --host 127.0.0.1 --port 4173",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "preview:local": "vite preview --host 127.0.0.1 --port 4173"
   },
   "devDependencies": {
     "vite": "^8.0.1"

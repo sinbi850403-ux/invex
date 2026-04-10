@@ -73,6 +73,7 @@ export function syncToCloud() {
         transfers: state.transfers || [],
         vendorMaster: state.vendorMaster || [],
         accountEntries: state.accountEntries || [],
+        purchaseOrders: state.purchaseOrders || [],
         stocktakeHistory: state.stocktakeHistory || [],
         customFields: state.customFields || [],
         industryTemplate: state.industryTemplate || 'general',
