@@ -1,8 +1,6 @@
 const COLLAPSE_STORAGE_KEY = 'invex:page-collapse:v1';
 
 const TARGET_PAGES = new Set([
-  // 홈 대시보드
-  'home',
   // 관리
   'inventory',
   'inout',
