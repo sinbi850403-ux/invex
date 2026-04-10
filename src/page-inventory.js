@@ -255,7 +255,7 @@ export function renderInventoryPage(container, navigateTo) {
     <!-- 寃???꾪꽣 + ?뺣젹 + 而щ읆 ?ㅼ젙 -->
     <div class="toolbar">
       <input type="text" class="search-input" id="search-input"
-        placeholder="품목명, 코드, 분류로 검색..." />
+        placeholder="스마트 검색: 품목명, 분류:식품, 창고:본사, 재고>=10, 부족, 품절" />
       <select class="filter-select" id="filter-item-code">
         <option value="">전체 품목코드</option>
         ${getItemCodes(data).map(c => `<option value="${c}">${c}</option>`).join('')}
@@ -304,6 +304,17 @@ export function renderInventoryPage(container, navigateTo) {
           </div>
         </div>
       </div>
+    </div>
+    <div class="smart-search-row" style="display:flex; flex-wrap:wrap; gap:6px; align-items:center; margin:8px 0 4px;">
+      <span style="font-size:12px; color:var(--text-muted);">빠른 스마트 검색</span>
+      <button class="btn btn-ghost btn-sm" type="button" data-smart-query="부족">부족</button>
+      <button class="btn btn-ghost btn-sm" type="button" data-smart-query="품절">품절</button>
+      <button class="btn btn-ghost btn-sm" type="button" data-smart-query="거래처없음">거래처없음</button>
+      <button class="btn btn-ghost btn-sm" type="button" data-smart-query="위치없음">위치없음</button>
+      <button class="btn btn-ghost btn-sm" type="button" data-smart-query="재고>=10">재고>=10</button>
+      <button class="btn btn-ghost btn-sm" type="button" data-smart-query="분류:">분류:</button>
+      <button class="btn btn-ghost btn-sm" type="button" data-smart-query="창고:">창고:</button>
+      <button class="btn btn-ghost btn-sm" type="button" data-smart-query="거래처:">거래처:</button>
     </div>
     <div class="filter-summary" id="inventory-filter-summary"></div>
 
@@ -407,6 +418,149 @@ export function renderInventoryPage(container, navigateTo) {
     return Number.isNaN(num) ? null : num;
   }
 
+  function normalizeToken(value) {
+    return String(value || '').trim().toLowerCase();
+  }
+
+  function parseSmartKeyword(rawKeyword) {
+    const source = String(rawKeyword || '').trim();
+    const parsed = {
+      textTerms: [],
+      containsFilters: {},
+      numericFilters: [],
+      flags: {
+        lowStock: false,
+        zeroStock: false,
+        missingVendor: false,
+        missingWarehouse: false,
+      },
+      summaryChips: [],
+    };
+    if (!source) return parsed;
+
+    const containsAliases = {
+      분류: 'category',
+      카테고리: 'category',
+      category: 'category',
+      창고: 'warehouse',
+      위치: 'warehouse',
+      warehouse: 'warehouse',
+      거래처: 'vendor',
+      벤더: 'vendor',
+      vendor: 'vendor',
+      코드: 'itemCode',
+      품목코드: 'itemCode',
+      itemcode: 'itemCode',
+    };
+
+    const numericAliases = {
+      재고: 'quantity',
+      수량: 'quantity',
+      qty: 'quantity',
+      원가: 'unitPrice',
+      매입가: 'unitPrice',
+      단가: 'unitPrice',
+      unitprice: 'unitPrice',
+      소가: 'salePrice',
+      판매가: 'salePrice',
+      saleprice: 'salePrice',
+      공급가: 'supplyValue',
+      공급가액: 'supplyValue',
+      supplyvalue: 'supplyValue',
+      합계: 'totalPrice',
+      합계금액: 'totalPrice',
+      totalprice: 'totalPrice',
+    };
+
+    const summarySet = new Set();
+    const tokens = source.split(/\s+/).filter(Boolean);
+
+    tokens.forEach(token => {
+      const lowered = normalizeToken(token);
+
+      if (['부족', '안전재고', 'low'].includes(lowered)) {
+        parsed.flags.lowStock = true;
+        summarySet.add('스마트: 부족');
+        return;
+      }
+      if (['품절', '재고0', '수량0', 'zero'].includes(lowered)) {
+        parsed.flags.zeroStock = true;
+        summarySet.add('스마트: 품절');
+        return;
+      }
+      if (['거래처없음', '거래처미입력', 'vendor:none'].includes(lowered)) {
+        parsed.flags.missingVendor = true;
+        summarySet.add('스마트: 거래처없음');
+        return;
+      }
+      if (['위치없음', '창고없음', '위치미입력', 'warehouse:none'].includes(lowered)) {
+        parsed.flags.missingWarehouse = true;
+        summarySet.add('스마트: 위치없음');
+        return;
+      }
+
+      const colonIndex = token.indexOf(':');
+      if (colonIndex > 0) {
+        const keyAlias = normalizeToken(token.slice(0, colonIndex));
+        const rawValue = token.slice(colonIndex + 1).trim();
+        const key = containsAliases[keyAlias];
+        if (key) {
+          if (rawValue) {
+            parsed.containsFilters[key] = normalizeToken(rawValue);
+            summarySet.add(`스마트: ${token.slice(0, colonIndex)}:${rawValue}`);
+          }
+          return;
+        }
+      }
+
+      const numericMatch = token.match(/^([^:><=]+)(>=|<=|=|>|<)(-?\d+(?:\.\d+)?)$/);
+      if (numericMatch) {
+        const alias = normalizeToken(numericMatch[1]);
+        const key = numericAliases[alias];
+        if (key) {
+          parsed.numericFilters.push({
+            key,
+            op: numericMatch[2],
+            value: Number.parseFloat(numericMatch[3]),
+            label: `스마트: ${token}`,
+          });
+          summarySet.add(`스마트: ${token}`);
+          return;
+        }
+      }
+
+      parsed.textTerms.push(lowered);
+    });
+
+    parsed.summaryChips = [...summarySet];
+    return parsed;
+  }
+
+  function getNumericFieldValue(row, key) {
+    if (key === 'supplyValue') {
+      const supply = getNumericValue(row.supplyValue);
+      if (supply !== null) return supply;
+      return (getNumericValue(row.quantity) || 0) * (getNumericValue(row.unitPrice) || 0);
+    }
+    if (key === 'totalPrice') {
+      const totalPrice = getNumericValue(row.totalPrice);
+      if (totalPrice !== null) return totalPrice;
+      const supply = getNumericFieldValue(row, 'supplyValue');
+      const vat = getNumericValue(row.vat) || Math.floor((supply || 0) * 0.1);
+      return (supply || 0) + vat;
+    }
+    return getNumericValue(row[key]);
+  }
+
+  function matchNumericRule(actualValue, op, expectedValue) {
+    if (actualValue === null || Number.isNaN(actualValue)) return false;
+    if (op === '>=') return actualValue >= expectedValue;
+    if (op === '<=') return actualValue <= expectedValue;
+    if (op === '>') return actualValue > expectedValue;
+    if (op === '<') return actualValue < expectedValue;
+    return actualValue === expectedValue;
+  }
+
   function isLowStockRow(row) {
     const min = safetyStock[row.itemName];
     const qty = getNumericValue(row.quantity) || 0;
@@ -459,8 +613,10 @@ export function renderInventoryPage(container, navigateTo) {
     const summaryEl = container.querySelector('#inventory-filter-summary');
     if (!summaryEl) return;
 
+    const smartQuery = parseSmartKeyword(currentFilter.keyword);
     const chips = [];
-    if (currentFilter.keyword) chips.push(`검색: ${currentFilter.keyword}`);
+    if (smartQuery.textTerms.length > 0) chips.push(`텍스트 검색: ${smartQuery.textTerms.join(' ')}`);
+    chips.push(...smartQuery.summaryChips);
     if (currentFilter.itemCode) chips.push(`품목코드: ${currentFilter.itemCode}`);
     if (currentFilter.vendor) chips.push(`거래처: ${currentFilter.vendor}`);
     if (currentFilter.category) chips.push(`분류: ${currentFilter.category}`);
@@ -545,23 +701,39 @@ export function renderInventoryPage(container, navigateTo) {
 
   // === ?꾪꽣留?===
   function getFilteredData() {
+    const smartQuery = parseSmartKeyword(currentFilter.keyword);
     return data.filter(row => {
-      const kw = currentFilter.keyword.toLowerCase();
-      if (kw && !(
-        (row.itemName || '').toLowerCase().includes(kw) ||
-        (row.itemCode || '').toLowerCase().includes(kw) ||
-        (row.category || '').toLowerCase().includes(kw)
-      )) return false;
+      if (smartQuery.textTerms.length > 0) {
+        const haystack = [
+          row.itemName,
+          row.itemCode,
+          row.category,
+          row.vendor,
+          row.warehouse,
+          row.note,
+          row.lotNumber,
+        ].map(value => String(value || '').toLowerCase()).join(' ');
+        if (!smartQuery.textTerms.every(term => haystack.includes(term))) return false;
+      }
 
       if (currentFilter.category && row.category !== currentFilter.category) return false;
       if (currentFilter.warehouse && row.warehouse !== currentFilter.warehouse) return false;
       if (currentFilter.itemCode && row.itemCode !== currentFilter.itemCode) return false;
       if (currentFilter.vendor && row.vendor !== currentFilter.vendor) return false;
+      if (smartQuery.containsFilters.category && !String(row.category || '').toLowerCase().includes(smartQuery.containsFilters.category)) return false;
+      if (smartQuery.containsFilters.warehouse && !String(row.warehouse || '').toLowerCase().includes(smartQuery.containsFilters.warehouse)) return false;
+      if (smartQuery.containsFilters.vendor && !String(row.vendor || '').toLowerCase().includes(smartQuery.containsFilters.vendor)) return false;
+      if (smartQuery.containsFilters.itemCode && !String(row.itemCode || '').toLowerCase().includes(smartQuery.containsFilters.itemCode)) return false;
       if (currentFilter.stock === 'low' && !isLowStockRow(row)) return false;
       if (currentFilter.focus === 'low' && !isLowStockRow(row)) return false;
       if (currentFilter.focus === 'zero' && getNumericValue(row.quantity) !== 0) return false;
       if (currentFilter.focus === 'missingVendor' && String(row.vendor || '').trim()) return false;
       if (currentFilter.focus === 'missingWarehouse' && String(row.warehouse || '').trim()) return false;
+      if (smartQuery.flags.lowStock && !isLowStockRow(row)) return false;
+      if (smartQuery.flags.zeroStock && (getNumericValue(row.quantity) || 0) !== 0) return false;
+      if (smartQuery.flags.missingVendor && String(row.vendor || '').trim()) return false;
+      if (smartQuery.flags.missingWarehouse && String(row.warehouse || '').trim()) return false;
+      if (smartQuery.numericFilters.some(rule => !matchNumericRule(getNumericFieldValue(row, rule.key), rule.op, rule.value))) return false;
       return true;
     });
   }
@@ -874,12 +1046,29 @@ export function renderInventoryPage(container, navigateTo) {
   });
 
   // === 寃???꾪꽣/?뺣젹 ?대깽??===
-  container.querySelector('#search-input').addEventListener('input', (e) => {
-    currentFilter.keyword = e.target.value;
+  function applyKeywordFilter(nextKeyword, { debounced = true } = {}) {
+    currentFilter.keyword = nextKeyword;
     currentPageNum = 1;
     renderTable();
     highlightActiveFilters();
-    persistInventoryPrefs({ debounced: true });
+    persistInventoryPrefs({ debounced });
+  }
+
+  container.querySelectorAll('[data-smart-query]').forEach(button => {
+    button.addEventListener('click', () => {
+      const keywordInput = container.querySelector('#search-input');
+      const token = String(button.dataset.smartQuery || '').trim();
+      if (!keywordInput || !token) return;
+      const current = String(keywordInput.value || '').trim();
+      const next = current ? `${current} ${token}` : token;
+      keywordInput.value = next;
+      applyKeywordFilter(next);
+      keywordInput.focus();
+    });
+  });
+
+  container.querySelector('#search-input').addEventListener('input', (e) => {
+    applyKeywordFilter(e.target.value);
   });
   container.querySelector('#filter-item-code').addEventListener('change', (e) => {
     currentFilter.itemCode = e.target.value;

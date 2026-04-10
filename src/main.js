@@ -263,6 +263,9 @@ initAuth((user, profile) => {
 // ?꾩옱 ?섏씠吏 (?덉쓣 湲곕낯?쇰줈)
 let currentPage = 'home';
 let navigationToken = 0;
+const RECENT_PAGES_KEY = 'invex_recent_pages_v1';
+const LAST_PAGE_KEY = 'invex_last_page_v1';
+const MAX_RECENT_PAGES = 6;
 
 const pageLoaders = {
   home: () => import('./page-home.js').then(m => m.renderHomePage),
@@ -306,6 +309,77 @@ const pageLoaders = {
 
 const pageRendererCache = {};
 
+function getPageLabel(pageId) {
+  const btn = document.querySelector(`.nav-btn[data-page="${pageId}"]`);
+  if (!btn) return pageId;
+  return btn.textContent.replace(/\s+/g, ' ').trim();
+}
+
+function readRecentPages() {
+  try {
+    const raw = localStorage.getItem(RECENT_PAGES_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter(pageId => typeof pageId === 'string' && !!pageLoaders[pageId] && pageId !== 'home');
+  } catch {
+    return [];
+  }
+}
+
+function writeRecentPages(pages) {
+  localStorage.setItem(RECENT_PAGES_KEY, JSON.stringify(pages.slice(0, MAX_RECENT_PAGES)));
+}
+
+function updateRecentPages(pageId) {
+  if (!pageId || pageId === 'home') return;
+  const current = readRecentPages();
+  const next = [pageId, ...current.filter(p => p !== pageId)].slice(0, MAX_RECENT_PAGES);
+  writeRecentPages(next);
+}
+
+function renderQuickAccess() {
+  const section = document.getElementById('quick-access-section');
+  const divider = document.getElementById('quick-access-divider');
+  const nav = document.getElementById('quick-access-nav');
+  if (!section || !divider || !nav) return;
+
+  const recentPages = readRecentPages();
+  if (!recentPages.length) {
+    section.style.display = 'none';
+    divider.style.display = 'none';
+    nav.innerHTML = '';
+    return;
+  }
+
+  nav.innerHTML = recentPages.map(pageId => `
+    <button class="nav-btn nav-btn-quick" data-quick-page="${pageId}" title="${getPageLabel(pageId)}">
+      <span class="nav-icon">🕘</span> ${getPageLabel(pageId)}
+    </button>
+  `).join('');
+
+  nav.querySelectorAll('[data-quick-page]').forEach(btn => {
+    btn.addEventListener('click', () => navigateTo(btn.dataset.quickPage));
+  });
+
+  section.style.display = '';
+  divider.style.display = '';
+}
+
+function initNavigationShortcuts() {
+  document.addEventListener('keydown', (e) => {
+    if (e.altKey && !e.shiftKey && !e.ctrlKey && !e.metaKey && /^[1-9]$/.test(e.key)) {
+      const visibleButtons = Array.from(document.querySelectorAll('.nav-btn[data-page]'))
+        .filter(btn => btn.offsetParent !== null);
+      const target = visibleButtons[Number(e.key) - 1];
+      if (target?.dataset?.page) {
+        e.preventDefault();
+        navigateTo(target.dataset.page);
+      }
+    }
+  });
+}
+
 /**
  * ?섏씠吏 ?꾪솚
  * ?붽툑??泥댄겕 ???묎렐 遺덇? ???낃렇?덉씠??紐⑤떖 ?쒖떆
@@ -320,6 +394,9 @@ async function navigateTo(pageName) {
   }
 
   currentPage = pageName;
+  localStorage.setItem(LAST_PAGE_KEY, pageName);
+  updateRecentPages(pageName);
+  renderQuickAccess();
   const token = ++navigationToken;
 
   // 紐⑤뱺 nav ?곸뿭??踰꾪듉 ?쒖꽦 ?곹깭 ?낅뜲?댄듃
@@ -416,6 +493,7 @@ function updateSidebarBadges() {
   });
 }
 updateSidebarBadges();
+renderQuickAccess();
 
 // ?ъ씠?쒕컮 ?섎떒 ?붽툑???쒖떆 ?낅뜲?댄듃
 function updatePlanDisplay() {
@@ -546,8 +624,13 @@ overlay?.addEventListener('click', closeSidebar);
 // ??遺꾨━? ???몄쬆 ?뺤씤 ?꾩뿉 IndexedDB 蹂듭썝?섎㈃ 鍮??곗씠?곌? 濡쒕뱶?????덉쓬
 async function initAppAfterAuth() {
   await restoreState();
+  const lastPage = localStorage.getItem(LAST_PAGE_KEY);
+  if (lastPage && pageLoaders[lastPage]) {
+    currentPage = lastPage;
+  }
   // ?붽툑??諛곗? & ?쒖떆 理쒖떊??
   updateSidebarBadges();
+  renderQuickAccess();
   updatePlanDisplay();
   await navigateTo(currentPage);
   // 泥?濡쒓렇???ъ슜?먯뿉寃??⑤낫??留덈쾿???쒖떆
@@ -563,6 +646,8 @@ if (!isConfigured) {
   if (gate) gate.style.display = 'none';
   initAppAfterAuth();
 }
+
+initNavigationShortcuts();
 
 // ?ъ슜??UI ?낅뜲?댄듃 (濡쒓렇??濡쒓렇?꾩썐 ???몄텧)
 function updateUserUI(user, profile) {
@@ -606,6 +691,5 @@ if ('serviceWorker' in navigator) {
       .catch((err) => console.log('SW failed:', err));
   });
 }
-
 
 

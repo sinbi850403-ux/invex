@@ -535,6 +535,13 @@ a:hover {
   padding: 0 12px;
 }
 
+#quick-access-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 0 12px;
+}
+
 .nav-btn {
   background: none;
   border: none;
@@ -569,6 +576,12 @@ a:hover {
   width: 20px;
   text-align: center;
   flex-shrink: 0;
+}
+
+.nav-btn-quick {
+  font-size: 12px;
+  padding: 8px 12px;
+  opacity: 0.95;
 }
 
 /* 뱃지 (입출고 건수 등) */
