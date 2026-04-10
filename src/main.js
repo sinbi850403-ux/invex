@@ -382,6 +382,17 @@ function initNavigationShortcuts() {
   });
 }
 
+function initSmartDetailsToggles() {
+  document.addEventListener('click', (event) => {
+    const summary = event.target.closest('details.smart-details > summary');
+    if (!summary) return;
+    const details = summary.parentElement;
+    if (!details || !(details instanceof HTMLDetailsElement)) return;
+    event.preventDefault();
+    details.open = !details.open;
+  }, true);
+}
+
 /**
  * ?섏씠吏 ?꾪솚
  * ?붽툑??泥댄겕 ???묎렐 遺덇? ???낃렇?덉씠??紐⑤떖 ?쒖떆
@@ -654,6 +665,7 @@ if (!isConfigured) {
 }
 
 initNavigationShortcuts();
+initSmartDetailsToggles();
 
 // ?ъ슜??UI ?낅뜲?댄듃 (濡쒓렇??濡쒓렇?꾩썐 ???몄텧)
 function updateUserUI(user, profile) {
