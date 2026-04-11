@@ -3,7 +3,7 @@
  * 역할: 기간별 품목 입고/출고/잔량을 장부 형식으로 자동 생성
  */
 
-import { getState } from './store.js';
+import { getState, setState } from './store.js';
 import { showToast } from './toast.js';
 import { downloadExcel } from './excel.js';
 import { jsPDF } from 'jspdf';
@@ -31,6 +31,7 @@ export function renderLedgerPage(container, navigateTo) {
   const state = getState();
   const items = state.mappedData || [];
   const transactions = state.transactions || [];
+  const openingOverrides = state.ledgerOpeningOverrides || {};
 
   const now = new Date();
   const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
@@ -43,6 +44,7 @@ export function renderLedgerPage(container, navigateTo) {
         <div class="page-desc">기간별 품목의 입고, 출고, 잔량을 장부 형식으로 자동 생성합니다.</div>
       </div>
       <div class="page-actions">
+        <button class="btn btn-outline" id="btn-ledger-opening">기초재고 입력</button>
         <button class="btn btn-outline" id="btn-ledger-excel">📊 엑셀 다운로드</button>
         <button class="btn btn-primary" id="btn-ledger-pdf">📄 PDF 다운로드</button>
       </div>
@@ -76,9 +78,12 @@ export function renderLedgerPage(container, navigateTo) {
 
   renderLedgerTable();
   container.querySelector('#btn-ledger-render')?.addEventListener('click', renderLedgerTable);
+  container.querySelector('#btn-ledger-opening')?.addEventListener('click', () => {
+    openOpeningModal(container, items, openingOverrides, () => renderLedgerTable());
+  });
 
   container.querySelector('#btn-ledger-excel')?.addEventListener('click', () => {
-    const { from, to, rows } = getLedgerRows(container, items, transactions);
+    const { from, to, rows } = getLedgerRows(container, items, transactions, openingOverrides);
     if (rows.length === 0) {
       showToast('내보낼 데이터가 없습니다.', 'warning');
       return;
@@ -101,7 +106,7 @@ export function renderLedgerPage(container, navigateTo) {
   });
 
   container.querySelector('#btn-ledger-pdf')?.addEventListener('click', async () => {
-    const { from, to, rows } = getLedgerRows(container, items, transactions);
+    const { from, to, rows } = getLedgerRows(container, items, transactions, openingOverrides);
     if (rows.length === 0) {
       showToast('내보낼 데이터가 없습니다.', 'warning');
       return;
@@ -151,7 +156,7 @@ export function renderLedgerPage(container, navigateTo) {
 
   function renderLedgerTable() {
     const tableArea = container.querySelector('#ledger-table-area');
-    const { from, to, rows } = getLedgerRows(container, items, transactions);
+    const { from, to, rows } = getLedgerRows(container, items, transactions, openingOverrides);
 
     if (!tableArea) return;
 
@@ -205,11 +210,11 @@ export function renderLedgerPage(container, navigateTo) {
   }
 }
 
-function getLedgerRows(container, items, transactions) {
+function getLedgerRows(container, items, transactions, openingOverrides) {
   const from = container.querySelector('#ledger-from')?.value || '';
   const to = container.querySelector('#ledger-to')?.value || '';
   const itemFilter = container.querySelector('#ledger-item-filter')?.value || '';
-  const ledgerRows = buildLedger(items, transactions, from, to, itemFilter);
+  const ledgerRows = buildLedger(items, transactions, from, to, itemFilter, openingOverrides);
   const sortedRows = sortLedgerRows(ledgerRows, ledgerSortState);
 
   return {
@@ -254,6 +259,100 @@ function renderLedgerRow(row, index) {
       <td class="text-right">${row.closingValue > 0 ? formatLedgerMoney(row.closingValue) : '-'}</td>
     </tr>
   `;
+}
+
+function openOpeningModal(container, items, openingOverrides, onComplete) {
+  const existing = document.getElementById('ledger-opening-modal');
+  if (existing) existing.remove();
+
+  const overlay = document.createElement('div');
+  overlay.id = 'ledger-opening-modal';
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = `
+    <div class="modal" style="max-width:760px;">
+      <div class="modal-header">
+        <h3 class="modal-title">기초재고 입력</h3>
+        <button class="modal-close" data-ledger-close>✕</button>
+      </div>
+      <div class="modal-body">
+        <div style="display:flex; gap:12px; align-items:center; margin-bottom:12px;">
+          <input class="form-input" id="ledger-opening-search" placeholder="품목명을 검색하세요" />
+          <button class="btn btn-outline btn-sm" id="ledger-opening-clear">초기화</button>
+        </div>
+        <div class="table-wrapper" style="border:none;">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>품목명</th>
+                <th class="text-right">현재 재고</th>
+                <th class="text-right">기초재고</th>
+              </tr>
+            </thead>
+            <tbody id="ledger-opening-rows"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" data-ledger-cancel>취소</button>
+        <button class="btn btn-primary" data-ledger-save>저장</button>
+      </div>
+    </div>
+  `;
+
+  const renderRows = (keyword = '') => {
+    const body = overlay.querySelector('#ledger-opening-rows');
+    const filtered = keyword
+      ? items.filter(item => (item.itemName || '').toLowerCase().includes(keyword.toLowerCase()))
+      : items;
+    body.innerHTML = filtered.map(item => `
+      <tr>
+        <td><strong>${item.itemName}</strong></td>
+        <td class="text-right">${(parseFloat(item.quantity) || 0).toLocaleString('ko-KR')}</td>
+        <td class="text-right">
+          <input
+            class="form-input"
+            style="max-width:120px; text-align:right;"
+            data-opening-item="${item.itemName}"
+            value="${openingOverrides[item.itemName] ?? ''}"
+            placeholder="입력"
+          />
+        </td>
+      </tr>
+    `).join('');
+  };
+
+  renderRows();
+
+  overlay.querySelector('#ledger-opening-search')?.addEventListener('input', (e) => {
+    renderRows(e.target.value);
+  });
+
+  overlay.querySelector('#ledger-opening-clear')?.addEventListener('click', () => {
+    Object.keys(openingOverrides).forEach(key => delete openingOverrides[key]);
+    renderRows(overlay.querySelector('#ledger-opening-search')?.value || '');
+  });
+
+  overlay.querySelector('[data-ledger-close]')?.addEventListener('click', () => overlay.remove());
+  overlay.querySelector('[data-ledger-cancel]')?.addEventListener('click', () => overlay.remove());
+  overlay.querySelector('[data-ledger-save]')?.addEventListener('click', () => {
+    const inputs = overlay.querySelectorAll('[data-opening-item]');
+    inputs.forEach(input => {
+      const name = input.dataset.openingItem;
+      const value = input.value.trim();
+      if (value === '') delete openingOverrides[name];
+      else openingOverrides[name] = Number.parseFloat(value) || 0;
+    });
+    setState({ ledgerOpeningOverrides: { ...openingOverrides } });
+    overlay.remove();
+    onComplete?.();
+    showToast('기초재고가 저장되었습니다.', 'success');
+  });
+
+  overlay.addEventListener('click', (event) => {
+    if (event.target === overlay) overlay.remove();
+  });
+
+  document.body.appendChild(overlay);
 }
 
 function getLedgerSortArrow(key, sortState) {
@@ -323,7 +422,7 @@ function formatLedgerMoney(value) {
  * 수불부 데이터 생성
  * 기초재고 = 현재재고 - 기간입고 + 기간출고
  */
-function buildLedger(items, transactions, from, to, itemFilter) {
+function buildLedger(items, transactions, from, to, itemFilter, openingOverrides = {}) {
   const periodTransactions = transactions.filter(tx => tx.date >= from && tx.date <= to);
   const transactionMap = {};
 
@@ -344,9 +443,11 @@ function buildLedger(items, transactions, from, to, itemFilter) {
     const currentQty = parseFloat(item.quantity) || 0;
     const unitPrice = parseFloat(item.unitPrice) || 0;
     const transaction = transactionMap[item.itemName] || { inQty: 0, outQty: 0 };
-
-    const openingQty = currentQty - transaction.inQty + transaction.outQty;
-    const closingQty = currentQty;
+    const override = openingOverrides[item.itemName];
+    const openingQty = override !== undefined && override !== null && override !== ''
+      ? Math.max(0, parseFloat(override) || 0)
+      : currentQty - transaction.inQty + transaction.outQty;
+    const closingQty = Math.max(0, openingQty + transaction.inQty - transaction.outQty);
     const closingValue = closingQty * unitPrice;
 
     return {

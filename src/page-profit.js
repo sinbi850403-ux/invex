@@ -6,6 +6,10 @@ export function renderProfitPage(container, navigateTo) {
   const items = state.mappedData || [];
   const transactions = state.transactions || [];
 
+  const periodPrefs = readProfitPeriodPrefs();
+  const periodFrom = periodPrefs.from || toDateKey(addDays(new Date(), -30));
+  const periodTo = periodPrefs.to || toDateKey(new Date());
+
   const rows = items
     .map((item) => {
       const quantity = toNumber(item.quantity);
@@ -54,7 +58,9 @@ export function renderProfitPage(container, navigateTo) {
   const lossCount = rows.filter((row) => row.profit < 0).length;
 
   const categorySummary = summarizeByCategory(rows).slice(0, 5);
-  const monthlySummary = getCurrentMonthSummary(transactions);
+  const periodTransactions = transactions.filter(tx => tx.date >= periodFrom && tx.date <= periodTo);
+  const periodSummary = buildPeriodSummary(periodTransactions, items);
+  const monthlySeries = buildMonthlySeries(periodTransactions, items);
 
   container.innerHTML = `
     <div class="page-header">
@@ -65,6 +71,46 @@ export function renderProfitPage(container, navigateTo) {
       <div class="page-actions">
         <button class="btn btn-outline" id="btn-profit-go-inventory">재고 화면으로 이동</button>
       </div>
+    </div>
+
+    <div class="card card-compact" style="margin-bottom:12px;">
+      <div style="display:flex; flex-wrap:wrap; gap:12px; align-items:end;">
+        <div style="display:flex; gap:8px; align-items:center;">
+          <label class="form-label" style="margin:0;">기간</label>
+          <input class="form-input" type="date" id="profit-from" value="${periodFrom}" />
+          <span style="color:var(--text-muted);">~</span>
+          <input class="form-input" type="date" id="profit-to" value="${periodTo}" />
+        </div>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button class="btn btn-outline btn-sm" data-profit-range="7">최근 7일</button>
+          <button class="btn btn-outline btn-sm" data-profit-range="30">최근 30일</button>
+          <button class="btn btn-outline btn-sm" data-profit-range="90">최근 90일</button>
+          <button class="btn btn-outline btn-sm" data-profit-range="month">이번 달</button>
+        </div>
+      </div>
+      <div style="margin-top:10px; display:flex; flex-wrap:wrap; gap:18px; font-size:13px; color:var(--text-muted);">
+        <div>기간 매입 합계 <strong>${formatSignedMoney(periodSummary.totalIn)}</strong></div>
+        <div>기간 매출 합계 <strong>${formatSignedMoney(periodSummary.totalOut)}</strong></div>
+        <div>기간 손익 <strong style="color:${periodSummary.profit >= 0 ? 'var(--success)' : 'var(--danger)'};">${formatSignedMoney(periodSummary.profit)}</strong></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">기간별 손익 추이</div>
+      ${monthlySeries.length === 0
+        ? '<div class="dashboard-empty-note">선택한 기간에 거래가 없습니다.</div>'
+        : `
+          <div style="display:grid; gap:8px;">
+            ${monthlySeries.map(row => `
+              <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 12px; border:1px solid var(--border); border-radius:10px;">
+                <div style="font-size:12px; color:var(--text-muted);">${row.label}</div>
+                <div style="font-weight:700; color:${row.profit >= 0 ? 'var(--success)' : 'var(--danger)'};">
+                  ${formatSignedMoney(row.profit)}
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        `}
     </div>
 
     ${
@@ -243,6 +289,35 @@ export function renderProfitPage(container, navigateTo) {
   `;
 
   container.querySelector('#btn-profit-go-inventory')?.addEventListener('click', () => navigateTo('inventory'));
+
+  const fromInput = container.querySelector('#profit-from');
+  const toInput = container.querySelector('#profit-to');
+  const persistAndRefresh = () => {
+    const nextFrom = fromInput.value;
+    const nextTo = toInput.value;
+    saveProfitPeriodPrefs({ from: nextFrom, to: nextTo });
+    renderProfitPage(container, navigateTo);
+  };
+  fromInput?.addEventListener('change', persistAndRefresh);
+  toInput?.addEventListener('change', persistAndRefresh);
+
+  container.querySelectorAll('[data-profit-range]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const value = btn.dataset.profitRange;
+      const now = new Date();
+      let from = null;
+      let to = toDateKey(now);
+      if (value === 'month') {
+        const start = new Date(now.getFullYear(), now.getMonth(), 1);
+        from = toDateKey(start);
+      } else {
+        const days = Number.parseInt(value, 10);
+        from = toDateKey(addDays(now, -days + 1));
+      }
+      saveProfitPeriodPrefs({ from, to });
+      renderProfitPage(container, navigateTo);
+    });
+  });
 }
 
 function summarizeByCategory(rows) {
@@ -262,6 +337,77 @@ function summarizeByCategory(rows) {
       rate: entry.revenue > 0 ? (entry.profit / entry.revenue) * 100 : 0,
     }))
     .sort((a, b) => b.profit - a.profit);
+}
+
+function buildPeriodSummary(transactions, items) {
+  let totalIn = 0;
+  let totalOut = 0;
+  transactions.forEach(tx => {
+    const amount = getTransactionAmount(tx, items);
+    if (tx.type === 'in') totalIn += amount;
+    if (tx.type === 'out') totalOut += amount;
+  });
+  return {
+    totalIn: Math.round(totalIn),
+    totalOut: Math.round(totalOut),
+    profit: Math.round(totalOut - totalIn),
+  };
+}
+
+function buildMonthlySeries(transactions, items) {
+  const map = new Map();
+  transactions.forEach(tx => {
+    if (!tx.date) return;
+    const key = String(tx.date).slice(0, 7);
+    if (!map.has(key)) map.set(key, { totalIn: 0, totalOut: 0 });
+    const bucket = map.get(key);
+    const amount = getTransactionAmount(tx, items);
+    if (tx.type === 'in') bucket.totalIn += amount;
+    if (tx.type === 'out') bucket.totalOut += amount;
+  });
+  return Array.from(map.entries())
+    .sort((a, b) => a[0].localeCompare(b[0]))
+    .map(([key, row]) => ({
+      label: `${key.replace('-', '년 ')}월`,
+      profit: Math.round(row.totalOut - row.totalIn),
+    }));
+}
+
+function getTransactionAmount(tx, items) {
+  const qty = toNumber(tx.quantity);
+  const direct = toNumber(tx.price ?? tx.unitPrice ?? tx.unitCost ?? 0);
+  if (direct > 0) return qty * direct;
+  const item = items.find(i => i.itemName === tx.itemName || (i.itemCode && i.itemCode === tx.itemCode));
+  if (!item) return 0;
+  const fallbackPrice = tx.type === 'out'
+    ? toNumber(getSalePrice(item))
+    : toNumber(item.unitPrice || item.unitCost);
+  return qty * fallbackPrice;
+}
+
+function readProfitPeriodPrefs() {
+  try {
+    const raw = localStorage.getItem('invex_profit_period_v1');
+    if (!raw) return {};
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === 'object' ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function saveProfitPeriodPrefs(next) {
+  localStorage.setItem('invex_profit_period_v1', JSON.stringify(next));
+}
+
+function addDays(baseDate, delta) {
+  const copy = new Date(baseDate);
+  copy.setDate(copy.getDate() + delta);
+  return copy;
+}
+
+function toDateKey(value) {
+  return new Date(value).toISOString().split('T')[0];
 }
 
 function getCurrentMonthSummary(transactions) {

@@ -166,6 +166,64 @@ export function acknowledgeAllNotifications() {
   emitUpdated();
 }
 
+function getNotificationEventId(notification) {
+  if (notification.category === 'stock') return 'stock.low';
+  if (notification.category === 'expiry') return 'stock.low';
+  return null;
+}
+
+async function sendWebhook(url, payload) {
+  try {
+    await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+  } catch (_) {}
+}
+
+export async function syncExternalNotifications() {
+  const state = getState();
+  const prefs = state.notificationChannelPrefs || {};
+  if (!prefs.webhook) return;
+
+  const webhooks = (state.webhooks || []).filter(w => w.url && w.active !== false);
+  if (!webhooks.length) return;
+
+  const delivered = { ...(state.notificationDeliveryLog || {}) };
+  const notifications = getNotifications({ includeRead: true });
+  const tasks = [];
+
+  notifications.forEach(notification => {
+    const eventId = getNotificationEventId(notification);
+    if (!eventId) return;
+    const deliveryKey = `${eventId}::${notification.id}`;
+    if (delivered[deliveryKey]) return;
+
+    const payload = {
+      event: eventId,
+      id: notification.id,
+      title: notification.title,
+      desc: notification.desc,
+      type: notification.type,
+      category: notification.category,
+      createdAt: new Date().toISOString(),
+    };
+
+    webhooks.forEach(wh => {
+      if (Array.isArray(wh.events) && wh.events.length > 0 && !wh.events.includes(eventId)) return;
+      tasks.push(sendWebhook(wh.url, payload));
+    });
+
+    delivered[deliveryKey] = Date.now();
+  });
+
+  if (tasks.length > 0) {
+    await Promise.allSettled(tasks);
+    setState({ notificationDeliveryLog: delivered });
+  }
+}
+
 function renderPanelContent(panel) {
   const notifications = getNotifications();
 

@@ -19,7 +19,7 @@ import { initAuth, getCurrentUser, getUserProfileData, loginWithGoogle, loginWit
 import { startSync, stopSync, syncToCloud, getSyncStatus } from './firebase-sync.js';
 import { startWorkspaceSync, stopWorkspaceSync, syncWorkspaceToCloud } from './workspace.js';
 import { setSyncCallback } from './store.js';
-import { renderNotificationPanel, getNotificationCount } from './notifications.js';
+import { renderNotificationPanel, getNotificationCount, syncExternalNotifications } from './notifications.js';
 import { showToast } from './toast.js';
 import { canAccessPage, getPageBadge, showUpgradeModal, getCurrentPlan, PLANS, setPlan, injectGetCurrentUser, injectGetUserProfile } from './plan.js';
 import { mountAutoTableSort } from './table-auto-sort.js';
@@ -452,8 +452,9 @@ async function navigateTo(pageName) {
   // 紐⑤컮?쇱뿉???ъ씠?쒕컮 ?リ린
   closeSidebar();
 
-  // ?뚮┝ 諭껋? ?낅뜲?댄듃
+  // 알림 뱃지 업데이트
   updateNotifBadge();
+  syncExternalNotifications();
 }
 
 async function resolvePageRenderer(pageName) {
@@ -482,6 +483,7 @@ function updateNotifBadge() {
 
 window.addEventListener('notifications-updated', () => {
   updateNotifBadge();
+  syncExternalNotifications();
 });
 
 const CARD_STATE_KEY = 'invex_card_state_v1';
@@ -612,6 +614,8 @@ function initCardCollapsibles(container, pageName) {
 
   applyPinnedOrder(container, cards, pinnedList);
   initDetailsPersistence(container, pageName, summaryMode);
+  mountFoldResetButton(container, pageName, cards);
+  mountPinManagerButton(container, pageName, cards);
 }
 
 function applyPinnedOrder(container, cards, pinnedList) {
@@ -669,6 +673,138 @@ function mountSummaryToggle(container, pageName, summaryMode) {
     btn.textContent = nextMode ? '설명 펼치기' : '요약만 보기';
   });
   actionSlot.prepend(btn);
+}
+
+function mountFoldResetButton(container, pageName, cards) {
+  const actionSlot = container.querySelector('.page-header .page-actions');
+  if (!actionSlot) return;
+  if (actionSlot.querySelector('[data-fold-reset]')) return;
+
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'btn btn-outline';
+  btn.dataset.foldReset = 'true';
+  btn.textContent = '접기 초기화';
+  btn.addEventListener('click', () => {
+    const collapsedMap = readStorageMap(CARD_STATE_KEY);
+    Object.keys(collapsedMap).forEach(key => {
+      if (key.startsWith(`${pageName}::`)) delete collapsedMap[key];
+    });
+    writeStorageMap(CARD_STATE_KEY, collapsedMap);
+
+    const detailsMap = readStorageMap(DETAILS_STATE_KEY);
+    Object.keys(detailsMap).forEach(key => {
+      if (key.startsWith(`${pageName}::details::`)) delete detailsMap[key];
+    });
+    writeStorageMap(DETAILS_STATE_KEY, detailsMap);
+
+    const summaryMap = readStorageMap(SUMMARY_MODE_KEY);
+    summaryMap[pageName] = false;
+    writeStorageMap(SUMMARY_MODE_KEY, summaryMap);
+    container.classList.remove('summary-mode');
+
+    cards.forEach(card => {
+      if (!card.classList.contains('card-collapsible')) return;
+      card.classList.remove('is-collapsed');
+      const toggle = card.querySelector('.card-collapse-toggle');
+      if (toggle) {
+        toggle.textContent = '접기 ▲';
+        toggle.setAttribute('aria-expanded', 'true');
+      }
+    });
+
+    container.querySelectorAll('details.fold-card, details.smart-details').forEach(details => {
+      details.open = true;
+    });
+
+    const summaryBtn = actionSlot.querySelector('[data-summary-toggle]');
+    if (summaryBtn) summaryBtn.textContent = '요약만 보기';
+  });
+  actionSlot.prepend(btn);
+}
+
+function mountPinManagerButton(container, pageName, cards) {
+  const actionSlot = container.querySelector('.page-header .page-actions');
+  if (!actionSlot) return;
+  if (actionSlot.querySelector('[data-pin-manager]')) return;
+
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'btn btn-outline';
+  btn.dataset.pinManager = 'true';
+  btn.textContent = '고정 관리';
+  btn.addEventListener('click', () => {
+    openPinManagerModal(container, pageName, cards);
+  });
+  actionSlot.prepend(btn);
+}
+
+function openPinManagerModal(container, pageName, cards) {
+  const existing = document.getElementById('pin-manager-modal');
+  if (existing) {
+    existing.remove();
+  }
+
+  const pinnedMap = readStorageMap(CARD_PIN_KEY);
+  const pinnedList = Array.isArray(pinnedMap[pageName]) ? pinnedMap[pageName] : [];
+
+  const overlay = document.createElement('div');
+  overlay.id = 'pin-manager-modal';
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = `
+    <div class="modal" style="max-width:560px;">
+      <div class="modal-header">
+        <h3 class="modal-title">고정 카드 관리</h3>
+        <button class="modal-close" data-pin-close>✕</button>
+      </div>
+      <div class="modal-body" id="pin-manager-body"></div>
+    </div>
+  `;
+
+  const body = overlay.querySelector('#pin-manager-body');
+  if (!pinnedList.length) {
+    body.innerHTML = `
+      <div class="empty-state" style="padding:24px;">
+        <div class="icon">📌</div>
+        <div class="msg">고정된 카드가 없습니다.</div>
+      </div>
+    `;
+  } else {
+    body.innerHTML = `
+      <div style="display:grid; gap:8px;">
+        ${pinnedList.map(id => {
+          const card = cards.find(c => c.dataset.cardId === id);
+          const title = normalizeTitle(card?.querySelector('.card-title')?.textContent) || '카드';
+          return `
+            <div class="pin-manager-item">
+              <div class="pin-manager-title">${title}</div>
+              <button class="btn btn-outline btn-sm" data-unpin="${id}">고정 해제</button>
+            </div>
+          `;
+        }).join('')}
+      </div>
+    `;
+  }
+
+  overlay.querySelector('[data-pin-close]')?.addEventListener('click', () => overlay.remove());
+  overlay.addEventListener('click', (event) => {
+    if (event.target === overlay) overlay.remove();
+  });
+
+  body.querySelectorAll('[data-unpin]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.dataset.unpin;
+      const nextPinned = pinnedList.filter(item => item !== id);
+      pinnedMap[pageName] = nextPinned;
+      writeStorageMap(CARD_PIN_KEY, pinnedMap);
+      const card = cards.find(c => c.dataset.cardId === id);
+      if (card) card.classList.remove('is-pinned');
+      applyPinnedOrder(container, cards, nextPinned);
+      openPinManagerModal(container, pageName, cards);
+    });
+  });
+
+  document.body.appendChild(overlay);
 }
 
 // ?ъ씠?쒕컮 硫붾돱???붽툑??諛곗? ?곸슜 + ?대깽???곌껐

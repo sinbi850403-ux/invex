@@ -79,6 +79,12 @@ const DEFAULT_STATE = {
   // 관리자 데이터
   adminUsers: [],         // [{uid, name, email, plan, role, status, createdAt, lastLogin}]
   adminNotices: [],       // [{id, title, content, date}]
+  // 알림 상태
+  notificationReadMap: {},
+  notificationDeliveryLog: {},
+  notificationChannelPrefs: { webhook: true },
+  // 수불부 기초재고 수동 입력
+  ledgerOpeningOverrides: {},
 };
 
 let state = { ...DEFAULT_STATE };
@@ -257,6 +263,9 @@ export function addTransaction(tx) {
   }
 
   saveToDB();
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('notifications-updated'));
+  }
   return newTx;
 }
 
@@ -264,8 +273,31 @@ export function addTransaction(tx) {
  * 입출고 기록 삭제
  */
 export function deleteTransaction(id) {
+  const target = state.transactions.find(t => t.id === id);
+  if (target) {
+    const item = (state.mappedData || []).find(d =>
+      d.itemName === target.itemName ||
+      (d.itemCode && d.itemCode === target.itemCode)
+    );
+    if (item) {
+      const qty = parseFloat(target.quantity) || 0;
+      const currentQty = parseFloat(item.quantity) || 0;
+      if (target.type === 'in') {
+        item.quantity = Math.max(0, currentQty - qty);
+      } else {
+        item.quantity = currentQty + qty;
+      }
+      const price = parseFloat(item.unitPrice) || 0;
+      item.supplyValue = item.quantity * price;
+      item.vat = Math.floor(item.supplyValue * 0.1);
+      item.totalPrice = item.supplyValue + item.vat;
+    }
+  }
   state.transactions = state.transactions.filter(t => t.id !== id);
   saveToDB();
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('notifications-updated'));
+  }
 }
 
 /**

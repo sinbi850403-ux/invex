@@ -48,6 +48,7 @@ function enhanceTables(container) {
     ensureOriginalIndexes(table);
     ensureSortState(table);
     ensureSummaryBar(table);
+    applyResponsiveLabels(table);
     decorateHeaders(table);
     applyTableSort(table);
   });
@@ -139,6 +140,18 @@ function decorateHeaders(table) {
   });
 
   renderHeaderState(table);
+}
+
+function applyResponsiveLabels(table) {
+  const headerRow = getHeaderRow(table);
+  if (!headerRow) return;
+  const labels = Array.from(headerRow.cells).map(cell => extractCellLabel(cell));
+  Array.from(table.tBodies[0]?.rows || []).forEach(row => {
+    Array.from(row.cells).forEach((cell, index) => {
+      const label = labels[index] || '';
+      if (label) cell.dataset.label = label;
+    });
+  });
 }
 
 function toggleTableSort(table, index) {
