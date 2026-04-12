@@ -9,7 +9,7 @@
  * 2. Supabase 미설정이면 → 로컬 모드 (개발/오프라인용)
  */
 
-import { supabase, isSupabaseConfigured } from './supabase-client.js';
+import { supabase, isSupabaseConfigured, getSupabaseDebugInfo } from './supabase-client.js';
 import { showToast } from './toast.js';
 
 // 현재 로그인 사용자
@@ -301,6 +301,9 @@ export async function loginWithEmail(email, password) {
   if (existingError) existingError.remove();
 
   try {
+    // Fast preflight to surface invalid env/server-unreachable conditions before sign-in call
+    await withTimeout(supabase.auth.getSession(), 6000, 'auth-preflight');
+
     const { data, error } = await withTimeout(
       supabase.auth.signInWithPassword({
         email,
@@ -330,7 +333,14 @@ export async function loginWithEmail(email, password) {
       error.message.includes('fetch') ||
       error.message.toLowerCase().includes('timeout')
     ) {
+      const debug = getSupabaseDebugInfo();
       errorMsg = '인증 서버 연결에 실패했습니다. Supabase 설정(URL/KEY) 또는 브라우저 캐시를 확인해 주세요.';
+      console.error('[Auth] Network/login error', {
+        message: error.message,
+        name: error.name,
+        online: navigator.onLine,
+        supabase: debug,
+      });
       showToast(errorMsg, 'error');
     } else {
       errorMsg = '로그인 실패: ' + error.message;

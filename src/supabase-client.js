@@ -8,9 +8,13 @@
 import { createClient } from '@supabase/supabase-js';
 
 function normalizeEnv(value) {
-  return String(value || '')
+  return String(value ?? '')
+    // remove escaped control sequences accidentally pasted from CLI output
+    .replace(/\\r\\n|\\n|\\r|\\t/g, '')
+    // remove actual control characters
+    .replace(/[\u0000-\u001F\u007F]/g, '')
     .trim()
-    .replace(/^['"]|['"]$/g, '');
+    .replace(/^['"`]+|['"`]+$/g, '');
 }
 
 function isValidHttpsUrl(url) {
@@ -30,6 +34,19 @@ const HAS_VALID_KEY = SUPABASE_ANON_KEY.length > 20;
 
 // Supabase 프로젝트가 설정되어 있는지 확인
 export const isSupabaseConfigured = HAS_VALID_URL && HAS_VALID_KEY;
+
+export function getSupabaseDebugInfo() {
+  const host = HAS_VALID_URL ? new URL(SUPABASE_URL).host : '(invalid-url)';
+  return {
+    configured: isSupabaseConfigured,
+    hasUrl: Boolean(SUPABASE_URL),
+    hasKey: Boolean(SUPABASE_ANON_KEY),
+    validUrl: HAS_VALID_URL,
+    validKey: HAS_VALID_KEY,
+    urlHost: host,
+    keyLength: SUPABASE_ANON_KEY.length,
+  };
+}
 
 /**
  * Supabase 클라이언트 싱글톤
