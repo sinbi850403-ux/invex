@@ -79,7 +79,22 @@ document.getElementById('gate-email-login')?.addEventListener('click', async () 
   const email = document.getElementById('login-email').value.trim();
   const password = document.getElementById('login-password').value;
   if (!email || !password) { showToast('이메일과 비밀번호를 입력해 주세요.', 'warning'); return; }
-  await loginWithEmail(email, password);
+  const loginBtn = document.getElementById('gate-email-login');
+  const watchdog = setTimeout(() => {
+    const btn = document.getElementById('gate-email-login');
+    if (btn && btn.disabled) {
+      btn.disabled = false;
+      btn.textContent = '이메일로 로그인';
+      btn.style.opacity = '1';
+      showToast('로그인이 지연되어 버튼을 복구했습니다. 다시 시도해 주세요.', 'warning');
+    }
+  }, 15000);
+
+  try {
+    await loginWithEmail(email, password);
+  } finally {
+    clearTimeout(watchdog);
+  }
 });
 
 // Enter ?ㅻ줈 濡쒓렇??
@@ -1102,15 +1117,22 @@ function updateUserUI(user, profile) {
   }
 }
 
-// PWA Service Worker ?깅줉
+// PWA Service Worker: 로그인 안정화를 위해 기존 SW/캐시 정리
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js')
-      .then((registration) => {
-        registration.update?.();
-        console.log('SW registered');
-      })
-      .catch((err) => console.log('SW failed:', err));
+    navigator.serviceWorker.getRegistrations()
+      .then((regs) => Promise.all(regs.map((reg) => reg.unregister())))
+      .catch(() => {});
+
+    if ('caches' in window) {
+      caches.keys()
+        .then((keys) => Promise.all(
+          keys
+            .filter((key) => key.includes('erp-lite') || key.includes('invex'))
+            .map((key) => caches.delete(key))
+        ))
+        .catch(() => {});
+    }
   });
 }
 
