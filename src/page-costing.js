@@ -270,7 +270,7 @@ function calculateCosts(items, transactions, method) {
   return items.map(item => {
     const qty = parseFloat(item.quantity) || 0;
     const unitPrice = parseFloat(item.unitPrice) || 0;
-    const sellPrice = parseFloat(item.sellPrice) || unitPrice;
+    const sellPrice = parseFloat(item.salePrice) || parseFloat(item.sellPrice) || unitPrice;
 
     const inTransactions = transactions
       .filter(tx => tx.type === 'in' && tx.itemName === item.itemName)
