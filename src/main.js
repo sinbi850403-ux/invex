@@ -1,4 +1,4 @@
-﻿/**
+/**
  * main.js - INVEX ??吏꾩엯??
  * ??븷: ?섏씠吏 ?쇱슦?? ?ㅻ퉬寃뚯씠??愿由? 紐⑤컮??吏?? ?곗씠??諛깆뾽/蹂듭썝
  */
@@ -655,88 +655,84 @@ function initDetailsPersistence(container, pageName, summaryMode) {
   });
 }
 
-function mountSummaryToggle(container, pageName, summaryMode) {
+function mountSummaryToggle() { /* 드롭다운으로 이전 */ }
+
+function mountFoldResetButton() { /* 드롭다운으로 이전 */ }
+
+function mountPinManagerButton(container, pageName, cards) {
   const actionSlot = container.querySelector('.page-header .page-actions');
   if (!actionSlot) return;
-  if (actionSlot.querySelector('[data-summary-toggle]')) return;
-  const btn = document.createElement('button');
-  btn.type = 'button';
-  btn.className = 'btn btn-outline';
-  btn.dataset.summaryToggle = 'true';
-  btn.textContent = summaryMode ? '설명 펼치기' : '요약만 보기';
-  btn.addEventListener('click', () => {
+  if (actionSlot.querySelector('[data-view-settings]')) return;
+
+  const summaryMap = readStorageMap(SUMMARY_MODE_KEY);
+  const isSummary = summaryMap[pageName] === true;
+
+  const wrap = document.createElement('div');
+  wrap.className = 'view-settings-wrap';
+  wrap.dataset.viewSettings = 'true';
+
+  const triggerBtn = document.createElement('button');
+  triggerBtn.type = 'button';
+  triggerBtn.className = 'btn btn-outline';
+  triggerBtn.textContent = '⚙️ 보기 설정';
+  triggerBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    menu.classList.toggle('is-open');
+  });
+
+  const menu = document.createElement('div');
+  menu.className = 'view-settings-menu';
+  menu.innerHTML = `
+    <button class="btn btn-ghost btn-sm" data-action="summary">${isSummary ? '📖 설명 펼치기' : '📋 요약만 보기'}</button>
+    <button class="btn btn-ghost btn-sm" data-action="fold-reset">🔄 접기 초기화</button>
+    <button class="btn btn-ghost btn-sm" data-action="pin-manager">📌 고정 관리</button>
+  `;
+
+  menu.querySelector('[data-action="summary"]').addEventListener('click', () => {
     const map = readStorageMap(SUMMARY_MODE_KEY);
     const nextMode = !container.classList.contains('summary-mode');
     container.classList.toggle('summary-mode', nextMode);
     map[pageName] = nextMode;
     writeStorageMap(SUMMARY_MODE_KEY, map);
-    btn.textContent = nextMode ? '설명 펼치기' : '요약만 보기';
+    menu.querySelector('[data-action="summary"]').textContent = nextMode ? '📖 설명 펼치기' : '📋 요약만 보기';
+    menu.classList.remove('is-open');
   });
-  actionSlot.prepend(btn);
-}
 
-function mountFoldResetButton(container, pageName, cards) {
-  const actionSlot = container.querySelector('.page-header .page-actions');
-  if (!actionSlot) return;
-  if (actionSlot.querySelector('[data-fold-reset]')) return;
-
-  const btn = document.createElement('button');
-  btn.type = 'button';
-  btn.className = 'btn btn-outline';
-  btn.dataset.foldReset = 'true';
-  btn.textContent = '접기 초기화';
-  btn.addEventListener('click', () => {
+  menu.querySelector('[data-action="fold-reset"]').addEventListener('click', () => {
     const collapsedMap = readStorageMap(CARD_STATE_KEY);
     Object.keys(collapsedMap).forEach(key => {
       if (key.startsWith(`${pageName}::`)) delete collapsedMap[key];
     });
     writeStorageMap(CARD_STATE_KEY, collapsedMap);
-
     const detailsMap = readStorageMap(DETAILS_STATE_KEY);
     Object.keys(detailsMap).forEach(key => {
       if (key.startsWith(`${pageName}::details::`)) delete detailsMap[key];
     });
     writeStorageMap(DETAILS_STATE_KEY, detailsMap);
-
-    const summaryMap = readStorageMap(SUMMARY_MODE_KEY);
-    summaryMap[pageName] = false;
-    writeStorageMap(SUMMARY_MODE_KEY, summaryMap);
+    const sMap = readStorageMap(SUMMARY_MODE_KEY);
+    sMap[pageName] = false;
+    writeStorageMap(SUMMARY_MODE_KEY, sMap);
     container.classList.remove('summary-mode');
-
     cards.forEach(card => {
       if (!card.classList.contains('card-collapsible')) return;
       card.classList.remove('is-collapsed');
       const toggle = card.querySelector('.card-collapse-toggle');
-      if (toggle) {
-        toggle.textContent = '접기 ▲';
-        toggle.setAttribute('aria-expanded', 'true');
-      }
+      if (toggle) { toggle.textContent = '접기 ▲'; toggle.setAttribute('aria-expanded', 'true'); }
     });
-
-    container.querySelectorAll('details.fold-card, details.smart-details').forEach(details => {
-      details.open = true;
-    });
-
-    const summaryBtn = actionSlot.querySelector('[data-summary-toggle]');
-    if (summaryBtn) summaryBtn.textContent = '요약만 보기';
+    container.querySelectorAll('details.fold-card, details.smart-details').forEach(d => { d.open = true; });
+    menu.querySelector('[data-action="summary"]').textContent = '📋 요약만 보기';
+    menu.classList.remove('is-open');
   });
-  actionSlot.prepend(btn);
-}
 
-function mountPinManagerButton(container, pageName, cards) {
-  const actionSlot = container.querySelector('.page-header .page-actions');
-  if (!actionSlot) return;
-  if (actionSlot.querySelector('[data-pin-manager]')) return;
-
-  const btn = document.createElement('button');
-  btn.type = 'button';
-  btn.className = 'btn btn-outline';
-  btn.dataset.pinManager = 'true';
-  btn.textContent = '고정 관리';
-  btn.addEventListener('click', () => {
+  menu.querySelector('[data-action="pin-manager"]').addEventListener('click', () => {
+    menu.classList.remove('is-open');
     openPinManagerModal(container, pageName, cards);
   });
-  actionSlot.prepend(btn);
+
+  wrap.appendChild(triggerBtn);
+  wrap.appendChild(menu);
+  actionSlot.prepend(wrap);
+  document.addEventListener('click', () => { menu.classList.remove('is-open'); });
 }
 
 function openPinManagerModal(container, pageName, cards) {
@@ -821,12 +817,11 @@ function updateSidebarBadges() {
 
     const badge = getPageBadge(pageId);
     if (badge) {
-      // ?좉툑 ?ㅽ????곸슜
       btn.style.opacity = '0.55';
       const badgeEl = document.createElement('span');
-      badgeEl.className = 'plan-badge';
+      badgeEl.className = 'plan-badge badge';
       badgeEl.textContent = badge.text;
-      badgeEl.style.cssText = `font-size:9px; background:linear-gradient(135deg,${badge.color},${badge.color}cc); color:#fff; padding:1px 5px; border-radius:4px; margin-left:auto;`;
+      badgeEl.style.background = `linear-gradient(135deg,${badge.color},${badge.color}cc)`;
       btn.appendChild(badgeEl);
     } else {
       btn.style.opacity = '1';
@@ -923,7 +918,8 @@ document.getElementById('btn-theme-toggle')?.addEventListener('click', () => {
   toggleTheme();
   const isDark = document.documentElement.classList.contains('dark-mode');
   const btn = document.getElementById('btn-theme-toggle');
-  if (btn) btn.textContent = isDark ? '라이트 모드' : '다크 모드';
+  if (btn) btn.textContent = isDark ? '☀️' : '🌙';
+  btn?.setAttribute('title', isDark ? '라이트 모드' : '다크 모드');
 });
 
 // === 紐⑤컮???좉? ===
@@ -1002,11 +998,11 @@ function updateUserUI(user, profile) {
     const plan = (profile?.plan || 'free').toUpperCase();
     const syncStatus = getSyncStatus();
     userArea.innerHTML = `
-      <div style="display:flex; align-items:center; gap:8px; padding:4px 0;">
-        ${photo ? `<img src="${photo}" style="width:24px; height:24px; border-radius:50%; border:1px solid rgba(255,255,255,0.2);" />` : ''}
-        <div style="flex:1; min-width:0;">
-          <div style="font-size:11px; font-weight:600; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${name}</div>
-          <div style="font-size:10px; color:rgba(255,255,255,0.5);">${plan} ${syncStatus.isConnected ? '동기화' : ''}</div>
+      <div class="sidebar-user">
+        ${photo ? `<img src="${photo}" class="sidebar-user-avatar" />` : ''}
+        <div class="sidebar-user-info">
+          <div class="sidebar-user-name">${name}</div>
+          <div class="sidebar-user-plan">${plan} ${syncStatus.isConnected ? '동기화' : ''}</div>
         </div>
         <button class="btn-icon" id="btn-logout" title="로그아웃" style="font-size:11px; color:rgba(255,255,255,0.5);">로그아웃</button>
       </div>

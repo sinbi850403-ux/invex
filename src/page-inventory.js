@@ -1,4 +1,4 @@
-﻿/**
+/**
  * page-inventory.js - ?ш퀬 ?꾪솴 ?섏씠吏
  * ?ㅻТ 湲곕뒫: ?섎룞 ?덈ぉ 異붽?/?몄쭛, ?덉쟾?ш퀬 寃쎄퀬, 寃???꾪꽣, ?섏씠吏?ㅼ씠?? ?묒? ?대낫?닿린
  * **而щ읆 ?쒖떆 ?ㅼ젙**: ?ъ슜?먭? 蹂닿퀬 ?띠? 而щ읆留??좏깮?댁꽌 蹂????덉쓬
@@ -90,15 +90,19 @@ export function renderInventoryPage(container, navigateTo) {
       <div class="card">
         <div class="empty-state">
           <div class="icon">📦</div>
-          <div class="msg">아직 등록된 품목이 없습니다.</div>
-          <div class="sub">파일을 업로드하거나, 위의 "품목 추가" 버튼으로 직접 등록해 주세요.</div>
-          <br/>
-          <button class="btn btn-outline" id="btn-go-upload">파일 업로드하기</button>
+          <div class="msg">아직 등록된 품목이 없습니다</div>
+          <div class="sub">엑셀 파일을 업로드하거나 품목을 직접 등록해 주세요.</div>
+          <div class="empty-state-actions">
+            <button class="btn btn-primary" id="btn-go-upload">📂 엑셀 업로드</button>
+            <button class="btn btn-outline" id="btn-add-item-empty">✏️ 직접 입력</button>
+          </div>
+          <div class="empty-state-tip">💡 TIP: 기존 엑셀 파일(.xlsx)을 그대로 드래그하면 자동으로 인식합니다</div>
         </div>
       </div>
     `;
     container.querySelector('#btn-go-upload')?.addEventListener('click', () => navigateTo('upload'));
     container.querySelector('#btn-add-item')?.addEventListener('click', () => openItemModal(container, navigateTo));
+    container.querySelector('#btn-add-item-empty')?.addEventListener('click', () => openItemModal(container, navigateTo));
     return;
   }
 
@@ -171,8 +175,8 @@ export function renderInventoryPage(container, navigateTo) {
         <div class="page-desc">${state.fileName ? `📄 ${state.fileName}` : ''} 총 ${data.length}개 품목</div>
       </div>
       <div class="page-actions">
-        <button class="btn btn-outline" id="btn-export">엑셀 내보내기</button>
-        <button class="btn btn-outline" id="btn-export-pdf">PDF 내보내기</button>
+        <button class="btn btn-outline" id="btn-export">📥 엑셀</button>
+        <button class="btn btn-outline" id="btn-export-pdf">📄 PDF</button>
         <button class="btn btn-primary" id="btn-add-item">+ 품목 추가</button>
       </div>
     </div>
@@ -237,39 +241,14 @@ export function renderInventoryPage(container, navigateTo) {
         bullets: [
           warningCount > 0 ? `부족 품목 ${warningCount}건을 먼저 보충할지 여부를 판단해 보세요.` : '부족 품목이 없습니다. 현재 재고 흐름이 안정적입니다.',
           missingVendorCount > 0 ? `거래처가 비어 있는 품목 ${missingVendorCount}건은 발주와 문서 연결 전에 보완하는 것이 좋습니다.` : '거래처 정보가 충분히 연결되어 있습니다.',
-          missingWarehouseCount > 0 ? `위치가 비어 있으면 현장 조회가 느려집니다. 위치 미입력 품목을 우선 정리해 주세요.` : '위치 정보도 잘 정리되어 있습니다.',
+          missingWarehouseCount > 0 ? '위치가 비어 있으면 현장 조회가 느려집니다. 위치 미입력 품목을 우선 정리해 주세요.' : '위치 정보도 잘 정리되어 있습니다.',
         ],
         actions: [
           { id: 'btn-add-item-inline', label: '품목 바로 추가', variant: 'btn-primary' },
           { nav: 'dashboard', label: '고급 분석 보기', variant: 'btn-outline' },
-          { nav: 'guide', label: '입력 가이드 보기', variant: 'btn-ghost' },
         ],
       })}
     </div>
-
-    ${beginnerMode && !hasTransactions ? `
-    <div class="inventory-collapsible-section" data-collapsible-section="inventory-quick-start" data-collapsible-label="처음 사용자 추천 흐름">
-      <div class="card quick-start-card">
-        <div class="quick-start-head">
-          <div>
-            <div class="quick-start-title">처음 사용자 추천 흐름</div>
-            <div class="quick-start-desc">3단계만 따라가면 바로 재고 운영이 가능합니다.</div>
-          </div>
-          <span class="badge badge-info">초보자 모드</span>
-        </div>
-        <div class="quick-start-steps">
-          <div class="quick-start-step is-done">1) 재고 품목 확인 완료</div>
-          <div class="quick-start-step">2) 첫 입출고 등록</div>
-          <div class="quick-start-step">3) 대시보드에서 현황 확인</div>
-        </div>
-        <div class="quick-start-actions">
-          <button class="btn btn-primary btn-sm" id="btn-quick-inout">첫 입출고 등록</button>
-          <button class="btn btn-outline btn-sm" id="btn-quick-guide">사용 가이드</button>
-          <button class="btn btn-ghost btn-sm" id="btn-quick-dashboard">대시보드 이동</button>
-        </div>
-      </div>
-    </div>
-    ` : ''}
 
     <div class="inventory-collapsible-section" data-collapsible-section="inventory-filters" data-collapsible-label="검색 · 필터 · 일괄 작업">
       ${renderQuickFilterRow({
@@ -278,33 +257,11 @@ export function renderInventoryPage(container, navigateTo) {
         chips: inventoryFocusChips.map(chip => ({ ...chip, active: chip.value === 'all' })),
       })}
 
-    <!-- 寃???꾪꽣 + ?뺣젹 + 而щ읆 ?ㅼ젙 -->
+    <!-- 검색 + 필터 — 기본은 검색만, 상세 필터는 토글로 열림 -->
     <div class="toolbar">
       <input type="text" class="search-input" id="search-input"
         placeholder="스마트 검색: 품목명, 분류:식품, 창고:본사, 재고>=10, 부족, 품절" />
-      <select class="filter-select" id="filter-item-code">
-        <option value="">전체 품목코드</option>
-        ${getItemCodes(data).map(c => `<option value="${c}">${c}</option>`).join('')}
-      </select>
-      <select class="filter-select" id="filter-vendor">
-        <option value="">전체 거래처</option>
-        ${getVendors(data).map(v => `<option value="${v}">${v}</option>`).join('')}
-      </select>
-      <select class="filter-select" id="filter-category">
-        <option value="">전체 분류</option>
-        ${getCategories(data).map(c => `<option value="${c}">${c}</option>`).join('')}
-      </select>
-      <select class="filter-select" id="filter-warehouse">
-        <option value="">전체 창고</option>
-        ${getWarehouses(data).map(w => `<option value="${w}">${w}</option>`).join('')}
-      </select>
-      <select class="filter-select" id="filter-stock">
-        <option value="">전체 재고</option>
-        <option value="low">부족 항목만</option>
-      </select>
-      <select class="filter-select" id="sort-preset" title="정렬">
-        ${sortOptions.map(option => `<option value="${option.value}">${option.label}</option>`).join('')}
-      </select>
+      <button class="filter-toggle-btn" id="btn-filter-toggle">🔍 상세 필터</button>
       <button class="btn btn-ghost btn-sm" id="btn-filter-reset" title="필터 초기화">초기화</button>
       <div class="col-settings-wrap" style="position:relative;">
         <button class="btn btn-outline btn-sm" id="btn-col-settings" title="표시 열 선택">
@@ -331,16 +288,39 @@ export function renderInventoryPage(container, navigateTo) {
         </div>
       </div>
     </div>
+    <!-- 상세 필터 패널 — 기본 숨김, 토글 버튼으로 열림 -->
+    <div class="filter-detail-panel" id="filter-detail-panel">
+      <select class="filter-select" id="filter-item-code">
+        <option value="">전체 품목코드</option>
+        ${getItemCodes(data).map(c => `<option value="${c}">${c}</option>`).join('')}
+      </select>
+      <select class="filter-select" id="filter-vendor">
+        <option value="">전체 거래처</option>
+        ${getVendors(data).map(v => `<option value="${v}">${v}</option>`).join('')}
+      </select>
+      <select class="filter-select" id="filter-category">
+        <option value="">전체 분류</option>
+        ${getCategories(data).map(c => `<option value="${c}">${c}</option>`).join('')}
+      </select>
+      <select class="filter-select" id="filter-warehouse">
+        <option value="">전체 창고</option>
+        ${getWarehouses(data).map(w => `<option value="${w}">${w}</option>`).join('')}
+      </select>
+      <select class="filter-select" id="filter-stock">
+        <option value="">전체 재고</option>
+        <option value="low">부족 항목만</option>
+      </select>
+      <select class="filter-select" id="sort-preset" title="정렬">
+        ${sortOptions.map(option => `<option value="${option.value}">${option.label}</option>`).join('')}
+      </select>
+    </div>
     <div class="smart-search-row" style="display:flex; flex-wrap:wrap; gap:6px; align-items:center; margin:8px 0 4px;">
-      <span style="font-size:12px; color:var(--text-muted);">빠른 스마트 검색</span>
+      <span style="font-size:12px; color:var(--text-muted);">빠른 검색</span>
       <button class="btn btn-ghost btn-sm" type="button" data-smart-query="부족">부족</button>
       <button class="btn btn-ghost btn-sm" type="button" data-smart-query="품절">품절</button>
       <button class="btn btn-ghost btn-sm" type="button" data-smart-query="거래처없음">거래처없음</button>
       <button class="btn btn-ghost btn-sm" type="button" data-smart-query="위치없음">위치없음</button>
       <button class="btn btn-ghost btn-sm" type="button" data-smart-query="재고>=10">재고>=10</button>
-      <button class="btn btn-ghost btn-sm" type="button" data-smart-query="분류:">분류:</button>
-      <button class="btn btn-ghost btn-sm" type="button" data-smart-query="창고:">창고:</button>
-      <button class="btn btn-ghost btn-sm" type="button" data-smart-query="거래처:">거래처:</button>
     </div>
     <div class="filter-summary" id="inventory-filter-summary"></div>
 
@@ -1538,6 +1518,12 @@ export function renderInventoryPage(container, navigateTo) {
     syncFocusChips();
     persistInventoryPrefs();
     showToast('필터와 정렬을 초기화했습니다.', 'info');
+  });
+
+  // 상세 필터 토글 — 기본 숨김, 클릭 시 패널 열기/닫기
+  container.querySelector('#btn-filter-toggle')?.addEventListener('click', () => {
+    const panel = container.querySelector('#filter-detail-panel');
+    if (panel) panel.classList.toggle('is-open');
   });
 
   // ?꾪꽣 ?쒖꽦 ?곹깭 ?쒓컖???쒖떆

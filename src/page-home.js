@@ -1,4 +1,4 @@
-﻿import { getState, setState } from './store.js';
+import { getState, setState } from './store.js';
 import { getNotifications, renderNotificationPanel } from './notifications.js';
 import {
   renderWeeklyTrendChart,
@@ -141,6 +141,9 @@ export function renderHomePage(container, navigateTo) {
     category: 'qty-desc',
   };
 
+  /* 데이터가 없을 때는 온보딩 중심 간소화 화면 표시 */
+  const hasData = totalItems > 0;
+
   container.innerHTML = `
     <div class="page-header">
       <div>
@@ -148,38 +151,32 @@ export function renderHomePage(container, navigateTo) {
         <div class="page-desc">${today.toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' })} 운영 요약</div>
       </div>
       <div class="page-actions">
+        <!-- 모드 전환: 헤더 세그먼트 컨트롤로 이동 — 화면 공간 절약 -->
+        <div class="segment-control">
+          <button class="segment-btn ${dashboardMode === 'executive' ? 'is-active' : ''}" data-dashboard-mode="executive">경영자용</button>
+          <button class="segment-btn ${dashboardMode === 'operator' ? 'is-active' : ''}" data-dashboard-mode="operator">실무자용</button>
+        </div>
         ${notifications.length > 0
-          ? `<button type="button" class="badge badge-danger dashboard-notif-trigger">실시간 알림 ${notifications.length}건</button>`
+          ? `<button type="button" class="badge badge-danger dashboard-notif-trigger">알림 ${notifications.length}건</button>`
           : '<span class="badge badge-success">알림 안정</span>'}
       </div>
     </div>
 
-    <details class="card fold-card" open>
-      <summary class="fold-card-summary">
-        <div>
-          <div class="fold-card-title">대시보드 모드</div>
-          <div class="fold-card-meta">${dashboardMode === 'executive' ? '경영자용' : '실무자용'} 모드 안내</div>
-        </div>
-      </summary>
-      <div class="fold-card-body">
-        <div class="dashboard-mode-top">
-          <div>
-            <div class="dashboard-eyebrow">대시보드 모드</div>
-            <div class="dashboard-mode-title">${dashboardMode === 'executive' ? '경영자 관점으로 한눈에 보고 있습니다.' : '실무자 관점으로 바로 처리할 항목을 보고 있습니다.'}</div>
-            <div class="dashboard-mode-desc">
-              ${dashboardMode === 'executive'
-                ? '경영자용은 자산 규모, 위험도, 의사결정 포인트를 중심으로 보여줍니다.'
-                : '실무자용은 오늘 해야 할 일, 빠른 실행, 현장 확인 순서를 중심으로 보여줍니다.'}
-            </div>
-          </div>
-          <div class="dashboard-mode-toggle">
-            <button class="dashboard-mode-btn ${dashboardMode === 'executive' ? 'is-active' : ''}" data-dashboard-mode="executive">경영자용</button>
-            <button class="dashboard-mode-btn ${dashboardMode === 'operator' ? 'is-active' : ''}" data-dashboard-mode="operator">실무자용</button>
-          </div>
-        </div>
+    ${!hasData ? `
+    <!-- 데이터 0건: 온보딩 전용 화면 -->
+    <div class="card" style="text-align:center; padding:48px 24px;">
+      <div style="font-size:48px; margin-bottom:12px;">📦</div>
+      <h2 style="font-size:18px; font-weight:700; margin-bottom:8px;">아직 등록된 데이터가 없습니다</h2>
+      <p style="color:var(--text-muted); margin-bottom:20px;">엑셀 파일을 업로드하거나 품목을 직접 등록하면<br/>여기에 핵심 경영 지표가 자동으로 표시됩니다.</p>
+      <div class="empty-state-actions">
+        <button class="btn btn-primary" data-nav="upload">📂 엑셀 업로드</button>
+        <button class="btn btn-outline" data-nav="inventory">✏️ 품목 직접 등록</button>
       </div>
-    </details>
+      <div class="empty-state-tip">💡 TIP: 기존 엑셀 파일(.xlsx)을 그대로 드래그하면 자동으로 인식합니다</div>
+    </div>
+    ` : ''}
 
+    ${hasData ? `
     <div class="card dashboard-quick-card">
       <div class="dashboard-quick-head">
         <div>
@@ -190,23 +187,24 @@ export function renderHomePage(container, navigateTo) {
       </div>
       <div class="dashboard-quick-grid">
         <button class="dashboard-quick-action is-inbound" id="btn-home-quick-in">
-          <div class="dashboard-quick-title">빠른 입고</div>
+          <div class="dashboard-quick-title">📥 빠른 입고</div>
           <div class="dashboard-quick-meta">품목 선택 + 수량 입력 모달 바로 열기</div>
         </button>
         <button class="dashboard-quick-action is-outbound" id="btn-home-quick-out">
-          <div class="dashboard-quick-title">빠른 출고</div>
+          <div class="dashboard-quick-title">📤 빠른 출고</div>
           <div class="dashboard-quick-meta">출고 모달 즉시 열고 재고 차감 등록</div>
         </button>
         <button class="dashboard-quick-action" id="btn-home-quick-item">
-          <div class="dashboard-quick-title">새 품목 등록</div>
+          <div class="dashboard-quick-title">📦 새 품목 등록</div>
           <div class="dashboard-quick-meta">현재 등록 품목 ${formatNumber(totalItems)}건</div>
         </button>
         <button class="dashboard-quick-action" id="btn-home-quick-alert">
-          <div class="dashboard-quick-title">실시간 알림 확인</div>
+          <div class="dashboard-quick-title">🔔 실시간 알림</div>
           <div class="dashboard-quick-meta">미확인 알림 ${formatNumber(notifications.length)}건</div>
         </button>
       </div>
     </div>
+    ` : ''}
 
     ${beginnerMode ? renderGuidedPanel({
       eyebrow: '대시보드 읽는 순서',
@@ -238,7 +236,7 @@ export function renderHomePage(container, navigateTo) {
           ],
     }) : ''}
 
-    ${dashboardMode === 'executive'
+    ${hasData ? (dashboardMode === 'executive'
       ? renderExecutiveView({
           riskLevel,
           executiveSummary,
@@ -270,9 +268,9 @@ export function renderHomePage(container, navigateTo) {
           actionCards,
           operatorTasks,
           topItems,
-        })}
+        })) : ''}
 
-    <div class="dashboard-chart-grid">
+    ${hasData ? `
       <div class="card">
         <div class="chart-control-row">
           <div>
@@ -384,6 +382,7 @@ export function renderHomePage(container, navigateTo) {
         </div>
       </div>
     </div>
+    ` : ''}
   `;
 
   container.querySelectorAll('[data-nav]').forEach(element => {

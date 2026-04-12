@@ -460,17 +460,17 @@ a:hover {
   height: 1px;
   background: rgba(255,255,255,0.08);
   margin: 12px 16px;
+}
 
 /* === 모바일 반응형 레이아웃 === */
 @media (max-width: 768px) {
-  /* 사이드바 숨김 및 토글 */
   #sidebar {
     width: 220px;
-    left: -220px; /* 화면 밖으로 이동 */
+    left: -220px;
     transition: left 0.3s ease;
   }
   #sidebar.open {
-    left: 0; /* 토글 시 표시 */
+    left: 0;
   }
   .sidebar-overlay {
     display: none;
@@ -482,12 +482,10 @@ a:hover {
     background: rgba(0,0,0,0.5);
     z-index: 90;
   }
-  /* 메인 콘텐츠 마진 제거 */
   #main-content {
     margin-left: 0;
-    padding: var(--space-md) var(--space-lg);
+    padding: var(--space-md) var(--space-sm);
   }
-  /* 모바일 토글 버튼 보이기 */
   .mobile-toggle {
     display: block;
     position: fixed;
@@ -500,18 +498,37 @@ a:hover {
     border-radius: var(--radius);
     padding: 8px 12px;
     font-size: 18px;
+    min-height: 44px;
+    min-width: 44px;
   }
-  /* 통계 카드 그리드 단일 열 */
   .stat-grid {
     grid-template-columns: 1fr;
   }
-  /* 네비게이션 버튼 전체 너비 */
   .nav-btn {
     width: 100%;
     justify-content: flex-start;
   }
-}
-
+  /* 모바일 터치 영역 최소 보장 */
+  .btn, .btn-sm, .nav-btn, .filter-tag, .tab-btn,
+  .card-collapse-toggle, .card-collapse-pin,
+  .auto-collapse-toggle {
+    min-height: 44px;
+  }
+  .page-actions {
+    flex-wrap: wrap;
+  }
+  .toolbar {
+    flex-direction: column;
+  }
+  .toolbar .search-input {
+    width: 100%;
+  }
+  .dashboard-highlight-grid {
+    grid-template-columns: 1fr 1fr !important;
+  }
+  .dashboard-action-grid {
+    grid-template-columns: 1fr !important;
+  }
 }
 
 .nav-section {
@@ -617,10 +634,11 @@ a:hover {
   border: 1px solid rgba(126, 156, 193, 0.24);
   background: rgba(14, 26, 43, 0.55);
   border-radius: 12px;
-  padding: 9px 10px;
+  padding: 8px 10px;
   gap: 9px;
-  align-items: flex-start;
-  min-height: 52px;
+  align-items: center;
+  min-height: 38px;
+  transition: min-height 0.2s ease, padding 0.2s ease;
 }
 
 .nav-rich-list .nav-btn-rich:hover {
@@ -648,13 +666,24 @@ a:hover {
   letter-spacing: -0.2px;
 }
 
+/* 서브 텍스트: 기본 숨김, hover 시 표시 — 사이드바 세로 공간 절약 */
 .nav-rich-list .nav-sub {
   color: rgba(176, 199, 230, 0.88);
   font-size: 10.5px;
-  margin-top: 3px;
+  margin-top: 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  max-height: 0;
+  opacity: 0;
+  transition: max-height 0.2s ease, opacity 0.2s ease, margin-top 0.2s ease;
+}
+
+.nav-rich-list .nav-btn-rich:hover .nav-sub,
+.nav-rich-list .nav-btn-rich.active .nav-sub {
+  max-height: 20px;
+  opacity: 1;
+  margin-top: 3px;
 }
 
 .nav-rich-list .nav-btn-rich.active {
@@ -893,6 +922,20 @@ a:hover {
 
 .card-collapse-title .card-title {
   margin: 0;
+}
+
+/* 접기/고정 버튼 — 기본 숨김, 카드 hover 시에만 표시 → 시각적 노이즈 제거 */
+.card-collapse-toggle,
+.card-collapse-pin {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+
+.card-collapse-head:hover .card-collapse-toggle,
+.card-collapse-head:hover .card-collapse-pin {
+  opacity: 1;
+  pointer-events: auto;
 }
 
 .card-collapse-toggle {
@@ -4111,3 +4154,240 @@ html.dark-mode .report-spotlight-card {
 .toggle-pill input {
   margin: 0;
 }
+
+/* === UX 개선 유틸리티 === */
+
+/* 사이드바 상단 도구 바 — 검색/알림/테마를 로고 아래로 이동 */
+.sidebar-tools {
+  display: flex;
+  gap: 2px;
+  padding: 4px 12px 8px;
+  align-items: center;
+}
+
+.sidebar-tools .btn-tool {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 6px 4px;
+  border-radius: var(--radius);
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.08);
+  color: rgba(255,255,255,0.6);
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.15s;
+  position: relative;
+  min-height: 36px;
+}
+
+.sidebar-tools .btn-tool:hover {
+  background: rgba(255,255,255,0.12);
+  color: #fff;
+  border-color: rgba(255,255,255,0.2);
+}
+
+.sidebar-tools .notif-dot {
+  position: absolute;
+  top: 4px;
+  right: 6px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #f85149;
+}
+
+/* 세그먼트 컨트롤 — 대시보드 모드 전환용 */
+.segment-control {
+  display: inline-flex;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg-main);
+  overflow: hidden;
+}
+
+.segment-control .segment-btn {
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.15s;
+  min-height: 32px;
+}
+
+.segment-control .segment-btn.is-active {
+  background: var(--accent);
+  color: #fff;
+}
+
+html.dark-mode .segment-control {
+  background: #0d1117;
+  border-color: #30363d;
+}
+
+/* 상세 필터 패널 — 기본 숨김, 토글로 표시 */
+.filter-detail-panel {
+  display: none;
+  padding: 12px 0;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.filter-detail-panel.is-open {
+  display: flex;
+}
+
+.filter-toggle-btn {
+  font-size: 12px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: var(--accent-light);
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  cursor: pointer;
+  font-weight: 600;
+}
+
+html.dark-mode .filter-toggle-btn {
+  background: rgba(88,166,255,0.1);
+  border-color: rgba(88,166,255,0.3);
+  color: #58a6ff;
+}
+
+/* Empty State 강화 */
+.empty-state-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  margin-top: 16px;
+  flex-wrap: wrap;
+}
+
+.empty-state-tip {
+  margin-top: 16px;
+  padding: 12px 16px;
+  background: var(--info-light);
+  border: 1px solid var(--info);
+  border-radius: var(--radius);
+  font-size: 12px;
+  color: var(--text-secondary);
+  display: inline-block;
+}
+
+html.dark-mode .empty-state-tip {
+  background: rgba(88,166,255,0.08);
+  border-color: rgba(88,166,255,0.2);
+  color: #b1bac4;
+}
+
+/* 빠른 액션 카드 — 시각적 차별화 */
+.dashboard-quick-action.is-inbound {
+  border-left: 3px solid var(--success);
+  background: var(--success-light);
+}
+
+.dashboard-quick-action.is-outbound {
+  border-left: 3px solid var(--danger);
+  background: var(--danger-light);
+}
+
+html.dark-mode .dashboard-quick-action.is-inbound {
+  background: rgba(63,185,80,0.08);
+  border-left-color: #3fb950;
+}
+
+html.dark-mode .dashboard-quick-action.is-outbound {
+  background: rgba(248,81,73,0.08);
+  border-left-color: #f85149;
+}
+
+/* 사이드바 유저 프로필 — 인라인 스타일 제거용 */
+.sidebar-user {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+}
+
+.sidebar-user-avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 1px solid rgba(255,255,255,0.2);
+}
+
+.sidebar-user-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.sidebar-user-name {
+  font-size: 11px;
+  font-weight: 600;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sidebar-user-plan {
+  font-size: 10px;
+  color: rgba(255,255,255,0.5);
+}
+
+.sidebar-plan-badge {
+  margin-bottom: 8px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  background: rgba(255,255,255,0.06);
+  text-align: center;
+  cursor: pointer;
+}
+
+.sidebar-plan-badge .plan-label {
+  font-size: 11px;
+  font-weight: 600;
+}
+
+/* 헤더 액션 드롭다운 — 여러 버튼을 하나로 통합 */
+.view-settings-wrap {
+  position: relative;
+  display: inline-block;
+}
+
+.view-settings-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 200px;
+  padding: 8px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--shadow-lg);
+  display: none;
+  z-index: 30;
+}
+
+.view-settings-menu.is-open {
+  display: block;
+}
+
+.view-settings-menu .btn {
+  width: 100%;
+  justify-content: flex-start;
+  gap: 6px;
+  margin-bottom: 2px;
+}
+
+html.dark-mode .view-settings-menu {
+  background: #161b22;
+  border-color: #30363d;
+}
+

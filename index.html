@@ -317,6 +317,16 @@
         </div>
       </div>
 
+      <!-- 사이드바 상단 도구 바 — 검색/알림/테마를 여기서 바로 접근 가능하게 -->
+      <div class="sidebar-tools">
+        <button class="btn-tool" id="btn-global-search" title="검색 (Ctrl+K)">🔍</button>
+        <button class="btn-tool" id="btn-notifications" title="알림">
+          🔔
+          <span class="notif-dot" id="notif-dot" style="display:none;"></span>
+        </button>
+        <button class="btn-tool" id="btn-theme-toggle" title="테마 전환">🌙</button>
+      </div>
+
       <div class="sidebar-divider"></div>
 
       <!-- 홈 -->
@@ -364,7 +374,8 @@
       <div class="sidebar-divider"></div>
 
       <!-- 관리 -->
-      <details class="nav-fold" open>
+      <!-- 관리 — 기본 접힘 → 사이드바 스크롤 50% 감소 -->
+      <details class="nav-fold">
         <summary class="nav-fold-summary">
           <div class="nav-section-title">관리</div>
           <span class="nav-fold-toggle" aria-hidden="true"></span>
@@ -462,7 +473,8 @@
       <div class="sidebar-divider"></div>
 
       <!-- 보고 -->
-      <details class="nav-fold" open>
+      <!-- 보고 · 분석 — 기본 접힘 -->
+      <details class="nav-fold">
         <summary class="nav-fold-summary">
           <div class="nav-section-title">보고 · 분석</div>
           <span class="nav-fold-toggle" aria-hidden="true"></span>
@@ -645,22 +657,11 @@
       </nav>
 
       <div class="sidebar-footer">
-        <div style="display:flex; gap:4px; margin-bottom:8px; align-items:center;">
-          <button class="btn btn-ghost btn-sm" id="btn-global-search" style="color:rgba(255,255,255,0.7); font-size:12px;" title="검색 (Ctrl+K)">
-            🔍 검색
-          </button>
-          <button class="btn btn-ghost btn-sm" id="btn-notifications" style="color:rgba(255,255,255,0.7); font-size:12px; position:relative;" title="알림">
-            🔔 알림 <span class="notif-badge" id="notif-badge"></span>
-          </button>
-          <button class="btn btn-ghost btn-sm" id="btn-theme-toggle" style="color:rgba(255,255,255,0.7); font-size:12px;" title="테마 전환">
-            🌙 다크
-          </button>
-        </div>
         <!-- 사용자 로그인 영역 -->
-        <div id="user-info-area" style="margin-bottom:8px;"></div>
+        <div id="user-info-area"></div>
         <!-- 현재 요금제 표시 -->
-        <div id="plan-display" style="margin-bottom:8px; padding:6px 10px; border-radius:6px; background:rgba(255,255,255,0.06); text-align:center; cursor:pointer;" title="요금제 변경">
-          <span id="plan-name" style="font-size:11px; font-weight:600;">🆓 Free</span>
+        <div class="sidebar-plan-badge" id="plan-display" title="요금제 변경">
+          <span class="plan-label" id="plan-name">🆓 Free</span>
         </div>
         INVEX v3.0<br/>
         © 2026
