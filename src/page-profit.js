@@ -1,10 +1,17 @@
 ﻿import { getState } from './store.js';
 import { getSalePrice } from './price-utils.js';
+import { downloadExcel } from './excel.js';
+import { generateTransactionPDF } from './pdf-generator.js';
+import { showToast } from './toast.js';
+import { destroyAllCharts, renderProfitTrendChart, renderVendorProfitChart } from './charts.js';
 
 export function renderProfitPage(container, navigateTo) {
+  destroyAllCharts();
+
   const state = getState();
   const items = state.mappedData || [];
   const transactions = state.transactions || [];
+  const vendorMaster = state.vendorMaster || [];
 
   const periodPrefs = readProfitPeriodPrefs();
   const fallbackFrom = toDateKey(addDays(new Date(), -30));
@@ -16,6 +23,11 @@ export function renderProfitPage(container, navigateTo) {
     periodFrom = periodTo;
     periodTo = tmp;
   }
+
+  const viewPrefs = readProfitViewPrefs();
+  const activeTab = viewPrefs.tab === 'vendors' ? 'vendors' : 'items';
+  const vendorSort = viewPrefs.vendorSort || 'profit';
+  const vendorLimit = Number(viewPrefs.vendorLimit) || 8;
 
   const rows = items
     .map((item) => {
@@ -73,13 +85,33 @@ export function renderProfitPage(container, navigateTo) {
   const monthlySeries = buildMonthlySeries(periodTransactions, items);
   const monthlySummary = getCurrentMonthSummary(transactions);
 
+  const vendorSummary = buildVendorSummary(periodTransactions, items);
+  const vendorSummarySorted = sortVendorSummary(vendorSummary, vendorSort);
+  const vendorChartRows = vendorSummarySorted.slice(0, vendorLimit);
+  const vendorTotalCount = new Set([
+    ...vendorMaster.map((v) => v.name).filter(Boolean),
+    ...vendorSummary.map((v) => v.name),
+  ]).size;
+  const vendorActiveCount = vendorSummary.length;
+  const vendorInactiveCount = Math.max(vendorTotalCount - vendorActiveCount, 0);
+  const topVendor = vendorSummarySorted[0];
+
   container.innerHTML = `
     <div class="page-header">
       <div>
         <h1 class="page-title"><span class="title-icon">💹</span> 손익 분석</h1>
-        <div class="page-desc">재고 기준 예상 손익을 한눈에 확인하고, 손실 가능 품목을 빠르게 점검합니다.</div>
+        <div class="page-desc">재고 기준 예상 손익과 기간 거래 손익을 한 화면에서 확인합니다.</div>
       </div>
-      <div class="page-actions">
+      <div class="page-actions" style="gap:8px;">
+        <div class="export-menu" id="profit-export-menu">
+          <button class="btn btn-outline" id="btn-profit-export-toggle">내보내기</button>
+          <div class="export-menu-panel" id="profit-export-panel">
+            <button class="btn btn-ghost btn-sm" data-profit-export="summary">손익 요약 엑셀</button>
+            <button class="btn btn-ghost btn-sm" data-profit-export="items">품목 손익 엑셀</button>
+            <button class="btn btn-ghost btn-sm" data-profit-export="vendors">거래처 손익 엑셀</button>
+            <button class="btn btn-ghost btn-sm" data-profit-export="transactions">기간 거래 PDF</button>
+          </div>
+        </div>
         <button class="btn btn-outline" id="btn-profit-go-inventory">재고 화면으로 이동</button>
       </div>
     </div>
@@ -106,28 +138,43 @@ export function renderProfitPage(container, navigateTo) {
       </div>
     </div>
 
-    <div class="card">
-      <div class="card-title">기간별 손익 추이</div>
-      ${
-        monthlySeries.length === 0
-          ? '<div class="dashboard-empty-note">선택한 기간에 거래가 없습니다.</div>'
-          : `
-          <div style="display:grid; gap:8px;">
-            ${monthlySeries
-              .map(
-                (row) => `
-              <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 12px; border:1px solid var(--border); border-radius:10px;">
-                <div style="font-size:12px; color:var(--text-muted);">${row.label}</div>
-                <div style="font-weight:700; color:${row.profit >= 0 ? 'var(--success)' : 'var(--danger)'};">
-                  ${formatSignedMoney(row.profit)}
-                </div>
-              </div>
-            `,
-              )
-              .join('')}
+    <div class="profit-chart-grid">
+      <div class="card">
+        <div class="chart-control-row">
+          <div>
+            <div class="card-title">기간 손익 흐름</div>
+            <div class="chart-help-text">기간 내 매입/매출/손익 흐름을 한 번에 확인합니다.</div>
           </div>
-        `
-      }
+        </div>
+        <div class="chart-canvas-lg">
+          <canvas id="profit-trend-chart"></canvas>
+        </div>
+      </div>
+      <div class="card">
+        <div class="chart-control-row">
+          <div>
+            <div class="card-title">거래처 손익 TOP</div>
+            <div class="chart-help-text">기간 내 손익 기준 상위 거래처 흐름입니다.</div>
+          </div>
+          <div class="chart-control-inline">
+            <span class="chart-control-label">정렬 기준</span>
+            <select class="filter-select chart-sort-select" id="profit-vendor-sort">
+              <option value="profit" ${vendorSort === 'profit' ? 'selected' : ''}>손익</option>
+              <option value="out" ${vendorSort === 'out' ? 'selected' : ''}>매출</option>
+              <option value="in" ${vendorSort === 'in' ? 'selected' : ''}>매입</option>
+            </select>
+            <span class="chart-control-label">표시 수</span>
+            <select class="filter-select chart-sort-select" id="profit-vendor-limit">
+              <option value="5" ${vendorLimit === 5 ? 'selected' : ''}>5곳</option>
+              <option value="8" ${vendorLimit === 8 ? 'selected' : ''}>8곳</option>
+              <option value="12" ${vendorLimit === 12 ? 'selected' : ''}>12곳</option>
+            </select>
+          </div>
+        </div>
+        <div class="chart-canvas-lg">
+          <canvas id="profit-vendor-chart"></canvas>
+        </div>
+      </div>
     </div>
 
     ${
@@ -174,14 +221,20 @@ export function renderProfitPage(container, navigateTo) {
       </div>
     </div>
 
-    <div class="card" style="padding-bottom: 8px;">
-      <div class="card-title">한눈에 보는 핵심 포인트</div>
-      <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap:14px;">
-        <div style="border:1px solid var(--border); border-radius:10px; padding:12px;">
-          <div style="font-size:12px; color:var(--text-muted); margin-bottom:8px;">수익 상위 품목 TOP 5</div>
-          ${renderQuickList(
-            topProfit,
-            (row, i) => `
+    <div class="tabs">
+      <button class="tab-btn ${activeTab === 'items' ? 'active' : ''}" data-profit-tab="items">품목 손익</button>
+      <button class="tab-btn ${activeTab === 'vendors' ? 'active' : ''}" data-profit-tab="vendors">거래처 손익</button>
+    </div>
+
+    <div class="profit-tab" id="profit-tab-items" style="display:${activeTab === 'items' ? 'block' : 'none'};">
+      <div class="card" style="padding-bottom: 8px;">
+        <div class="card-title">한눈에 보는 핵심 포인트</div>
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap:14px;">
+          <div style="border:1px solid var(--border); border-radius:10px; padding:12px;">
+            <div style="font-size:12px; color:var(--text-muted); margin-bottom:8px;">수익 상위 품목 TOP 5</div>
+            ${renderQuickList(
+              topProfit,
+              (row, i) => `
             <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; padding:6px 0; border-bottom:${
               i === topProfit.length - 1 ? 'none' : '1px solid var(--border-light)'
             }">
@@ -196,13 +249,13 @@ export function renderProfitPage(container, navigateTo) {
               <div style="font-size:12px; font-weight:700; color:var(--success);">${formatSignedMoney(row.profit)}</div>
             </div>
           `,
-          )}
-        </div>
-        <div style="border:1px solid var(--border); border-radius:10px; padding:12px;">
-          <div style="font-size:12px; color:var(--text-muted); margin-bottom:8px;">주의 필요 품목 TOP 5</div>
-          ${renderQuickList(
-            riskRows,
-            (row, i) => `
+            )}
+          </div>
+          <div style="border:1px solid var(--border); border-radius:10px; padding:12px;">
+            <div style="font-size:12px; color:var(--text-muted); margin-bottom:8px;">주의 필요 품목 TOP 5</div>
+            ${renderQuickList(
+              riskRows,
+              (row, i) => `
             <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; padding:6px 0; border-bottom:${
               i === riskRows.length - 1 ? 'none' : '1px solid var(--border-light)'
             }">
@@ -219,14 +272,14 @@ export function renderProfitPage(container, navigateTo) {
               }">${formatPercent(row.profitRate)}</div>
             </div>
           `,
-            '판매가가 입력된 품목이 없습니다.',
-          )}
-        </div>
-        <div style="border:1px solid var(--border); border-radius:10px; padding:12px;">
-          <div style="font-size:12px; color:var(--text-muted); margin-bottom:8px;">카테고리 수익 TOP 5</div>
-          ${renderQuickList(
-            categorySummary,
-            (category, i) => `
+              '판매가가 입력된 품목이 없습니다.',
+            )}
+          </div>
+          <div style="border:1px solid var(--border); border-radius:10px; padding:12px;">
+            <div style="font-size:12px; color:var(--text-muted); margin-bottom:8px;">카테고리 수익 TOP 5</div>
+            ${renderQuickList(
+              categorySummary,
+              (category, i) => `
             <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; padding:6px 0; border-bottom:${
               i === categorySummary.length - 1 ? 'none' : '1px solid var(--border-light)'
             }">
@@ -243,48 +296,48 @@ export function renderProfitPage(container, navigateTo) {
               }">${formatSignedMoney(category.profit)}</div>
             </div>
           `,
-            '카테고리 데이터가 없습니다.',
-          )}
+              '카테고리 데이터가 없습니다.',
+            )}
+          </div>
         </div>
       </div>
-    </div>
 
-    <div class="card">
-      <div class="card-title">
-        품목별 손익 상세
-        <span class="card-subtitle">${rows.length.toLocaleString('ko-KR')}개 품목</span>
-      </div>
-      <div class="table-wrapper" style="border:none;">
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>품목명</th>
-              <th>분류</th>
-              <th class="text-right">수량</th>
-              <th class="text-right">원가</th>
-              <th class="text-right">판매가</th>
-              <th class="text-right">개당 이익</th>
-              <th class="text-right">총 이익</th>
-              <th class="text-right">이익률</th>
-              <th class="text-center">상태</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${
-              sortedByProfit.length === 0
-                ? `
+      <div class="card">
+        <div class="card-title">
+          품목별 손익 상세
+          <span class="card-subtitle">${rows.length.toLocaleString('ko-KR')}개 품목</span>
+        </div>
+        <div class="table-wrapper" style="border:none;">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>품목명</th>
+                <th>분류</th>
+                <th class="text-right">수량</th>
+                <th class="text-right">원가</th>
+                <th class="text-right">판매가</th>
+                <th class="text-right">개당 이익</th>
+                <th class="text-right">총 이익</th>
+                <th class="text-right">이익률</th>
+                <th class="text-center">상태</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${
+                sortedByProfit.length === 0
+                  ? `
               <tr>
                 <td colspan="10" style="text-align:center; color:var(--text-muted); padding:28px 0;">
                   손익을 계산할 재고 데이터가 없습니다.
                 </td>
               </tr>
             `
-                : sortedByProfit
-                    .map((row, index) => {
-                      const perUnitProfit = row.salePrice - row.unitCost;
-                      const tone = getTone(row.profitRate);
-                      return `
+                  : sortedByProfit
+                      .map((row, index) => {
+                        const perUnitProfit = row.salePrice - row.unitCost;
+                        const tone = getTone(row.profitRate);
+                        return `
                 <tr class="${row.profit < 0 ? 'row-danger' : row.profitRate < 10 ? 'row-warning' : ''}">
                   <td class="col-num">${index + 1}</td>
                   <td>
@@ -308,11 +361,93 @@ export function renderProfitPage(container, navigateTo) {
                   </td>
                 </tr>
               `;
-                    })
-                    .join('')
-            }
-          </tbody>
-        </table>
+                      })
+                      .join('')
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="profit-tab" id="profit-tab-vendors" style="display:${activeTab === 'vendors' ? 'block' : 'none'};">
+      <div class="card" style="padding-bottom: 8px;">
+        <div class="card-title">거래처 손익 요약</div>
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:12px;">
+          <div class="stat-card">
+            <div class="stat-label">기간 거래처</div>
+            <div class="stat-value">${vendorActiveCount.toLocaleString('ko-KR')}곳</div>
+            <div class="stat-change">거래 없음 ${vendorInactiveCount.toLocaleString('ko-KR')}곳</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">기간 매입 합계</div>
+            <div class="stat-value text-accent">${formatMoney(periodSummary.totalIn)}</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">기간 매출 합계</div>
+            <div class="stat-value text-success">${formatMoney(periodSummary.totalOut)}</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">기간 손익</div>
+            <div class="stat-value ${periodSummary.profit >= 0 ? 'text-success' : 'text-danger'}">${formatSignedMoney(
+              periodSummary.profit,
+            )}</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">최고 손익 거래처</div>
+            <div class="stat-value">${topVendor ? escapeHtml(topVendor.name) : '-'}</div>
+            <div class="stat-change">${topVendor ? formatSignedMoney(topVendor.profit) : '데이터 없음'}</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">거래처별 손익 상세</div>
+        <div class="table-wrapper" style="border:none;">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>거래처</th>
+                <th class="text-right">거래 수</th>
+                <th class="text-right">매입</th>
+                <th class="text-right">매출</th>
+                <th class="text-right">손익</th>
+                <th class="text-right">이익률</th>
+                <th class="text-right">마진율</th>
+                <th class="text-right">최근 거래</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${
+                vendorSummarySorted.length === 0
+                  ? `
+                <tr>
+                  <td colspan="9" style="text-align:center; color:var(--text-muted); padding:28px 0;">기간 내 거래처 손익 데이터가 없습니다.</td>
+                </tr>
+              `
+                  : vendorSummarySorted
+                      .map((row, index) => {
+                        const tone = row.profit >= 0 ? 'var(--success)' : 'var(--danger)';
+                        return `
+                <tr>
+                  <td class="col-num">${index + 1}</td>
+                  <td>${escapeHtml(row.name)}</td>
+                  <td class="text-right">${row.count.toLocaleString('ko-KR')}</td>
+                  <td class="text-right">${formatMoney(row.totalIn)}</td>
+                  <td class="text-right">${formatMoney(row.totalOut)}</td>
+                  <td class="text-right" style="font-weight:700; color:${tone};">${formatSignedMoney(row.profit)}</td>
+                  <td class="text-right">${formatPercent(row.profitRate)}</td>
+                  <td class="text-right">${formatPercent(row.marginRate)}</td>
+                  <td class="text-right">${row.lastDate || '-'}</td>
+                </tr>
+              `;
+                      })
+                      .join('')
+              }
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
 
@@ -370,6 +505,125 @@ export function renderProfitPage(container, navigateTo) {
       renderProfitPage(container, navigateTo);
     });
   });
+
+  container.querySelectorAll('[data-profit-tab]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const nextTab = btn.dataset.profitTab;
+      saveProfitViewPrefs({ tab: nextTab });
+      renderProfitPage(container, navigateTo);
+    });
+  });
+
+  const vendorSortSelect = container.querySelector('#profit-vendor-sort');
+  const vendorLimitSelect = container.querySelector('#profit-vendor-limit');
+  const updateVendorView = () => {
+    saveProfitViewPrefs({
+      vendorSort: vendorSortSelect?.value,
+      vendorLimit: vendorLimitSelect?.value,
+    });
+    renderProfitPage(container, navigateTo);
+  };
+  vendorSortSelect?.addEventListener('change', updateVendorView);
+  vendorLimitSelect?.addEventListener('change', updateVendorView);
+
+  const exportMenu = container.querySelector('#profit-export-menu');
+  const exportToggle = container.querySelector('#btn-profit-export-toggle');
+  const exportPanel = container.querySelector('#profit-export-panel');
+  const docClickHandler = (event) => {
+    if (exportMenu && !exportMenu.contains(event.target)) {
+      exportMenu.classList.remove('is-open');
+      document.removeEventListener('click', docClickHandler);
+    }
+  };
+
+  exportToggle?.addEventListener('click', (event) => {
+    event.stopPropagation();
+    if (!exportMenu) return;
+    const isOpen = exportMenu.classList.contains('is-open');
+    if (isOpen) {
+      exportMenu.classList.remove('is-open');
+      document.removeEventListener('click', docClickHandler);
+    } else {
+      exportMenu.classList.add('is-open');
+      document.addEventListener('click', docClickHandler);
+    }
+  });
+  exportPanel?.addEventListener('click', (event) => event.stopPropagation());
+
+  container.querySelectorAll('[data-profit-export]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const type = btn.dataset.profitExport;
+      const periodLabel = `${periodFrom}_${periodTo}`;
+      try {
+        if (type === 'summary') {
+          const exportRows = [
+            {
+              기간: `${periodFrom} ~ ${periodTo}`,
+              '기간 매입 합계': periodSummary.totalIn,
+              '기간 매출 합계': periodSummary.totalOut,
+              '기간 손익': periodSummary.profit,
+              '총 예상 매출': totalRevenue,
+              '총 원가': totalCost,
+              '총 예상 이익': totalProfit,
+              '평균 이익률(%)': Number(avgProfitRate.toFixed(2)),
+              '마진율(%)': Number(avgMarginRate.toFixed(2)),
+              '판매가 입력률(%)': Number(salePriceRate.toFixed(2)),
+            },
+          ];
+          downloadExcel(exportRows, `손익요약_${periodLabel}`);
+          showToast('손익 요약 엑셀을 내보냈습니다.', 'success');
+        } else if (type === 'items') {
+          const exportRows = sortedByProfit.map((row) => ({
+            품목명: row.name,
+            코드: row.code,
+            분류: row.category,
+            수량: row.quantity,
+            원가: row.unitCost,
+            판매가: row.salePrice,
+            '총 원가': row.totalCost,
+            '총 매출': row.totalRevenue,
+            손익: row.profit,
+            '이익률(%)': Number(row.profitRate.toFixed(2)),
+            '마진율(%)': Number(row.marginRate.toFixed(2)),
+          }));
+          if (exportRows.length === 0) {
+            showToast('내보낼 품목 손익 데이터가 없습니다.', 'warning');
+            return;
+          }
+          downloadExcel(exportRows, `품목손익_${periodLabel}`);
+          showToast('품목 손익 엑셀을 내보냈습니다.', 'success');
+        } else if (type === 'vendors') {
+          const exportRows = vendorSummarySorted.map((row) => ({
+            거래처: row.name,
+            '거래 수': row.count,
+            매입: row.totalIn,
+            매출: row.totalOut,
+            손익: row.profit,
+            '이익률(%)': Number(row.profitRate.toFixed(2)),
+            '마진율(%)': Number(row.marginRate.toFixed(2)),
+            '최근 거래일': row.lastDate || '-',
+          }));
+          if (exportRows.length === 0) {
+            showToast('내보낼 거래처 손익 데이터가 없습니다.', 'warning');
+            return;
+          }
+          downloadExcel(exportRows, `거래처손익_${periodLabel}`);
+          showToast('거래처 손익 엑셀을 내보냈습니다.', 'success');
+        } else if (type === 'transactions') {
+          if (periodTransactions.length === 0) {
+            showToast('기간 내 거래가 없어 PDF를 만들 수 없습니다.', 'warning');
+            return;
+          }
+          generateTransactionPDF(periodTransactions, '손익 분석 거래', `${periodFrom}~${periodTo}`);
+        }
+      } catch (err) {
+        showToast(err.message || '내보내기에 실패했습니다.', 'error');
+      }
+    });
+  });
+
+  renderProfitTrendChart('profit-trend-chart', monthlySeries);
+  renderVendorProfitChart('profit-vendor-chart', vendorChartRows);
 }
 
 function summarizeByCategory(rows) {
@@ -421,8 +675,45 @@ function buildMonthlySeries(transactions, items) {
     .sort((a, b) => a[0].localeCompare(b[0]))
     .map(([key, row]) => ({
       label: `${key.replace('-', '년 ')}월`,
+      totalIn: Math.round(row.totalIn),
+      totalOut: Math.round(row.totalOut),
       profit: Math.round(row.totalOut - row.totalIn),
     }));
+}
+
+function buildVendorSummary(transactions, items) {
+  const map = new Map();
+  transactions.forEach((tx) => {
+    const name = String(tx.vendor || '').trim() || '미지정';
+    const current = map.get(name) || { name, count: 0, totalIn: 0, totalOut: 0, lastDate: '' };
+    current.count += 1;
+    if (String(tx.date || '') > current.lastDate) current.lastDate = String(tx.date || '');
+    const amount = getTransactionAmount(tx, items);
+    if (tx.type === 'in') current.totalIn += amount;
+    if (tx.type === 'out') current.totalOut += amount;
+    map.set(name, current);
+  });
+
+  return Array.from(map.values()).map((entry) => {
+    const profit = entry.totalOut - entry.totalIn;
+    const profitRate = entry.totalOut > 0 ? (profit / entry.totalOut) * 100 : 0;
+    const marginRate = entry.totalIn > 0 ? (profit / entry.totalIn) * 100 : 0;
+    return {
+      ...entry,
+      totalIn: Math.round(entry.totalIn),
+      totalOut: Math.round(entry.totalOut),
+      profit: Math.round(profit),
+      profitRate,
+      marginRate,
+    };
+  });
+}
+
+function sortVendorSummary(rows, sortKey) {
+  const list = [...rows];
+  if (sortKey === 'out') return list.sort((a, b) => b.totalOut - a.totalOut);
+  if (sortKey === 'in') return list.sort((a, b) => b.totalIn - a.totalIn);
+  return list.sort((a, b) => b.profit - a.profit);
 }
 
 function getTransactionAmount(tx, items) {
@@ -448,6 +739,23 @@ function readProfitPeriodPrefs() {
 
 function saveProfitPeriodPrefs(next) {
   localStorage.setItem('invex_profit_period_v1', JSON.stringify(next));
+}
+
+function readProfitViewPrefs() {
+  try {
+    const raw = localStorage.getItem('invex_profit_view_v1');
+    if (!raw) return {};
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === 'object' ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function saveProfitViewPrefs(next) {
+  const current = readProfitViewPrefs();
+  const merged = { ...current, ...next };
+  localStorage.setItem('invex_profit_view_v1', JSON.stringify(merged));
 }
 
 function addDays(baseDate, delta) {
