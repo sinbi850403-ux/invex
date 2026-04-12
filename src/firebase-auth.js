@@ -1,12 +1,15 @@
 /**
- * firebase-auth.js - 사용자 인증 모듈
- * 역할: Google 로그인/로그아웃, 사용자 상태 관리, 권한 체크
- * 왜 필요? → 다중 사용자, 계정별 데이터 분리, 유료 구독 관리의 기초
+ * firebase-auth.js - 인증 모듈 (Supabase 전환 완료)
+ *
+ * 왜 파일명을 유지? → main.js 등 20+ 파일이 이 파일을 import하고 있어서
+ * 파일명을 바꾸면 전부 수정해야 함. 인터페이스만 유지하고 내부를 교체.
+ *
+ * 동작 방식:
+ * 1. Supabase가 설정되어 있으면 → Supabase Auth 사용
+ * 2. Supabase 미설정이면 → 로컬 모드 (개발/오프라인용)
  */
 
-import { signInWithPopup, signOut, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile, sendPasswordResetEmail } from 'firebase/auth';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { auth, db, googleProvider, isConfigured } from './firebase-config.js';
+import { supabase, isSupabaseConfigured } from './supabase-client.js';
 import { showToast } from './toast.js';
 
 // 현재 로그인 사용자
@@ -16,12 +19,27 @@ let userProfile = null;
 // 인증 상태 변화 리스너 콜백
 let authChangeCallbacks = [];
 
+// Supabase user → 기존 코드 호환 형태로 변환
+// 왜? → main.js가 user.uid, user.displayName, user.photoURL 을 참조하고 있어서
+function toCompatUser(supabaseUser) {
+  if (!supabaseUser) return null;
+  return {
+    uid: supabaseUser.id,
+    email: supabaseUser.email,
+    displayName: supabaseUser.user_metadata?.full_name || supabaseUser.user_metadata?.name || '사용자',
+    photoURL: supabaseUser.user_metadata?.avatar_url || null,
+    // 원본 Supabase user도 보존
+    _raw: supabaseUser,
+  };
+}
+
 /**
  * 인증 상태 변화 감지 초기화
+ * main.js에서 initAuth(callback) 형태로 호출됨
  */
 export function initAuth(callback) {
-  if (!isConfigured) {
-    // Firebase 미설정 시 → 로컬 모드로 동작
+  if (!isSupabaseConfigured) {
+    // Supabase 미설정 시 → 로컬 모드로 동작 (개발 편의)
     currentUser = null;
     userProfile = { role: 'admin', plan: 'free', name: '로컬 사용자' };
     if (callback) callback(null, userProfile);
@@ -30,44 +48,70 @@ export function initAuth(callback) {
 
   if (callback) authChangeCallbacks.push(callback);
 
-  onAuthStateChanged(auth, async (user) => {
-    currentUser = user;
+  // Supabase 인증 상태 변화 리스너
+  supabase.auth.onAuthStateChange(async (event, session) => {
+    if (session?.user) {
+      currentUser = toCompatUser(session.user);
 
-    if (user) {
-      // Firestore에서 사용자 프로필 가져오기
+      // Supabase profiles 테이블에서 프로필 가져오기
       try {
-        userProfile = await getUserProfile(user.uid);
+        const { data: profile, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', session.user.id)
+          .single();
 
-        // 첫 로그인 시 기본 프로필 생성
-        if (!userProfile) {
-          userProfile = {
-            uid: user.uid,
-            email: user.email,
-            name: user.displayName || '사용자',
-            photoURL: user.photoURL || '',
-            role: 'admin', // 첫 가입자는 관리자
+        if (error && error.code === 'PGRST116') {
+          // 프로필이 없으면 수동 생성 (트리거 실패 대비)
+          const newProfile = {
+            id: session.user.id,
+            name: currentUser.displayName,
+            email: session.user.email,
+            photo_url: currentUser.photoURL,
             plan: 'free',
-            createdAt: new Date().toISOString(),
-            lastLogin: new Date().toISOString(),
+            role: 'admin',
+            created_at: new Date().toISOString(),
           };
-          await setDoc(doc(db, 'users', user.uid), userProfile);
-        } else {
-          // 마지막 로그인 시간 업데이트
-          await setDoc(doc(db, 'users', user.uid), {
-            ...userProfile,
+          await supabase.from('profiles').insert(newProfile);
+          userProfile = {
+            uid: session.user.id,
+            email: session.user.email,
+            name: currentUser.displayName,
+            photoURL: currentUser.photoURL,
+            role: 'admin',
+            plan: 'free',
+            createdAt: newProfile.created_at,
+          };
+        } else if (profile) {
+          userProfile = {
+            uid: profile.id,
+            email: profile.email,
+            name: profile.name || currentUser.displayName,
+            photoURL: profile.photo_url || currentUser.photoURL,
+            role: 'admin',
+            plan: profile.plan || 'free',
+            createdAt: profile.created_at,
             lastLogin: new Date().toISOString(),
-          });
+            beginnerMode: profile.beginner_mode,
+            dashboardMode: profile.dashboard_mode,
+            industryTemplate: profile.industry_template,
+          };
         }
       } catch (error) {
-        console.warn('프로필 로드 실패:', error);
-        userProfile = { role: 'admin', plan: 'free', name: user.displayName || '사용자' };
+        console.warn('[Auth] 프로필 로드 실패:', error.message);
+        userProfile = {
+          role: 'admin',
+          plan: 'free',
+          name: currentUser.displayName || '사용자',
+        };
       }
     } else {
+      currentUser = null;
       userProfile = null;
     }
 
-    // 모든 콜백 호출
-    authChangeCallbacks.forEach(cb => cb(user, userProfile));
+    // 모든 콜백 호출 (main.js 등)
+    authChangeCallbacks.forEach(cb => cb(currentUser, userProfile));
   });
 }
 
@@ -75,49 +119,66 @@ export function initAuth(callback) {
  * Google 로그인
  */
 export async function loginWithGoogle() {
-  if (!isConfigured) {
-    showToast('Firebase 설정이 필요합니다. firebase-config.js를 확인하세요.', 'warning');
+  if (!isSupabaseConfigured) {
+    showToast('Supabase 설정이 필요합니다.', 'warning');
     return null;
   }
 
   try {
-    const result = await signInWithPopup(auth, googleProvider);
-    showToast(`${result.user.displayName}님, 환영합니다! 🎉`, 'success');
-    return result.user;
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: window.location.origin,
+      },
+    });
+
+    if (error) throw error;
+    // OAuth는 리다이렉트 방식이라 여기서 user가 바로 반환되지 않음
+    // onAuthStateChange에서 처리됨
+    return data;
   } catch (error) {
-    if (error.code === 'auth/popup-closed-by-user') {
-      showToast('로그인이 취소되었습니다.', 'info');
-    } else {
-      showToast('로그인에 실패했습니다: ' + error.message, 'error');
-    }
+    showToast('Google 로그인 실패: ' + error.message, 'error');
     return null;
   }
 }
 
 /**
  * 이메일/비밀번호 회원가입
- * 왜? → Google 계정 없는 사용자도 서비스 이용 가능
  */
 export async function signupWithEmail(email, password, name) {
-  if (!isConfigured) {
-    showToast('Firebase 설정이 필요합니다.', 'warning');
+  if (!isSupabaseConfigured) {
+    showToast('Supabase 설정이 필요합니다.', 'warning');
     return null;
   }
 
   try {
-    const result = await createUserWithEmailAndPassword(auth, email, password);
-    // 사용자 displayName 설정
-    await updateProfile(result.user, { displayName: name || '사용자' });
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: { full_name: name || '사용자' },
+      },
+    });
+
+    if (error) throw error;
+
+    // Supabase는 이메일 확인이 필요할 수 있음
+    if (data.user && !data.user.confirmed_at && data.user.identities?.length === 0) {
+      showToast('이미 가입된 이메일입니다. 로그인을 시도해주세요.', 'warning');
+      return null;
+    }
+
     showToast(`${name || '사용자'}님, 가입을 환영합니다! 🎉`, 'success');
-    return result.user;
+    return toCompatUser(data.user);
   } catch (error) {
     // 사용자 친화적 에러 메시지
-    const messages = {
-      'auth/email-already-in-use': '이미 가입된 이메일입니다. 로그인을 시도해주세요.',
-      'auth/weak-password': '비밀번호가 너무 짧습니다. 6자 이상 입력해주세요.',
-      'auth/invalid-email': '올바른 이메일 형식이 아닙니다.',
-    };
-    showToast(messages[error.code] || '회원가입 실패: ' + error.message, 'error');
+    if (error.message.includes('already registered')) {
+      showToast('이미 가입된 이메일입니다. 로그인을 시도해주세요.', 'warning');
+    } else if (error.message.includes('Password')) {
+      showToast('비밀번호가 너무 짧습니다. 6자 이상 입력해주세요.', 'warning');
+    } else {
+      showToast('회원가입 실패: ' + error.message, 'error');
+    }
     return null;
   }
 }
@@ -126,23 +187,27 @@ export async function signupWithEmail(email, password, name) {
  * 이메일/비밀번호 로그인
  */
 export async function loginWithEmail(email, password) {
-  if (!isConfigured) {
-    showToast('Firebase 설정이 필요합니다.', 'warning');
+  if (!isSupabaseConfigured) {
+    showToast('Supabase 설정이 필요합니다.', 'warning');
     return null;
   }
 
   try {
-    const result = await signInWithEmailAndPassword(auth, email, password);
-    showToast(`${result.user.displayName || '사용자'}님, 환영합니다! 🎉`, 'success');
-    return result.user;
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (error) throw error;
+
+    showToast(`${data.user?.user_metadata?.full_name || '사용자'}님, 환영합니다! 🎉`, 'success');
+    return toCompatUser(data.user);
   } catch (error) {
-    const messages = {
-      'auth/user-not-found': '등록되지 않은 이메일입니다.',
-      'auth/wrong-password': '비밀번호가 올바르지 않습니다.',
-      'auth/invalid-credential': '이메일 또는 비밀번호가 올바르지 않습니다.',
-      'auth/too-many-requests': '너무 많은 로그인 시도. 잠시 후 다시 시도해주세요.',
-    };
-    showToast(messages[error.code] || '로그인 실패: ' + error.message, 'error');
+    if (error.message.includes('Invalid login')) {
+      showToast('이메일 또는 비밀번호가 올바르지 않습니다.', 'error');
+    } else {
+      showToast('로그인 실패: ' + error.message, 'error');
+    }
     return null;
   }
 }
@@ -151,21 +216,21 @@ export async function loginWithEmail(email, password) {
  * 비밀번호 재설정 이메일 전송
  */
 export async function resetPassword(email) {
-  if (!isConfigured) {
-    showToast('Firebase 설정이 필요합니다.', 'warning');
+  if (!isSupabaseConfigured) {
+    showToast('Supabase 설정이 필요합니다.', 'warning');
     return false;
   }
 
   try {
-    await sendPasswordResetEmail(auth, email);
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/?type=recovery`,
+    });
+
+    if (error) throw error;
     showToast('비밀번호 재설정 이메일이 전송되었습니다. 📧', 'success');
     return true;
   } catch (error) {
-    const messages = {
-      'auth/user-not-found': '등록되지 않은 이메일입니다.',
-      'auth/invalid-email': '올바른 이메일 형식이 아닙니다.',
-    };
-    showToast(messages[error.code] || '전송 실패: ' + error.message, 'error');
+    showToast('전송 실패: ' + error.message, 'error');
     return false;
   }
 }
@@ -174,28 +239,15 @@ export async function resetPassword(email) {
  * 로그아웃
  */
 export async function logout() {
-  if (!isConfigured) return;
+  if (!isSupabaseConfigured) return;
 
   try {
-    await signOut(auth);
+    await supabase.auth.signOut();
     currentUser = null;
     userProfile = null;
     showToast('로그아웃되었습니다.', 'info');
   } catch (error) {
     showToast('로그아웃 실패: ' + error.message, 'error');
-  }
-}
-
-/**
- * Firestore에서 사용자 프로필 조회
- */
-async function getUserProfile(uid) {
-  try {
-    const docRef = doc(db, 'users', uid);
-    const docSnap = await getDoc(docRef);
-    return docSnap.exists() ? docSnap.data() : null;
-  } catch {
-    return null;
   }
 }
 

@@ -974,11 +974,9 @@ async function initAppAfterAuth() {
   checkAndShowOnboarding(navigateTo);
 }
 
-// Firebase 誘몄꽕??濡쒖뺄 媛쒕컻) ?쒖뿉??寃뚯씠???먮룞 ?댁젣
-// isConfigured媛 false硫?initAuth?먯꽌 user=null濡?肄쒕갚 ??寃뚯씠?멸? ?⑥?留? 
-// 濡쒖뺄 媛쒕컻???꾪빐 ?먮룞 ?댁젣
-import { isConfigured } from './firebase-config.js';
-if (!isConfigured) {
+// Supabase 미설정(로컬 개발) 시에는 게이트 자동 제거
+import { isSupabaseConfigured } from './supabase-client.js';
+if (!isSupabaseConfigured) {
   const gate = document.getElementById('auth-gate');
   if (gate) gate.style.display = 'none';
   initAppAfterAuth();

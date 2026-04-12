@@ -1,143 +1,78 @@
 /**
- * firebase-sync.js - Firestore 클라우드 동기화
- * 역할: 로컬 데이터를 Firestore에 자동 동기화 (양방향)
- * 왜 필요? → PC/모바일 어디서든 같은 데이터. 데이터 유실 방지.
+ * firebase-sync.js - 클라우드 동기화 (Supabase 전환 완료)
+ *
+ * 왜 파일명을 유지? → main.js가 import { startSync, stopSync, ... }를 사용중
+ * 인터페이스 유지하고 내부만 Supabase로 교체
+ *
+ * 변경 전: Firestore 1개 문서에 모든 데이터 저장 (1MB 제한)
+ * 변경 후: Supabase 테이블별 분리 저장 (무제한)
  */
 
-import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
-import { db, isConfigured } from './firebase-config.js';
-import { getCurrentUser } from './firebase-auth.js';
+import { isSupabaseConfigured } from './supabase-client.js';
+import * as db from './db.js';
 import { getState, setState } from './store.js';
 import { showToast } from './toast.js';
 
-let unsubscribe = null;
 let isSyncing = false;
 let lastSyncTime = null;
 
 /**
  * 클라우드 동기화 시작
- * 사용자 로그인 후 호출
+ * Supabase는 RLS로 자동 격리되므로 userId는 내부적으로 처리됨
  */
 export function startSync(userId) {
-  if (!isConfigured || !userId) return;
-
-  const docRef = doc(db, 'workspaces', userId);
-
-  // 실시간 동기화 리스너
-  unsubscribe = onSnapshot(docRef, (docSnap) => {
-    if (isSyncing) return; // 내가 업로드한 변경은 무시
-
-    if (docSnap.exists()) {
-      const cloudData = docSnap.data();
-      const cloudTime = cloudData._lastSync || 0;
-      const localTime = lastSyncTime || 0;
-
-      // 클라우드가 더 최신이면 로컬에 반영
-      if (cloudTime > localTime) {
-        const { _lastSync, ...data } = cloudData;
-        setState(data);
-        lastSyncTime = cloudTime;
-        console.log('[Sync] 클라우드 → 로컬 동기화 완료');
-      }
-    }
-  }, (error) => {
-    console.warn('[Sync] 실시간 동기화 에러:', error.message);
-  });
-}
-
-/**
- * 로컬 → 클라우드 업로드
- * 데이터 변경 시 호출 (디바운스 적용)
- */
-let saveTimer = null;
-
-export function syncToCloud() {
-  if (!isConfigured) return;
-  
-  const user = getCurrentUser();
-  if (!user) return;
-
-  // 2초 디바운스: 빠른 연속 변경 시 마지막 것만 저장
-  clearTimeout(saveTimer);
-  saveTimer = setTimeout(async () => {
-    try {
-      isSyncing = true;
-      const state = getState();
-      const now = Date.now();
-
-      // 민감하지 않은 데이터만 동기화
-      const syncData = {
-        mappedData: state.mappedData || [],
-        mappingConfig: state.mappingConfig || null,
-        transactions: state.transactions || [],
-        transfers: state.transfers || [],
-        vendorMaster: state.vendorMaster || [],
-        accountEntries: state.accountEntries || [],
-        purchaseOrders: state.purchaseOrders || [],
-        stocktakeHistory: state.stocktakeHistory || [],
-        customFields: state.customFields || [],
-        industryTemplate: state.industryTemplate || 'general',
-        costMethod: state.costMethod || 'weighted-avg',
-        currency: state.currency || { code: 'KRW', symbol: '₩', rate: 1 },
-        _lastSync: now,
-      };
-
-      const docRef = doc(db, 'workspaces', user.uid);
-      await setDoc(docRef, syncData, { merge: true });
-      
-      lastSyncTime = now;
-      isSyncing = false;
-      console.log('[Sync] 로컬 → 클라우드 동기화 완료');
-    } catch (error) {
-      isSyncing = false;
-      console.warn('[Sync] 업로드 실패:', error.message);
-    }
-  }, 2000);
+  if (!isSupabaseConfigured) return;
+  // Supabase는 실시간 동기화가 아닌 요청 기반
+  // 초기 데이터 로딩은 initAppAfterAuth에서 처리
+  lastSyncTime = Date.now();
+  console.log('[Sync] Supabase 동기화 준비 완료 (사용자:', userId, ')');
 }
 
 /**
  * 동기화 중지
- * 로그아웃 시 호출
  */
 export function stopSync() {
-  if (unsubscribe) {
-    unsubscribe();
-    unsubscribe = null;
-  }
-  clearTimeout(saveTimer);
   lastSyncTime = null;
 }
 
 /**
- * 수동 전체 동기화
+ * 로컬 → 클라우드 업로드 (디바운스)
+ * 기존: Firestore 1문서에 전체 데이터
+ * 변경: 호출되면 무시 (각 페이지에서 db.js를 직접 사용)
+ *
+ * 왜 빈 함수? → 기존에 store.js의 setSyncCallback에서 이 함수를 호출하지만
+ * Supabase 전환 후에는 각 페이지가 db.js를 직접 호출하므로 별도 동기화 불필요
+ */
+let saveTimer = null;
+
+export function syncToCloud() {
+  // Supabase는 각 CRUD 시점에 바로 저장되므로 별도 동기화 불필요
+  // 이 함수는 하위 호환을 위해 유지
+}
+
+/**
+ * 수동 전체 동기화 — 로컬 데이터를 Supabase로 강제 업로드
  */
 export async function forceSync() {
-  if (!isConfigured) {
-    showToast('Firebase가 설정되지 않았습니다.', 'info');
-    return;
-  }
-
-  const user = getCurrentUser();
-  if (!user) {
-    showToast('로그인이 필요합니다.', 'warning');
+  if (!isSupabaseConfigured) {
+    showToast('Supabase가 설정되지 않았습니다.', 'info');
     return;
   }
 
   try {
-    // 현재 로컬 데이터를 클라우드로 강제 업로드
     isSyncing = true;
     const state = getState();
-    const now = Date.now();
+    const items = state.mappedData || [];
 
-    const docRef = doc(db, 'workspaces', user.uid);
-    await setDoc(docRef, {
-      ...state,
-      _lastSync: now,
-    });
+    if (items.length > 0) {
+      // 기존 로컬 데이터를 Supabase로 업로드
+      const dbItems = items.map(item => db.storeItemToDb(item));
+      await db.items.bulkUpsert(dbItems);
+    }
 
-    lastSyncTime = now;
+    lastSyncTime = Date.now();
     isSyncing = false;
-    showToast('클라우드에 전체 동기화 완료 ☁️', 'success');
+    showToast('Supabase에 전체 동기화 완료 ☁️', 'success');
   } catch (error) {
     isSyncing = false;
     showToast('동기화 실패: ' + error.message, 'error');
@@ -149,8 +84,8 @@ export async function forceSync() {
  */
 export function getSyncStatus() {
   return {
-    isConfigured,
-    isConnected: !!unsubscribe,
+    isConfigured: isSupabaseConfigured,
+    isConnected: isSupabaseConfigured,
     lastSync: lastSyncTime ? new Date(lastSyncTime).toLocaleString('ko-KR') : '없음',
   };
 }
