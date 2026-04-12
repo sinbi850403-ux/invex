@@ -1,13 +1,13 @@
-﻿/**
- * page-documents.js - 臾몄꽌 ?먮룞?앹꽦 ?섏씠吏
- * ??븷: 諛쒖＜?? 寃ъ쟻?? 嫄곕옒紐낆꽭?쒕? ?먮룞 ?앹꽦?섍퀬 PDF濡??ㅼ슫濡쒕뱶
- * ???꾩슂? ???뚭퇋紐??낆껜?먯꽌 媛???쒓컙 留롮씠 ?곕뒗 ?낅Т瑜??먮룞??
+/**
+ * page-documents.js - 문서 자동생성 페이지
+ * 왜: 발주서, 견적서, 거래명세서를 자동 생성하고 PDF로 다운로드
+ * 소규모 업체에서 가장 시간이 많이 걸리는 서류를 자동화
  */
 
 import { jsPDF } from 'jspdf';
 import { applyPlugin } from 'jspdf-autotable';
 
-// jsPDF??autoTable ?뚮윭洹몄씤 ?곌껐 (ESM ?섍꼍?먯꽌 ?꾩닔)
+// jsPDF에 autoTable 플러그인 연결 (ESM 환경에서 필수)
 applyPlugin(jsPDF);
 import { getState } from './store.js';
 import { showToast } from './toast.js';
@@ -15,20 +15,20 @@ import { applyKoreanFont, getKoreanFontStyle } from './pdf-font.js';
 import { renderGuidedPanel, renderInsightHero } from './ux-toolkit.js';
 
 /**
- * 臾몄꽌 ?먮룞?앹꽦 ?섏씠吏 ?뚮뜑留?
+ * 문서 자동생성 페이지 렌더링
  */
 export function renderDocumentsPage(container, navigateTo) {
   const state = getState();
   const items = state.mappedData || [];
   const safetyStock = state.safetyStock || {};
 
-  // ?덉쟾?ш퀬 遺議??덈ぉ (諛쒖＜ 異붿쿇)
+  // 안전재고 부족 품목 (발주 추천)
   const lowStockItems = items.filter(d => {
     const min = safetyStock[d.itemName];
     return min !== undefined && (parseFloat(d.quantity) || 0) <= min;
   });
 
-  // 嫄곕옒泥?紐⑸줉
+  // 거래처 목록
   const vendors = [...new Set(items.map(i => i.vendor).filter(Boolean))].sort();
   const recentTransactionCount = (state.transactions || []).filter(tx => {
     const txDate = String(tx.date || '');
@@ -40,8 +40,8 @@ export function renderDocumentsPage(container, navigateTo) {
   container.innerHTML = `
     <div class="page-header">
       <div>
-        <h1 class="page-title"><span class="title-icon">?뱞</span> 臾몄꽌 ?먮룞?앹꽦</h1>
-        <div class="page-desc">諛쒖＜?? 寃ъ쟻?? 嫄곕옒紐낆꽭?쒕? ?먮룞?쇰줈 ?앹꽦?섍퀬 PDF濡??ㅼ슫濡쒕뱶?⑸땲??</div>
+        <h1 class="page-title"><span class="title-icon">📄</span> 문서 자동생성</h1>
+        <div class="page-desc">발주서, 견적서, 거래명세서를 자동으로 생성하고 PDF로 다운로드합니다.</div>
       </div>
     </div>
 
@@ -107,13 +107,13 @@ export function renderDocumentsPage(container, navigateTo) {
       </div>
     </div>
 
-    <!-- 臾몄꽌 ?묒꽦 ?곸뿭 -->
+    <!-- 문서 작성 영역 -->
     <div class="card" id="doc-editor">
       <div id="doc-content"></div>
     </div>
   `;
 
-  // 臾몄꽌 ?좏삎 ?좏깮 ?대깽??
+  // 문서 유형 선택 이벤트
   let currentDocType = 'purchase';
   container.querySelectorAll('.doc-type-card').forEach(card => {
     card.addEventListener('click', () => {
@@ -124,11 +124,11 @@ export function renderDocumentsPage(container, navigateTo) {
     });
   });
 
-  // 珥덇린 ?뚮뜑留?
+  // 초기 렌더링
   renderDocEditor('purchase');
 
   /**
-   * 臾몄꽌 ?몄쭛湲??뚮뜑留?
+   * 문서 편집기 렌더링
    */
   function renderDocEditor(type) {
     const docContent = container.querySelector('#doc-content');
@@ -144,30 +144,30 @@ export function renderDocumentsPage(container, navigateTo) {
 }
 
 /**
- * 諛쒖＜???묒꽦 UI
- * ????援ъ“? ???덉쟾?ш퀬 遺議??덈ぉ???먮룞?쇰줈 異붿쿇 + 嫄곕옒泥섎퀎 洹몃９??
+ * 발주서 작성 UI
+ * 왜: 안전재고 부족 품목을 자동으로 추천 + 거래처별 그룹화
  */
 function renderPurchaseOrder(el, items, lowStockItems, vendors, safetyStock) {
   const today = new Date().toISOString().split('T')[0];
 
   el.innerHTML = `
-    <div class="card-title">?뱥 諛쒖＜???묒꽦</div>
+    <div class="card-title">📋 발주서 작성</div>
 
     ${lowStockItems.length > 0 ? `
       <div class="alert alert-warning" style="margin-bottom:16px;">
-        ?좑툘 ?덉쟾?ш퀬 遺議??덈ぉ??<strong>${lowStockItems.length}嫄?/strong> ?덉뒿?덈떎. ?먮룞?쇰줈 異붿쿇?⑸땲??
+        ⚠️ 안전재고 부족 품목이 <strong>${lowStockItems.length}건</strong> 있습니다. 자동으로 추천합니다.
       </div>
     ` : ''}
 
     <div class="form-row" style="margin-bottom:16px;">
       <div class="form-group">
-        <label class="form-label">諛쒖＜?쇱옄</label>
+        <label class="form-label">발주일자</label>
         <input class="form-input" type="date" id="po-date" value="${today}" />
       </div>
       <div class="form-group">
-        <label class="form-label">嫄곕옒泥??좏깮</label>
+        <label class="form-label">거래처 선택</label>
         <select class="form-select" id="po-vendor">
-          <option value="">?꾩껜 嫄곕옒泥?/option>
+          <option value="">전체 거래처</option>
           ${vendors.map(v => `<option value="${v}">${v}</option>`).join('')}
         </select>
       </div>
@@ -175,35 +175,35 @@ function renderPurchaseOrder(el, items, lowStockItems, vendors, safetyStock) {
 
     <div class="form-row" style="margin-bottom:16px;">
       <div class="form-group">
-        <label class="form-label">諛쒖＜ ?뚯궗紐?/label>
+        <label class="form-label">발주 회사명</label>
         <input class="form-input" id="po-company" placeholder="우리 회사명" />
       </div>
       <div class="form-group">
-        <label class="form-label">?대떦??/label>
-        <input class="form-input" id="po-manager" placeholder="?대떦?먮챸" />
+        <label class="form-label">담당자</label>
+        <input class="form-input" id="po-manager" placeholder="담당자명" />
       </div>
     </div>
 
-    <!-- 諛쒖＜ ?덈ぉ ?뚯씠釉?-->
+    <!-- 발주 품목 테이블 -->
     <div class="table-wrapper" style="margin-bottom:16px;">
       <table class="data-table">
         <thead>
           <tr>
             <th><input type="checkbox" id="po-check-all" checked /></th>
-            <th>?덈ぉ紐?/th>
-            <th>?덈ぉ肄붾뱶</th>
-            <th>嫄곕옒泥?/th>
-            <th class="text-right">?꾩옱 ?ш퀬</th>
-            <th class="text-right">?덉쟾?ш퀬</th>
-            <th class="text-right">諛쒖＜ ?섎웾</th>
-            <th class="text-right">?④?</th>
+            <th>품목명</th>
+            <th>품목코드</th>
+            <th>거래처</th>
+            <th class="text-right">현재 재고</th>
+            <th class="text-right">안전재고</th>
+            <th class="text-right">발주 수량</th>
+            <th class="text-right">단가</th>
           </tr>
         </thead>
         <tbody id="po-items-body">
           ${(lowStockItems.length > 0 ? lowStockItems : items.slice(0, 10)).map((item, i) => {
             const currentQty = parseFloat(item.quantity) || 0;
             const minQty = safetyStock[item.itemName] || 0;
-            // 遺議깅텇 + ?ъ쑀遺??덉쟾?ш퀬??50%)?쇰줈 諛쒖＜ ?섎웾 異붿쿇
+            // 부족분 + 여유분(안전재고의 50%)으로 발주 수량 추천
             const orderQty = Math.max(1, Math.ceil((minQty - currentQty) + (minQty * 0.5)));
             return `
               <tr>
@@ -223,21 +223,21 @@ function renderPurchaseOrder(el, items, lowStockItems, vendors, safetyStock) {
     </div>
 
     <div class="form-group" style="margin-bottom:16px;">
-      <label class="form-label">鍮꾧퀬</label>
-      <input class="form-input" id="po-note" placeholder="異붽? 硫붾え (?좏깮)" />
+      <label class="form-label">비고</label>
+      <input class="form-input" id="po-note" placeholder="추가 메모 (선택)" />
     </div>
 
     <div style="display:flex; gap:8px; justify-content:flex-end;">
-      <button class="btn btn-primary btn-lg" id="btn-generate-po">?뱞 諛쒖＜??PDF ?앹꽦</button>
+      <button class="btn btn-primary btn-lg" id="btn-generate-po">📋 발주서 PDF 생성</button>
     </div>
   `;
 
-  // ?꾩껜 ?좏깮/?댁젣
+  // 전체 선택/해제
   el.querySelector('#po-check-all').addEventListener('change', (e) => {
     el.querySelectorAll('.po-item-check').forEach(cb => { cb.checked = e.target.checked; });
   });
 
-  // PDF ?앹꽦
+  // PDF 생성
   el.querySelector('#btn-generate-po').addEventListener('click', () => {
     const sourceItems = lowStockItems.length > 0 ? lowStockItems : items.slice(0, 10);
     const selectedItems = [];
@@ -249,7 +249,7 @@ function renderPurchaseOrder(el, items, lowStockItems, vendors, safetyStock) {
     });
 
     if (selectedItems.length === 0) {
-      showToast('諛쒖＜???덈ぉ???좏깮??二쇱꽭??', 'warning');
+      showToast('발주할 품목을 선택해 주세요.', 'warning');
       return;
     }
 
@@ -266,45 +266,45 @@ function renderPurchaseOrder(el, items, lowStockItems, vendors, safetyStock) {
 }
 
 /**
- * 寃ъ쟻???묒꽦 UI
+ * 견적서 작성 UI
  */
 function renderQuote(el, items) {
   const today = new Date().toISOString().split('T')[0];
 
   el.innerHTML = `
-    <div class="card-title">?뮥 寃ъ쟻???묒꽦</div>
+    <div class="card-title">📄 견적서 작성</div>
 
     <div class="form-row" style="margin-bottom:16px;">
       <div class="form-group">
-        <label class="form-label">寃ъ쟻?쇱옄</label>
+        <label class="form-label">견적일자</label>
         <input class="form-input" type="date" id="qt-date" value="${today}" />
       </div>
       <div class="form-group">
-        <label class="form-label">嫄곕옒泥??섏떊)</label>
-        <input class="form-input" id="qt-to" placeholder="寃ъ쟻 諛쏆쓣 ?낆껜紐? />
+        <label class="form-label">거래처 (수신)</label>
+        <input class="form-input" id="qt-to" placeholder="견적 받을 업체명" />
       </div>
     </div>
 
     <div class="form-row" style="margin-bottom:16px;">
       <div class="form-group">
-        <label class="form-label">諛쒖떊 ?뚯궗紐?/label>
-        <input class="form-input" id="qt-from" placeholder="?곕━ ?뚯궗紐? />
+        <label class="form-label">발신 회사명</label>
+        <input class="form-input" id="qt-from" placeholder="우리 회사명" />
       </div>
       <div class="form-group">
-        <label class="form-label">?좏슚湲곌컙</label>
-        <input class="form-input" id="qt-valid" placeholder="?? 寃ъ쟻?쇰줈遺??30?? value="寃ъ쟻?쇰줈遺??30?? />
+        <label class="form-label">유효기간</label>
+        <input class="form-input" id="qt-valid" placeholder="예: 견적일로부터 30일" value="견적일로부터 30일" />
       </div>
     </div>
 
-    <!-- ?덈ぉ ?좏깮 -->
+    <!-- 품목 선택 -->
     <div class="form-group" style="margin-bottom:8px;">
-      <label class="form-label">?덈ぉ 異붽?</label>
+      <label class="form-label">품목 추가</label>
       <div style="display:flex; gap:8px;">
         <select class="form-select" id="qt-item-select" style="flex:1;">
-          <option value="">-- ?덈ぉ ?좏깮 --</option>
+          <option value="">-- 품목 선택 --</option>
           ${items.map((item, i) => `<option value="${i}">${item.itemName} (${item.itemCode || '-'}) - ₩${Math.round(parseFloat(item.unitPrice || 0)).toLocaleString('ko-KR')}</option>`).join('')}
         </select>
-        <button class="btn btn-primary" id="btn-qt-add-item">+ 異붽?</button>
+        <button class="btn btn-primary" id="btn-qt-add-item">+ 추가</button>
       </div>
     </div>
 
@@ -312,21 +312,21 @@ function renderQuote(el, items) {
       <table class="data-table">
         <thead>
           <tr>
-            <th>?덈ぉ紐?/th>
-            <th>肄붾뱶</th>
-            <th class="text-right">?섎웾</th>
-            <th class="text-right">?④?</th>
-            <th class="text-right">湲덉븸</th>
-            <th style="width:40px;">??젣</th>
+            <th>품목명</th>
+            <th>코드</th>
+            <th class="text-right">수량</th>
+            <th class="text-right">단가</th>
+            <th class="text-right">금액</th>
+            <th style="width:40px;">삭제</th>
           </tr>
         </thead>
         <tbody id="qt-items-body">
-          <tr><td colspan="6" style="text-align:center; padding:24px; color:var(--text-muted);">?덈ぉ??異붽???二쇱꽭??/td></tr>
+          <tr><td colspan="6" style="text-align:center; padding:24px; color:var(--text-muted);">품목을 추가해 주세요.</td></tr>
         </tbody>
         <tfoot>
           <tr style="font-weight:700; background:var(--bg-card);">
-            <td colspan="4" class="text-right">?⑷퀎</td>
-            <td class="text-right" id="qt-total">??</td>
+            <td colspan="4" class="text-right">합계</td>
+            <td class="text-right" id="qt-total">₩0</td>
             <td></td>
           </tr>
         </tfoot>
@@ -334,17 +334,17 @@ function renderQuote(el, items) {
     </div>
 
     <div style="display:flex; gap:8px; justify-content:flex-end;">
-      <button class="btn btn-primary btn-lg" id="btn-generate-qt">?뮥 寃ъ쟻??PDF ?앹꽦</button>
+      <button class="btn btn-primary btn-lg" id="btn-generate-qt">📄 견적서 PDF 생성</button>
     </div>
   `;
 
   const quoteItems = [];
 
-  // ?덈ぉ 異붽?
+  // 품목 추가
   el.querySelector('#btn-qt-add-item').addEventListener('click', () => {
     const select = el.querySelector('#qt-item-select');
     const idx = parseInt(select.value);
-    if (isNaN(idx)) { showToast('?덈ぉ???좏깮??二쇱꽭??', 'warning'); return; }
+    if (isNaN(idx)) { showToast('품목을 선택해 주세요.', 'warning'); return; }
 
     const item = items[idx];
     quoteItems.push({ ...item, qty: 1 });
@@ -355,8 +355,8 @@ function renderQuote(el, items) {
   function renderQuoteTable() {
     const tbody = el.querySelector('#qt-items-body');
     if (quoteItems.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:24px; color:var(--text-muted);">?덈ぉ??異붽???二쇱꽭??/td></tr>';
-      el.querySelector('#qt-total').textContent = '??';
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:24px; color:var(--text-muted);">품목을 추가해 주세요.</td></tr>';
+      el.querySelector('#qt-total').textContent = '₩0';
       return;
     }
 
@@ -368,18 +368,18 @@ function renderQuote(el, items) {
           <td><strong>${item.itemName}</strong></td>
           <td style="color:var(--text-muted);">${item.itemCode || '-'}</td>
           <td class="text-right"><input type="number" class="form-input qt-qty" data-idx="${i}" value="${item.qty}" min="1" style="width:60px; padding:3px 6px; text-align:right;" /></td>
-          <td class="text-right">??{price.toLocaleString('ko-KR')}</td>
-          <td class="text-right">??{subtotal.toLocaleString('ko-KR')}</td>
-          <td class="text-center"><button class="btn-icon btn-icon-danger qt-del" data-idx="${i}">?뿊截?/button></td>
+          <td class="text-right">₩${price.toLocaleString('ko-KR')}</td>
+          <td class="text-right">₩${subtotal.toLocaleString('ko-KR')}</td>
+          <td class="text-center"><button class="btn-icon btn-icon-danger qt-del" data-idx="${i}">🗑️</button></td>
         </tr>
       `;
     }).join('');
 
-    // ?⑷퀎 怨꾩궛
+    // 합계 계산
     const total = quoteItems.reduce((s, item) => s + ((parseFloat(item.unitPrice) || 0) * item.qty), 0);
     el.querySelector('#qt-total').textContent = '₩' + total.toLocaleString('ko-KR');
 
-    // ?섎웾 蹂寃??대깽??
+    // 수량 변경 이벤트
     el.querySelectorAll('.qt-qty').forEach(input => {
       input.addEventListener('change', () => {
         quoteItems[parseInt(input.dataset.idx)].qty = parseInt(input.value) || 1;
@@ -387,7 +387,7 @@ function renderQuote(el, items) {
       });
     });
 
-    // ??젣 ?대깽??
+    // 삭제 이벤트
     el.querySelectorAll('.qt-del').forEach(btn => {
       btn.addEventListener('click', () => {
         quoteItems.splice(parseInt(btn.dataset.idx), 1);
@@ -396,10 +396,10 @@ function renderQuote(el, items) {
     });
   }
 
-  // PDF ?앹꽦
+  // PDF 생성
   el.querySelector('#btn-generate-qt').addEventListener('click', () => {
     if (quoteItems.length === 0) {
-      showToast('寃ъ쟻 ?덈ぉ??異붽???二쇱꽭??', 'warning');
+      showToast('견적 품목을 추가해 주세요.', 'warning');
       return;
     }
     const info = {
@@ -413,7 +413,7 @@ function renderQuote(el, items) {
 }
 
 /**
- * 嫄곕옒紐낆꽭???묒꽦 UI
+ * 거래명세서 작성 UI
  */
 function renderStatement(el, items, transactions) {
   const today = new Date().toISOString().split('T')[0];
@@ -422,37 +422,37 @@ function renderStatement(el, items, transactions) {
   const fromDate = monthAgo.toISOString().split('T')[0];
 
   el.innerHTML = `
-    <div class="card-title">?뱷 嫄곕옒紐낆꽭???묒꽦</div>
+    <div class="card-title">📋 거래명세서 작성</div>
 
     <div class="form-row" style="margin-bottom:16px;">
       <div class="form-group">
-        <label class="form-label">湲곌컙 (?쒖옉)</label>
+        <label class="form-label">기간 (시작)</label>
         <input class="form-input" type="date" id="st-from" value="${fromDate}" />
       </div>
       <div class="form-group">
-        <label class="form-label">湲곌컙 (醫낅즺)</label>
+        <label class="form-label">기간 (종료)</label>
         <input class="form-input" type="date" id="st-to" value="${today}" />
       </div>
     </div>
 
     <div class="form-row" style="margin-bottom:16px;">
       <div class="form-group">
-        <label class="form-label">怨듦툒??(?곕━ ?뚯궗)</label>
+        <label class="form-label">공급자 (우리 회사)</label>
         <input class="form-input" id="st-supplier" placeholder="우리 회사명" />
       </div>
       <div class="form-group">
-        <label class="form-label">怨듦툒諛쏅뒗??/label>
-        <input class="form-input" id="st-receiver" placeholder="嫄곕옒泥섎챸" />
+        <label class="form-label">공급받는자</label>
+        <input class="form-input" id="st-receiver" placeholder="거래처명" />
       </div>
     </div>
 
     <div style="margin-bottom:16px;">
-      <strong>?대떦 湲곌컙 嫄곕옒 嫄댁닔: </strong>
-      <span id="st-count" class="badge badge-info">${transactions.length}嫄?/span>
+      <strong>해당 기간 거래 건수: </strong>
+      <span id="st-count" class="badge badge-info">${transactions.length}건</span>
     </div>
 
     <div style="display:flex; gap:8px; justify-content:flex-end;">
-      <button class="btn btn-primary btn-lg" id="btn-generate-st">?뱷 嫄곕옒紐낆꽭??PDF ?앹꽦</button>
+      <button class="btn btn-primary btn-lg" id="btn-generate-st">📋 거래명세서 PDF 생성</button>
     </div>
   `;
 
@@ -462,7 +462,7 @@ function renderStatement(el, items, transactions) {
     const filteredTx = transactions.filter(tx => tx.date >= from && tx.date <= to);
 
     if (filteredTx.length === 0) {
-      showToast('?대떦 湲곌컙??嫄곕옒 湲곕줉???놁뒿?덈떎.', 'warning');
+      showToast('해당 기간에 거래 기록이 없습니다.', 'warning');
       return;
     }
 
@@ -475,7 +475,7 @@ function renderStatement(el, items, transactions) {
     generateStatementPDF(filteredTx, info);
   });
 
-  // ?좎쭨 蹂寃???嫄댁닔 ?낅뜲?댄듃
+  // 날짜 변경 시 건수 업데이트
   ['#st-from', '#st-to'].forEach(sel => {
     el.querySelector(sel).addEventListener('change', () => {
       const from = el.querySelector('#st-from').value;
@@ -486,29 +486,29 @@ function renderStatement(el, items, transactions) {
   });
 }
 
-// === PDF ?앹꽦 ?⑥닔??===
+// === PDF 생성 함수들 ===
 
 /**
- * 諛쒖＜??PDF ?앹꽦
- * ??jsPDF? ???몃? ?쒕쾭 ?놁씠 釉뚮씪?곗??먯꽌 諛붾줈 PDF瑜?留뚮뱾 ???덉뼱??蹂댁븞?깅룄 ?믪쓬
+ * 발주서 PDF 생성
+ * 왜: jsPDF와 한글 폰트 없이 브라우저에서 바로 PDF를 만들 수 있어야 보안성도 높음
  */
 async function generatePurchaseOrderPDF(selectedItems, info) {
   try {
-    showToast('PDF ?앹꽦 以?.. (?고듃 濡쒕뵫)', 'info', 2000);
+    showToast('PDF 생성 중... (폰트 로딩)', 'info', 2000);
     const doc = new jsPDF();
     const fontStyle = getKoreanFontStyle();
     await applyKoreanFont(doc);
 
-    // ?ㅻ뜑
+    // 헤더
     doc.setFontSize(20);
     doc.text('발주서', 105, 20, { align: 'center' });
     doc.setFontSize(10);
-    doc.text(`諛쒖＜?쇱옄: ${info.date}`, 15, 35);
-    doc.text(`諛쒖＜?뚯궗: ${info.company}`, 15, 42);
-    doc.text(`?대떦?? ${info.manager}`, 15, 49);
-    doc.text(`嫄곕옒泥? ${info.vendor}`, 15, 56);
+    doc.text(`발주일자: ${info.date}`, 15, 35);
+    doc.text(`발주회사: ${info.company}`, 15, 42);
+    doc.text(`담당자: ${info.manager}`, 15, 49);
+    doc.text(`거래처: ${info.vendor}`, 15, 56);
 
-    // ?뚯씠釉?
+    // 테이블
     const tableData = selectedItems.map((item, i) => {
       const price = parseFloat(item.unitPrice) || 0;
       const subtotal = price * item.orderQty;
@@ -532,22 +532,22 @@ async function generatePurchaseOrderPDF(selectedItems, info) {
     if (info.note) {
       const finalY = doc.lastAutoTable.finalY || 120;
       doc.setFontSize(9);
-      doc.text(`鍮꾧퀬: ${info.note}`, 15, finalY + 15);
+      doc.text(`비고: ${info.note}`, 15, finalY + 15);
     }
 
-    doc.save(`諛쒖＜??${info.date}.pdf`);
-    showToast('諛쒖＜??PDF瑜??ㅼ슫濡쒕뱶?덉뒿?덈떎.', 'success');
+    doc.save(`발주서_${info.date}.pdf`);
+    showToast('발주서 PDF를 다운로드했습니다.', 'success');
   } catch (err) {
-    showToast('PDF ?앹꽦 ?ㅽ뙣: ' + err.message, 'error');
+    showToast('PDF 생성 실패: ' + err.message, 'error');
   }
 }
 
 /**
- * 寃ъ쟻??PDF ?앹꽦
+ * 견적서 PDF 생성
  */
 async function generateQuotePDF(quoteItems, info) {
   try {
-    showToast('PDF ?앹꽦 以?.. (?고듃 濡쒕뵫)', 'info', 2000);
+    showToast('PDF 생성 중... (폰트 로딩)', 'info', 2000);
     const doc = new jsPDF();
     const fontStyle = getKoreanFontStyle();
     await applyKoreanFont(doc);
@@ -555,10 +555,10 @@ async function generateQuotePDF(quoteItems, info) {
     doc.setFontSize(20);
     doc.text('견적서', 105, 20, { align: 'center' });
     doc.setFontSize(10);
-    doc.text(`寃ъ쟻?쇱옄: ${info.date}`, 15, 35);
-    doc.text(`?섏떊: ${info.to}`, 15, 42);
-    doc.text(`諛쒖떊: ${info.from}`, 15, 49);
-    doc.text(`?좏슚湲곌컙: ${info.valid}`, 15, 56);
+    doc.text(`견적일자: ${info.date}`, 15, 35);
+    doc.text(`수신: ${info.to}`, 15, 42);
+    doc.text(`발신: ${info.from}`, 15, 49);
+    doc.text(`유효기간: ${info.valid}`, 15, 56);
 
     const tableData = quoteItems.map((item, i) => {
       const price = parseFloat(item.unitPrice) || 0;
@@ -580,19 +580,19 @@ async function generateQuotePDF(quoteItems, info) {
       styles: { ...fontStyle },
     });
 
-    doc.save(`寃ъ쟻??${info.date}.pdf`);
-    showToast('寃ъ쟻??PDF瑜??ㅼ슫濡쒕뱶?덉뒿?덈떎.', 'success');
+    doc.save(`견적서_${info.date}.pdf`);
+    showToast('견적서 PDF를 다운로드했습니다.', 'success');
   } catch (err) {
-    showToast('PDF ?앹꽦 ?ㅽ뙣: ' + err.message, 'error');
+    showToast('PDF 생성 실패: ' + err.message, 'error');
   }
 }
 
 /**
- * 嫄곕옒紐낆꽭??PDF ?앹꽦
+ * 거래명세서 PDF 생성
  */
 async function generateStatementPDF(transactions, info) {
   try {
-    showToast('PDF ?앹꽦 以?.. (?고듃 濡쒕뵫)', 'info', 2000);
+    showToast('PDF 생성 중... (폰트 로딩)', 'info', 2000);
     const doc = new jsPDF();
     const fontStyle = getKoreanFontStyle();
     await applyKoreanFont(doc);
@@ -600,14 +600,14 @@ async function generateStatementPDF(transactions, info) {
     doc.setFontSize(20);
     doc.text('거래명세서', 105, 20, { align: 'center' });
     doc.setFontSize(10);
-    doc.text(`湲곌컙: ${info.from} ~ ${info.to}`, 15, 35);
-    doc.text(`怨듦툒?? ${info.supplier}`, 15, 42);
-    doc.text(`怨듦툒諛쏅뒗?? ${info.receiver}`, 15, 49);
+    doc.text(`기간: ${info.from} ~ ${info.to}`, 15, 35);
+    doc.text(`공급자: ${info.supplier}`, 15, 42);
+    doc.text(`공급받는자: ${info.receiver}`, 15, 49);
 
     const tableData = transactions.map((tx, i) => [
       i + 1,
       tx.date,
-      tx.type === 'in' ? '?낃퀬' : '異쒓퀬',
+      tx.type === 'in' ? '입고' : '출고',
       tx.itemName,
       tx.itemCode || '-',
       tx.quantity,
@@ -631,10 +631,9 @@ async function generateStatementPDF(transactions, info) {
       },
     });
 
-    doc.save(`嫄곕옒紐낆꽭??${info.from}_${info.to}.pdf`);
-    showToast('嫄곕옒紐낆꽭??PDF瑜??ㅼ슫濡쒕뱶?덉뒿?덈떎.', 'success');
+    doc.save(`거래명세서_${info.from}_${info.to}.pdf`);
+    showToast('거래명세서 PDF를 다운로드했습니다.', 'success');
   } catch (err) {
-    showToast('PDF ?앹꽦 ?ㅽ뙣: ' + err.message, 'error');
+    showToast('PDF 생성 실패: ' + err.message, 'error');
   }
 }
-
