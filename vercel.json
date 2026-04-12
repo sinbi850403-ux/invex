@@ -7,7 +7,6 @@
     { "source": "/google0310002914a08212.html", "destination": "/google0310002914a08212.html" },
     { "source": "/privacy", "destination": "/privacy.html" },
     { "source": "/terms", "destination": "/terms.html" },
-    { "source": "/__/auth/:path*", "destination": "https://erp-lite-9e83a.firebaseapp.com/__/auth/:path*" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }

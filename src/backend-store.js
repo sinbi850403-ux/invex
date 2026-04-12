@@ -1,9 +1,9 @@
 /**
- * Firebase Firestore compatibility shim.
- * Purpose: remove runtime dependency on firebase/* while keeping legacy pages working.
+ * Lightweight document-store compatibility layer.
+ * Purpose: keep older pages working without external legacy SDKs.
  */
 
-const STORAGE_KEY = 'invex-firestore-compat-v1';
+const STORAGE_KEY = 'invex-backend-store-v1';
 let listeners = [];
 
 function loadStore() {

@@ -15,7 +15,7 @@ import { isAdmin } from './admin-auth.js';
 import { checkAndShowOnboarding } from './onboarding.js';
 import { initGlobalSearch, toggleGlobalSearch } from './global-search.js';
 import { initTheme, toggleTheme } from './theme.js';
-import { initAuth, getCurrentUser, getUserProfileData, loginWithGoogle, loginWithEmail, signupWithEmail, resetPassword, logout } from './firebase-auth.js';
+import { initAuth, getCurrentUser, getUserProfileData, loginWithGoogle, loginWithEmail, signupWithEmail, resetPassword, logout } from './auth.js';
 import { renderNotificationPanel, getNotificationCount, syncExternalNotifications } from './notifications.js';
 import { showToast } from './toast.js';
 import { canAccessPage, getPageBadge, showUpgradeModal, getCurrentPlan, PLANS, setPlan, injectGetCurrentUser, injectGetUserProfile } from './plan.js';
@@ -29,7 +29,7 @@ initTheme();
 injectGetCurrentUser(getCurrentUser);
 injectGetUserProfile(getUserProfileData);
 
-// Firebase ?몄쬆 珥덇린????濡쒓렇???곹깭???곕씪 ???묎렐 ?쒖뼱
+// 인증 초기화 후 로그인 상태에 따라 화면 제어
 let isAuthReady = false;
 
 // === ?쒕뵫 ?섏씠吏 ?대깽??===

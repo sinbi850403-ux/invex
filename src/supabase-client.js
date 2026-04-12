@@ -65,7 +65,7 @@ export const supabase = isSupabaseConfigured
       auth: {
         persistSession: true,
         autoRefreshToken: true,
-        // 기존 Firebase 키와 충돌 방지
+        // 이전 인증 저장소와 충돌 방지
         storageKey: 'invex-supabase-auth',
       },
     })

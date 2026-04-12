@@ -1,6 +1,6 @@
 /**
- * firebase-config.js (legacy compatibility)
- * Firebase is fully deprecated in this project.
+ * backend-config.js
+ * Compatibility flags for older pages that still use the bridge layer.
  */
 
 export const app = null;

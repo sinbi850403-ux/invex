@@ -1,9 +1,9 @@
 /**
- * Firebase Auth compatibility shim on top of Supabase auth.
+ * Auth bridge on top of Supabase auth.
  */
 
 import { supabase } from './supabase-client.js';
-import { getCurrentUser } from './firebase-auth.js';
+import { getCurrentUser } from './auth.js';
 
 export function getAuth() {
   return {

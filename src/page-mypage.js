@@ -2,10 +2,10 @@
  * page-mypage.js - 마이페이지
  * 왜 필요? → 사용자가 프로필 수정, 비밀번호 변경, 회원탈퇴를 할 수 있어야 함 (개인정보보호법 준수)
  */
-import { getCurrentUser, getUserProfileData } from './firebase-auth.js';
-import { getAuth, updatePassword, reauthenticateWithCredential, EmailAuthProvider, deleteUser } from './firebase-compat-auth.js';
-import { doc, updateDoc, deleteDoc } from './firebase-compat-firestore.js';
-import { db, isConfigured } from './firebase-config.js';
+import { getCurrentUser, getUserProfileData } from './auth.js';
+import { getAuth, updatePassword, reauthenticateWithCredential, EmailAuthProvider, deleteUser } from './auth-bridge.js';
+import { doc, updateDoc, deleteDoc } from './backend-store.js';
+import { db, isConfigured } from './backend-config.js';
 import { showToast } from './toast.js';
 import { getCurrentPlan, PLANS } from './plan.js';
 
@@ -141,11 +141,11 @@ export function renderMyPage(container) {
 
     try {
       const auth = getAuth();
-      // Firestore 사용자 데이터 삭제
+      // 사용자 데이터 삭제
       if (isConfigured && user) {
         await deleteDoc(doc(db, 'users', user.uid));
       }
-      // Firebase Auth 계정 삭제
+      // 인증 계정 삭제
       await deleteUser(auth.currentUser);
       showToast('회원 탈퇴가 완료되었습니다.', 'success');
     } catch (e) {

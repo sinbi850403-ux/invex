@@ -1,16 +1,16 @@
 ﻿/**
  * page-admin.js - 총관리자 대시보드 (Pro Edition)
- * 역할: Firebase에서 실제 사용자 데이터를 조회하여 SaaS 전체를 관리
- * 왜 Firebase 직접 조회? → 실시간 사용자 현황과 정확한 통계 제공
+ * 역할: 백엔드에 저장된 실제 사용자 데이터를 조회하여 SaaS 전체를 관리
+ * 왜 직접 조회? → 실시간 사용자 현황과 정확한 통계 제공
  * 접근 제한: 총관리자 이메일만 접근 가능, 일반 사용자에게는 메뉴 자체가 숨김
  */
 
 import { getState, setState } from './store.js';
 import { showToast } from './toast.js';
-import { getCurrentUser } from './firebase-auth.js';
+import { getCurrentUser } from './auth.js';
 import { PLANS } from './plan.js';
-import { db, isConfigured } from './firebase-config.js';
-import { collection, getDocs, doc, updateDoc, deleteDoc, query, orderBy } from './firebase-compat-firestore.js';
+import { db, isConfigured } from './backend-config.js';
+import { collection, getDocs, doc, updateDoc, deleteDoc, query, orderBy } from './backend-store.js';
 
 // ═══════════════════════════════════════════
 // 총관리자(사이트 소유자) 이메일 목록
@@ -31,7 +31,7 @@ export function isAdmin() {
 }
 
 /**
- * Firebase에서 모든 사용자 가져오기
+ * 백엔드 사용자 목록 가져오기
  * 왜? → 로컬 상태가 아닌 실제 가입된 사용자를 보여줘야 함
  */
 async function fetchAllUsers() {
@@ -102,7 +102,7 @@ export async function renderAdminPage(container, navigateTo) {
     </div>
   `;
 
-  // Firebase에서 실제 사용자 데이터 조회
+  // 백엔드에서 실제 사용자 데이터 조회
   const allUsers = await fetchAllUsers();
   const state = getState();
   const notices = state.adminNotices || [];
@@ -304,8 +304,8 @@ export async function renderAdminPage(container, navigateTo) {
         <div style="font-size:12px; line-height:2;">
           ${sysRow('도메인', '<a href="https://invex.io.kr" target="_blank" style="color:var(--accent);">invex.io.kr</a>')}
           ${sysRow('호스팅', 'Vercel Edge')}
-          ${sysRow('데이터베이스', 'Cloud Firestore')}
-          ${sysRow('인증', 'Firebase Auth')}
+          ${sysRow('데이터베이스', 'Supabase Database')}
+          ${sysRow('인증', 'Supabase Auth')}
           ${sysRow('결제', '토스페이먼츠')}
           ${sysRow('버전', '<span style="background:var(--accent); color:#fff; padding:1px 6px; border-radius:4px; font-size:10px;">v3.1</span>')}
           ${sysRow('관리자', user?.email || '-')}

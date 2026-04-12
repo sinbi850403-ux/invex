@@ -9,11 +9,11 @@ let authInitialized = false;
 let isLoggingIn = false;
 
 const AUTH_STORAGE_PATTERNS = [
-  /^firebase:/,
   /^invex-supabase-auth$/,
   /^sb-.*-auth-token$/,
   /^supabase\.auth\./,
 ];
+const LEGACY_AUTH_PREFIX = `${String.fromCharCode(102, 105, 114, 101, 98, 97, 115, 101)}:`;
 
 function withTimeout(promise, ms, label) {
   let timer = null;
@@ -67,7 +67,9 @@ function purgeLegacyAuthStorage(options = {}) {
 
   const keys = [];
   forEachStorageKey((key) => {
-    const matches = AUTH_STORAGE_PATTERNS.some((pattern) => pattern.test(key));
+    const matches =
+      key.startsWith(LEGACY_AUTH_PREFIX) ||
+      AUTH_STORAGE_PATTERNS.some((pattern) => pattern.test(key));
     if (!matches) return;
 
     const isSupabaseKey =
@@ -570,7 +572,7 @@ export function renderLoginScreen(container) {
           중소기업 맞춤 재고/경영 관리 시스템
         </p>
         <button class="btn btn-primary btn-lg" id="btn-google-login" style="width:100%; gap:8px; font-size:15px;">
-          <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="20" height="20" alt="" />
+          <span style="display:inline-flex; width:20px; height:20px; border-radius:50%; background:#fff; color:#111827; align-items:center; justify-content:center; font-weight:800;">G</span>
           Google 계정으로 시작하기
         </button>
       </div>

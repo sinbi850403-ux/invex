@@ -4,8 +4,8 @@
  * 왜 필요? → 다중 사용자가 같은 데이터를 공유하려면 팀 관리가 필수
  */
 
-import { getCurrentUser, getUserProfileData } from './firebase-auth.js';
-import { isConfigured } from './firebase-config.js';
+import { getCurrentUser, getUserProfileData } from './auth.js';
+import { isConfigured } from './backend-config.js';
 import { showToast } from './toast.js';
 import {
   getWorkspaceId,
