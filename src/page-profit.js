@@ -28,6 +28,8 @@ export function renderProfitPage(container, navigateTo) {
   const activeTab = viewPrefs.tab === 'vendors' ? 'vendors' : 'items';
   const vendorSort = viewPrefs.vendorSort || 'profit';
   const vendorLimit = Number(viewPrefs.vendorLimit) || 8;
+  const vendorKeyword = String(viewPrefs.vendorKeyword || '').trim();
+  const vendorLossOnly = viewPrefs.vendorLossOnly === true;
 
   const rows = items
     .map((item) => {
@@ -87,14 +89,15 @@ export function renderProfitPage(container, navigateTo) {
 
   const vendorSummary = buildVendorSummary(periodTransactions, items);
   const vendorSummarySorted = sortVendorSummary(vendorSummary, vendorSort);
-  const vendorChartRows = vendorSummarySorted.slice(0, vendorLimit);
+  const vendorFiltered = filterVendorRows(vendorSummarySorted, vendorKeyword, vendorLossOnly);
+  const vendorChartRows = vendorFiltered.slice(0, vendorLimit);
   const vendorTotalCount = new Set([
     ...vendorMaster.map((v) => v.name).filter(Boolean),
     ...vendorSummary.map((v) => v.name),
   ]).size;
   const vendorActiveCount = vendorSummary.length;
   const vendorInactiveCount = Math.max(vendorTotalCount - vendorActiveCount, 0);
-  const topVendor = vendorSummarySorted[0];
+  const topVendor = vendorFiltered[0];
 
   container.innerHTML = `
     <div class="page-header">
@@ -145,6 +148,9 @@ export function renderProfitPage(container, navigateTo) {
             <div class="card-title">기간 손익 흐름</div>
             <div class="chart-help-text">기간 내 매입/매출/손익 흐름을 한 번에 확인합니다.</div>
           </div>
+          <div class="chart-control-inline">
+            <button class="btn btn-ghost btn-sm" id="btn-profit-trend-download">차트 PNG</button>
+          </div>
         </div>
         <div class="chart-canvas-lg">
           <canvas id="profit-trend-chart"></canvas>
@@ -157,6 +163,7 @@ export function renderProfitPage(container, navigateTo) {
             <div class="chart-help-text">기간 내 손익 기준 상위 거래처 흐름입니다.</div>
           </div>
           <div class="chart-control-inline">
+            <button class="btn btn-ghost btn-sm" id="btn-profit-vendor-download">차트 PNG</button>
             <span class="chart-control-label">정렬 기준</span>
             <select class="filter-select chart-sort-select" id="profit-vendor-sort">
               <option value="profit" ${vendorSort === 'profit' ? 'selected' : ''}>손익</option>
@@ -371,6 +378,16 @@ export function renderProfitPage(container, navigateTo) {
     </div>
 
     <div class="profit-tab" id="profit-tab-vendors" style="display:${activeTab === 'vendors' ? 'block' : 'none'};">
+      <div class="card card-compact" style="margin-bottom:12px;">
+        <div style="display:flex; flex-wrap:wrap; gap:10px; align-items:center;">
+          <input class="form-input" id="profit-vendor-keyword" placeholder="거래처 검색" value="${escapeHtmlAttr(vendorKeyword)}" />
+          <label class="toggle-pill">
+            <input type="checkbox" id="profit-vendor-loss" ${vendorLossOnly ? 'checked' : ''} />
+            손실 거래처만
+          </label>
+          <button class="btn btn-ghost btn-sm" id="profit-vendor-reset">필터 초기화</button>
+        </div>
+      </div>
       <div class="card" style="padding-bottom: 8px;">
         <div class="card-title">거래처 손익 요약</div>
         <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:12px;">
@@ -420,13 +437,13 @@ export function renderProfitPage(container, navigateTo) {
             </thead>
             <tbody>
               ${
-                vendorSummarySorted.length === 0
+                vendorFiltered.length === 0
                   ? `
                 <tr>
                   <td colspan="9" style="text-align:center; color:var(--text-muted); padding:28px 0;">기간 내 거래처 손익 데이터가 없습니다.</td>
                 </tr>
               `
-                  : vendorSummarySorted
+                  : vendorFiltered
                       .map((row, index) => {
                         const tone = row.profit >= 0 ? 'var(--success)' : 'var(--danger)';
                         return `
@@ -514,6 +531,23 @@ export function renderProfitPage(container, navigateTo) {
     });
   });
 
+  const vendorKeywordInput = container.querySelector('#profit-vendor-keyword');
+  const vendorLossInput = container.querySelector('#profit-vendor-loss');
+  const vendorResetBtn = container.querySelector('#profit-vendor-reset');
+  const updateVendorFilter = () => {
+    saveProfitViewPrefs({
+      vendorKeyword: vendorKeywordInput?.value || '',
+      vendorLossOnly: !!vendorLossInput?.checked,
+    });
+    renderProfitPage(container, navigateTo);
+  };
+  vendorKeywordInput?.addEventListener('input', updateVendorFilter);
+  vendorLossInput?.addEventListener('change', updateVendorFilter);
+  vendorResetBtn?.addEventListener('click', () => {
+    saveProfitViewPrefs({ vendorKeyword: '', vendorLossOnly: false });
+    renderProfitPage(container, navigateTo);
+  });
+
   const vendorSortSelect = container.querySelector('#profit-vendor-sort');
   const vendorLimitSelect = container.querySelector('#profit-vendor-limit');
   const updateVendorView = () => {
@@ -593,7 +627,7 @@ export function renderProfitPage(container, navigateTo) {
           downloadExcel(exportRows, `품목손익_${periodLabel}`);
           showToast('품목 손익 엑셀을 내보냈습니다.', 'success');
         } else if (type === 'vendors') {
-          const exportRows = vendorSummarySorted.map((row) => ({
+          const exportRows = vendorFiltered.map((row) => ({
             거래처: row.name,
             '거래 수': row.count,
             매입: row.totalIn,
@@ -620,6 +654,13 @@ export function renderProfitPage(container, navigateTo) {
         showToast(err.message || '내보내기에 실패했습니다.', 'error');
       }
     });
+  });
+
+  container.querySelector('#btn-profit-trend-download')?.addEventListener('click', () => {
+    downloadCanvasImage('profit-trend-chart', `손익흐름_${periodFrom}_${periodTo}`);
+  });
+  container.querySelector('#btn-profit-vendor-download')?.addEventListener('click', () => {
+    downloadCanvasImage('profit-vendor-chart', `거래처손익_${periodFrom}_${periodTo}`);
   });
 
   renderProfitTrendChart('profit-trend-chart', monthlySeries);
@@ -714,6 +755,18 @@ function sortVendorSummary(rows, sortKey) {
   if (sortKey === 'out') return list.sort((a, b) => b.totalOut - a.totalOut);
   if (sortKey === 'in') return list.sort((a, b) => b.totalIn - a.totalIn);
   return list.sort((a, b) => b.profit - a.profit);
+}
+
+function filterVendorRows(rows, keyword, lossOnly) {
+  let list = [...rows];
+  if (keyword) {
+    const lowered = keyword.toLowerCase();
+    list = list.filter((row) => row.name.toLowerCase().includes(lowered));
+  }
+  if (lossOnly) {
+    list = list.filter((row) => row.profit < 0);
+  }
+  return list;
 }
 
 function getTransactionAmount(tx, items) {
@@ -831,6 +884,23 @@ function formatPercent(value) {
   return `${toNumber(value).toFixed(1)}%`;
 }
 
+function downloadCanvasImage(canvasId, fileName) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) {
+    showToast('차트를 찾을 수 없습니다.', 'warning');
+    return;
+  }
+  try {
+    const dataUrl = canvas.toDataURL('image/png');
+    const link = document.createElement('a');
+    link.href = dataUrl;
+    link.download = `${fileName}.png`;
+    link.click();
+  } catch {
+    showToast('차트 이미지를 저장하지 못했습니다.', 'error');
+  }
+}
+
 function escapeHtml(text) {
   return String(text)
     .replace(/&/g, '&amp;')
@@ -838,4 +908,8 @@ function escapeHtml(text) {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
+}
+
+function escapeHtmlAttr(text) {
+  return escapeHtml(text).replace(/`/g, '&#96;');
 }

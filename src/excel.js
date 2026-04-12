@@ -15,6 +15,22 @@ import * as XLSX from 'xlsx';
  */
 export function readExcelFile(file) {
   return new Promise((resolve, reject) => {
+    const maxSizeMb = 10;
+    if (!file) {
+      reject(new Error('파일을 선택해 주세요.'));
+      return;
+    }
+    const name = String(file.name || '').toLowerCase();
+    const allowed = ['.xlsx', '.xls', '.csv'];
+    if (!allowed.some(ext => name.endsWith(ext))) {
+      reject(new Error('엑셀(xlsx/xls) 또는 CSV 파일만 업로드할 수 있습니다.'));
+      return;
+    }
+    if (file.size > maxSizeMb * 1024 * 1024) {
+      reject(new Error(`파일 용량이 너무 큽니다. ${maxSizeMb}MB 이하로 줄여주세요.`));
+      return;
+    }
+
     const reader = new FileReader();
 
     reader.onload = (e) => {

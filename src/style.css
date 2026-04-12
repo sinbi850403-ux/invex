@@ -3741,3 +3741,19 @@ html.dark-mode .report-spotlight-card {
   justify-content: flex-start;
   gap: 6px;
 }
+
+.toggle-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.toggle-pill input {
+  margin: 0;
+}
