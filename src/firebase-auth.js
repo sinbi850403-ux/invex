@@ -283,7 +283,7 @@ export async function signupWithEmail(email, password, name) {
  */
 export async function loginWithEmail(email, password) {
   if (!isSupabaseConfigured) {
-    showToast('Supabase 설정이 필요합니다.', 'warning');
+    showToast('로그인 설정이 누락되었습니다. 관리자에게 Supabase URL/키를 확인해 달라고 요청해 주세요.', 'warning');
     return null;
   }
 
@@ -330,7 +330,7 @@ export async function loginWithEmail(email, password) {
       error.message.includes('fetch') ||
       error.message.toLowerCase().includes('timeout')
     ) {
-      errorMsg = '네트워크 연결을 확인해 주세요.';
+      errorMsg = '인증 서버 연결에 실패했습니다. Supabase 설정(URL/KEY) 또는 브라우저 캐시를 확인해 주세요.';
       showToast(errorMsg, 'error');
     } else {
       errorMsg = '로그인 실패: ' + error.message;
@@ -403,7 +403,7 @@ export async function loginWithEmail(email, password) {
  */
 export async function resetPassword(email) {
   if (!isSupabaseConfigured) {
-    showToast('Supabase 설정이 필요합니다.', 'warning');
+    showToast('로그인 설정이 누락되었습니다. 관리자에게 Supabase URL/키를 확인해 달라고 요청해 주세요.', 'warning');
     return false;
   }
 

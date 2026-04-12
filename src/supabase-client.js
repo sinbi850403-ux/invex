@@ -7,12 +7,29 @@
 
 import { createClient } from '@supabase/supabase-js';
 
-// Vite 환경변수에서 Supabase 설정 로드
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || '';
-const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+function normalizeEnv(value) {
+  return String(value || '')
+    .trim()
+    .replace(/^['"]|['"]$/g, '');
+}
+
+function isValidHttpsUrl(url) {
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
+
+// Vite 환경변수에서 Supabase 설정 로드 (따옴표/공백 오입력 방어)
+const SUPABASE_URL = normalizeEnv(import.meta.env.VITE_SUPABASE_URL);
+const SUPABASE_ANON_KEY = normalizeEnv(import.meta.env.VITE_SUPABASE_ANON_KEY);
+const HAS_VALID_URL = isValidHttpsUrl(SUPABASE_URL);
+const HAS_VALID_KEY = SUPABASE_ANON_KEY.length > 20;
 
 // Supabase 프로젝트가 설정되어 있는지 확인
-export const isSupabaseConfigured = !!(SUPABASE_URL && SUPABASE_ANON_KEY);
+export const isSupabaseConfigured = HAS_VALID_URL && HAS_VALID_KEY;
 
 /**
  * Supabase 클라이언트 싱글톤
@@ -29,3 +46,12 @@ export const supabase = isSupabaseConfigured
       },
     })
   : null;
+
+if (!isSupabaseConfigured) {
+  console.error('[Supabase] 설정값이 유효하지 않습니다.', {
+    hasUrl: Boolean(SUPABASE_URL),
+    hasKey: Boolean(SUPABASE_ANON_KEY),
+    validUrl: HAS_VALID_URL,
+    validKey: HAS_VALID_KEY,
+  });
+}
