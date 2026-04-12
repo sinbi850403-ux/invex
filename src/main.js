@@ -307,6 +307,8 @@ const pageLoaders = {
   referral: () => import('./page-referral.js').then(m => m.renderReferralPage),
   'weekly-report': () => import('./page-weekly-report.js').then(m => m.renderWeeklyReportPage),
   pos: () => import('./page-pos.js').then(m => m.renderPosPage),
+  'ops-hub': () => import('./page-ops-hub.js').then(m => m.renderOpsHubPage),
+  'report-hub': () => import('./page-report-hub.js').then(m => m.renderReportHubPage),
 };
 
 const pageRendererCache = {};
@@ -316,11 +318,11 @@ const NAV_SHOW_ALL_KEY = 'invex_nav_show_all_v1';
 const NAV_ROLE_MODES = {
   staff: {
     label: '실무자',
-    corePages: new Set(['home', 'inout', 'inventory', 'upload', 'summary', 'vendors']),
+    corePages: new Set(['home', 'ops-hub', 'inout', 'inventory', 'upload', 'report-hub', 'summary']),
   },
   manager: {
     label: '경영자',
-    corePages: new Set(['home', 'summary', 'profit', 'accounts', 'inventory', 'dashboard']),
+    corePages: new Set(['home', 'report-hub', 'summary', 'profit', 'accounts', 'ops-hub', 'dashboard']),
   },
 };
 const HARD_HIDDEN_PAGES = new Set(['scanner', 'labels', 'api']);
@@ -363,6 +365,8 @@ const PAGE_SECTION_LABELS = {
   guide: '지원',
   support: '지원',
   referral: '지원',
+  'ops-hub': '관리',
+  'report-hub': '보고 · 분석',
 };
 
 function getPageLabel(pageId) {
@@ -426,8 +430,41 @@ function ensureSidebarModeControls() {
   });
 }
 
+function ensureHubEntryButtons() {
+  const opsNav = document.getElementById('nav2');
+  const reportNav = document.getElementById('nav3');
+  if (opsNav && !opsNav.querySelector('[data-page="ops-hub"]')) {
+    const btn = document.createElement('button');
+    btn.className = 'nav-btn nav-btn-rich';
+    btn.dataset.page = 'ops-hub';
+    btn.innerHTML = `
+      <span class="nav-icon">🧭</span>
+      <span class="nav-copy">
+        <span class="nav-main">재고 관리 허브</span>
+        <span class="nav-sub">현황·실사·창고·이동 한 번에</span>
+      </span>
+    `;
+    opsNav.prepend(btn);
+  }
+
+  if (reportNav && !reportNav.querySelector('[data-page="report-hub"]')) {
+    const btn = document.createElement('button');
+    btn.className = 'nav-btn nav-btn-rich';
+    btn.dataset.page = 'report-hub';
+    btn.innerHTML = `
+      <span class="nav-icon">🧭</span>
+      <span class="nav-copy">
+        <span class="nav-main">보고서 센터</span>
+        <span class="nav-sub">목적별 보고·분석 빠른 이동</span>
+      </span>
+    `;
+    reportNav.prepend(btn);
+  }
+}
+
 function applySidebarMode() {
   ensureSidebarModeControls();
+  ensureHubEntryButtons();
   const roleMode = getCurrentRoleMode();
   const showAll = isShowAllMenu();
   const corePages = NAV_ROLE_MODES[roleMode].corePages;
@@ -999,6 +1036,7 @@ function openPinManagerModal(container, pageName, cards) {
 
 // ?ъ씠?쒕컮 硫붾돱???붽툑??諛곗? ?곸슜 + ?대깽???곌껐
 function updateSidebarBadges() {
+  ensureHubEntryButtons();
   document.querySelectorAll('.nav-btn').forEach(btn => {
     const pageId = btn.dataset.page;
     if (!pageId) return;
