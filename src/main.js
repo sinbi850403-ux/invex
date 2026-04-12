@@ -23,6 +23,7 @@ import { renderNotificationPanel, getNotificationCount, syncExternalNotification
 import { showToast } from './toast.js';
 import { canAccessPage, getPageBadge, showUpgradeModal, getCurrentPlan, PLANS, setPlan, injectGetCurrentUser, injectGetUserProfile } from './plan.js';
 import { mountAutoTableSort } from './table-auto-sort.js';
+import { renderHubData, renderHubInventory, renderHubWarehouse, renderHubOrder, renderHubReport, renderHubDocuments, renderHubSettings, renderHubSupport, HUB_MAP, PAGE_LABELS } from './page-hubs.js';
 
 // ?ㅽ겕 紐⑤뱶 珥덇린??
 initTheme();
@@ -305,11 +306,22 @@ const pageLoaders = {
   referral: () => import('./page-referral.js').then(m => m.renderReferralPage),
   'weekly-report': () => import('./page-weekly-report.js').then(m => m.renderWeeklyReportPage),
   pos: () => import('./page-pos.js').then(m => m.renderPosPage),
+  // 허브 페이지 — 하위 기능을 타일 그리드로 묶은 인덱스 페이지
+  'hub-data': async () => renderHubData,
+  'hub-inventory': async () => renderHubInventory,
+  'hub-warehouse': async () => renderHubWarehouse,
+  'hub-order': async () => renderHubOrder,
+  'hub-report': async () => renderHubReport,
+  'hub-documents': async () => renderHubDocuments,
+  'hub-settings': async () => renderHubSettings,
+  'hub-support': async () => renderHubSupport,
 };
 
 const pageRendererCache = {};
 
 function getPageLabel(pageId) {
+  // 허브 기반 네비게이션 — PAGE_LABELS 맵 우선 사용
+  if (PAGE_LABELS[pageId]) return PAGE_LABELS[pageId];
   const btn = document.querySelector(`.nav-btn[data-page="${pageId}"]`);
   if (!btn) return pageId;
   const mainLabel = btn.querySelector('.nav-main');
@@ -413,19 +425,19 @@ async function navigateTo(pageName) {
   const token = ++navigationToken;
 
   // 紐⑤뱺 nav ?곸뿭??踰꾪듉 ?쒖꽦 ?곹깭 ?낅뜲?댄듃
+  // 사이드바 하이라이트 — 자식 페이지는 부모 허브를 활성화
+  const activeSidebarPage = HUB_MAP[pageName] || pageName;
   document.querySelectorAll('.nav-btn').forEach(btn => {
-    btn.classList.toggle('active', btn.dataset.page === pageName);
+    btn.classList.toggle('active', btn.dataset.page === activeSidebarPage);
   });
+
+  // 브레드크럼 업데이트
+  updateBreadcrumb(pageName);
 
   const mainContent = document.getElementById('main-content');
   mainContent.dataset.page = pageName;
-  mainContent.innerHTML = `
-    <div class="card">
-      <div class="empty-state" style="padding:32px 20px;">
-        <div class="msg">페이지를 불러오는 중입니다.</div>
-      </div>
-    </div>
-  `;
+  // 스켈레톤 로딩 UI 표시
+  mainContent.innerHTML = getSkeletonHtml();
   mainContent.scrollTop = 0;
 
   try {
@@ -433,6 +445,10 @@ async function navigateTo(pageName) {
     if (token !== navigationToken || currentPage !== pageName) return;
     mainContent.innerHTML = '';
     renderPage(mainContent, navigateTo);
+    // 페이지 전환 애니메이션 트리거
+    mainContent.classList.remove('page-enter');
+    void mainContent.offsetWidth;
+    mainContent.classList.add('page-enter');
     initCardCollapsibles(mainContent, pageName);
     mountAutoTableSort(mainContent);
   } catch (error) {
@@ -462,6 +478,68 @@ async function resolvePageRenderer(pageName) {
     pageRendererCache[pageName] = pageLoaders[pageName]();
   }
   return pageRendererCache[pageName];
+}
+
+/** 스켈레톤 로딩 HTML — 페이지 모듈 로딩 중에 표시하여 체감 속도 개선 */
+function getSkeletonHtml() {
+  return `
+    <div class="skeleton-page">
+      <div class="skeleton-header">
+        <div class="skeleton-line skeleton-lg skeleton-w60"></div>
+        <div class="skeleton-line skeleton-sm skeleton-w40"></div>
+      </div>
+      <div class="skeleton-stats">
+        <div class="skeleton-stat"></div>
+        <div class="skeleton-stat"></div>
+        <div class="skeleton-stat"></div>
+        <div class="skeleton-stat"></div>
+      </div>
+      <div class="skeleton-card">
+        <div class="skeleton-line skeleton-w40"></div>
+        <div class="skeleton-line skeleton-w90"></div>
+        <div class="skeleton-line skeleton-w70"></div>
+        <div class="skeleton-line skeleton-w80"></div>
+      </div>
+      <div class="skeleton-card">
+        <div class="skeleton-line skeleton-w50"></div>
+        <div class="skeleton-line skeleton-w80"></div>
+        <div class="skeleton-line skeleton-w60"></div>
+      </div>
+    </div>
+  `;
+}
+
+/** 브레드크럼 업데이트 — 현재 페이지 위치를 허브 계층으로 표시 */
+function updateBreadcrumb(pageName) {
+  const breadcrumb = document.getElementById('breadcrumb');
+  if (!breadcrumb) return;
+
+  const label = PAGE_LABELS[pageName] || pageName;
+  const parentHub = HUB_MAP[pageName];
+
+  if (pageName === 'home') {
+    breadcrumb.innerHTML = `<span class="breadcrumb-current">🏠 대시보드</span>`;
+  } else if (parentHub) {
+    const hubLabel = PAGE_LABELS[parentHub] || parentHub;
+    breadcrumb.innerHTML = `
+      <span class="breadcrumb-item" data-bc-nav="home">🏠</span>
+      <span class="breadcrumb-sep">›</span>
+      <span class="breadcrumb-item" data-bc-nav="${parentHub}">${hubLabel}</span>
+      <span class="breadcrumb-sep">›</span>
+      <span class="breadcrumb-current">${label}</span>
+    `;
+  } else {
+    breadcrumb.innerHTML = `
+      <span class="breadcrumb-item" data-bc-nav="home">🏠</span>
+      <span class="breadcrumb-sep">›</span>
+      <span class="breadcrumb-current">${label}</span>
+    `;
+  }
+
+  // 브레드크럼 클릭 이벤트 바인딩
+  breadcrumb.querySelectorAll('[data-bc-nav]').forEach(el => {
+    el.addEventListener('click', () => navigateTo(el.dataset.bcNav));
+  });
 }
 
 /**
@@ -1006,6 +1084,16 @@ function updateUserUI(user, profile) {
       </div>
     `;
     document.getElementById('btn-logout')?.addEventListener('click', () => { logout(); });
+    // 상단 헤더 사용자 영역 업데이트
+    const topUser = document.getElementById('top-header-user');
+    if (topUser) {
+      topUser.innerHTML = `
+        <div class="top-user-compact">
+          ${photo ? `<img src="${photo}" class="top-user-avatar" />` : `<span class="top-user-avatar-placeholder">${name[0]}</span>`}
+          <span class="top-user-name">${name}</span>
+        </div>
+      `;
+    }
   } else {
     userArea.innerHTML = `
       <button class="btn btn-ghost btn-sm" id="btn-login" style="color:rgba(255,255,255,0.7); font-size:12px; width:100%;">
@@ -1013,6 +1101,8 @@ function updateUserUI(user, profile) {
       </button>
     `;
     document.getElementById('btn-login')?.addEventListener('click', () => { loginWithGoogle(); });
+    const topUser2 = document.getElementById('top-header-user');
+    if (topUser2) topUser2.innerHTML = '';
   }
 }
 

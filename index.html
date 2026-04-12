@@ -335,7 +335,6 @@
           <span class="nav-icon">🏠</span>
           <span class="nav-copy">
             <span class="nav-main">대시보드</span>
-            <span class="nav-sub">오늘 핵심 현황 한눈에 보기</span>
           </span>
         </button>
       </nav>
@@ -350,311 +349,65 @@
 
       <div class="sidebar-divider" id="quick-access-divider" style="display:none;"></div>
 
-      <!-- 데이터 -->
-      <div class="nav-section">
-        <div class="nav-section-title">데이터</div>
-      </div>
-      <nav id="nav" class="nav-rich-list">
-        <button class="nav-btn nav-btn-rich" data-page="upload">
+      <!-- 업무 -->
+      <div class="nav-section"><div class="nav-section-title">업무</div></div>
+      <nav class="nav-rich-list">
+        <button class="nav-btn nav-btn-rich" data-page="hub-data">
           <span class="nav-icon">📂</span>
-          <span class="nav-copy">
-            <span class="nav-main">파일 업로드</span>
-            <span class="nav-sub">엑셀/CSV 데이터 가져오기</span>
-          </span>
+          <span class="nav-copy"><span class="nav-main">데이터 가져오기</span></span>
         </button>
-        <button class="nav-btn nav-btn-rich" data-page="mapping">
-          <span class="nav-icon">📋</span>
-          <span class="nav-copy">
-            <span class="nav-main">데이터 확인</span>
-            <span class="nav-sub">컬럼 매핑과 정합성 점검</span>
-          </span>
+        <button class="nav-btn nav-btn-rich" data-page="hub-inventory">
+          <span class="nav-icon">📦</span>
+          <span class="nav-copy"><span class="nav-main">재고 관리</span></span>
+        </button>
+        <button class="nav-btn nav-btn-rich" data-page="hub-warehouse">
+          <span class="nav-icon">🏢</span>
+          <span class="nav-copy"><span class="nav-main">창고·거래처</span></span>
         </button>
       </nav>
 
       <div class="sidebar-divider"></div>
 
-      <!-- 관리 -->
-      <!-- 관리 — 기본 접힘 → 사이드바 스크롤 50% 감소 -->
-      <details class="nav-fold">
-        <summary class="nav-fold-summary">
-          <div class="nav-section-title">관리</div>
-          <span class="nav-fold-toggle" aria-hidden="true"></span>
-        </summary>
-        <nav id="nav2" class="nav-rich-list">
-        <button class="nav-btn nav-btn-rich" data-page="inventory">
-          <span class="nav-icon">📦</span>
-          <span class="nav-copy">
-            <span class="nav-main">재고 현황</span>
-            <span class="nav-sub">품목별 재고와 금액 조회</span>
-          </span>
-        </button>
-        <button class="nav-btn nav-btn-rich" data-page="inout">
-          <span class="nav-icon">🔄</span>
-          <span class="nav-copy">
-            <span class="nav-main">입출고 관리</span>
-            <span class="nav-sub">입고·출고 등록 및 수정</span>
-          </span>
-        </button>
-        <button class="nav-btn nav-btn-rich" data-page="bulk">
-          <span class="nav-icon">⚡</span>
-          <span class="nav-copy">
-            <span class="nav-main">일괄 처리</span>
-            <span class="nav-sub">대량 수정/삭제 빠른 처리</span>
-          </span>
-        </button>
-        <!-- 바코드 스캔 — 추후 오픈 예정 (display:none 제거하면 복원) -->
-        <button class="nav-btn nav-btn-rich" data-page="scanner" style="display:none;">
-          <span class="nav-icon">📱</span>
-          <span class="nav-copy">
-            <span class="nav-main">바코드 스캔</span>
-            <span class="nav-sub">스캔으로 품목 즉시 입력</span>
-          </span>
-        </button>
-        <!-- 라벨 인쇄 — 추후 오픈 예정 (display:none 제거하면 복원) -->
-        <button class="nav-btn nav-btn-rich" data-page="labels" style="display:none;">
-          <span class="nav-icon">🏷️</span>
-          <span class="nav-copy">
-            <span class="nav-main">라벨 인쇄</span>
-            <span class="nav-sub">품목 라벨 출력 및 관리</span>
-          </span>
-        </button>
-        <button class="nav-btn nav-btn-rich" data-page="warehouses">
-          <span class="nav-icon">🏢</span>
-          <span class="nav-copy">
-            <span class="nav-main">다중 창고 관리</span>
-            <span class="nav-sub">창고별 재고 분산 관리</span>
-          </span>
-        </button>
-        <button class="nav-btn nav-btn-rich" data-page="transfer">
-          <span class="nav-icon">🏭</span>
-          <span class="nav-copy">
-            <span class="nav-main">창고 이동</span>
-            <span class="nav-sub">창고 간 재고 이전 처리</span>
-          </span>
-        </button>
-        <button class="nav-btn nav-btn-rich" data-page="stocktake">
-          <span class="nav-icon">📋</span>
-          <span class="nav-copy">
-            <span class="nav-main">재고 실사</span>
-            <span class="nav-sub">실물 재고와 장부 비교</span>
-          </span>
-        </button>
-        <button class="nav-btn nav-btn-rich" data-page="vendors">
-          <span class="nav-icon">🤝</span>
-          <span class="nav-copy">
-            <span class="nav-main">거래처 관리</span>
-            <span class="nav-sub">공급처·고객사 정보 관리</span>
-          </span>
-        </button>
-        <button class="nav-btn nav-btn-rich" data-page="auto-order">
-          <span class="nav-icon">🤖</span>
-          <span class="nav-copy">
-            <span class="nav-main">자동 발주 추천</span>
-            <span class="nav-sub">부족 예상 품목 자동 제안</span>
-          </span>
-        </button>
-        <button class="nav-btn nav-btn-rich" data-page="orders">
-          <span class="nav-icon">📋</span>
-          <span class="nav-copy">
-            <span class="nav-main">발주 이력</span>
-            <span class="nav-sub">발주 진행 내역 추적</span>
-          </span>
-        </button>
-        <button class="nav-btn nav-btn-rich" data-page="forecast">
-          <span class="nav-icon">🔮</span>
-          <span class="nav-copy">
-            <span class="nav-main">AI 수요 예측</span>
-            <span class="nav-sub">미래 수요량 예측 분석</span>
-          </span>
-        </button>
-        </nav>
-      </details>
-
-      <div class="sidebar-divider"></div>
-
-      <!-- 보고 -->
-      <!-- 보고 · 분석 — 기본 접힘 -->
-      <details class="nav-fold">
-        <summary class="nav-fold-summary">
-          <div class="nav-section-title">보고 · 분석</div>
-          <span class="nav-fold-toggle" aria-hidden="true"></span>
-        </summary>
-        <nav id="nav3" class="nav-rich-list">
-        <button class="nav-btn nav-btn-rich" data-page="summary">
-          <span class="nav-icon">📊</span>
-          <span class="nav-copy">
-            <span class="nav-main">요약 보고</span>
-            <span class="nav-sub">핵심 지표 빠르게 확인</span>
-          </span>
-        </button>
-        <button class="nav-btn nav-btn-rich" data-page="weekly-report">
-          <span class="nav-icon">📬</span>
-          <span class="nav-copy">
-            <span class="nav-main">주간 보고서</span>
-            <span class="nav-sub">주간 흐름과 이상 신호</span>
-          </span>
-        </button>
-        <button class="nav-btn nav-btn-rich" data-page="profit">
-          <span class="nav-icon">💹</span>
-          <span class="nav-copy">
-            <span class="nav-main">손익 분석</span>
-            <span class="nav-sub">이익률과 손실 포인트</span>
-          </span>
-        </button>
-        <button class="nav-btn nav-btn-rich" data-page="accounts">
-          <span class="nav-icon">💳</span>
-          <span class="nav-copy">
-            <span class="nav-main">매출/매입</span>
-            <span class="nav-sub">매출과 매입 추이 비교</span>
-          </span>
-        </button>
-        <button class="nav-btn nav-btn-rich" data-page="costing">
-          <span class="nav-icon">💰</span>
-          <span class="nav-copy">
-            <span class="nav-main">원가 분석</span>
-            <span class="nav-sub">원가 구조와 변동 체크</span>
-          </span>
-        </button>
-        <button class="nav-btn nav-btn-rich" data-page="dashboard">
-          <span class="nav-icon">📈</span>
-          <span class="nav-copy">
-            <span class="nav-main">고급 분석</span>
-            <span class="nav-sub">세부 지표 심화 분석</span>
-          </span>
-        </button>
-        <button class="nav-btn nav-btn-rich" data-page="tax-reports">
-          <span class="nav-icon">📑</span>
-          <span class="nav-copy">
-            <span class="nav-main">세무/회계 서류</span>
-            <span class="nav-sub">신고용 자료 자동 생성</span>
-          </span>
-        </button>
-        <button class="nav-btn nav-btn-rich" data-page="documents">
-          <span class="nav-icon">📄</span>
-          <span class="nav-copy">
-            <span class="nav-main">문서 생성</span>
-            <span class="nav-sub">증빙·출력 문서 만들기</span>
-          </span>
-        </button>
-        <button class="nav-btn nav-btn-rich" data-page="ledger">
-          <span class="nav-icon">📒</span>
-          <span class="nav-copy">
-            <span class="nav-main">수불부</span>
-            <span class="nav-sub">입출고 장부 상세 조회</span>
-          </span>
-        </button>
-        <button class="nav-btn nav-btn-rich" data-page="auditlog">
-          <span class="nav-icon">📝</span>
-          <span class="nav-copy">
-            <span class="nav-main">감사 추적</span>
-            <span class="nav-sub">변경 이력 및 사용자 로그</span>
-          </span>
-        </button>
-        </nav>
-      </details>
-
-      <div class="sidebar-divider"></div>
-
-      <!-- 설정 -->
-      <div class="nav-section">
-        <div class="nav-section-title">설정</div>
-      </div>
+      <!-- 분석 -->
+      <div class="nav-section"><div class="nav-section-title">분석</div></div>
       <nav class="nav-rich-list">
-        <button class="nav-btn nav-btn-rich" data-page="settings">
+        <button class="nav-btn nav-btn-rich" data-page="hub-order">
+          <span class="nav-icon">🤖</span>
+          <span class="nav-copy"><span class="nav-main">발주·예측</span></span>
+        </button>
+        <button class="nav-btn nav-btn-rich" data-page="hub-report">
+          <span class="nav-icon">📊</span>
+          <span class="nav-copy"><span class="nav-main">보고·분석</span></span>
+        </button>
+        <button class="nav-btn nav-btn-rich" data-page="hub-documents">
+          <span class="nav-icon">📑</span>
+          <span class="nav-copy"><span class="nav-main">문서·서류</span></span>
+        </button>
+      </nav>
+
+      <div class="sidebar-divider"></div>
+
+      <!-- 설정·지원 -->
+      <div class="nav-section"><div class="nav-section-title">설정·지원</div></div>
+      <nav class="nav-rich-list">
+        <button class="nav-btn nav-btn-rich" data-page="hub-settings">
           <span class="nav-icon">⚙️</span>
-          <span class="nav-copy">
-            <span class="nav-main">설정</span>
-            <span class="nav-sub">기본 옵션 및 환경 설정</span>
-          </span>
+          <span class="nav-copy"><span class="nav-main">설정</span></span>
         </button>
-        <button class="nav-btn nav-btn-rich" data-page="team">
-          <span class="nav-icon">👥</span>
-          <span class="nav-copy">
-            <span class="nav-main">팀 관리</span>
-            <span class="nav-sub">팀원 초대와 조직 관리</span>
-          </span>
+        <button class="nav-btn nav-btn-rich" data-page="hub-support">
+          <span class="nav-icon">💬</span>
+          <span class="nav-copy"><span class="nav-main">지원</span></span>
         </button>
-        <button class="nav-btn nav-btn-rich" data-page="backup">
-          <span class="nav-icon">💾</span>
-          <span class="nav-copy">
-            <span class="nav-main">백업/복원</span>
-            <span class="nav-sub">데이터 백업과 복구 실행</span>
-          </span>
-        </button>
-        <button class="nav-btn nav-btn-rich" data-page="roles">
-          <span class="nav-icon">🔐</span>
-          <span class="nav-copy">
-            <span class="nav-main">권한 관리</span>
-            <span class="nav-sub">역할별 접근 권한 설정</span>
-          </span>
-        </button>
-        <!-- API 연동 — 추후 오픈 예정 (display:none 제거하면 복원) -->
-        <button class="nav-btn nav-btn-rich" data-page="api" style="display:none;">
-          <span class="nav-icon">🔌</span>
-          <span class="nav-copy">
-            <span class="nav-main">API 연동</span>
-            <span class="nav-sub">외부 시스템 연결 관리</span>
-          </span>
-        </button>
-        <button class="nav-btn nav-btn-rich" data-page="billing">
-          <span class="nav-icon">💳</span>
-          <span class="nav-copy">
-            <span class="nav-main">구독 관리</span>
-            <span class="nav-sub">요금제와 결제 정보 관리</span>
-          </span>
+        <button class="nav-btn nav-btn-rich" data-page="admin" style="display:none;">
+          <span class="nav-icon">👑</span>
+          <span class="nav-copy"><span class="nav-main">관리자</span></span>
         </button>
         <button class="nav-btn nav-btn-rich" data-page="pos" style="display:none;">
           <span class="nav-icon">🏪</span>
-          <span class="nav-copy">
-            <span class="nav-main">POS 매출분석</span>
-            <span class="nav-sub">매장 POS 매출 데이터 분석</span>
-          </span>
-        </button>
-        <button class="nav-btn nav-btn-rich" data-page="admin">
-          <span class="nav-icon">👑</span>
-          <span class="nav-copy">
-            <span class="nav-main">관리자</span>
-            <span class="nav-sub">관리자 전용 기능 실행</span>
-          </span>
+          <span class="nav-copy"><span class="nav-main">POS 매출분석</span></span>
         </button>
       </nav>
 
-      <div class="sidebar-divider"></div>
-
-      <!-- 지원 -->
-      <div class="nav-section">
-        <div class="nav-section-title">지원</div>
-      </div>
-      <nav class="nav-rich-list">
-        <button class="nav-btn nav-btn-rich" data-page="mypage">
-          <span class="nav-icon">👤</span>
-          <span class="nav-copy">
-            <span class="nav-main">마이페이지</span>
-            <span class="nav-sub">내 정보와 계정 관리</span>
-          </span>
-        </button>
-        <button class="nav-btn nav-btn-rich" data-page="guide">
-          <span class="nav-icon">📖</span>
-          <span class="nav-copy">
-            <span class="nav-main">사용 가이드</span>
-            <span class="nav-sub">기능별 사용법 빠른 안내</span>
-          </span>
-        </button>
-        <button class="nav-btn nav-btn-rich" data-page="support">
-          <span class="nav-icon">💬</span>
-          <span class="nav-copy">
-            <span class="nav-main">고객 문의</span>
-            <span class="nav-sub">문의 접수 및 답변 확인</span>
-          </span>
-        </button>
-        <button class="nav-btn nav-btn-rich" data-page="referral">
-          <span class="nav-icon">🎁</span>
-          <span class="nav-copy">
-            <span class="nav-main">친구 초대</span>
-            <span class="nav-sub">추천 링크 공유 및 혜택</span>
-          </span>
-        </button>
-      </nav>
 
       <div class="sidebar-footer">
         <!-- 사용자 로그인 영역 -->
@@ -667,6 +420,20 @@
         © 2026
       </div>
     </aside>
+
+
+    <!-- 상단 헤더바 — 브레드크럼 + 사용자 정보 -->
+    <header class="top-header" id="top-header">
+      <div class="top-header-left">
+        <nav class="breadcrumb" id="breadcrumb" aria-label="현재 위치">
+          <span class="breadcrumb-current">🏠 대시보드</span>
+        </nav>
+      </div>
+      <div class="top-header-right">
+        <div class="sync-dot" id="sync-dot" title="동기화 연결됨"></div>
+        <div class="top-header-user" id="top-header-user"></div>
+      </div>
+    </header>
 
     <!-- 메인 콘텐츠 -->
     <main id="main-content"></main>
