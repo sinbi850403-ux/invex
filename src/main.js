@@ -1011,7 +1011,15 @@ function updateUserUI(user, profile) {
         <button class="btn-icon" id="btn-logout" title="로그아웃" style="font-size:11px; color:rgba(255,255,255,0.5);">로그아웃</button>
       </div>
     `;
-    document.getElementById('btn-logout')?.addEventListener('click', () => { logout(); });
+    document.getElementById('btn-logout')?.addEventListener('click', async () => {
+      const button = document.getElementById('btn-logout');
+      if (button) button.disabled = true;
+      try {
+        await logout();
+      } finally {
+        if (button) button.disabled = false;
+      }
+    });
   } else {
     userArea.innerHTML = `
       <button class="btn btn-ghost btn-sm" id="btn-login" style="color:rgba(255,255,255,0.7); font-size:12px; width:100%;">

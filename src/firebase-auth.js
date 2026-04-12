@@ -174,15 +174,36 @@ export async function resetPassword(email) {
  * 로그아웃
  */
 export async function logout() {
-  if (!isConfigured) return;
+  if (!isConfigured) {
+    currentUser = null;
+    userProfile = null;
+    authChangeCallbacks.forEach(cb => cb(null, null));
+    showToast('로그아웃되었습니다.', 'info');
+    return true;
+  }
 
   try {
     await signOut(auth);
+    showToast('로그아웃되었습니다.', 'info');
+    return true;
+  } catch (error) {
+    // 네트워크/SDK 오류 시에도 UI를 로그아웃 상태로 복구한다.
+    try {
+      Object.keys(localStorage)
+        .filter((key) => key.startsWith('firebase:'))
+        .forEach((key) => localStorage.removeItem(key));
+      Object.keys(sessionStorage)
+        .filter((key) => key.startsWith('firebase:'))
+        .forEach((key) => sessionStorage.removeItem(key));
+    } catch {
+      // 스토리지 접근 실패는 무시
+    }
+
     currentUser = null;
     userProfile = null;
-    showToast('로그아웃되었습니다.', 'info');
-  } catch (error) {
+    authChangeCallbacks.forEach(cb => cb(null, null));
     showToast('로그아웃 실패: ' + error.message, 'error');
+    return false;
   }
 }
 
