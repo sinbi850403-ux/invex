@@ -12,6 +12,7 @@ let userProfile = null;
 let authChangeCallbacks = [];
 let authSubscription = null;
 let authInitialized = false;
+let recoveryFlowInProgress = false;
 
 function normalizeUser(user) {
   if (!user) return null;
@@ -54,6 +55,40 @@ function emitAuthChange() {
   authChangeCallbacks.forEach((cb) => cb(currentUser, userProfile));
 }
 
+async function handlePasswordRecovery() {
+  if (!supabase || recoveryFlowInProgress) return;
+  recoveryFlowInProgress = true;
+  try {
+    showToast('비밀번호 재설정 모드입니다. 새 비밀번호를 입력해 주세요.', 'info');
+    const nextPassword = window.prompt('새 비밀번호를 입력해 주세요. (6자 이상)');
+    if (!nextPassword) {
+      showToast('비밀번호 재설정이 취소되었습니다.', 'info');
+      return;
+    }
+    if (nextPassword.length < 6) {
+      showToast('비밀번호는 6자 이상이어야 합니다.', 'warning');
+      return;
+    }
+    const nextPasswordConfirm = window.prompt('새 비밀번호를 다시 입력해 주세요.');
+    if (nextPassword !== nextPasswordConfirm) {
+      showToast('비밀번호 확인이 일치하지 않습니다.', 'warning');
+      return;
+    }
+
+    const { error } = await supabase.auth.updateUser({ password: nextPassword });
+    if (error) {
+      showToast('비밀번호 재설정 실패: ' + error.message, 'error');
+      return;
+    }
+
+    showToast('비밀번호가 재설정되었습니다. 새 비밀번호로 로그인해 주세요.', 'success');
+    await supabase.auth.signOut({ scope: 'local' });
+    window.location.href = `${window.location.origin}${window.location.pathname}`;
+  } finally {
+    recoveryFlowInProgress = false;
+  }
+}
+
 export function isAuthConfigured() {
   return isSupabaseConfigured;
 }
@@ -79,6 +114,9 @@ export function initAuth(callback) {
   });
 
   const { data } = supabase.auth.onAuthStateChange((_event, session) => {
+    if (_event === 'PASSWORD_RECOVERY') {
+      handlePasswordRecovery();
+    }
     const sessionUser = session?.user || null;
     currentUser = normalizeUser(sessionUser);
     userProfile = buildProfile(sessionUser);
@@ -170,6 +208,10 @@ export async function resetPassword(email) {
   }
 
   if (result.error) {
+    if (String(result.error.message || '').toLowerCase().includes('rate limit')) {
+      showToast('요청이 너무 많습니다. 잠시 후 다시 시도해 주세요.', 'warning');
+      return false;
+    }
     showToast('비밀번호 재설정 메일 발송 실패: ' + result.error.message, 'error');
     return false;
   }
