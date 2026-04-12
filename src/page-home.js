@@ -154,23 +154,31 @@ export function renderHomePage(container, navigateTo) {
       </div>
     </div>
 
-    <div class="card dashboard-mode-shell">
-      <div class="dashboard-mode-top">
+    <details class="card fold-card" open>
+      <summary class="fold-card-summary">
         <div>
-          <div class="dashboard-eyebrow">대시보드 모드</div>
-          <div class="dashboard-mode-title">${dashboardMode === 'executive' ? '경영자 관점으로 한눈에 보고 있습니다.' : '실무자 관점으로 바로 처리할 항목을 보고 있습니다.'}</div>
-          <div class="dashboard-mode-desc">
-            ${dashboardMode === 'executive'
-              ? '경영자용은 자산 규모, 위험도, 의사결정 포인트를 중심으로 보여줍니다.'
-              : '실무자용은 오늘 해야 할 일, 빠른 실행, 현장 확인 순서를 중심으로 보여줍니다.'}
+          <div class="fold-card-title">대시보드 모드</div>
+          <div class="fold-card-meta">${dashboardMode === 'executive' ? '경영자용' : '실무자용'} 모드 안내</div>
+        </div>
+      </summary>
+      <div class="fold-card-body">
+        <div class="dashboard-mode-top">
+          <div>
+            <div class="dashboard-eyebrow">대시보드 모드</div>
+            <div class="dashboard-mode-title">${dashboardMode === 'executive' ? '경영자 관점으로 한눈에 보고 있습니다.' : '실무자 관점으로 바로 처리할 항목을 보고 있습니다.'}</div>
+            <div class="dashboard-mode-desc">
+              ${dashboardMode === 'executive'
+                ? '경영자용은 자산 규모, 위험도, 의사결정 포인트를 중심으로 보여줍니다.'
+                : '실무자용은 오늘 해야 할 일, 빠른 실행, 현장 확인 순서를 중심으로 보여줍니다.'}
+            </div>
+          </div>
+          <div class="dashboard-mode-toggle">
+            <button class="dashboard-mode-btn ${dashboardMode === 'executive' ? 'is-active' : ''}" data-dashboard-mode="executive">경영자용</button>
+            <button class="dashboard-mode-btn ${dashboardMode === 'operator' ? 'is-active' : ''}" data-dashboard-mode="operator">실무자용</button>
           </div>
         </div>
-        <div class="dashboard-mode-toggle">
-          <button class="dashboard-mode-btn ${dashboardMode === 'executive' ? 'is-active' : ''}" data-dashboard-mode="executive">경영자용</button>
-          <button class="dashboard-mode-btn ${dashboardMode === 'operator' ? 'is-active' : ''}" data-dashboard-mode="operator">실무자용</button>
-        </div>
       </div>
-    </div>
+    </details>
 
     <div class="card dashboard-quick-card">
       <div class="dashboard-quick-head">

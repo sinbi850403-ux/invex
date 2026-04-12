@@ -1,56 +1,116 @@
-/**
- * excel.js - 엑셀 파일 읽기/쓰기 처리
- * 왜 별도 파일? → 엑셀 처리 로직을 한 곳에 모아서 관리하기 위해
- * xlsx 라이브러리 사용
- */
+﻿import { showToast } from './toast.js';
 
-import * as XLSX from 'xlsx';
+const MAX_UPLOAD_MB = 10;
 
-/**
- * 엑셀 파일을 읽어서 데이터 반환
- * @param {File} file - 업로드된 파일 객체
- * @returns {Promise<{sheetNames: string[], sheets: Object}>}
- *   - sheetNames: 시트 이름 목록
- *   - sheets: { 시트이름: [[행1], [행2], ...] } 형태의 2차원 배열
- */
-export function readExcelFile(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
+export async function readExcelFile(file) {
+  if (!file) {
+    throw new Error('파일을 선택해 주세요.');
+  }
 
-    reader.onload = (e) => {
-      try {
-        const data = new Uint8Array(e.target.result);
-        const workbook = XLSX.read(data, { type: 'array' });
+  const name = String(file.name || '').toLowerCase();
+  const allowed = ['.xlsx', '.xls', '.csv'];
+  if (!allowed.some((ext) => name.endsWith(ext))) {
+    throw new Error('엑셀(xlsx/xls) 또는 CSV 파일만 업로드할 수 있습니다.');
+  }
+  if (file.size > MAX_UPLOAD_MB * 1024 * 1024) {
+    throw new Error(`파일 용량이 너무 큽니다. ${MAX_UPLOAD_MB}MB 이하로 줄여주세요.`);
+  }
 
-        const sheetNames = workbook.SheetNames;
-        const sheets = {};
-
-        // 각 시트를 2차원 배열로 변환
-        sheetNames.forEach((name) => {
-          const sheet = workbook.Sheets[name];
-          // header:1 → 헤더를 별도로 분리하지 않고 전부 배열로 반환
-          sheets[name] = XLSX.utils.sheet_to_json(sheet, {
-            header: 1,
-            defval: '', // 빈 셀은 빈 문자열로
-          });
-        });
-
-        resolve({ sheetNames, sheets });
-      } catch (err) {
-        reject(new Error('엑셀 파일을 읽을 수 없습니다: ' + err.message));
-      }
+  if (name.endsWith('.csv')) {
+    const text = await file.text();
+    const Papa = await import('papaparse');
+    const result = Papa.parse(text, { skipEmptyLines: false });
+    if (result.errors && result.errors.length) {
+      throw new Error('CSV 파일을 읽는 중 오류가 발생했습니다.');
+    }
+    return {
+      sheetNames: ['CSV'],
+      sheets: { CSV: result.data },
     };
+  }
 
-    reader.onerror = () => reject(new Error('파일 읽기에 실패했습니다.'));
-    reader.readAsArrayBuffer(file);
+  const ExcelJS = await import('exceljs');
+  const workbook = new ExcelJS.Workbook();
+  const buffer = await file.arrayBuffer();
+  await workbook.xlsx.load(buffer);
+
+  const sheetNames = [];
+  const sheets = {};
+
+  workbook.eachSheet((worksheet) => {
+    sheetNames.push(worksheet.name);
+    const rows = [];
+    let maxCols = 0;
+
+    worksheet.eachRow({ includeEmpty: true }, (row) => {
+      const values = row.values ? row.values.slice(1) : [];
+      maxCols = Math.max(maxCols, values.length);
+      rows.push(values);
+    });
+
+    const normalized = rows.map((row) => {
+      const filled = row.slice();
+      while (filled.length < maxCols) filled.push('');
+      return filled.map((cell) => (cell == null ? '' : cell));
+    });
+
+    sheets[worksheet.name] = normalized;
   });
+
+  return { sheetNames, sheets };
 }
 
-/**
- * 컬럼 인덱스에서 엑셀 컬럼명(A, B, C...)으로 변환
- * @param {number} idx - 0부터 시작하는 인덱스
- * @returns {string} 엑셀 컬럼명
- */
+export async function downloadExcel(data, fileName = '내보내기') {
+  try {
+    if (!Array.isArray(data) || data.length === 0) {
+      throw new Error('내보낼 데이터가 없습니다.');
+    }
+
+    const sheets = [{ name: '데이터', rows: data }];
+    await downloadExcelSheets(sheets, fileName);
+  } catch (err) {
+    reportExcelError(err);
+  }
+}
+
+export async function downloadExcelSheets(sheets, fileName = '내보내기') {
+  try {
+    if (!Array.isArray(sheets) || sheets.length === 0) {
+      throw new Error('내보낼 시트가 없습니다.');
+    }
+
+    const ExcelJS = await import('exceljs');
+    const workbook = new ExcelJS.Workbook();
+
+    sheets.forEach((sheet) => {
+      const name = sheet.name || 'Sheet';
+      const rows = Array.isArray(sheet.rows) ? sheet.rows : [];
+      const worksheet = workbook.addWorksheet(name);
+
+      if (rows.length === 0) return;
+
+      if (Array.isArray(rows[0])) {
+        rows.forEach((row) => worksheet.addRow(row));
+      } else {
+        const headers = Object.keys(rows[0] || {});
+        worksheet.columns = headers.map((key) => ({ header: key, key, width: Math.max(12, key.length + 2) }));
+        rows.forEach((row) => {
+          const record = {};
+          headers.forEach((key) => {
+            record[key] = row[key] == null ? '' : row[key];
+          });
+          worksheet.addRow(record);
+        });
+      }
+    });
+
+    const buffer = await workbook.xlsx.writeBuffer();
+    triggerDownload(buffer, fileName);
+  } catch (err) {
+    reportExcelError(err);
+  }
+}
+
 export function indexToCol(idx) {
   let col = '';
   let n = idx;
@@ -61,18 +121,19 @@ export function indexToCol(idx) {
   return col;
 }
 
-/**
- * 데이터를 엑셀 파일로 다운로드
- * @param {Array<Object>} data - 내보낼 데이터 배열
- * @param {string} fileName - 파일명 (확장자 제외)
- */
-export function downloadExcel(data, fileName = '내보내기') {
-  try {
-    const ws = XLSX.utils.json_to_sheet(data);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, '데이터');
-    XLSX.writeFile(wb, `${fileName}.xlsx`);
-  } catch (err) {
-    throw new Error('엑셀 내보내기 실패: ' + err.message);
-  }
+function triggerDownload(buffer, fileName) {
+  const blob = new Blob([buffer], {
+    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `${fileName}.xlsx`;
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+export function reportExcelError(err) {
+  const message = err?.message || '엑셀 처리 중 오류가 발생했습니다.';
+  showToast(message, 'error');
 }

@@ -528,6 +528,79 @@ a:hover {
   font-weight: 500;
 }
 
+.nav-fold {
+  padding: 0 12px;
+  margin-bottom: 8px;
+}
+
+.nav-fold-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 10px;
+  cursor: pointer;
+  user-select: none;
+  list-style: none;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 10px;
+}
+
+.nav-fold-summary::-webkit-details-marker {
+  display: none;
+}
+
+.nav-fold-summary::marker {
+  content: '';
+}
+
+.nav-fold-summary:hover {
+  color: #fff;
+  background: rgba(255,255,255,0.08);
+  border-color: rgba(255,255,255,0.16);
+}
+
+.nav-fold-summary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 8px;
+}
+
+.nav-fold .nav-section-title {
+  padding: 0;
+}
+
+.nav-fold-toggle {
+  font-size: 11px;
+  font-weight: 700;
+  color: #f8fafc;
+  background: rgba(255,255,255,0.16);
+  border: 1px solid rgba(255,255,255,0.28);
+  padding: 4px 10px;
+  border-radius: 999px;
+  letter-spacing: 0.02em;
+  text-transform: none;
+  box-shadow: 0 6px 16px rgba(0,0,0,0.2);
+}
+
+.nav-fold-toggle::after {
+  content: '접기 ▲';
+}
+
+.nav-fold:not([open]) .nav-fold-toggle::after {
+  content: '열기 ▼';
+}
+
+.nav-fold #nav2,
+.nav-fold #nav3 {
+  padding: 0;
+}
+
+.nav-fold .nav-rich-list {
+  padding: 4px 0 0;
+}
+
 #nav, #nav2, #nav3 {
   display: flex;
   flex-direction: column;
@@ -739,6 +812,172 @@ a:hover {
   font-size: var(--font-size-sm);
   color: var(--text-muted);
   font-weight: 400;
+}
+
+.fold-card {
+  padding: 0;
+}
+
+.fold-card > summary {
+  list-style: none;
+  cursor: pointer;
+  padding: var(--space-lg);
+  padding-right: calc(var(--space-lg) + 96px);
+  position: relative;
+}
+
+.fold-card > summary::-webkit-details-marker {
+  display: none;
+}
+
+.fold-card > summary::after {
+  content: '접기 ▲';
+  position: absolute;
+  right: var(--space-lg);
+  top: 50%;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 64px;
+  height: 24px;
+  padding: 0 10px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: #f8fafc;
+  background: rgba(255,255,255,0.12);
+  border: 1px solid rgba(255,255,255,0.22);
+  border-radius: 999px;
+  box-shadow: 0 6px 16px rgba(0,0,0,0.18);
+  transition: transform 0.2s ease, background 0.2s ease, border-color 0.2s ease;
+}
+
+.fold-card[open] > summary {
+  border-bottom: 1px solid var(--border);
+}
+
+.fold-card:not([open]) > summary::after {
+  content: '열기 ▼';
+}
+
+.fold-card-body {
+  padding: var(--space-lg);
+  padding-top: 0;
+}
+
+.fold-card-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.fold-card-meta {
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.card-collapsible {
+  padding: 0;
+}
+
+.card-collapse-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: var(--space-lg);
+  border-bottom: 1px solid var(--border);
+}
+
+.card-collapse-title .card-title {
+  margin: 0;
+}
+
+.card-collapse-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 72px;
+  height: 28px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.12);
+  border: 1px solid rgba(255,255,255,0.22);
+  color: #f8fafc;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  box-shadow: 0 8px 18px rgba(0,0,0,0.2);
+  cursor: pointer;
+}
+
+.card-collapse-toggle:hover {
+  background: rgba(255,255,255,0.18);
+  border-color: rgba(255,255,255,0.34);
+}
+
+.card-collapse-pin {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 60px;
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: rgba(37, 99, 235, 0.18);
+  border: 1px solid rgba(96, 165, 250, 0.35);
+  color: #e2e8f0;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+}
+
+.card-collapse-pin:hover {
+  background: rgba(37, 99, 235, 0.28);
+  border-color: rgba(96, 165, 250, 0.55);
+}
+
+.card-collapsible.is-pinned {
+  border-color: rgba(96, 165, 250, 0.45);
+  box-shadow: 0 12px 26px rgba(37, 99, 235, 0.16);
+}
+
+.card-collapse-body {
+  padding: var(--space-lg);
+}
+
+.card-collapsible.is-collapsed .card-collapse-body {
+  display: none;
+}
+
+.summary-mode .mission-panel-desc,
+.summary-mode .mission-bullet-list,
+.summary-mode .mission-highlight-note {
+  display: none;
+}
+
+.summary-mode .smart-inline-note {
+  display: none;
+}
+
+.pin-manager-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-main);
+}
+
+.pin-manager-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
 }
 
 /* --- 버튼 --- */
@@ -1779,16 +2018,43 @@ html.dark-mode .mission-highlight {
   list-style: none;
   cursor: pointer;
   padding: 12px 14px;
+  padding-right: 88px;
   color: var(--text-primary);
   font-weight: 700;
+  position: relative;
 }
 
 .smart-details > summary::-webkit-details-marker {
   display: none;
 }
 
+.smart-details > summary::after {
+  content: '접기 ▲';
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 60px;
+  height: 22px;
+  padding: 0 10px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: #f8fafc;
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  border-radius: 999px;
+}
+
 .smart-details[open] > summary {
   border-bottom: 1px solid var(--border);
+}
+
+.smart-details:not([open]) > summary::after {
+  content: '열기 ▼';
 }
 
 .smart-details-body {
@@ -3042,6 +3308,46 @@ html.dark-mode .report-spotlight-card {
     width: 100%;
     justify-content: space-between;
   }
+
+  .data-table thead {
+    display: none;
+  }
+
+  .data-table,
+  .data-table tbody,
+  .data-table tr,
+  .data-table td {
+    display: block;
+    width: 100%;
+  }
+
+  .data-table tr {
+    margin-bottom: 12px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 10px 12px;
+    background: var(--bg-card);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .data-table td {
+    border: none;
+    padding: 6px 0;
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .data-table td::before {
+    content: attr(data-label);
+    font-size: 11px;
+    color: var(--text-muted);
+    flex-shrink: 0;
+  }
+
+  .data-table td.col-num {
+    display: none;
+  }
 }
 
 /* --- 인쇄 스타일 --- */
@@ -3746,4 +4052,62 @@ html.dark-mode .report-spotlight-card {
 
 .chart-sort-select {
   min-width: 150px;
+}
+
+.profit-chart-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  margin-bottom: 12px;
+}
+
+.chart-canvas-lg {
+  position: relative;
+  height: 260px;
+}
+
+.export-menu {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.export-menu-panel {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 180px;
+  padding: 6px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.15);
+  display: none;
+  z-index: 20;
+}
+
+.export-menu.is-open .export-menu-panel {
+  display: block;
+}
+
+.export-menu-panel .btn {
+  width: 100%;
+  justify-content: flex-start;
+  gap: 6px;
+}
+
+.toggle-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.toggle-pill input {
+  margin: 0;
 }

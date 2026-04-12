@@ -10,9 +10,8 @@
 
 import { getState, setState } from './store.js';
 import { showToast } from './toast.js';
-import { readExcelFile, downloadExcel } from './excel.js';
+import { readExcelFile, downloadExcel, downloadExcelSheets } from './excel.js';
 import { isAdmin } from './admin-auth.js';
-import * as XLSX from 'xlsx';
 
 // POS 필드 정의 — POS 시스템에서 내보내는 일반적인 컬럼들
 const POS_FIELDS = [
@@ -564,7 +563,6 @@ async function processPosFile(file, overlay, container, navigateTo, closeModal) 
  *   표준 양식을 제공하면 수동 입력/복사-붙여넣기가 쉬워짐
  */
 function downloadPosTemplate() {
-  const wb = XLSX.utils.book_new();
   const today = new Date().toISOString().split('T')[0];
   const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
 
@@ -583,26 +581,7 @@ function downloadPosTemplate() {
     [yesterday, '본점', '정상', 280000, 254545, 25455, 280000, 0, 0, 0, 280000, '', '', '', '0008', ''],
   ];
 
-  const ws = XLSX.utils.aoa_to_sheet([headers, ...sampleRows]);
-  ws['!cols'] = [
-    { wch: 12 },  // 판매일자
-    { wch: 10 },  // 매장명
-    { wch: 8 },   // 구분
-    { wch: 14 },  // 총매출액
-    { wch: 14 },  // 매출금액
-    { wch: 12 },  // 부가세
-    { wch: 12 },  // 카드
-    { wch: 12 },  // 현금
-    { wch: 10 },  // 포인트
-    { wch: 12 },  // 환불/할인
-    { wch: 14 },  // 순매출
-    { wch: 16 },  // 품목명
-    { wch: 8 },   // 수량
-    { wch: 10 },  // 단가
-    { wch: 10 },  // POS번호
-    { wch: 20 },  // 비고
-  ];
-  XLSX.utils.book_append_sheet(wb, ws, 'POS 매출 데이터');
+  const dataRows = [headers, ...sampleRows];
 
   // 안내 시트
   const guideData = [
@@ -646,10 +625,12 @@ function downloadPosTemplate() {
     [''],
     ['📎 자세한 사용법: https://invex.io.kr'],
   ];
-  const guideWs = XLSX.utils.aoa_to_sheet(guideData);
-  guideWs['!cols'] = [{ wch: 55 }];
-  XLSX.utils.book_append_sheet(wb, guideWs, '📖 작성방법');
-
-  XLSX.writeFile(wb, 'INVEX_POS매출_양식.xlsx');
+  downloadExcelSheets(
+    [
+      { name: 'POS 매출 데이터', rows: dataRows },
+      { name: '작성방법', rows: guideData },
+    ],
+    'INVEX_POS매출_양식',
+  );
   showToast('POS 양식을 다운로드했습니다.', 'success');
 }

@@ -8,7 +8,7 @@
 
 import { getState } from './store.js';
 import { showToast } from './toast.js';
-import * as XLSX from 'xlsx';
+import { downloadExcelSheets } from './excel.js';
 
 export function renderTaxReportsPage(container, navigateTo) {
   const state = getState();
@@ -557,30 +557,12 @@ function calcTxAmount(tx) {
  */
 function downloadReport(filename, rows) {
   if (rows.length <= 5) {
-    showToast('해당 기간의 데이터가 없습니다.', 'warning');
+    showToast('해당 기간에 데이터가 없습니다.', 'warning');
     return;
   }
 
-  try {
-    const ws = XLSX.utils.aoa_to_sheet(rows);
-    // 열 너비 자동 조정
-    const colWidths = [];
-    rows.forEach(row => {
-      if (!Array.isArray(row)) return;
-      row.forEach((cell, ci) => {
-        const len = String(cell || '').length * 2 + 4;
-        colWidths[ci] = Math.max(colWidths[ci] || 10, Math.min(len, 40));
-      });
-    });
-    ws['!cols'] = colWidths.map(w => ({ wch: w }));
-
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, '시트1');
-    XLSX.writeFile(wb, `${filename}.xlsx`);
-    showToast(`${filename} 다운로드 완료!`, 'success');
-  } catch (e) {
-    showToast('다운로드 실패: ' + e.message, 'error');
-  }
+  downloadExcelSheets([{ name: '시트1', rows }], filename);
+  showToast(`${filename} 다운로드 완료!`, 'success');
 }
 
 /**
@@ -588,29 +570,7 @@ function downloadReport(filename, rows) {
  * 왜 별도? → 전체 서류 일괄 다운로드 시 시트별로 나눠서 한 파일로 제공
  */
 function downloadMultiSheetReport(filename, sheets) {
-  try {
-    const wb = XLSX.utils.book_new();
-
-    Object.entries(sheets).forEach(([sheetName, rows]) => {
-      const ws = XLSX.utils.aoa_to_sheet(rows);
-
-      // 열 너비 자동 조정
-      const colWidths = [];
-      rows.forEach(row => {
-        if (!Array.isArray(row)) return;
-        row.forEach((cell, ci) => {
-          const len = String(cell || '').length * 2 + 4;
-          colWidths[ci] = Math.max(colWidths[ci] || 10, Math.min(len, 40));
-        });
-      });
-      ws['!cols'] = colWidths.map(w => ({ wch: w }));
-
-      XLSX.utils.book_append_sheet(wb, ws, sheetName);
-    });
-
-    XLSX.writeFile(wb, `${filename}.xlsx`);
-    showToast(`${filename} 전체 서류 다운로드 완료!`, 'success');
-  } catch (e) {
-    showToast('다운로드 실패: ' + e.message, 'error');
-  }
+  const sheetList = Object.entries(sheets).map(([name, rows]) => ({ name, rows }));
+  downloadExcelSheets(sheetList, filename);
+  showToast(`${filename} 전체 자료 다운로드 완료!`, 'success');
 }

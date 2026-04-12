@@ -364,10 +364,12 @@
       <div class="sidebar-divider"></div>
 
       <!-- 관리 -->
-      <div class="nav-section">
-        <div class="nav-section-title">관리</div>
-      </div>
-      <nav id="nav2" class="nav-rich-list">
+      <details class="nav-fold" open>
+        <summary class="nav-fold-summary">
+          <div class="nav-section-title">관리</div>
+          <span class="nav-fold-toggle" aria-hidden="true"></span>
+        </summary>
+        <nav id="nav2" class="nav-rich-list">
         <button class="nav-btn nav-btn-rich" data-page="inventory">
           <span class="nav-icon">📦</span>
           <span class="nav-copy">
@@ -454,15 +456,18 @@
             <span class="nav-sub">미래 수요량 예측 분석</span>
           </span>
         </button>
-      </nav>
+        </nav>
+      </details>
 
       <div class="sidebar-divider"></div>
 
       <!-- 보고 -->
-      <div class="nav-section">
-        <div class="nav-section-title">보고 · 분석</div>
-      </div>
-      <nav id="nav3" class="nav-rich-list">
+      <details class="nav-fold" open>
+        <summary class="nav-fold-summary">
+          <div class="nav-section-title">보고 · 분석</div>
+          <span class="nav-fold-toggle" aria-hidden="true"></span>
+        </summary>
+        <nav id="nav3" class="nav-rich-list">
         <button class="nav-btn nav-btn-rich" data-page="summary">
           <span class="nav-icon">📊</span>
           <span class="nav-copy">
@@ -533,7 +538,8 @@
             <span class="nav-sub">변경 이력 및 사용자 로그</span>
           </span>
         </button>
-      </nav>
+        </nav>
+      </details>
 
       <div class="sidebar-divider"></div>
 
