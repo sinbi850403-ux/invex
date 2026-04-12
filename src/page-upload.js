@@ -177,7 +177,8 @@ async function handleFile(file, navigateTo) {
     // 자동 매핑 수행
     const headers = rawData[0];
     const dataRows = rawData.slice(1);
-    const mapping = autoMap(headers);
+    const mappingDetail = autoMapDetailed(headers);
+    const mapping = mappingDetail.mapping;
     const mappedData = buildMappedData(dataRows, mapping);
 
     // 매핑 결과 요약
@@ -186,11 +187,57 @@ async function handleFile(file, navigateTo) {
       ERP_FIELDS.find(f => f.key === key)?.label || key
     );
 
+    // 필수 컬럼(품목명) 누락 시, 자동 등록을 막고 매핑 교정 페이지로 이동
+    if (mapping.itemName === undefined) {
+      resetState();
+      setState({
+        rawData,
+        sheetNames: result.sheetNames,
+        activeSheet,
+        fileName: file.name,
+        currentStep: 2,
+        allSheets: result.sheets,
+        columnMapping: mapping,
+      });
+      showToast('품목명 컬럼을 찾지 못했습니다. 매핑 확인 후 다시 진행해 주세요.', 'warning');
+      navigateTo('mapping');
+      return;
+    }
+
+    const previewAction = await openUploadPreviewModal({
+      fileName: file.name,
+      rowCount: mappedData.length,
+      mappedCount,
+      totalFields: ERP_FIELDS.length,
+      mappedLabels,
+      lowConfidenceFields: mappingDetail.lowConfidenceFields,
+    });
+
+    if (previewAction === 'mapping') {
+      resetState();
+      setState({
+        rawData,
+        sheetNames: result.sheetNames,
+        activeSheet,
+        fileName: file.name,
+        currentStep: 2,
+        allSheets: result.sheets,
+        columnMapping: mapping,
+      });
+      navigateTo('mapping');
+      return;
+    }
+
+    if (previewAction !== 'confirm') {
+      showToast('업로드를 취소했습니다.', 'info');
+      return;
+    }
+
     const uploadSafetyStock = { ...getState().safetyStock };
     mappedData.forEach(row => {
       if (row.safetyStock !== '' && row.safetyStock !== undefined && row.safetyStock !== null) {
         let val = parseFloat(row.safetyStock);
-        if(!isNaN(val)) uploadSafetyStock[row.itemName] = val;
+        if (!isNaN(val)) uploadSafetyStock[row.itemName] = val;
       }
     });
 
@@ -207,16 +254,112 @@ async function handleFile(file, navigateTo) {
       safetyStock: uploadSafetyStock,
     });
 
-    showToast(
-      `"${file.name}" → ${mappedData.length}건 등록 (${mappedCount}개 필드 자동 매핑)`,
-      'success'
-    );
+    showToast(`"${file.name}" → ${mappedData.length}건 등록 (${mappedCount}개 필드 자동 매핑)`, 'success');
 
     // 바로 재고 현황으로
     navigateTo('inventory');
   } catch (err) {
     showToast(err.message, 'error');
   }
+}
+
+function autoMapDetailed(headers) {
+  const lower = headers.map(h => (h || '').toString().toLowerCase().trim());
+  const mapping = {};
+  const lowConfidenceFields = [];
+
+  ERP_FIELDS.forEach(field => {
+    const kws = MAPPING_KEYWORDS[field.key] || [];
+    let bestIndex = -1;
+    let bestScore = 0;
+
+    lower.forEach((header, idx) => {
+      let score = 0;
+      kws.forEach((kw) => {
+        if (!kw) return;
+        if (header === kw) score = Math.max(score, 1);
+        else if (header.includes(kw)) {
+          const ratio = kw.length / Math.max(header.length, 1);
+          score = Math.max(score, Math.max(0.6, ratio));
+        }
+      });
+      if (score > bestScore) {
+        bestScore = score;
+        bestIndex = idx;
+      }
+    });
+
+    if (bestIndex >= 0) {
+      mapping[field.key] = bestIndex;
+      if (bestScore < 0.75) {
+        lowConfidenceFields.push(field.label);
+      }
+    }
+  });
+
+  return { mapping, lowConfidenceFields };
+}
+
+function openUploadPreviewModal({ fileName, rowCount, mappedCount, totalFields, mappedLabels, lowConfidenceFields }) {
+  return new Promise((resolve) => {
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.innerHTML = `
+      <div class="modal" style="max-width:640px;">
+        <div class="modal-header">
+          <h3 class="modal-title">업로드 매핑 확인</h3>
+          <button class="modal-close" data-action="cancel">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="alert alert-info" style="margin-bottom:12px;">
+            파일: <strong>${escapeHtml(fileName)}</strong><br/>
+            데이터: <strong>${rowCount}건</strong> / 자동 매핑: <strong>${mappedCount}/${totalFields}</strong>
+          </div>
+          ${lowConfidenceFields.length > 0 ? `
+            <div class="alert alert-warning" style="margin-bottom:12px;">
+              신뢰도 낮은 매핑: ${escapeHtml(lowConfidenceFields.join(', '))}
+            </div>
+          ` : ''}
+          <div style="font-size:12px; color:var(--text-secondary); margin-bottom:6px;">매핑된 필드</div>
+          <div style="display:flex; flex-wrap:wrap; gap:6px;">
+            ${mappedLabels.map((label) => `<span class="chip">${escapeHtml(label)}</span>`).join('')}
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-outline" data-action="mapping">매핑 교정</button>
+          <button class="btn btn-outline" data-action="cancel">취소</button>
+          <button class="btn btn-success" data-action="confirm">확인 후 등록</button>
+        </div>
+      </div>
+    `;
+
+    const finalize = (action) => {
+      overlay.remove();
+      resolve(action);
+    };
+
+    overlay.addEventListener('click', (e) => {
+      const action = e.target?.dataset?.action;
+      if (action) {
+        finalize(action);
+        return;
+      }
+      if (e.target === overlay) {
+        finalize('cancel');
+      }
+    });
+
+    document.body.appendChild(overlay);
+  });
+}
+
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
 /**
