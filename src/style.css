@@ -738,6 +738,83 @@ a:hover {
   border-top: 1px solid rgba(255,255,255,0.06);
 }
 
+.sidebar-mode-controls {
+  padding: 8px 12px 0;
+  display: grid;
+  gap: 8px;
+}
+
+.sidebar-role-toggle {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.sidebar-role-btn,
+.sidebar-more-toggle {
+  border: 1px solid rgba(126, 171, 231, 0.28);
+  border-radius: 10px;
+  background: rgba(14, 26, 43, 0.45);
+  color: rgba(226, 239, 255, 0.9);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 8px 10px;
+  cursor: pointer;
+}
+
+.sidebar-role-btn.is-active {
+  border-color: rgba(116, 186, 255, 0.9);
+  background: linear-gradient(135deg, rgba(75, 146, 228, 0.95), rgba(56, 125, 209, 0.95));
+  color: #f8fbff;
+}
+
+.sidebar-more-toggle {
+  background: rgba(26, 44, 70, 0.68);
+}
+
+.nav-btn.nav-reduced-hidden {
+  display: none !important;
+}
+
+.nav-fold.has-active-child > .nav-fold-summary {
+  border-color: rgba(116, 186, 255, 0.9);
+  box-shadow: 0 0 0 1px rgba(116, 186, 255, 0.3);
+}
+
+.nav-fold.has-active-child > .nav-fold-summary::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: #60a5fa;
+  box-shadow: 0 0 10px rgba(96, 165, 250, 0.8);
+  display: inline-block;
+}
+
+.app-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.app-breadcrumb .breadcrumb-home {
+  border: none;
+  background: transparent;
+  color: var(--accent);
+  cursor: pointer;
+  padding: 0;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.app-breadcrumb .breadcrumb-current {
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
 /* --- 메인 콘텐츠 --- */
 #main-content {
   flex: 1;

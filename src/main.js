@@ -237,6 +237,7 @@ initAuth((user, profile) => {
     const posBtn = document.querySelector('[data-page="pos"]');
     if (adminBtn) adminBtn.style.display = isAdmin() ? '' : 'none';
     if (posBtn) posBtn.style.display = isAdmin() ? '' : 'none';
+    applySidebarMode();
     
     // 理쒖큹 濡쒓렇???쒖뿉留???珥덇린??(以묐났 諛⑹?)
     if (!isAuthReady) {
@@ -257,6 +258,7 @@ initAuth((user, profile) => {
     const landing = document.getElementById('landing-page');
     if (landing) landing.style.display = 'block';
     isAuthReady = false;
+    applySidebarMode();
   }
 });
 
@@ -308,6 +310,60 @@ const pageLoaders = {
 };
 
 const pageRendererCache = {};
+const NAV_ROLE_MODE_KEY = 'invex_nav_role_mode_v1';
+const NAV_SHOW_ALL_KEY = 'invex_nav_show_all_v1';
+
+const NAV_ROLE_MODES = {
+  staff: {
+    label: '실무자',
+    corePages: new Set(['home', 'inout', 'inventory', 'upload', 'summary', 'vendors']),
+  },
+  manager: {
+    label: '경영자',
+    corePages: new Set(['home', 'summary', 'profit', 'accounts', 'inventory', 'dashboard']),
+  },
+};
+const HARD_HIDDEN_PAGES = new Set(['scanner', 'labels', 'api']);
+
+const PAGE_SECTION_LABELS = {
+  home: '대시보드',
+  upload: '데이터',
+  mapping: '데이터',
+  inventory: '관리',
+  inout: '관리',
+  bulk: '관리',
+  scanner: '관리',
+  labels: '관리',
+  warehouses: '관리',
+  transfer: '관리',
+  stocktake: '관리',
+  vendors: '관리',
+  'auto-order': '관리',
+  orders: '관리',
+  forecast: '관리',
+  summary: '보고 · 분석',
+  'weekly-report': '보고 · 분석',
+  profit: '보고 · 분석',
+  accounts: '보고 · 분석',
+  costing: '보고 · 분석',
+  dashboard: '보고 · 분석',
+  'tax-reports': '보고 · 분석',
+  documents: '보고 · 분석',
+  ledger: '보고 · 분석',
+  auditlog: '보고 · 분석',
+  settings: '설정',
+  team: '설정',
+  backup: '설정',
+  roles: '설정',
+  api: '설정',
+  billing: '설정',
+  pos: '설정',
+  admin: '설정',
+  mypage: '지원',
+  guide: '지원',
+  support: '지원',
+  referral: '지원',
+};
 
 function getPageLabel(pageId) {
   const btn = document.querySelector(`.nav-btn[data-page="${pageId}"]`);
@@ -315,6 +371,131 @@ function getPageLabel(pageId) {
   const mainLabel = btn.querySelector('.nav-main');
   if (mainLabel) return mainLabel.textContent.replace(/\s+/g, ' ').trim();
   return btn.textContent.replace(/\s+/g, ' ').trim();
+}
+
+function getCurrentRoleMode() {
+  const saved = localStorage.getItem(NAV_ROLE_MODE_KEY);
+  return NAV_ROLE_MODES[saved] ? saved : 'staff';
+}
+
+function isShowAllMenu() {
+  return localStorage.getItem(NAV_SHOW_ALL_KEY) === '1';
+}
+
+function setRoleMode(mode) {
+  if (!NAV_ROLE_MODES[mode]) return;
+  localStorage.setItem(NAV_ROLE_MODE_KEY, mode);
+}
+
+function setShowAllMenu(value) {
+  localStorage.setItem(NAV_SHOW_ALL_KEY, value ? '1' : '0');
+}
+
+function ensureSidebarModeControls() {
+  const sidebar = document.getElementById('sidebar');
+  if (!sidebar) return;
+  if (document.getElementById('sidebar-mode-controls')) return;
+
+  const divider = sidebar.querySelector('.sidebar-divider');
+  if (!divider) return;
+
+  const wrapper = document.createElement('div');
+  wrapper.id = 'sidebar-mode-controls';
+  wrapper.className = 'sidebar-mode-controls';
+  wrapper.innerHTML = `
+    <div class="sidebar-role-toggle" role="tablist" aria-label="메뉴 모드">
+      <button class="sidebar-role-btn" data-role-mode="manager" role="tab">경영자</button>
+      <button class="sidebar-role-btn" data-role-mode="staff" role="tab">실무자</button>
+    </div>
+    <button class="sidebar-more-toggle" id="sidebar-more-toggle" type="button">더 보기</button>
+  `;
+
+  divider.insertAdjacentElement('afterend', wrapper);
+
+  wrapper.querySelectorAll('[data-role-mode]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      setRoleMode(btn.dataset.roleMode);
+      applySidebarMode();
+      showToast(`${NAV_ROLE_MODES[btn.dataset.roleMode].label} 기본 메뉴로 전환했습니다.`, 'info');
+    });
+  });
+
+  wrapper.querySelector('#sidebar-more-toggle')?.addEventListener('click', () => {
+    setShowAllMenu(!isShowAllMenu());
+    applySidebarMode();
+  });
+}
+
+function applySidebarMode() {
+  ensureSidebarModeControls();
+  const roleMode = getCurrentRoleMode();
+  const showAll = isShowAllMenu();
+  const corePages = NAV_ROLE_MODES[roleMode].corePages;
+
+  document.querySelectorAll('.nav-btn[data-page]').forEach((btn) => {
+    const pageId = btn.dataset.page;
+    if (HARD_HIDDEN_PAGES.has(pageId)) return;
+
+    const isActive = pageId === currentPage;
+    const isCore = corePages.has(pageId);
+    const isDynamicallyVisible = btn.style.display !== 'none';
+    if (!isDynamicallyVisible) {
+      btn.classList.remove('nav-reduced-hidden');
+      return;
+    }
+    btn.classList.toggle('nav-reduced-hidden', !showAll && !isCore && !isActive);
+  });
+
+  const modeControls = document.getElementById('sidebar-mode-controls');
+  modeControls?.querySelectorAll('[data-role-mode]').forEach((btn) => {
+    btn.classList.toggle('is-active', btn.dataset.roleMode === roleMode);
+  });
+
+  const moreBtn = document.getElementById('sidebar-more-toggle');
+  if (moreBtn) {
+    moreBtn.textContent = showAll ? '핵심만 보기' : '더 보기';
+  }
+
+  updateFoldActiveState(currentPage);
+}
+
+function getSectionLabel(pageName) {
+  return PAGE_SECTION_LABELS[pageName] || '페이지';
+}
+
+function renderBreadcrumb(pageName) {
+  const mainContent = document.getElementById('main-content');
+  if (!mainContent) return;
+
+  const existing = mainContent.querySelector('.app-breadcrumb');
+  if (existing) existing.remove();
+
+  const pageLabel = getPageLabel(pageName);
+  const sectionLabel = getSectionLabel(pageName);
+  const hasSection = pageName !== 'home' && sectionLabel !== '대시보드';
+
+  const nav = document.createElement('nav');
+  nav.className = 'app-breadcrumb';
+  nav.setAttribute('aria-label', '현재 위치');
+  nav.innerHTML = `
+    <button type="button" class="breadcrumb-home">홈</button>
+    ${hasSection ? `<span class="breadcrumb-sep">/</span><span class="breadcrumb-item">${sectionLabel}</span>` : ''}
+    <span class="breadcrumb-sep">/</span>
+    <span class="breadcrumb-current">${pageLabel}</span>
+  `;
+  nav.querySelector('.breadcrumb-home')?.addEventListener('click', () => navigateTo('home'));
+  mainContent.prepend(nav);
+}
+
+function updateFoldActiveState(pageName) {
+  document.querySelectorAll('.nav-fold').forEach((fold) => {
+    fold.classList.remove('has-active-child');
+    const activeInside = fold.querySelector(`.nav-btn[data-page="${pageName}"]`);
+    if (!activeInside) return;
+    if (activeInside.classList.contains('nav-reduced-hidden') || activeInside.style.display === 'none') return;
+    fold.classList.add('has-active-child');
+    if (!fold.open) fold.open = true;
+  });
 }
 
 function readRecentPages() {
@@ -416,16 +597,24 @@ async function navigateTo(pageName) {
   document.querySelectorAll('.nav-btn').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.page === pageName);
   });
+  applySidebarMode();
+  updateFoldActiveState(pageName);
 
   const mainContent = document.getElementById('main-content');
   mainContent.dataset.page = pageName;
   mainContent.innerHTML = `
+    <nav class="app-breadcrumb" aria-label="현재 위치">
+      <button type="button" class="breadcrumb-home">홈</button>
+      <span class="breadcrumb-sep">/</span>
+      <span class="breadcrumb-current">${getPageLabel(pageName)}</span>
+    </nav>
     <div class="card">
       <div class="empty-state" style="padding:32px 20px;">
         <div class="msg">페이지를 불러오는 중입니다.</div>
       </div>
     </div>
   `;
+  mainContent.querySelector('.breadcrumb-home')?.addEventListener('click', () => navigateTo('home'));
   mainContent.scrollTop = 0;
 
   try {
@@ -433,6 +622,7 @@ async function navigateTo(pageName) {
     if (token !== navigationToken || currentPage !== pageName) return;
     mainContent.innerHTML = '';
     renderPage(mainContent, navigateTo);
+    renderBreadcrumb(pageName);
     initCardCollapsibles(mainContent, pageName);
     mountAutoTableSort(mainContent);
   } catch (error) {
@@ -813,8 +1003,11 @@ function updateSidebarBadges() {
     const pageId = btn.dataset.page;
     if (!pageId) return;
 
-    // ?대깽???곌껐
-    btn.addEventListener('click', () => navigateTo(pageId));
+    // 이벤트 중복 바인딩 방지
+    if (btn.dataset.navBound !== '1') {
+      btn.addEventListener('click', () => navigateTo(pageId));
+      btn.dataset.navBound = '1';
+    }
 
     // 湲곗〈 諛곗? ?쒓굅
     btn.querySelectorAll('.plan-badge').forEach(b => b.remove());
@@ -834,6 +1027,8 @@ function updateSidebarBadges() {
   });
 }
 updateSidebarBadges();
+ensureSidebarModeControls();
+applySidebarMode();
 renderQuickAccess();
 
 // ?ъ씠?쒕컮 ?섎떒 ?붽툑???쒖떆 ?낅뜲?댄듃
