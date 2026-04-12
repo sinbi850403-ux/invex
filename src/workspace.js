@@ -1,4 +1,4 @@
-/**
+﻿/**
  * workspace.js - 팀 워크스페이스 관리
  * 
  * 핵심 개념:
@@ -12,7 +12,7 @@
  *   users/{uid} → {workspaceId, role, ...}
  */
 
-import { doc, getDoc, setDoc, updateDoc, collection, query, where, getDocs, onSnapshot, deleteField } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, collection, query, where, getDocs, onSnapshot, deleteField } from './firebase-compat-firestore.js';
 import { db, isConfigured } from './firebase-config.js';
 import { getCurrentUser, getUserProfileData } from './firebase-auth.js';
 import { getState, setState } from './store.js';

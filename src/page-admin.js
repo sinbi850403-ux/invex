@@ -1,4 +1,4 @@
-/**
+﻿/**
  * page-admin.js - 총관리자 대시보드 (Pro Edition)
  * 역할: Firebase에서 실제 사용자 데이터를 조회하여 SaaS 전체를 관리
  * 왜 Firebase 직접 조회? → 실시간 사용자 현황과 정확한 통계 제공
@@ -10,7 +10,7 @@ import { showToast } from './toast.js';
 import { getCurrentUser } from './firebase-auth.js';
 import { PLANS } from './plan.js';
 import { db, isConfigured } from './firebase-config.js';
-import { collection, getDocs, doc, updateDoc, deleteDoc, query, orderBy } from 'firebase/firestore';
+import { collection, getDocs, doc, updateDoc, deleteDoc, query, orderBy } from './firebase-compat-firestore.js';
 
 // ═══════════════════════════════════════════
 // 총관리자(사이트 소유자) 이메일 목록

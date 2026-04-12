@@ -1,10 +1,10 @@
-/**
+﻿/**
  * page-mypage.js - 마이페이지
  * 왜 필요? → 사용자가 프로필 수정, 비밀번호 변경, 회원탈퇴를 할 수 있어야 함 (개인정보보호법 준수)
  */
 import { getCurrentUser, getUserProfileData } from './firebase-auth.js';
-import { getAuth, updatePassword, reauthenticateWithCredential, EmailAuthProvider, deleteUser } from 'firebase/auth';
-import { doc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { getAuth, updatePassword, reauthenticateWithCredential, EmailAuthProvider, deleteUser } from './firebase-compat-auth.js';
+import { doc, updateDoc, deleteDoc } from './firebase-compat-firestore.js';
 import { db, isConfigured } from './firebase-config.js';
 import { showToast } from './toast.js';
 import { getCurrentPlan, PLANS } from './plan.js';
