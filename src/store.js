@@ -14,6 +14,7 @@
 import { isSupabaseConfigured } from './supabase-client.js';
 import * as db from './db.js';
 import { storeItemToDb } from './db.js';
+import { managedQuery, invalidateCache, getTrafficMetrics } from './traffic-manager.js';
 
 // 기본 상태
 const DEFAULT_STATE = {
@@ -190,7 +191,8 @@ async function syncToSupabase() {
     if (keysToSync.has('mappedData')) {
       const items = (state.mappedData || []).map(item => storeItemToDb(item));
       promises.push(
-        db.items.bulkUpsert(items)
+        // managedQuery로 래핑 — 레이트 리밋 + 재시도 자동 적용
+        managedQuery(() => db.items.bulkUpsert(items))
           .then(result => console.log(`[Sync] 품목 ${result.length}건 동기화`))
           .catch(err => console.warn('[Sync] 품목 동기화 실패:', err.message))
       );
@@ -215,7 +217,7 @@ async function syncToSupabase() {
 
       if (newTxs.length > 0) {
         promises.push(
-          db.transactions.bulkCreate(newTxs)
+          managedQuery(() => db.transactions.bulkCreate(newTxs))
             .then(result => {
               console.log(`[Sync] 입출고 ${result.length}건 동기화`);
               // 동기화 완료 표시
@@ -242,7 +244,7 @@ async function syncToSupabase() {
       // 거래처는 upsert 미지원이라 개별 생성 시도 (중복은 무시)
       for (const vendor of vendors) {
         promises.push(
-          db.vendors.create(vendor).catch(() => { /* 중복 무시 */ })
+          managedQuery(() => db.vendors.create(vendor)).catch(() => { /* 중복 무시 */ })
         );
       }
     }
@@ -256,7 +258,7 @@ async function syncToSupabase() {
     for (const key of settingKeys) {
       if (keysToSync.has(key) && state[key] !== undefined) {
         promises.push(
-          db.settings.set(key, state[key])
+          managedQuery(() => db.settings.set(key, state[key]))
             .catch(err => console.warn(`[Sync] 설정 ${key} 동기화 실패:`, err.message))
         );
       }
@@ -329,7 +331,7 @@ export async function restoreState() {
   if (isSupabaseConfigured) {
     try {
       console.log('[Store] Supabase에서 데이터 로딩 중...');
-      const cloudData = await db.loadAllData();
+      const cloudData = await managedQuery(() => db.loadAllData());
 
       // 로컬 IndexedDB에서 UI 설정만 로드 (Supabase에 없는 것들)
       const localData = await loadFromDB();

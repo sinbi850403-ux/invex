@@ -19,6 +19,9 @@ let userProfile = null;
 // 인증 상태 변화 리스너 콜백
 let authChangeCallbacks = [];
 
+// 로그인 진행 중 플래그 — 이중 클릭 방지
+let _isLoggingIn = false;
+
 // Supabase user → 기존 코드 호환 형태로 변환
 // 왜? → main.js가 user.uid, user.displayName, user.photoURL 을 참조하고 있어서
 function toCompatUser(supabaseUser) {
@@ -111,6 +114,7 @@ export function initAuth(callback) {
     }
 
     // 모든 콜백 호출 (main.js 등)
+    _isLoggingIn = false; // 로그인 플래그 해제
     authChangeCallbacks.forEach(cb => cb(currentUser, userProfile));
   });
 }
@@ -124,20 +128,49 @@ export async function loginWithGoogle() {
     return null;
   }
 
+  // 이중 클릭 방지 — OAuth 리다이렉트 중 중복 호출 차단
+  if (_isLoggingIn) {
+    showToast('로그인 처리 중입니다. 잠시만 기다려 주세요.', 'info');
+    return null;
+  }
+  _isLoggingIn = true;
+
   try {
+    // 리다이렉트 URL — 해시(#) 포함으로 앱 상태 복구 보장
+    const redirectUrl = window.location.origin + '/index.html';
+
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: window.location.origin,
+        redirectTo: redirectUrl,
+        // 팝업이 차단될 경우를 대비해 queryParams로 힌트 전달
+        queryParams: {
+          prompt: 'select_account',
+        },
       },
     });
 
     if (error) throw error;
-    // OAuth는 리다이렉트 방식이라 여기서 user가 바로 반환되지 않음
-    // onAuthStateChange에서 처리됨
+
+    // OAuth는 리다이렉트 방식 — 2초 후에도 페이지가 안 바뀌면 팝업 차단 안내
+    setTimeout(() => {
+      if (_isLoggingIn) {
+        _isLoggingIn = false;
+        showToast('팝업이 차단되었을 수 있습니다. 브라우저 주소창의 팝업 허용을 확인해 주세요.', 'warning', 5000);
+      }
+    }, 3000);
+
     return data;
   } catch (error) {
-    showToast('Google 로그인 실패: ' + error.message, 'error');
+    _isLoggingIn = false;
+    // 에러 유형별 사용자 친화적 메시지
+    if (error.message?.includes('popup')) {
+      showToast('팝업이 차단되었습니다. 브라우저 설정에서 팝업을 허용해 주세요.', 'warning');
+    } else if (error.message?.includes('network') || error.message?.includes('fetch')) {
+      showToast('네트워크 연결을 확인해 주세요.', 'error');
+    } else {
+      showToast('Google 로그인 실패: ' + error.message, 'error');
+    }
     return null;
   }
 }
