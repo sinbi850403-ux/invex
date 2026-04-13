@@ -217,7 +217,7 @@ export function renderScannerPage(container, navigateTo) {
         </div>
 
         <button class="btn ${scanType === 'in' ? 'btn-success' : 'btn-danger'} btn-lg" id="btn-scan-register" style="width:100%;">
-          ${scanType === 'in' ? '📥 입고 등록' : '📤 출고 등록'}
+          ${scanType === 'in' ? '📥 입고' : '📤 출고'}
         </button>
       </div>
     `;

@@ -1,7 +1,7 @@
 ﻿/**
  * page-admin.js - 총관리자 대시보드 (Pro Edition)
  * 역할: 백엔드에 저장된 실제 사용자 데이터를 조회하여 SaaS 전체를 관리
- * 왜 직접 조회? → 실시간 사용자 현황과 정확한 통계 제공
+ * 관리자 권한 체크
  * 접근 제한: 총관리자 이메일만 접근 가능, 일반 사용자에게는 메뉴 자체가 숨김
  */
 
@@ -32,7 +32,7 @@ export function isAdmin() {
 
 /**
  * 백엔드 사용자 목록 가져오기
- * 왜? → 로컬 상태가 아닌 실제 가입된 사용자를 보여줘야 함
+ * 관리자 권한 체크
  */
 async function fetchAllUsers() {
   if (!isConfigured || !db) return [];
@@ -491,7 +491,7 @@ function renderUserRow(u) {
           <button class="btn btn-ghost btn-sm btn-detail-user" data-uid="${u.id}" title="상세 보기" style="font-size:12px; padding:4px 6px;">👁️</button>
           <button class="btn btn-ghost btn-sm btn-plan-user" data-uid="${u.id}" title="요금제 변경" style="font-size:12px; padding:4px 6px;">💎</button>
           <button class="btn btn-ghost btn-sm btn-suspend-user" data-uid="${u.id}" data-status="${u.status || 'active'}" title="${isActive ? '정지' : '활성화'}" style="font-size:12px; padding:4px 6px;">
-            ${isActive ? '🚫' : '✅'}
+            ${isActive ? '● 활성' : '● 정지'}
           </button>
         </div>
       </td>

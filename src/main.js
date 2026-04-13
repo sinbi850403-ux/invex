@@ -1,5 +1,5 @@
 /**
- * main.js - INVEX ??吏꾩엯??
+ * main.js - INVEX 앱 진입점
  * ??븷: ?섏씠吏 ?쇱슦?? ?ㅻ퉬寃뚯씠??愿由? 紐⑤컮??吏?? ?곗씠??諛깆뾽/蹂듭썝
  */
 
@@ -7,7 +7,7 @@ import './style.css';
 import { initErrorMonitor, setMonitorUser, clearMonitorUser } from './error-monitor.js';
 
 // ?먮윭 紐⑤땲?곕쭅 珥덇린??(媛?ν븳 ??鍮⑤━ ?ㅽ뻾)
-// ???ш린?? ????珥덇린??怨쇱젙???먮윭???↔린 ?꾪븿
+// 여기서부터는 초기화 과정에서 에러를 잡기 위함
 initErrorMonitor();
 import { restoreState, getState, setState } from './store.js';
 import { renderAuditLogPage } from './audit-log.js';
@@ -22,7 +22,7 @@ import { canAccessPage, getPageBadge, showUpgradeModal, getCurrentPlan, PLANS, s
 import { mountAutoTableSort } from './table-auto-sort.js';
 import { renderHubData, renderHubInventory, renderHubWarehouse, renderHubOrder, renderHubReport, renderHubDocuments, renderHubSettings, renderHubSupport, HUB_MAP, PAGE_LABELS } from './page-hubs.js';
 
-// ?ㅽ겕 紐⑤뱶 珥덇린??
+// 여기서부터는 초기화 과정에서 에러를 잡기 위함
 initTheme();
 
 // 珥앷?由ъ옄 湲곕뒫 ?댁젣瑜??꾪빐 getCurrentUser瑜?plan.js??二쇱엯
@@ -50,7 +50,7 @@ document.getElementById('landing-cta-demo')?.addEventListener('click', () => {
   document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' });
 });
 
-// === 濡쒓렇??寃뚯씠???대깽??===
+// === ?쒕뵫 ?섏씠吏 ?대깽??===
 
 // ???꾪솚 (濡쒓렇?????뚯썝媛??
 // ???꾪솚 (濡쒓렇?????뚯썝媛?? ??CSS ?대옒??湲곕컲?쇰줈 蹂寃?
@@ -95,7 +95,7 @@ document.getElementById('login-password')?.addEventListener('keydown', (e) => {
   if (e.key === 'Enter') document.getElementById('gate-email-login')?.click();
 });
 
-// ?대찓???뚯썝媛??
+// 여기서부터는 초기화 과정에서 에러를 잡기 위함
 document.getElementById('gate-email-signup')?.addEventListener('click', async () => {
   const name = document.getElementById('signup-name').value.trim();
   const email = document.getElementById('signup-email').value.trim();
@@ -110,18 +110,18 @@ document.getElementById('gate-email-signup')?.addEventListener('click', async ()
   await signupWithEmail(email, pw, name);
 });
 
-// Enter ?ㅻ줈 ?뚯썝媛??
+// Enter ?ㅻ줈 濡쒓렇??
 document.getElementById('signup-password2')?.addEventListener('keydown', (e) => {
   if (e.key === 'Enter') document.getElementById('gate-email-signup')?.click();
 });
 
-// ?댁슜?쎄? 紐⑤떖
+// 여기서부터는 초기화 과정에서 에러를 잡기 위함
 document.getElementById('link-terms')?.addEventListener('click', (e) => {
   e.preventDefault();
   showLegalModal('서비스 이용약관', getTermsContent());
 });
 
-// 媛쒖씤?뺣낫泥섎━諛⑹묠 紐⑤떖
+// 여기서부터는 초기화 과정에서 에러를 잡기 위함
 document.getElementById('link-privacy')?.addEventListener('click', (e) => {
   e.preventDefault();
   showLegalModal('개인정보처리방침', getPrivacyContent());
@@ -202,7 +202,7 @@ function getPrivacyContent() {
   `;
 }
 
-// 鍮꾨?踰덊샇 李얘린
+// 여기서부터는 초기화 과정에서 에러를 잡기 위함
 document.getElementById('btn-forgot-pw')?.addEventListener('click', async (e) => {
   e.preventDefault();
   const email = document.getElementById('login-email').value.trim();
@@ -230,7 +230,7 @@ initAuth((user, profile) => {
       setTimeout(() => { gate.style.display = 'none'; }, 300);
     }
     updateUserUI(user, profile);
-    // ?먮윭 紐⑤땲?곕쭅???ъ슜???뺣낫 ?ㅼ젙 (?대뼡 ?ъ슜?먯뿉寃??먮윭媛 諛쒖깮?덈뒗吏 異붿쟻)
+    // ?먮윭 紐⑤땲?곕쭅 珥덇린??(媛?ν븳 ??鍮⑤━ ?ㅽ뻾)
     setMonitorUser(user.uid, user.email);
     
     // 珥앷?由ъ옄留?愿由ъ옄 硫붾돱 + POS 留ㅼ텧遺꾩꽍 ?쒖떆
@@ -239,7 +239,7 @@ initAuth((user, profile) => {
     if (adminBtn) adminBtn.style.display = isAdmin() ? '' : 'none';
     if (posBtn) posBtn.style.display = isAdmin() ? '' : 'none';
     
-    // 理쒖큹 濡쒓렇???쒖뿉留???珥덇린??(以묐났 諛⑹?)
+    // ?먮윭 紐⑤땲?곕쭅 珥덇린??(媛?ν븳 ??鍮⑤━ ?ㅽ뻾)
     if (!isAuthReady) {
       isAuthReady = true;
       initAppAfterAuth();
@@ -262,7 +262,7 @@ initAuth((user, profile) => {
   }
 });
 
-// ?꾩옱 ?섏씠吏 (?덉쓣 湲곕낯?쇰줈)
+// ?먮윭 紐⑤땲?곕쭅 珥덇린??(媛?ν븳 ??鍮⑤━ ?ㅽ뻾)
 let currentPage = 'home';
 let navigationToken = 0;
 const RECENT_PAGES_KEY = 'invex_recent_pages_v1';
@@ -407,8 +407,8 @@ function initSmartDetailsToggles() {
 }
 
 /**
- * ?섏씠吏 ?꾪솚
- * ?붽툑??泥댄겕 ???묎렐 遺덇? ???낃렇?덉씠??紐⑤떖 ?쒖떆
+ * 踰뺣쪧 臾몄꽌 紐⑤떖
+ * 踰뺣쪧 臾몄꽌 紐⑤떖
  */
 async function navigateTo(pageName) {
   if (!pageLoaders[pageName]) return;
@@ -466,7 +466,7 @@ async function navigateTo(pageName) {
     return;
   }
 
-  // 紐⑤컮?쇱뿉???ъ씠?쒕컮 ?リ린
+  // 여기서부터는 초기화 과정에서 에러를 잡기 위함
   closeSidebar();
 
   // 알림 뱃지 업데이트
@@ -544,8 +544,8 @@ function updateBreadcrumb(pageName) {
 }
 
 /**
- * ?뚮┝ 諭껋? ?낅뜲?댄듃
- * ???섏씠吏 ?꾪솚 ?쒕쭏?? ???낆텧怨??깅줉 ???ш퀬 ?곹깭媛 諛붾????덉쑝誘濡?
+ * 踰뺣쪧 臾몄꽌 紐⑤떖
+ * 踰뺣쪧 臾몄꽌 紐⑤떖
  */
 function updateNotifBadge() {
   const badge = document.getElementById('notif-badge');
@@ -882,7 +882,7 @@ function openPinManagerModal(container, pageName, cards) {
   document.body.appendChild(overlay);
 }
 
-// ?ъ씠?쒕컮 硫붾돱???붽툑??諛곗? ?곸슜 + ?대깽???곌껐
+// ??濡쒓렇???깃났 ???쒕뵫 + 寃뚯씠???④린怨????쒖떆
 function updateSidebarBadges() {
   document.querySelectorAll('.nav-btn').forEach(btn => {
     const pageId = btn.dataset.page;
@@ -891,7 +891,7 @@ function updateSidebarBadges() {
     // ?대깽???곌껐
     btn.addEventListener('click', () => navigateTo(pageId));
 
-    // 湲곗〈 諛곗? ?쒓굅
+    // 여기서부터는 초기화 과정에서 에러를 잡기 위함
     btn.querySelectorAll('.plan-badge').forEach(b => b.remove());
 
     const badge = getPageBadge(pageId);
@@ -910,7 +910,7 @@ function updateSidebarBadges() {
 updateSidebarBadges();
 renderQuickAccess();
 
-// ?ъ씠?쒕컮 ?섎떒 ?붽툑???쒖떆 ?낅뜲?댄듃
+// 여기서부터는 초기화 과정에서 에러를 잡기 위함
 function updatePlanDisplay() {
   const planId = getCurrentPlan();
   const plan = PLANS[planId];
@@ -922,7 +922,7 @@ function updatePlanDisplay() {
 }
 updatePlanDisplay();
 
-// ?붽툑???대┃ ??蹂寃??앹뾽
+// 여기서부터는 초기화 과정에서 에러를 잡기 위함
 document.getElementById('plan-display')?.addEventListener('click', () => {
   const current = getCurrentPlan();
   const existing = document.getElementById('plan-picker-modal');
@@ -973,14 +973,14 @@ document.getElementById('plan-display')?.addEventListener('click', () => {
       setPlan(planId);
       modal.remove();
       showToast(`${PLANS[planId].icon} ${PLANS[planId].name} 요금제로 변경되었습니다.`, 'success');
-      // ?ъ씠?쒕컮 諛곗? + ?쒖떆 媛깆떊
+      // ??濡쒓렇???깃났 ???쒕뵫 + 寃뚯씠???④린怨????쒖떆
       updateSidebarBadges();
       updatePlanDisplay();
     });
   });
 });
 
-// ?뚮┝ 踰꾪듉 ?대깽??
+// 여기서부터는 초기화 과정에서 에러를 잡기 위함
 document.getElementById('btn-notifications')?.addEventListener('click', (e) => {
   e.stopPropagation();
   renderNotificationPanel();
@@ -992,16 +992,16 @@ document.getElementById('btn-global-search')?.addEventListener('click', () => {
   toggleGlobalSearch();
 });
 
-// ?ㅽ겕紐⑤뱶 ?좉? 踰꾪듉
+// 여기서부터는 초기화 과정에서 에러를 잡기 위함
 document.getElementById('btn-theme-toggle')?.addEventListener('click', () => {
   toggleTheme();
   const isDark = document.documentElement.classList.contains('dark-mode');
   const btn = document.getElementById('btn-theme-toggle');
-  if (btn) btn.textContent = isDark ? '☀️' : '🌙';
+  if (btn) btn.textContent = isDark ? '라이트 모드' : '다크 모드';
   btn?.setAttribute('title', isDark ? '라이트 모드' : '다크 모드');
 });
 
-// === 紐⑤컮???좉? ===
+// === ?쒕뵫 ?섏씠吏 ?대깽??===
 
 const sidebar = document.getElementById('sidebar');
 const toggleBtn = document.getElementById('mobile-toggle');
@@ -1031,12 +1031,12 @@ overlay?.addEventListener('click', closeSidebar);
 
 /**
  * ??JSON 諛깆뾽? ??IndexedDB??釉뚮씪?곗?蹂꾨줈 寃⑸━?섏뼱 ?덉뼱??
- * ?ㅻⅨ 湲곌린濡??곗씠?곕? ?대룞?섍굅?? 留뚯빟????젣???鍮꾪븯湲??꾪빐
+ * 踰뺣쪧 臾몄꽌 紐⑤떖
  */
 
 // 諛깆뾽/蹂듭썝? ?꾩슜 ?섏씠吏(page-backup.js)濡??대룞??
 
-// ??珥덇린??(濡쒓렇???꾨즺 ???몄텧)
+// ?먮윭 紐⑤땲?곕쭅 珥덇린??(媛?ν븳 ??鍮⑤━ ?ㅽ뻾)
 // ??遺꾨━? ???몄쬆 ?뺤씤 ?꾩뿉 IndexedDB 蹂듭썝?섎㈃ 鍮??곗씠?곌? 濡쒕뱶?????덉쓬
 async function initAppAfterAuth() {
   await restoreState();
@@ -1044,12 +1044,12 @@ async function initAppAfterAuth() {
   if (lastPage && pageLoaders[lastPage]) {
     currentPage = lastPage;
   }
-  // ?붽툑??諛곗? & ?쒖떆 理쒖떊??
+  // 湲濡쒕쾶 寃??珥덇린??& 踰꾪듉
   updateSidebarBadges();
   renderQuickAccess();
   updatePlanDisplay();
   await navigateTo(currentPage);
-  // 泥?濡쒓렇???ъ슜?먯뿉寃??⑤낫??留덈쾿???쒖떆
+  // 여기서부터는 초기화 과정에서 에러를 잡기 위함
   checkAndShowOnboarding(navigateTo);
 }
 

@@ -1,7 +1,7 @@
 ﻿/**
- * page-dashboard.js - 怨좉툒 遺꾩꽍 ??쒕낫???섏씠吏
+ * page-dashboard.js - 고급 분석 대시보드 페이지
  * ??븷: ABC 遺꾩꽍, ?ш퀬 ?뚯쟾?? ?붾퀎 異붿씠, ?섎텋遺 ??寃쎌쁺 ?섏궗寃곗젙 吏??
- * ???꾩슂? ???⑥닚 ?ш퀬 紐⑸줉???꾨땲??"?대뼡 ?덈ぉ??以묒슂?쒖?" ?????덉뼱??吏꾩쭨 ERP
+ * 왜 필요? → 단순 재고 목록이 아니라 "어떤 품목이 중요한지" 알 수 있어야 진짜 ERP
  */
 
 import { getState } from './store.js';
@@ -9,7 +9,7 @@ import { showToast } from './toast.js';
 import { downloadExcel } from './excel.js';
 
 /**
- * 怨좉툒 遺꾩꽍 ??쒕낫???뚮뜑留?
+ * 고급 분석 대시보드 렌더링
  */
 export function renderDashboardPage(container, navigateTo) {
   const state = getState();
@@ -33,7 +33,7 @@ export function renderDashboardPage(container, navigateTo) {
     return;
   }
 
-  // === 遺꾩꽍 ?곗씠??怨꾩궛 ===
+  // === 분석 데이터 계산 ===
   const abcData = calcABCAnalysis(items);
   const turnoverData = calcTurnoverRate(items, transactions);
   const monthlyTrend = calcMonthlyTrend(transactions);
@@ -90,7 +90,7 @@ export function renderDashboardPage(container, navigateTo) {
         <span class="badge badge-default" style="padding:6px 14px;">C등급: 나머지</span>
       </div>
 
-      <!-- ABC ?쒓컖??諛?-->
+      <!-- ABC 분석 -->
       <div style="display:flex; height:30px; border-radius:6px; overflow:hidden; margin-bottom:16px;">
         ${(() => {
           const aCount = abcData.filter(d => d.grade === 'A').length;
@@ -146,7 +146,7 @@ export function renderDashboardPage(container, navigateTo) {
       </div>
     </div>
 
-    <!-- ?ш퀬 ?뚯쟾??-->
+    <!-- 재고 회전율 -->
     <div class="card">
       <div class="card-title">재고 회전율 <span class="card-subtitle">최근 30일 출고 기준</span></div>
 
@@ -185,7 +185,7 @@ export function renderDashboardPage(container, navigateTo) {
       </div>
     </div>
 
-    <!-- ?붾퀎 異붿씠 -->
+    <!-- 재고 회전율 -->
     ${monthlyTrend.length > 0 ? `
     <div class="card">
       <div class="card-title">월별 입출고 추이</div>
@@ -213,7 +213,7 @@ export function renderDashboardPage(container, navigateTo) {
     </div>
     ` : ''}
 
-    <!-- ?좏넻湲고븳 寃쎄퀬 -->
+    <!-- 재고 회전율 -->
     ${expiryAlerts.length > 0 ? `
     <div class="card" style="border-left: 3px solid var(--warning);">
       <div class="card-title" style="color:var(--warning);">유통기한 임박 품목 <span class="badge badge-warning">${expiryAlerts.length}건</span></div>
@@ -252,7 +252,7 @@ export function renderDashboardPage(container, navigateTo) {
     ` : ''}
   `;
 
-  // 遺꾩꽍 ?대낫?닿린
+  // 분석 내보내기
   container.querySelector('#btn-export-analysis')?.addEventListener('click', () => {
     try {
       const exportData = abcData.map(d => ({
@@ -271,12 +271,12 @@ export function renderDashboardPage(container, navigateTo) {
   });
 }
 
-// === 遺꾩꽍 ?좏떥 ?⑥닔 ===
+// === 분석 데이터 계산 ===
 
 /**
  * ABC 遺꾩꽍 怨꾩궛
- * ??ABC? ???뚮젅??踰뺤튃(80/20)???곕씪 ?듭떖 ?덈ぉ ?앸퀎
- * A: 湲덉븸 ?곸쐞 80%, B: 80~95%, C: ?섎㉧吏
+ * 왜 ABC? → 파레토 법칙(80/20)에 따라 핵심 품목 식별
+ * A: 금액 상위 80%, B: 80~95%, C: 나머지
  */
 function calcABCAnalysis(items) {
   const sorted = items
@@ -301,8 +301,8 @@ function calcABCAnalysis(items) {
 }
 
 /**
- * ?ш퀬 ?뚯쟾??怨꾩궛
- * ?뚯쟾??= 湲곌컙 異쒓퀬??/ ?꾩옱 ?ш퀬??
+ * 고급 분석 대시보드 렌더링
+ * 회전율 = 기간 출고량 / 현재 재고량
  * ?믪쓣?섎줉 ???붾━???덈ぉ, 0?대㈃ 鍮꾪솢??Dead stock)
  */
 function calcTurnoverRate(items, transactions) {
@@ -310,7 +310,7 @@ function calcTurnoverRate(items, transactions) {
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
   const cutoff = thirtyDaysAgo.toISOString().split('T')[0];
 
-  // 理쒓렐 30??異쒓퀬??吏묎퀎
+  // 최근 30일 출고량 집계
   const outMap = {};
   transactions
     .filter(tx => tx.type === 'out' && tx.date >= cutoff)
@@ -334,7 +334,7 @@ function calcTurnoverRate(items, transactions) {
 }
 
 /**
- * ?붾퀎 ?낆텧怨?異붿씠 怨꾩궛
+ * 고급 분석 대시보드 렌더링
  */
 function calcMonthlyTrend(transactions) {
   if (transactions.length === 0) return [];
@@ -353,8 +353,8 @@ function calcMonthlyTrend(transactions) {
 }
 
 /**
- * ?좏넻湲고븳 寃쎄퀬 異붿텧
- * 30???대궡 留뚮즺?섎뒗 ?덈ぉ 紐⑸줉
+ * 고급 분석 대시보드 렌더링
+ * 30일 이내 만료되는 품목 목록
  */
 function getExpiryAlerts(items) {
   const today = new Date();

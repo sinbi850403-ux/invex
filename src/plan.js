@@ -137,7 +137,7 @@ export function setPlan(planId) {
 
 /**
  * 특정 페이지 접근 가능 여부
- * 왜 관리자 체크? → 총관리자는 요금제 무관하게 모든 기능 사용 가능
+ * 현재 요금제 조회
  */
 // 총관리자 이메일 (page-admin.js의 ADMIN_EMAILS와 동기화 필수)
 const SUPER_ADMINS = ['sinbi0214@naver.com', 'sinbi850403@gmail.com', 'admin@invex.io.kr'];

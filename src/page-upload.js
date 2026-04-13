@@ -266,7 +266,7 @@ function loadSampleData(navigateTo) {
     columnMapping: mapping,
     mappedData,
     safetyStock: uploadSafetyStock,
-    lastUploadDiff: buildUploadDiff(previousMappedData, mappedData, '?섑뵆_?ш퀬?곗씠??xlsx'),
+    lastUploadDiff: buildUploadDiff(previousMappedData, mappedData, '샘플_재고데이터.xlsx'),
   });
 
   showToast(`샘플 데이터 ${mappedData.length}건 자동 등록 완료`, 'success');

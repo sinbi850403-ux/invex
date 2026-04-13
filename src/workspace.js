@@ -87,7 +87,7 @@ export async function createWorkspace(name) {
 
 /**
  * 팀 멤버 초대 (이메일로)
- * 왜 이메일? → 상대방에게 별도 코드를 공유할 필요 없이 이메일만으로 초대 가능
+ * 왜? → 사용자가 속한 워크스페이스를 찾아야 데이터를 공유할 수 있음
  */
 export async function inviteMember(email, role = 'staff') {
   const user = getCurrentUser();

@@ -1,7 +1,7 @@
 /**
- * page-inventory.js - ?ш퀬 ?꾪솴 ?섏씠吏
+ * page-inventory.js - 재고 현황 페이지
  * ?ㅻТ 湲곕뒫: ?섎룞 ?덈ぉ 異붽?/?몄쭛, ?덉쟾?ш퀬 寃쎄퀬, 寃???꾪꽣, ?섏씠吏?ㅼ씠?? ?묒? ?대낫?닿린
- * **而щ읆 ?쒖떆 ?ㅼ젙**: ?ъ슜?먭? 蹂닿퀬 ?띠? 而щ읆留??좏깮?댁꽌 蹂????덉쓬
+ * **컬럼 표시 설정**: 사용자가 보고 싶은 컬럼만 선택해서 볼 수 있음
  */
 
 import { getState, setState, addItem, updateItem, deleteItem, restoreItem, setSafetyStock } from './store.js';
@@ -11,7 +11,7 @@ import { generateInventoryPDF } from './pdf-generator.js';
 import { renderItemTimelineChart } from './charts.js';
 import { renderGuidedPanel, renderInsightHero, renderQuickFilterRow } from './ux-toolkit.js';
 
-// ?섏씠吏??????
+// 페이지당 행 수
 const PAGE_SIZE = 20;
 
 // ?꾩껜 ?꾨뱶 ?뺤쓽 (?쒖꽌 ?좎?)
@@ -33,20 +33,20 @@ const ALL_FIELDS = [
   { key: 'note', label: '비고', numeric: false },
 ];
 
-// 媛꾪렪 李몄“ 留?
+// 페이지당 행 수
 const FIELD_LABELS = {};
 ALL_FIELDS.forEach(f => { FIELD_LABELS[f.key] = f.label; });
 
 /**
- * ?꾩옱 ?쒖떆??而щ읆 紐⑸줉 寃곗젙
+ * 현재 표시할 컬럼 목록 결정
  * ????濡쒖쭅? ??visibleColumns ?ㅼ젙???덉쑝硫?洹멸구 ?곕Ⅴ怨?
- * ?놁쑝硫??곗씠?곗뿉 ?ㅼ젣 媛믪씠 ?덈뒗 ?꾨뱶留??먮룞 ?좏깮
+ * 현재 표시할 컬럼 목록 결정
  */
 function getVisibleFields(data) {
   const state = getState();
   const visibleColumns = state.visibleColumns;
 
-  // ?곗씠?곗뿉 ?ㅼ젣 媛믪씠 ?ㅼ뼱?덈뒗 ?꾨뱶 紐⑸줉
+  // 페이지당 행 수
   const hasData = new Set(
     ALL_FIELDS.map(f => f.key).filter(key =>
       data.some(row => row[key] !== '' && row[key] !== undefined && row[key] !== null)
@@ -59,17 +59,17 @@ function getVisibleFields(data) {
     if (!updatedVisible.includes('supplyValue')) updatedVisible.push('supplyValue');
     if (!updatedVisible.includes('vat')) updatedVisible.push('vat');
     
-    // ?ъ슜???ㅼ젙???덉쑝硫????ㅼ젙???ы븿??寃껊쭔 (?쒖꽌??ALL_FIELDS ?쒖꽌 ?좎?)
+    // 사용자 설정이 있으면 → 설정에 포함된 것만 (순서는 ALL_FIELDS 순서 유지)
     return ALL_FIELDS.filter(f => updatedVisible.includes(f.key)).map(f => f.key);
   }
 
-  // ?ㅼ젙 ?놁쑝硫????곗씠?곌? ?덈뒗 ?꾨뱶留??먮룞 ?좏깮
-  // ?ш린???좉퇋 而щ읆??鍮꾩뼱?덈뜑?쇰룄 ?쇰떒 ?ㅻ뜑??蹂댁씠?꾨줉 媛뺤젣 ?ы븿 (?좎? ?붿껌)
+  // 페이지당 행 수
+  // 전체 필드 정의 (순서 유지)
   return ALL_FIELDS.filter(f => hasData.has(f.key) || f.key === 'supplyValue' || f.key === 'vat').map(f => f.key);
 }
 
 /**
- * ?ш퀬 ?꾪솴 ?섏씠吏 ?뚮뜑留?
+ * 현재 표시할 컬럼 목록 결정
  */
 export function renderInventoryPage(container, navigateTo) {
   const state = getState();
@@ -106,15 +106,15 @@ export function renderInventoryPage(container, navigateTo) {
     return;
   }
 
-  // ?꾩옱 ?쒖떆???꾨뱶 紐⑸줉
+  // 페이지당 행 수
   let activeFields = getVisibleFields(data);
 
-  // ?곗씠?곗뿉 媛믪씠 ?덈뒗 ?꾩껜 ?꾨뱶 紐⑸줉 (而щ읆 ?ㅼ젙 ?⑤꼸?먯꽌 ?ъ슜)
+  // 전체 필드 정의 (순서 유지)
   const allAvailableFields = ALL_FIELDS.filter(f =>
     data.some(row => row[f.key] !== '' && row[f.key] !== undefined && row[f.key] !== null)
   );
 
-  // ?덉쟾?ш퀬 ?댄븯 ??ぉ 移댁슫??
+  // 페이지당 행 수
   const warningCount = data.filter(d => {
     const min = safetyStock[d.itemName];
     const qtyStr = typeof d.quantity === 'string' ? d.quantity.replace(/,/g, '') : d.quantity;
@@ -181,7 +181,7 @@ export function renderInventoryPage(container, navigateTo) {
       </div>
     </div>
 
-    <!-- ?듦퀎 移대뱶 -->
+    <!-- 통계 카드 -->
     <div class="inventory-collapsible-section" data-collapsible-section="inventory-stats" data-collapsible-label="핵심 지표">
       <div class="stat-grid">
         <div class="stat-card">
@@ -334,7 +334,7 @@ export function renderInventoryPage(container, navigateTo) {
       </div>
     </div>
 
-    <!-- ?곗씠???뚯씠釉?-->
+    <!-- 통계 카드 -->
     <div class="inventory-collapsible-section" data-collapsible-section="inventory-table" data-collapsible-label="재고 테이블">
       <div class="card card-flush">
         <div class="table-wrapper" style="border:none;">
@@ -370,7 +370,7 @@ export function renderInventoryPage(container, navigateTo) {
     </div>
   `;
 
-  // === ?곹깭 蹂??===
+  // === 상태 변수 ===
   const defaultFilter = { keyword: '', category: '', warehouse: '', stock: '', itemCode: '', vendor: '', focus: 'all' };
   const defaultSort = { key: '', direction: '' };
   const savedViewPrefs = state.inventoryViewPrefs || {};
@@ -836,7 +836,7 @@ export function renderInventoryPage(container, navigateTo) {
     attachSortHeaderEvents();
   }
 
-  // === ?꾪꽣留?===
+  // === 상태 변수 ===
   function getFilteredData() {
     const smartQuery = parseSmartKeyword(currentFilter.keyword);
     return data.filter(row => {
@@ -875,7 +875,7 @@ export function renderInventoryPage(container, navigateTo) {
     });
   }
 
-  // === ?뚯씠釉?諛붾뵒 ?뚮뜑留?===
+  // === 상태 변수 ===
   function renderTable() {
     const filtered = getFilteredData();
     const sorted = sortRows(filtered);
@@ -937,7 +937,7 @@ export function renderInventoryPage(container, navigateTo) {
 
     renderFilterSummary(sorted.length, data.length);
 
-    // ?섏씠吏?ㅼ씠??
+    // 페이지당 행 수
     const paginationEl = container.querySelector('#pagination');
     const pageStart = sorted.length === 0 ? 0 : start + 1;
     paginationEl.innerHTML = `
@@ -956,7 +956,7 @@ export function renderInventoryPage(container, navigateTo) {
       </div>
     `;
 
-    // ?대깽???ъ뿰寃?
+    // 페이지당 행 수
     attachTableEvents();
     attachPaginationEvents();
     updateSelectAllState(pageData);
@@ -1252,7 +1252,7 @@ export function renderInventoryPage(container, navigateTo) {
       });
     });
 
-    // ?몄쭛 (紐⑤떖)
+    // 전체 필드 정의 (순서 유지)
     container.querySelectorAll('.btn-edit').forEach(btn => {
       btn.addEventListener('click', () => {
         const idx = parseInt(btn.dataset.idx);
@@ -1260,7 +1260,7 @@ export function renderInventoryPage(container, navigateTo) {
       });
     });
 
-    // ?덉쟾?ш퀬 ?ㅼ젙
+    // 페이지당 행 수
     container.querySelectorAll('.btn-safety').forEach(btn => {
       btn.addEventListener('click', () => {
         const name = btn.dataset.name;
@@ -1288,7 +1288,7 @@ export function renderInventoryPage(container, navigateTo) {
     });
   }
 
-  // ?섏씠吏?ㅼ씠???대깽??
+  // 페이지당 행 수
   function attachPaginationEvents() {
     container.querySelector('#page-prev')?.addEventListener('click', () => {
       if (currentPageNum > 1) { currentPageNum--; renderTable(); }
@@ -1322,7 +1322,7 @@ export function renderInventoryPage(container, navigateTo) {
       return min !== undefined && (parseFloat(qtyStr) || 0) <= min;
     }).length;
     // warningCount ?섎━癒쇳듃???꾩뿉???쒓? display:none ?섍굅???꾩삁 類먮뒗??.. (?댁씠荑?類먮꽕??
-    // ?ㅼ떆 ?앷컖??蹂대땲 ?ш퀬 遺議?寃쎄퀬 移대뱶??以묒슂?⑸땲??
+    // 페이지당 행 수
     const warnEl = container.querySelector('#stat-warn');
     if (warnEl) {
       warnEl.textContent = wc > 0 ? `${wc}건` : '없음';
@@ -1332,12 +1332,12 @@ export function renderInventoryPage(container, navigateTo) {
 
   initCollapsibleSections();
 
-  // === 而щ읆 ?ㅼ젙 ?⑤꼸 ?대깽??===
+  // === 상태 변수 ===
 
   const colPanel = container.querySelector('#col-settings-panel');
   const colBtn = container.querySelector('#btn-col-settings');
 
-  // ?⑤꼸 ?닿린/?リ린
+  // 패널 열기/닫기
   colBtn.addEventListener('click', (e) => {
     e.stopPropagation();
     colPanel.classList.toggle('open');
@@ -1347,19 +1347,19 @@ export function renderInventoryPage(container, navigateTo) {
     colPanel.classList.remove('open');
   });
 
-  // ?⑤꼸 ?몃? ?대┃ ???リ린
+  // 페이지당 행 수
   document.addEventListener('click', (e) => {
     if (!colPanel.contains(e.target) && e.target !== colBtn) {
       colPanel.classList.remove('open');
     }
   });
 
-  // ?꾩껜 ?좏깮 踰꾪듉
+  // 페이지당 행 수
   container.querySelector('#col-select-all').addEventListener('click', () => {
     container.querySelectorAll('.col-check').forEach(cb => { cb.checked = true; });
   });
 
-  // ?곸슜 踰꾪듉 ???좏깮??而щ읆????ν븯怨??뚯씠釉??덈줈 洹몃━湲?
+  // 페이지당 행 수
   container.querySelector('#col-apply').addEventListener('click', () => {
     const checked = [];
     container.querySelectorAll('.col-check:checked').forEach(cb => {
@@ -1371,21 +1371,21 @@ export function renderInventoryPage(container, navigateTo) {
       return;
     }
 
-    // ?꾩껜 ?좏깮?대㈃ null濡????(湲곕낯媛?= ?먮룞)
+    // 전체 선택이면 null로 저장 (기본값 = 자동)
     const allKeys = allAvailableFields.map(f => f.key);
     const isAll = checked.length === allKeys.length && allKeys.every(k => checked.includes(k));
 
     setState({ visibleColumns: isAll ? null : checked });
     activeFields = checked;
 
-    // ?뚯씠釉??ㅻ뜑+諛붾뵒 ?ㅼ떆 洹몃━湲?
+    // 테이블 헤더+바디 다시 그리기
     renderTableHeader();
     renderTable();
     colPanel.classList.remove('open');
     showToast(`${checked.length}개 항목을 표시하도록 적용했습니다.`, 'success');
   });
 
-  // 珥덉떖??鍮좊Ⅸ ?≪뀡
+  // 페이지당 행 수
   container.querySelector('#btn-quick-inout')?.addEventListener('click', () => navigateTo('inout'));
   container.querySelector('#btn-quick-guide')?.addEventListener('click', () => navigateTo('guide'));
   container.querySelector('#btn-quick-dashboard')?.addEventListener('click', () => navigateTo('home'));
@@ -1429,7 +1429,7 @@ export function renderInventoryPage(container, navigateTo) {
     });
   });
 
-  // === 寃???꾪꽣/?뺣젹 ?대깽??===
+  // === 품목 추가/편집 모달 ===
   function applyKeywordFilter(nextKeyword, { debounced = true } = {}) {
     currentFilter.keyword = nextKeyword;
     currentPageNum = 1;
@@ -1500,7 +1500,7 @@ export function renderInventoryPage(container, navigateTo) {
     persistInventoryPrefs();
   });
 
-  // ?꾪꽣/?뺣젹 珥덇린??踰꾪듉
+  // 패널 열기/닫기
   container.querySelector('#btn-filter-reset').addEventListener('click', () => {
     currentFilter = { ...defaultFilter };
     currentSort = { ...defaultSort };
@@ -1543,7 +1543,7 @@ export function renderInventoryPage(container, navigateTo) {
     if (searchEl) searchEl.classList.toggle('filter-active', !!currentFilter.keyword);
   }
 
-  // ?묒? ?대낫?닿린 ???꾩옱 ?쒖떆 以묒씤 而щ읆留??대낫?닿린
+  // 페이지당 행 수
   container.querySelector('#btn-export').addEventListener('click', () => {
     try {
       const exportData = data.map(row => {
@@ -1564,12 +1564,12 @@ export function renderInventoryPage(container, navigateTo) {
     generateInventoryPDF(data);
   });
 
-  // ?덈ぉ 異붽? 踰꾪듉
+  // 페이지당 행 수
   container.querySelector('#btn-add-item').addEventListener('click', () => {
     openItemModal(container, navigateTo);
   });
 
-  // === 珥덇린 ?뚮뜑留?===
+  // === 상태 변수 ===
   container.querySelector('#search-input').value = currentFilter.keyword;
   container.querySelector('#filter-item-code').value = currentFilter.itemCode;
   container.querySelector('#filter-vendor').value = currentFilter.vendor;
@@ -1588,7 +1588,7 @@ export function renderInventoryPage(container, navigateTo) {
   }
 }
 
-// === ?덈ぉ 異붽?/?몄쭛 紐⑤떖 ===
+// === 품목 추가/편집 모달 ===
 
 function openItemModal(container, navigateTo, editIdx = null) {
   const state = getState();
@@ -1835,7 +1835,7 @@ function formatCell(key, value) {
     const valStr = typeof value === 'string' ? value.replace(/,/g, '') : value;
     const num = parseFloat(valStr);
     if (!isNaN(num)) {
-      // ??Math.round? ???먮떒??諛섏삱由?(?쒓뎅 ?먰솕???뚯닔???놁쓬)
+      // 왜 Math.round? → 원단위 반올림 (한국 원화는 소수점 없음)
       if (key === 'unitPrice' || key === 'salePrice' || key === 'supplyValue' || key === 'vat' || key === 'totalPrice') {
         return '₩' + Math.round(num).toLocaleString('ko-KR');
       }
@@ -1885,16 +1885,16 @@ function getWarehouses(data) {
 }
 
 /**
- * ?덈ぉ肄붾뱶 紐⑸줉 異붿텧
- * ??蹂꾨룄 ?⑥닔? ???쒕∼?ㅼ슫 ?꾪꽣?먯꽌 ?뱀젙 ?덈ぉ肄붾뱶濡?鍮좊Ⅴ寃?議고쉶?섍린 ?꾪븿
+ * 현재 표시할 컬럼 목록 결정
+ * 현재 표시할 컬럼 목록 결정
  */
 function getItemCodes(data) {
   return [...new Set(data.map(r => r.itemCode).filter(Boolean))].sort();
 }
 
 /**
- * 嫄곕옒泥?紐⑸줉 異붿텧
- * ??蹂꾨룄 ?⑥닔? ??嫄곕옒泥섎퀎 ?꾪꽣濡??뱀젙 ?낆껜???덈ぉ留?蹂????덇쾶 ?섍린 ?꾪븿
+ * 현재 표시할 컬럼 목록 결정
+ * 현재 표시할 컬럼 목록 결정
  */
 function getVendors(data) {
   return [...new Set(data.map(r => r.vendor).filter(Boolean))].sort();

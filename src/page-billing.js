@@ -24,7 +24,7 @@ function formatDate(iso) {
 
 /**
  * 토스페이먼츠 SDK 로드
- * 왜 동적 로딩? → 결제 페이지 진입 시에만 SDK를 불러오면 초기 로딩 속도 향상
+ * 토스페이먼츠 SDK 로드
  */
 function loadTossSDK() {
   return new Promise((resolve, reject) => {

@@ -1,5 +1,5 @@
 ﻿/**
- * page-summary.js - ?붿빟 蹂닿퀬 ?섏씠吏
+ * page-summary.js - 요약 보고 페이지
  * ?ㅻТ 湲곕뒫: 遺꾨쪟蹂?李쎄퀬蹂?湲곌컙蹂?吏묎퀎, ?낆텧怨?異붿씠, ?ш퀬 遺議?寃쎄퀬 紐⑸줉
  */
 
@@ -9,7 +9,7 @@ import { downloadExcel } from './excel.js';
 import { renderInsightHero } from './ux-toolkit.js';
 
 /**
- * ?붿빟 蹂닿퀬 ?섏씠吏 ?뚮뜑留?
+ * 요약 보고 페이지 렌더링
  */
 export function renderSummaryPage(container, navigateTo) {
   const state = getState();
@@ -68,7 +68,7 @@ export function renderSummaryPage(container, navigateTo) {
       ],
     })}
 
-    <!-- ?듭떖 吏??-->
+    <!-- 핵심 지표 -->
     <div class="stat-grid">
       <div class="stat-card">
         <div class="stat-label">전체 품목</div>
@@ -88,7 +88,7 @@ export function renderSummaryPage(container, navigateTo) {
       </div>
     </div>
 
-    <!-- ?ш퀬 遺議?寃쎄퀬 -->
+    <!-- 핵심 지표 -->
     ${summary.warnings.length > 0 ? `
       <div class="card" style="border-left: 3px solid var(--danger);">
         <div class="card-title" style="color:var(--danger);">
@@ -124,10 +124,10 @@ export function renderSummaryPage(container, navigateTo) {
       </div>
     ` : ''}
 
-    <!-- 遺꾨쪟蹂??쒓컖 李⑦듃 -->
+    <!-- 핵심 지표 -->
     ${summary.categories.length > 1 ? `
       <div style="display:grid; grid-template-columns: 1fr 1fr; gap:16px; margin-bottom:16px;">
-        <!-- ?꾨꽋 李⑦듃: 遺꾨쪟蹂?湲덉븸 鍮꾩쑉 -->
+        <!-- 도넛 차트: 분류별 금액 비율 -->
         <div class="card">
           <div class="card-title">분류별 금액 비중</div>
           <div style="display:flex; align-items:center; gap:24px; padding:8px 0;">
@@ -148,7 +148,7 @@ export function renderSummaryPage(container, navigateTo) {
           </div>
         </div>
 
-        <!-- ?섑룊 諛?李⑦듃: 遺꾨쪟蹂??섎웾 -->
+        <!-- 도넛 차트: 분류별 금액 비율 -->
         <div class="card">
           <div class="card-title">분류별 수량 분포</div>
           <div style="display:flex; flex-direction:column; gap:10px; padding:8px 0;">
@@ -171,7 +171,7 @@ export function renderSummaryPage(container, navigateTo) {
       </div>
     ` : ''}
 
-    <!-- 遺꾨쪟蹂??꾪솴 -->
+    <!-- 핵심 지표 -->
     ${summary.categories.length > 0 ? `
       <div class="card">
         <div class="card-title">분류별 현황</div>
@@ -209,7 +209,7 @@ export function renderSummaryPage(container, navigateTo) {
       </div>
     ` : ''}
 
-    <!-- 李쎄퀬/?꾩튂蹂?-->
+    <!-- 창고/위치별 -->
     ${summary.warehouses.length > 0 ? `
       <div class="card">
         <div class="card-title">창고/위치별 현황</div>
@@ -238,7 +238,7 @@ export function renderSummaryPage(container, navigateTo) {
       </div>
     ` : ''}
 
-    <!-- 嫄곕옒泥섎퀎 ?꾪솴 -->
+    <!-- 핵심 지표 -->
     ${summary.vendors.length > 0 ? `
       <div class="card">
         <div class="card-title">거래처별 현황</div>
@@ -267,7 +267,7 @@ export function renderSummaryPage(container, navigateTo) {
       </div>
     ` : ''}
 
-    <!-- ?낆텧怨?理쒓렐 ?숉뼢 -->
+    <!-- 핵심 지표 -->
     ${transactions.length > 0 ? `
       <div class="card">
         <div class="card-title">최근 입출고 동향 <span class="card-subtitle">(최근 7일)</span></div>
@@ -302,7 +302,7 @@ export function renderSummaryPage(container, navigateTo) {
       </div>
     ` : ''}
 
-    <!-- ?섎웾 ?곸쐞 ?덈ぉ -->
+    <!-- 핵심 지표 -->
     <div class="card">
       <div class="card-title">수량 상위 10개 품목</div>
       <div class="table-wrapper" style="border:none;">
@@ -360,13 +360,13 @@ export function renderSummaryPage(container, navigateTo) {
 }
 
 /**
- * ?붿빟 ?곗씠??怨꾩궛
+ * 요약 보고 페이지 렌더링
  */
 function buildSummary(data, transactions, safetyStock) {
   const totalQty = data.reduce((s, r) => s + (parseFloat(r.quantity) || 0), 0);
   const totalPrice = data.reduce((s, r) => s + (parseFloat(r.totalPrice) || 0), 0);
 
-  // 遺꾨쪟蹂?
+  // 분류별
   const catMap = {};
   data.forEach(row => {
     const cat = row.category || '';
@@ -382,7 +382,7 @@ function buildSummary(data, transactions, safetyStock) {
       ratio: data.length > 0 ? Math.round((c.count / data.length) * 100) : 0,
     }));
 
-  // 李쎄퀬蹂?
+  // 분류별
   const whMap = {};
   data.forEach(row => {
     const wh = row.warehouse || '';
@@ -394,7 +394,7 @@ function buildSummary(data, transactions, safetyStock) {
   });
   const warehouses = Object.values(whMap).sort((a, b) => b.qty - a.qty);
 
-  // 嫄곕옒泥섎퀎 吏묎퀎
+  // 거래처별 집계
   const vendorMap = {};
   data.forEach(row => {
     const v = row.vendor || '';
@@ -411,7 +411,7 @@ function buildSummary(data, transactions, safetyStock) {
     .sort((a, b) => (parseFloat(b.quantity) || 0) - (parseFloat(a.quantity) || 0))
     .slice(0, 10);
 
-  // ?ш퀬 寃쎄퀬
+  // 분류별
   const warnings = data
     .filter(d => {
       const min = safetyStock[d.itemName];
@@ -424,7 +424,7 @@ function buildSummary(data, transactions, safetyStock) {
     }))
     .sort((a, b) => a.qty - b.qty);
 
-  // 理쒓렐 7???낆텧怨?異붿씠
+  // 최근 7일 입출고 추이
   const dailyTrend = [];
   for (let i = 6; i >= 0; i--) {
     const d = new Date();
@@ -452,8 +452,8 @@ function buildSummary(data, transactions, safetyStock) {
 }
 
 /**
- * CSS conic-gradient 湲곕컲 ?꾨꽋 李⑦듃 ?앹꽦
- * ??CSS? ???몃? 李⑦듃 ?쇱씠釉뚮윭由??놁씠???쒓컖???④낵瑜??????덉뼱??踰덈뱾 ?ш린瑜?以꾩엫
+ * CSS conic-gradient 기반 도넛 차트 생성
+ * 왜 CSS? → 외부 차트 라이브러리 없이도 시각적 효과를 낼 수 있어서 번들 크기를 줄임
  */
 function buildDonutChart(categories, totalPrice) {
   const colors = ['#2563eb', '#16a34a', '#d97706', '#dc2626', '#7c3aed', '#0891b2', '#be185d', '#ca8a04'];
@@ -462,7 +462,7 @@ function buildDonutChart(categories, totalPrice) {
     return `<div style="width:140px; height:140px; border-radius:50%; background:#e5e7eb; display:flex; align-items:center; justify-content:center; color:var(--text-muted); font-size:12px;">데이터 없음</div>`;
   }
 
-  // conic-gradient ?멸렇癒쇳듃 怨꾩궛
+  // conic-gradient 세그먼트 계산
   let cumulative = 0;
   const segments = categories.map((cat, i) => {
     const ratio = cat.price / totalPrice;
@@ -492,7 +492,7 @@ function buildDonutChart(categories, totalPrice) {
         align-items: center;
         justify-content: center;
       ">
-        <div style="font-size:10px; color:var(--text-muted);">珥?湲덉븸</div>
+        <div style="font-size:10px; color:var(--text-muted);">총 금액</div>
         <div style="font-size:11px; font-weight:700; color:var(--text-primary);">
           ${totalPrice >= 100000000
             ? '₩' + (totalPrice / 100000000).toFixed(1) + '억'

@@ -559,7 +559,7 @@ async function processPosFile(file, overlay, container, navigateTo, closeModal) 
 
 /**
  * POS 엑셀 양식 생성 & 다운로드
- * 왜 별도 양식? → POS 시스템마다 내보내기 포맷이 달라서
+ * 왜 별도 페이지? → 기존 재고 매핑과 POS 매출 데이터는 구조가 완전히 다름
  *   표준 양식을 제공하면 수동 입력/복사-붙여넣기가 쉬워짐
  */
 function downloadPosTemplate() {

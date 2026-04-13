@@ -386,7 +386,7 @@ export function renderVendorProfitChart(canvasId, rows) {
 
 /**
  * 품목별 재고 타임라인 차트
- * 왜 별도 함수? → 품목 상세 모달에서 입출고 흐름을 시각화하기 위함
+ * 왜 별도 파일? → 차트 로직을 한 곳에 모아서 여러 페이지에서 재사용하기 위함
  */
 export function renderItemTimelineChart(canvasId, timelineData) {
   destroyChart(canvasId);

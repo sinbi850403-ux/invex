@@ -1,7 +1,7 @@
 ﻿/**
- * page-inout.js - ?낆텧怨?愿由??섏씠吏
- * ??븷: ?낃퀬/異쒓퀬 湲곕줉 ?깅줉, ?대젰 議고쉶, ?ш퀬 ?먮룞 諛섏쁺
- * ?듭떖: ?낆텧怨좊? 湲곕줉?섎㈃ ?ш퀬 ?꾪솴???섎웾???먮룞?쇰줈 利앷컧??
+ * page-inout.js - 입출고 관리 페이지
+ * 역할: 입고/출고 기록 등록, 이력 조회, 재고 자동 반영
+ * 핵심: 입출고를 기록하면 재고 현황의 수량이 자동으로 증감됨
  */
 
 import { getState, setState, addTransaction, deleteTransaction, restoreTransaction } from './store.js';
@@ -12,7 +12,7 @@ import { escapeHtml, renderGuidedPanel, renderInsightHero, renderQuickFilterRow 
 const PAGE_SIZE = 15;
 
 /**
- * ?낆텧怨?愿由??섏씠吏 ?뚮뜑留?
+ * 입출고 관리 페이지 렌더링
  */
 export function renderInoutPage(container, navigateTo) {
   const state = getState();
@@ -78,7 +78,7 @@ export function renderInoutPage(container, navigateTo) {
       </div>
     </div>
 
-    <!-- ?ㅻ뒛 ?듦퀎 -->
+    <!-- 오늘 통계 -->
     <div class="stat-grid">
       <div class="stat-card">
         <div class="stat-label">전체 기록</div>
@@ -173,7 +173,7 @@ export function renderInoutPage(container, navigateTo) {
     </div>
     <div class="filter-summary" id="tx-filter-summary"></div>
 
-    <!-- ?대젰 ?뚯씠釉?-->
+    <!-- 오늘 통계 -->
     <div class="card card-flush">
       <div class="table-wrapper" style="border:none;">
         <table class="data-table">
@@ -372,11 +372,11 @@ export function renderInoutPage(container, navigateTo) {
       )) return false;
       if (filter.type && tx.type !== filter.type) return false;
       if (filter.date && tx.date !== filter.date) return false;
-      // 嫄곕옒泥??꾪꽣: ?몃옖??뀡??吏곸젒 湲곕줉??嫄곕옒泥섎줈 ?꾪꽣留?
-      // ??吏곸젒 ?꾪꽣? ??湲곗〈?먮뒗 ?덈ぉ 湲곗? 媛꾩젒 鍮꾧탳?吏留?
-      //   媛숈? ?덈ぉ???щ윭 嫄곕옒泥섏뿉???낃퀬?????덉쑝誘濡??몃옖??뀡 湲곗????뺥솗
+      // 거래처 필터: 트랜잭션에 직접 기록된 거래처로 필터링
+      //   같은 품목을 여러 거래처에서 입고할 수 있으므로 트랜잭션 기준이 정확
+      //   같은 품목을 여러 거래처에서 입고할 수 있으므로 트랜잭션 기준이 정확
       if (filter.vendor && tx.vendor !== filter.vendor) return false;
-      // ?덈ぉ肄붾뱶 ?꾪꽣
+      //   같은 품목을 여러 거래처에서 입고할 수 있으므로 트랜잭션 기준이 정확
       if (filter.itemCode && tx.itemCode !== filter.itemCode) return false;
       if (filter.quick === 'today' && tx.date !== todayKey) return false;
       if (filter.quick === 'in' && tx.type !== 'in') return false;
@@ -463,7 +463,7 @@ export function renderInoutPage(container, navigateTo) {
 
     renderFilterSummary(sorted.length);
 
-    // ?섏씠吏?ㅼ씠??
+    //   같은 품목을 여러 거래처에서 입고할 수 있으므로 트랜잭션 기준이 정확
     const pagEl = container.querySelector('#tx-pagination');
     const pageStart = sorted.length === 0 ? 0 : start + 1;
     pagEl.innerHTML = `
@@ -497,7 +497,7 @@ export function renderInoutPage(container, navigateTo) {
       });
     });
 
-    // ?섏씠吏?ㅼ씠???대깽??
+    //   같은 품목을 여러 거래처에서 입고할 수 있으므로 트랜잭션 기준이 정확
     pagEl.querySelector('#tx-prev')?.addEventListener('click', () => { currentPageNum--; renderTxTable(); });
     pagEl.querySelector('#tx-next')?.addEventListener('click', () => { currentPageNum++; renderTxTable(); });
   }
@@ -596,7 +596,7 @@ export function renderInoutPage(container, navigateTo) {
     persistInoutPrefs();
   });
 
-  // ?꾪꽣/?뺣젹 珥덇린??
+  // 필터/정렬 이벤트
   container.querySelector('#tx-filter-reset').addEventListener('click', () => {
     filter = { ...defaultFilter };
     sort = { ...defaultSort };
@@ -615,7 +615,7 @@ export function renderInoutPage(container, navigateTo) {
     showToast('필터와 정렬을 초기화했습니다.', 'info');
   });
 
-  // ?낃퀬/異쒓퀬 ?깅줉 踰꾪듉
+  // 필터/정렬 이벤트
   container.querySelector('#btn-in').addEventListener('click', () => {
     openTxModal(container, navigateTo, 'in', items);
   });
@@ -649,7 +649,7 @@ export function renderInoutPage(container, navigateTo) {
     openBulkUploadModal(container, navigateTo, items);
   });
 
-  // 珥덇린 ?뚮뜑留?
+  //   같은 품목을 여러 거래처에서 입고할 수 있으므로 트랜잭션 기준이 정확
   container.querySelector('#tx-search').value = filter.keyword;
   container.querySelector('#tx-type-filter').value = filter.type;
   container.querySelector('#tx-vendor-filter').value = filter.vendor;
@@ -673,9 +673,9 @@ export function renderInoutPage(container, navigateTo) {
 }
 
 /**
- * ?묒? ?쇨큵 ?낆텧怨??낅줈??紐⑤떖
- * ???꾩슂? ??嫄대퀎 ?깅줉? ?섏떗 嫄??댁긽????鍮꾪슚?⑥쟻.
- *   ?묒?濡??쒕쾲???щ━硫??쒓컙???ш쾶 ?덉빟?????덉쓬.
+ * 입출고 관리 페이지 렌더링
+ * 왜 필요? → 건별 등록은 수십 건 이상일 때 비효율적.
+ * 왜 필요? → 건별 등록은 수십 건 이상일 때 비효율적.
  */
 function openBulkUploadModal(container, navigateTo, items) {
   const overlay = document.createElement('div');
@@ -770,8 +770,8 @@ function openBulkUploadModal(container, navigateTo, items) {
 }
 
 /**
- * ?낅줈?쒕맂 ?묒? ?뚯씪???뚯떛?섏뿬 誘몃━蹂닿린 + ?쇨큵 ?깅줉
- * ??誘몃━蹂닿린? ???섎せ???곗씠?곌? ?깅줉?섎뒗 寃껋쓣 諛⑹?
+ * 업로드된 엑셀 파일을 파싱하여 미리보기 + 일괄 등록
+ * 입출고 관리 페이지 렌더링
  */
 async function processUploadedFile(file, overlay, container, navigateTo, items, closeModal) {
   const previewEl = overlay.querySelector('#bulk-preview');
@@ -926,7 +926,7 @@ async function processUploadedFile(file, overlay, container, navigateTo, items, 
 }
 
 /**
- * ?낃퀬/異쒓퀬 ?깅줉 紐⑤떖
+ * 입고/출고 등록 모달
  */
 function openTxModal(container, navigateTo, type, items) {
   const today = new Date().toISOString().split('T')[0];
@@ -1248,9 +1248,9 @@ function countToday(transactions, type) {
 }
 
 /**
- * 嫄곕옒泥??꾪꽣 ?듭뀡 異붿텧
- * ???몃옖??뀡怨??덈ぉ 紐⑤몢?먯꽌? ??湲곗〈 ?몃옖??뀡??vendor媛 ?놁쓣 ???덉쑝誘濡?
- *   ?덈ぉ??vendor???ы븿?섏뿬 鍮덊땲?놁씠 ?꾪꽣留?
+ * 입출고 관리 페이지 렌더링
+ * 왜 트랜잭션과 품목 모두에서? → 기존 트랜잭션에 vendor가 없을 수 있으므로
+ * 왜 트랜잭션과 품목 모두에서? → 기존 트랜잭션에 vendor가 없을 수 있으므로
  */
 function getVendorOptions(transactions, items) {
   const fromTx = transactions.map(tx => tx.vendor).filter(Boolean);
@@ -1259,7 +1259,7 @@ function getVendorOptions(transactions, items) {
 }
 
 /**
- * ?깅줉???덈ぉ?ㅼ쓽 ?덈ぉ肄붾뱶 紐⑸줉 異붿텧
+ * 입출고 관리 페이지 렌더링
  */
 function getCodeList(items) {
   return [...new Set(items.map(i => i.itemCode).filter(Boolean))].sort();

@@ -21,7 +21,7 @@ const SENTRY_DSN = '';
 
 /**
  * 에러 모니터링 초기화
- * 왜 앱 시작 시 호출? → 가능한 한 빨리 에러를 잡아야 초기화 과정의 버그도 감지 가능
+ * 왜 필요? → 사용자가 겪는 오류를 실시간으로 감지해야
  */
 export function initErrorMonitor() {
   // DSN이 설정되지 않으면 Sentry 비활성화
@@ -55,7 +55,7 @@ export function initErrorMonitor() {
 
 /**
  * 사용자 정보 설정 (로그인 후 호출)
- * 왜? → 에러 발생 시 어떤 사용자에게 영향이 있는지 파악하기 위함
+ * 왜 필요? → 사용자가 겪는 오류를 실시간으로 감지해야
  * 주의: 이메일은 보내되 비밀번호 등 민감 정보는 절대 보내지 않음
  */
 export function setMonitorUser(userId, email) {
