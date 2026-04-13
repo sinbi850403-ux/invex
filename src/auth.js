@@ -429,20 +429,23 @@ export async function loginWithEmail(email, password) {
     showToast(`${data.user?.user_metadata?.full_name || '사용자'}님, 로그인되었습니다.`, 'success');
     return toCompatUser(data.user);
   } catch (error) {
-    const lowerMessage = String(error?.message || '').toLowerCase();
-
-    if (
+    let resolvedError = error;
+    let lowerMessage = String(resolvedError?.message || '').toLowerCase();
+    const isConnectivityIssue =
       lowerMessage.includes('fetch') ||
       lowerMessage.includes('network') ||
-      lowerMessage.includes('timeout')
-    ) {
+      lowerMessage.includes('timeout') ||
+      lowerMessage.includes('abort');
+
+    if (isConnectivityIssue) {
       try {
         purgeLegacyAuthStorage({ includeSupabaseSession: true });
         const fallbackUser = await directPasswordLogin(email, password);
         showToast(`${fallbackUser?.user_metadata?.full_name || '사용자'}님, 로그인되었습니다.`, 'success');
         return toCompatUser(fallbackUser);
       } catch (fallbackError) {
-        error = fallbackError;
+        resolvedError = fallbackError;
+        lowerMessage = String(resolvedError?.message || '').toLowerCase();
       }
     }
 
@@ -450,31 +453,38 @@ export async function loginWithEmail(email, password) {
     let showResetAction = false;
 
     if (
-      error.message.includes('Invalid login') ||
-      error.message.includes('Invalid login credentials')
+      lowerMessage.includes('invalid login') ||
+      lowerMessage.includes('invalid credentials') ||
+      lowerMessage.includes('email or password') ||
+      lowerMessage.includes('invalid email or password')
     ) {
       errorMsg = '이메일 또는 비밀번호가 올바르지 않습니다.';
       showResetAction = true;
       showToast('로그인 정보를 확인해 주세요.', 'error', 3000);
-    } else if (error.message.includes('Email not confirmed')) {
+    } else if (lowerMessage.includes('email not confirmed')) {
       errorMsg = '이메일 인증이 완료되지 않았습니다. 메일함을 확인해 주세요.';
       showToast(errorMsg, 'warning', 5000);
     } else if (
       lowerMessage.includes('network') ||
       lowerMessage.includes('fetch') ||
-      lowerMessage.includes('timeout')
+      lowerMessage.includes('timeout') ||
+      lowerMessage.includes('abort')
     ) {
       const debug = getSupabaseDebugInfo();
-      errorMsg = '인증 서버 연결에 실패했습니다. 브라우저 캐시 또는 인증 저장소를 정리한 뒤 다시 시도해 주세요.';
+      if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+        errorMsg = '현재 오프라인 상태입니다. 네트워크 연결을 확인한 뒤 다시 시도해 주세요.';
+      } else {
+        errorMsg = '인증 서버 연결이 불안정합니다. 잠시 후 다시 시도해 주세요.';
+      }
       console.error('[Auth] Network/login error', {
-        message: error.message,
-        name: error.name,
+        message: resolvedError?.message,
+        name: resolvedError?.name,
         online: navigator.onLine,
         supabase: debug,
       });
       showToast(errorMsg, 'error');
     } else {
-      errorMsg = `로그인 실패: ${error.message}`;
+      errorMsg = `로그인 실패: ${resolvedError?.message || '알 수 없는 오류'}`;
       showToast(errorMsg, 'error');
     }
 
