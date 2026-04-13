@@ -1,42 +1,51 @@
 /**
- * page-costing.js - 원가 계산 (FIFO / 이동평균법)
- * 역할: 매입 원가를 자동 계산하여 정확한 수익성 분석 지원
- * 왜 필수? → 원가를 모르면 마진을 모르고, 마진을 모르면 경영을 못함
+ * page-costing.js - 원가 분석 (FIFO / 이동평균법)
+ * 역할: 매입 원가를 자동 계산하여 정확한 수익성 분석을 지원
  */
 
 import { getState, setState } from './store.js';
 import { downloadExcel } from './excel.js';
 import { showToast } from './toast.js';
 
+const COSTING_TEXT_COLLATOR = new Intl.Collator('ko', { numeric: true, sensitivity: 'base' });
+const COSTING_SORT_FIELDS = [
+  { key: 'itemName', label: '품목명' },
+  { key: 'itemCode', label: '코드' },
+  { key: 'qty', label: '재고수량', numeric: true, align: 'text-right' },
+  { key: 'unitCost', label: '단위원가', numeric: true, align: 'text-right' },
+  { key: 'totalCost', label: '총 원가', numeric: true, align: 'text-right' },
+  { key: 'sellPrice', label: '판매단가', numeric: true, align: 'text-right' },
+  { key: 'marketValue', label: '시가환산', numeric: true, align: 'text-right' },
+  { key: 'profit', label: '예상이익', numeric: true, align: 'text-right' },
+  { key: 'marginRate', label: '마진율', numeric: true, align: 'text-right' },
+];
+const COSTING_SORT_FIELD_MAP = Object.fromEntries(COSTING_SORT_FIELDS.map(field => [field.key, field]));
+let costingSortState = { key: 'totalCost', direction: 'desc' };
+
 export function renderCostingPage(container, navigateTo) {
   const state = getState();
   const items = state.mappedData || [];
   const transactions = state.transactions || [];
-
-  // 원가 계산 방식 (기본: 이동평균법)
   const costMethod = state.costMethod || 'weighted-avg';
-
-  // 원가 계산 실행
   const costData = calculateCosts(items, transactions, costMethod);
 
-  // 전체 요약
-  const totalCost = costData.reduce((s, r) => s + r.totalCost, 0);
-  const totalMarket = costData.reduce((s, r) => s + r.marketValue, 0);
+  const totalCost = costData.reduce((sum, row) => sum + row.totalCost, 0);
+  const totalMarket = costData.reduce((sum, row) => sum + row.marketValue, 0);
   const totalProfit = totalMarket - totalCost;
   const avgMargin = totalMarket > 0 ? ((totalProfit / totalMarket) * 100).toFixed(1) : '-';
+  const sortedCostData = sortCostRows(costData, costingSortState);
 
   container.innerHTML = `
     <div class="page-header">
       <div>
-        <h1 class="page-title"><span class="title-icon">💰</span> 원가 분석</h1>
-        <div class="page-desc">매입 원가를 자동 계산하고 수익성을 분석합니다.</div>
+        <h1 class="page-title"><span class="title-icon">🧮</span> 원가 분석</h1>
+        <div class="page-desc">매입 원가와 예상 마진을 한눈에 정리합니다.</div>
       </div>
       <div class="page-actions">
-        <button class="btn btn-outline" id="btn-cost-export">📥 원가표 내보내기</button>
+        <button class="btn btn-outline" id="btn-cost-export">📊 원가표 내보내기</button>
       </div>
     </div>
 
-    <!-- 원가 계산 방식 선택 -->
     <div class="card card-compact" style="margin-bottom:12px;">
       <div style="display:flex; gap:16px; align-items:center; flex-wrap:wrap;">
         <label class="form-label" style="margin:0; font-weight:600;">원가 계산 방식:</label>
@@ -55,146 +64,245 @@ export function renderCostingPage(container, navigateTo) {
       </div>
     </div>
 
-    <!-- KPI -->
     <div class="stat-grid" style="grid-template-columns: repeat(4, 1fr);">
       <div class="stat-card">
         <div class="stat-label">총 매입원가</div>
-        <div class="stat-value">${totalCost > 0 ? '₩' + totalCost.toLocaleString('ko-KR') : '-'}</div>
+        <div class="stat-value">${formatCostMoney(totalCost)}</div>
       </div>
       <div class="stat-card">
         <div class="stat-label">시가 환산액</div>
-        <div class="stat-value">${totalMarket > 0 ? '₩' + totalMarket.toLocaleString('ko-KR') : '-'}</div>
+        <div class="stat-value">${formatCostMoney(totalMarket)}</div>
       </div>
       <div class="stat-card">
         <div class="stat-label">예상 마진</div>
-        <div class="stat-value ${totalProfit >= 0 ? 'text-success' : 'text-danger'}">${totalProfit !== 0 ? '₩' + totalProfit.toLocaleString('ko-KR') : '-'}</div>
+        <div class="stat-value ${totalProfit >= 0 ? 'text-success' : 'text-danger'}">${formatSignedCostMoney(totalProfit)}</div>
       </div>
       <div class="stat-card">
         <div class="stat-label">평균 마진율</div>
-        <div class="stat-value text-accent">${avgMargin}%</div>
+        <div class="stat-value text-accent">${avgMargin === '-' ? '-' : `${avgMargin}%`}</div>
       </div>
     </div>
 
-    <!-- 원가 테이블 -->
     <div class="card card-flush">
       <div style="padding:12px 16px; border-bottom:1px solid var(--border); background:var(--bg-card);">
-        <strong>💰 품목별 원가 분석</strong>
-        <span style="color:var(--text-muted); font-size:12px; margin-left:8px;">(${costData.length}개 품목)</span>
+        <strong>🧮 품목별 원가 분석</strong>
+        <span style="color:var(--text-muted); font-size:12px; margin-left:8px;">(${sortedCostData.length}개 품목)</span>
+        <span style="color:var(--text-muted); font-size:12px; margin-left:8px;">정렬: ${getCostSortSummary(costingSortState)}</span>
       </div>
       <div class="table-wrapper" style="border:none; border-radius:0;">
         <table class="data-table">
           <thead>
             <tr>
               <th style="width:40px;">#</th>
-              <th>품목명</th>
-              <th>코드</th>
-              <th class="text-right">재고수량</th>
-              <th class="text-right">단위원가</th>
-              <th class="text-right">총 원가</th>
-              <th class="text-right">판매단가</th>
-              <th class="text-right">시가환산</th>
-              <th class="text-right">예상이익</th>
-              <th class="text-right">마진율</th>
+              ${COSTING_SORT_FIELDS.map(field => renderCostingHeader(field, costingSortState)).join('')}
             </tr>
           </thead>
           <tbody>
-            ${costData.map((r, i) => {
-              const margin = r.marketValue > 0 ? ((r.profit / r.marketValue) * 100).toFixed(1) : '-';
-              return `
-                <tr class="${parseFloat(margin) < 0 ? 'row-danger' : parseFloat(margin) < 10 ? 'row-warning' : ''}">
-                  <td class="col-num">${i + 1}</td>
-                  <td><strong>${r.itemName}</strong></td>
-                  <td style="color:var(--text-muted); font-size:12px;">${r.itemCode || '-'}</td>
-                  <td class="text-right">${r.qty.toLocaleString('ko-KR')}</td>
-                  <td class="text-right">₩${r.unitCost.toLocaleString('ko-KR')}</td>
-                  <td class="text-right">₩${r.totalCost.toLocaleString('ko-KR')}</td>
-                  <td class="text-right">${r.sellPrice > 0 ? '₩' + r.sellPrice.toLocaleString('ko-KR') : '-'}</td>
-                  <td class="text-right">${r.marketValue > 0 ? '₩' + r.marketValue.toLocaleString('ko-KR') : '-'}</td>
-                  <td class="text-right ${r.profit >= 0 ? 'type-in' : 'type-out'}">${r.profit !== 0 ? '₩' + r.profit.toLocaleString('ko-KR') : '-'}</td>
-                  <td class="text-right" style="font-weight:600;">${margin}%</td>
-                </tr>
-              `;
-            }).join('')}
+            ${sortedCostData.map((row, index) => renderCostingRow(row, index)).join('')}
           </tbody>
         </table>
       </div>
     </div>
+    <div class="chart-help-text">표 제목을 누르면 큰 값 순서나 가나다순으로 바로 정렬됩니다.</div>
   `;
 
-  // 원가 방식 변경
   container.querySelectorAll('input[name="cost-method"]').forEach(radio => {
-    radio.addEventListener('change', (e) => {
-      setState({ costMethod: e.target.value });
+    radio.addEventListener('change', (event) => {
+      setState({ costMethod: event.target.value });
       renderCostingPage(container, navigateTo);
     });
   });
 
-  // 내보내기
-  container.querySelector('#btn-cost-export').addEventListener('click', () => {
-    if (costData.length === 0) { showToast('데이터가 없습니다.', 'warning'); return; }
-    const data = costData.map(r => ({
-      '품목명': r.itemName,
-      '코드': r.itemCode || '',
-      '재고수량': r.qty,
-      '단위원가': r.unitCost,
-      '총원가': r.totalCost,
-      '판매단가': r.sellPrice,
-      '시가환산': r.marketValue,
-      '예상이익': r.profit,
-      '마진율(%)': r.marketValue > 0 ? ((r.profit / r.marketValue) * 100).toFixed(1) : 0,
+  container.querySelectorAll('.table-sort-btn[data-sort-key]').forEach(button => {
+    button.addEventListener('click', () => {
+      const nextKey = button.dataset.sortKey;
+      if (!nextKey) return;
+
+      costingSortState = getNextCostSortState(costingSortState, nextKey);
+      renderCostingPage(container, navigateTo);
+    });
+  });
+
+  container.querySelector('#btn-cost-export')?.addEventListener('click', () => {
+    if (sortedCostData.length === 0) {
+      showToast('데이터가 없습니다.', 'warning');
+      return;
+    }
+
+    const exportRows = sortedCostData.map(row => ({
+      '품목명': row.itemName,
+      '코드': row.itemCode || '',
+      '재고수량': row.qty,
+      '단위원가': row.unitCost,
+      '총원가': row.totalCost,
+      '판매단가': row.sellPrice,
+      '시가환산': row.marketValue,
+      '예상이익': row.profit,
+      '마진율(%)': getCostMarginRate(row) ?? '',
     }));
-    downloadExcel(data, `원가분석_${new Date().toISOString().split('T')[0]}`);
+
+    downloadExcel(exportRows, `원가분석_${new Date().toISOString().split('T')[0]}`);
     showToast('원가표를 내보냈습니다.', 'success');
   });
 }
 
+function renderCostingHeader(field, sortState) {
+  const classes = ['sortable-col'];
+  if (field.align) classes.push(field.align);
+
+  return `
+    <th class="${classes.join(' ')}">
+      <button type="button" class="table-sort-btn ${sortState.key === field.key ? 'active' : ''}" data-sort-key="${field.key}">
+        <span>${field.label}</span>
+        <span class="table-sort-arrow">${getCostSortArrow(field.key, sortState)}</span>
+      </button>
+    </th>
+  `;
+}
+
+function renderCostingRow(row, index) {
+  const marginRate = getCostMarginRate(row);
+  const marginText = marginRate === null ? '-' : `${marginRate.toFixed(1)}%`;
+  const rowClass = marginRate !== null && marginRate < 0
+    ? 'row-danger'
+    : marginRate !== null && marginRate < 10
+      ? 'row-warning'
+      : '';
+
+  return `
+    <tr class="${rowClass}">
+      <td class="col-num">${index + 1}</td>
+      <td><strong>${row.itemName}</strong></td>
+      <td style="color:var(--text-muted); font-size:12px;">${row.itemCode || '-'}</td>
+      <td class="text-right">${row.qty.toLocaleString('ko-KR')}</td>
+      <td class="text-right">${formatCostMoney(row.unitCost)}</td>
+      <td class="text-right">${formatCostMoney(row.totalCost)}</td>
+      <td class="text-right">${formatCostMoney(row.sellPrice)}</td>
+      <td class="text-right">${formatCostMoney(row.marketValue)}</td>
+      <td class="text-right ${row.profit >= 0 ? 'type-in' : 'type-out'}">${formatSignedCostMoney(row.profit)}</td>
+      <td class="text-right" style="font-weight:600;">${marginText}</td>
+    </tr>
+  `;
+}
+
+function getCostSortArrow(key, sortState) {
+  if (sortState.key !== key) return '↕';
+  return sortState.direction === 'asc' ? '↑' : '↓';
+}
+
+function getCostSortSummary(sortState) {
+  const label = COSTING_SORT_FIELD_MAP[sortState.key]?.label || '품목명';
+  return `${label} ${sortState.direction === 'asc' ? '오름차순' : '내림차순'}`;
+}
+
+function getNextCostSortState(currentSort, nextKey) {
+  if (currentSort.key === nextKey) {
+    return {
+      key: nextKey,
+      direction: currentSort.direction === 'asc' ? 'desc' : 'asc',
+    };
+  }
+
+  return {
+    key: nextKey,
+    direction: COSTING_SORT_FIELD_MAP[nextKey]?.numeric ? 'desc' : 'asc',
+  };
+}
+
+function sortCostRows(rows, sortState) {
+  return [...rows].sort((left, right) => compareCostRows(left, right, sortState));
+}
+
+function compareCostRows(left, right, sortState) {
+  const leftValue = getCostSortValue(left, sortState.key);
+  const rightValue = getCostSortValue(right, sortState.key);
+
+  const leftEmpty = leftValue === null || leftValue === '';
+  const rightEmpty = rightValue === null || rightValue === '';
+  if (leftEmpty && rightEmpty) return COSTING_TEXT_COLLATOR.compare(left.itemName || '', right.itemName || '');
+  if (leftEmpty) return 1;
+  if (rightEmpty) return -1;
+
+  let result = 0;
+  if (typeof leftValue === 'number' && typeof rightValue === 'number') {
+    result = leftValue - rightValue;
+  } else {
+    result = COSTING_TEXT_COLLATOR.compare(String(leftValue), String(rightValue));
+  }
+
+  if (result === 0) {
+    result = COSTING_TEXT_COLLATOR.compare(left.itemName || '', right.itemName || '');
+  }
+
+  return sortState.direction === 'desc' ? result * -1 : result;
+}
+
+function getCostSortValue(row, key) {
+  if (key === 'marginRate') return getCostMarginRate(row);
+
+  const value = row[key];
+  if (value === null || value === undefined || value === '') return null;
+  return COSTING_SORT_FIELD_MAP[key]?.numeric ? Number(value) : String(value).trim();
+}
+
+function getCostMarginRate(row) {
+  if (!row.marketValue) return null;
+  return Number((((row.profit || 0) / row.marketValue) * 100).toFixed(1));
+}
+
+function formatCostMoney(value) {
+  if (!value) return '-';
+  return `₩${Math.round(value).toLocaleString('ko-KR')}`;
+}
+
+function formatSignedCostMoney(value) {
+  if (!value) return '-';
+  return `${value < 0 ? '-₩' : '₩'}${Math.abs(Math.round(value)).toLocaleString('ko-KR')}`;
+}
+
 /**
  * 원가 계산 로직
- * 이동평균법: 기존 단가 그대로 사용 (매입 시점 평균)
- * FIFO: 가장 오래된 매입 단가부터 적용
- * 최종매입원가법: 가장 최근 매입 단가 적용
+ * weighted-avg: 입고 평균가
+ * fifo: 가장 오래된 입고 단가
+ * latest: 가장 최근 입고 단가
  */
 function calculateCosts(items, transactions, method) {
   return items.map(item => {
     const qty = parseFloat(item.quantity) || 0;
     const unitPrice = parseFloat(item.unitPrice) || 0;
-    const sellPrice = parseFloat(item.sellPrice) || unitPrice;
+    const sellPrice = parseFloat(item.salePrice) || parseFloat(item.sellPrice) || unitPrice;
 
-    // 해당 품목의 입고 거래
-    const inTx = transactions
+    const inTransactions = transactions
       .filter(tx => tx.type === 'in' && tx.itemName === item.itemName)
       .sort((a, b) => (a.date || '').localeCompare(b.date || ''));
 
-    let unitCost;
+    let unitCost = unitPrice;
 
     switch (method) {
       case 'fifo':
-        // FIFO: 가장 오래된 매입 단가 (첫 입고)
-        unitCost = inTx.length > 0 ? (parseFloat(inTx[0].unitPrice) || unitPrice) : unitPrice;
+        unitCost = inTransactions.length > 0 ? (parseFloat(inTransactions[0].unitPrice) || unitPrice) : unitPrice;
         break;
       case 'latest':
-        // 최종매입원가: 가장 최근 입고 단가
-        unitCost = inTx.length > 0 ? (parseFloat(inTx[inTx.length - 1].unitPrice) || unitPrice) : unitPrice;
+        unitCost = inTransactions.length > 0 ? (parseFloat(inTransactions[inTransactions.length - 1].unitPrice) || unitPrice) : unitPrice;
         break;
       case 'weighted-avg':
       default:
-        // 이동평균: 전체 입고 가중평균 (없으면 현재 단가)
-        if (inTx.length > 0) {
-          let totalQty = 0, totalVal = 0;
-          inTx.forEach(tx => {
+        if (inTransactions.length > 0) {
+          let totalQty = 0;
+          let totalValue = 0;
+
+          inTransactions.forEach(tx => {
             const txQty = parseFloat(tx.quantity) || 0;
             const txPrice = parseFloat(tx.unitPrice) || unitPrice;
             totalQty += txQty;
-            totalVal += txQty * txPrice;
+            totalValue += txQty * txPrice;
           });
-          unitCost = totalQty > 0 ? Math.round(totalVal / totalQty) : unitPrice;
-        } else {
-          unitCost = unitPrice;
+
+          unitCost = totalQty > 0 ? Math.round(totalValue / totalQty) : unitPrice;
         }
         break;
     }
 
-    // 왜 Math.round? → 원단위 반올림으로 소수점 제거 (한국 회계 기준)
     unitCost = Math.round(unitCost);
     const totalCost = Math.round(qty * unitCost);
     const marketValue = Math.round(qty * sellPrice);

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * workspace.js - 팀 워크스페이스 관리
  * 
  * 핵심 개념:
@@ -6,15 +6,15 @@
  *   - 팀장(owner)이 워크스페이스를 생성하고 멤버를 초대
  *   - 같은 워크스페이스에 속한 멤버는 동일한 데이터를 실시간 공유
  * 
- * Firestore 구조:
+ * 공유 저장소 구조:
  *   workspaces/{workspaceId} → 공유 데이터 (재고, 거래, 거래처 등)
  *   workspaces/{workspaceId}/meta → {name, ownerId, createdAt, members[]}
  *   users/{uid} → {workspaceId, role, ...}
  */
 
-import { doc, getDoc, setDoc, updateDoc, collection, query, where, getDocs, onSnapshot, deleteField } from 'firebase/firestore';
-import { db, isConfigured } from './firebase-config.js';
-import { getCurrentUser, getUserProfileData } from './firebase-auth.js';
+import { doc, getDoc, setDoc, updateDoc, collection, query, where, getDocs, onSnapshot, deleteField } from './backend-store.js';
+import { db, isConfigured } from './backend-config.js';
+import { getCurrentUser, getUserProfileData } from './auth.js';
 import { getState, setState } from './store.js';
 import { showToast } from './toast.js';
 
@@ -254,6 +254,7 @@ export function syncWorkspaceToCloud() {
         transfers: state.transfers || [],
         vendorMaster: state.vendorMaster || [],
         accountEntries: state.accountEntries || [],
+        purchaseOrders: state.purchaseOrders || [],
         stocktakeHistory: state.stocktakeHistory || [],
         customFields: state.customFields || [],
         safetyStock: state.safetyStock || {},

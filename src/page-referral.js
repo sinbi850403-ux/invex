@@ -7,7 +7,7 @@
 
 import { getState, setState } from './store.js';
 import { showToast } from './toast.js';
-import { getCurrentUser } from './firebase-auth.js';
+import { getCurrentUser } from './auth.js';
 
 export function renderReferralPage(container, navigateTo) {
   const state = getState();

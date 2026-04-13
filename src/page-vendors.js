@@ -11,6 +11,8 @@ import { downloadExcel } from './excel.js';
 export function renderVendorsPage(container, navigateTo) {
   const state = getState();
   const vendors = state.vendorMaster || [];
+  const transactions = state.transactions || [];
+  const vendorStats = buildVendorStats(vendors, transactions);
 
   container.innerHTML = `
     <div class="page-header">
@@ -39,8 +41,16 @@ export function renderVendorsPage(container, navigateTo) {
     </div>
 
     <!-- 거래처 목록 -->
+    <div class="card card-compact" style="margin-bottom:12px;">
+      <div style="display:flex; flex-wrap:wrap; gap:16px; font-size:13px; color:var(--text-muted);">
+        <div>거래 발생 거래처 <strong style="color:var(--accent);">${vendorStats.activeCount}</strong>곳</div>
+        <div>누적 매입 <strong>${formatMoney(vendorStats.totalIn)}</strong></div>
+        <div>누적 매출 <strong>${formatMoney(vendorStats.totalOut)}</strong></div>
+      </div>
+    </div>
+
     <div class="card card-flush" id="vendor-list-area">
-      ${renderVendorList(vendors, '')}
+      ${renderVendorList(vendors, '', vendorStats.map)}
     </div>
 
     <!-- 등록/수정 모달 -->
@@ -58,7 +68,7 @@ export function renderVendorsPage(container, navigateTo) {
   // === 검색 ===
   container.querySelector('#vendor-search').addEventListener('input', (e) => {
     const keyword = e.target.value.toLowerCase();
-    container.querySelector('#vendor-list-area').innerHTML = renderVendorList(vendors, keyword);
+    container.querySelector('#vendor-list-area').innerHTML = renderVendorList(vendors, keyword, vendorStats.map);
     bindVendorActions(container, vendors, navigateTo);
   });
 
@@ -93,7 +103,7 @@ export function renderVendorsPage(container, navigateTo) {
 /**
  * 거래처 목록 HTML
  */
-function renderVendorList(vendors, keyword) {
+function renderVendorList(vendors, keyword, statsMap) {
   const filtered = keyword
     ? vendors.filter(v =>
         (v.name || '').toLowerCase().includes(keyword) ||
@@ -121,6 +131,10 @@ function renderVendorList(vendors, keyword) {
             <th>담당자</th>
             <th>연락처</th>
             <th>이메일</th>
+            <th class="text-right">거래 건수</th>
+            <th class="text-right">누적 매입</th>
+            <th class="text-right">누적 매출</th>
+            <th>최근 거래</th>
             <th style="width:100px;">관련 품목</th>
             <th style="width:80px;">관리</th>
           </tr>
@@ -128,6 +142,7 @@ function renderVendorList(vendors, keyword) {
         <tbody>
           ${filtered.map((v, i) => {
             const realIdx = vendors.indexOf(v);
+            const stats = statsMap?.get(v.name) || { count: 0, totalIn: 0, totalOut: 0, lastDate: '' };
             return `
               <tr>
                 <td><span class="badge ${v.type === 'supplier' ? 'badge-info' : 'badge-success'}">${v.type === 'supplier' ? '매입' : '매출'}</span></td>
@@ -136,6 +151,10 @@ function renderVendorList(vendors, keyword) {
                 <td>${v.contactName || '-'}</td>
                 <td style="font-size:12px;">${v.phone || '-'}</td>
                 <td style="font-size:12px;">${v.email || '-'}</td>
+                <td class="text-right">${stats.count.toLocaleString('ko-KR')}건</td>
+                <td class="text-right">${formatMoney(stats.totalIn)}</td>
+                <td class="text-right">${formatMoney(stats.totalOut)}</td>
+                <td style="font-size:12px;">${stats.lastDate || '-'}</td>
                 <td class="text-center">${getVendorItemCount(v.name)}개</td>
                 <td>
                   <div style="display:flex; gap:4px;">
@@ -159,6 +178,49 @@ function getVendorItemCount(vendorName) {
   const state = getState();
   const items = state.mappedData || [];
   return items.filter(i => i.vendor === vendorName).length;
+}
+
+function buildVendorStats(vendors, transactions) {
+  const map = new Map();
+  vendors.forEach(v => map.set(v.name, { count: 0, totalIn: 0, totalOut: 0, lastDate: '' }));
+
+  transactions.forEach(tx => {
+    const name = (tx.vendor || '').trim();
+    if (!name) return;
+    const stats = map.get(name) || { count: 0, totalIn: 0, totalOut: 0, lastDate: '' };
+    const qty = toNumber(tx.quantity);
+    const price = toNumber(tx.price ?? tx.unitPrice ?? tx.unitCost ?? 0);
+    const amount = Math.round(qty * price);
+    if (tx.type === 'in') stats.totalIn += amount;
+    if (tx.type === 'out') stats.totalOut += amount;
+    stats.count += 1;
+    const dateKey = String(tx.date || tx.createdAt || '');
+    if (dateKey && dateKey > stats.lastDate) stats.lastDate = dateKey;
+    map.set(name, stats);
+  });
+
+  let totalIn = 0;
+  let totalOut = 0;
+  let activeCount = 0;
+  map.forEach(stats => {
+    totalIn += stats.totalIn;
+    totalOut += stats.totalOut;
+    if (stats.count > 0) activeCount += 1;
+  });
+
+  return { map, totalIn, totalOut, activeCount };
+}
+
+function toNumber(value) {
+  if (value === null || value === undefined || value === '') return 0;
+  const numeric = Number.parseFloat(String(value).replace(/,/g, ''));
+  return Number.isNaN(numeric) ? 0 : numeric;
+}
+
+function formatMoney(value) {
+  const numeric = toNumber(value);
+  if (!numeric) return '₩0';
+  return `₩${Math.round(numeric).toLocaleString('ko-KR')}`;
 }
 
 /**

@@ -192,11 +192,11 @@ export function renderSettingsPage(container, navigateTo) {
   container.querySelector('#btn-reset-view-prefs')?.addEventListener('click', () => {
     setState({
       inventoryViewPrefs: {
-        filter: { keyword: '', category: '', warehouse: '', stock: '', itemCode: '', vendor: '' },
+        filter: { keyword: '', category: '', warehouse: '', stock: '', itemCode: '', vendor: '', focus: 'all' },
         sort: { key: '', direction: '' },
       },
       inoutViewPrefs: {
-        filter: { keyword: '', type: '', date: '', vendor: '', itemCode: '' },
+        filter: { keyword: '', type: '', date: '', vendor: '', itemCode: '', quick: 'all' },
         sort: { key: 'date', direction: 'desc' },
       },
     });
@@ -299,11 +299,11 @@ export function renderSettingsPage(container, navigateTo) {
       visibleColumns: null,
       beginnerMode: true,
       inventoryViewPrefs: {
-        filter: { keyword: '', category: '', warehouse: '', stock: '', itemCode: '', vendor: '' },
+        filter: { keyword: '', category: '', warehouse: '', stock: '', itemCode: '', vendor: '', focus: 'all' },
         sort: { key: '', direction: '' },
       },
       inoutViewPrefs: {
-        filter: { keyword: '', type: '', date: '', vendor: '', itemCode: '' },
+        filter: { keyword: '', type: '', date: '', vendor: '', itemCode: '', quick: 'all' },
         sort: { key: 'date', direction: 'desc' },
       },
       fileName: '',

@@ -182,9 +182,8 @@ async function handleFile(file, navigateTo) {
 
     // 매핑 결과 요약
     const mappedCount = Object.keys(mapping).length;
-    const mappedLabels = Object.keys(mapping).map(key =>
-      ERP_FIELDS.find(f => f.key === key)?.label || key
-    );
+    const previousMappedData = (getState().mappedData || []).slice();
+    const uploadDiff = buildUploadDiff(previousMappedData, mappedData, file.name);
 
     const uploadSafetyStock = { ...getState().safetyStock };
     mappedData.forEach(row => {
@@ -205,6 +204,7 @@ async function handleFile(file, navigateTo) {
       columnMapping: mapping,
       mappedData,
       safetyStock: uploadSafetyStock,
+      lastUploadDiff: uploadDiff,
     });
 
     showToast(
@@ -223,6 +223,7 @@ async function handleFile(file, navigateTo) {
  * 샘플 데이터 로드 — 파일 없이 체험
  */
 function loadSampleData(navigateTo) {
+  const previousMappedData = (getState().mappedData || []).slice();
   const sampleData = [
     ['품목명', '품목코드', '분류', '수량', '단위', '단가', '공급가액', '부가세', '합계금액', '창고', '비고', '안전재고'],
     ['A4용지', 'P-001', '사무용품', 500, 'EA', 5000, 2500000, 250000, 2750000, '본사 1층', '', 100],
@@ -265,6 +266,7 @@ function loadSampleData(navigateTo) {
     columnMapping: mapping,
     mappedData,
     safetyStock: uploadSafetyStock,
+    lastUploadDiff: buildUploadDiff(previousMappedData, mappedData, '?섑뵆_?ш퀬?곗씠??xlsx'),
   });
 
   showToast(`샘플 데이터 ${mappedData.length}건 자동 등록 완료`, 'success');
@@ -277,6 +279,72 @@ function loadSampleData(navigateTo) {
  * 엑셀 헤더를 분석해 ERP 필드에 자동 매핑
  * @returns {object} { fieldKey: columnIndex, ... }
  */
+function buildUploadDiff(previousRows, nextRows, fileName = '') {
+  const previousMap = new Map();
+  previousRows.forEach((row, index) => {
+    previousMap.set(getUploadRowKey(row, index), row);
+  });
+
+  const touched = new Set();
+  let added = 0;
+  let updated = 0;
+  let unchanged = 0;
+
+  nextRows.forEach((row, index) => {
+    const key = getUploadRowKey(row, index);
+    const previous = previousMap.get(key);
+    if (!previous) {
+      added += 1;
+      return;
+    }
+
+    touched.add(key);
+    if (isUploadRowChanged(previous, row)) updated += 1;
+    else unchanged += 1;
+  });
+
+  const removed = previousRows.length - touched.size;
+
+  return {
+    fileName,
+    added,
+    updated,
+    unchanged,
+    removed: Math.max(0, removed),
+    at: new Date().toISOString(),
+  };
+}
+
+function getUploadRowKey(row, index) {
+  const code = String(row?.itemCode || '').trim();
+  const name = String(row?.itemName || '').trim();
+  if (code) return `code:${code}`;
+  if (name) return `name:${name}`;
+  return `row:${index}`;
+}
+
+function isUploadRowChanged(previousRow, nextRow) {
+  const compareKeys = [
+    'itemName',
+    'itemCode',
+    'category',
+    'quantity',
+    'unit',
+    'unitPrice',
+    'salePrice',
+    'supplyValue',
+    'vat',
+    'totalPrice',
+    'warehouse',
+    'note',
+    'safetyStock',
+  ];
+
+  return compareKeys.some((key) =>
+    String(previousRow?.[key] ?? '').trim() !== String(nextRow?.[key] ?? '').trim()
+  );
+}
+
 function autoMap(headers) {
   const lower = headers.map(h => (h || '').toString().toLowerCase().trim());
   const mapping = {};

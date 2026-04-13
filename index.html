@@ -190,7 +190,7 @@
         </details>
         <details class="landing-faq-item">
           <summary>데이터가 안전한가요?</summary>
-          <p>Google Firebase 기반으로 모든 데이터가 암호화 저장됩니다. 추가로 JSON 백업 기능도 제공합니다.</p>
+          <p>Supabase 기반으로 모든 데이터가 안전하게 저장되며, 추가로 JSON 백업 기능도 제공합니다.</p>
         </details>
         <details class="landing-faq-item">
           <summary>팀원과 함께 쓸 수 있나요?</summary>
@@ -234,32 +234,33 @@
       </div>
 
       <!-- 로그인 폼 -->
-      <div id="form-login" class="auth-form">
+      <!-- form 태그 사용: 브라우저 패스워드 매니저 + 자동완성 호환 -->
+      <form id="form-login" class="auth-form" autocomplete="on" onsubmit="return false;">
         <div class="auth-field">
-          <input id="login-email" class="auth-input" type="email" placeholder="이메일 주소" />
+          <input id="login-email" class="auth-input" type="email" placeholder="이메일 주소" autocomplete="email" />
         </div>
         <div class="auth-field">
-          <input id="login-password" class="auth-input" type="password" placeholder="비밀번호" />
+          <input id="login-password" class="auth-input" type="password" placeholder="비밀번호" autocomplete="current-password" />
         </div>
         <div class="auth-forgot">
           <a href="#" id="btn-forgot-pw" class="auth-link-small">비밀번호 찾기</a>
         </div>
-        <button id="gate-email-login" class="auth-btn auth-btn-primary">이메일로 로그인</button>
-      </div>
+        <button id="gate-email-login" type="button" class="auth-btn auth-btn-primary">이메일로 로그인</button>
+      </form>
 
       <!-- 회원가입 폼 (숨김) -->
-      <div id="form-signup" class="auth-form" style="display:none;">
+      <form id="form-signup" class="auth-form" style="display:none;" autocomplete="on" onsubmit="return false;">
         <div class="auth-field">
-          <input id="signup-name" class="auth-input" type="text" placeholder="이름 (닉네임)" />
+          <input id="signup-name" class="auth-input" type="text" placeholder="이름 (닉네임)" autocomplete="name" />
         </div>
         <div class="auth-field">
-          <input id="signup-email" class="auth-input" type="email" placeholder="이메일 주소" />
+          <input id="signup-email" class="auth-input" type="email" placeholder="이메일 주소" autocomplete="email" />
         </div>
         <div class="auth-field">
-          <input id="signup-password" class="auth-input" type="password" placeholder="비밀번호 (6자 이상)" />
+          <input id="signup-password" class="auth-input" type="password" placeholder="비밀번호 (6자 이상)" autocomplete="new-password" />
         </div>
         <div class="auth-field">
-          <input id="signup-password2" class="auth-input" type="password" placeholder="비밀번호 확인" />
+          <input id="signup-password2" class="auth-input" type="password" placeholder="비밀번호 확인" autocomplete="new-password" />
         </div>
 
         <!-- 약관 동의 -->
@@ -273,8 +274,8 @@
           </div>
         </div>
 
-        <button id="gate-email-signup" class="auth-btn auth-btn-signup">회원가입</button>
-      </div>
+        <button id="gate-email-signup" type="button" class="auth-btn auth-btn-signup">회원가입</button>
+      </form>
 
       <!-- 구분선 -->
       <div class="auth-divider">
@@ -285,7 +286,7 @@
 
       <!-- 소셜 로그인 -->
       <button id="gate-google-login" class="auth-btn auth-btn-google">
-        <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="18" height="18" alt="" />
+        <span style="display:inline-flex; width:18px; height:18px; border-radius:50%; background:#fff; color:#111827; align-items:center; justify-content:center; font-weight:800; font-size:12px;">G</span>
         Google 계정으로 계속하기
       </button>
 
@@ -317,187 +318,123 @@
         </div>
       </div>
 
+      <!-- 사이드바 상단 도구 바 — 검색/알림/테마를 여기서 바로 접근 가능하게 -->
+      <div class="sidebar-tools">
+        <button class="btn-tool" id="btn-global-search" title="검색 (Ctrl+K)">🔍</button>
+        <button class="btn-tool" id="btn-notifications" title="알림">
+          🔔
+          <span class="notif-dot" id="notif-dot" style="display:none;"></span>
+        </button>
+        <button class="btn-tool" id="btn-theme-toggle" title="테마 전환">🌙</button>
+      </div>
+
       <div class="sidebar-divider"></div>
 
       <!-- 홈 -->
-      <nav style="padding:0 12px;">
-        <button class="nav-btn active" data-page="home">
-          <span class="nav-icon">🏠</span> 대시보드
+      <nav class="nav-rich-list">
+        <button class="nav-btn nav-btn-rich active" data-page="home">
+          <span class="nav-icon">🏠</span>
+          <span class="nav-copy">
+            <span class="nav-main">대시보드</span>
+          </span>
         </button>
       </nav>
 
       <div class="sidebar-divider"></div>
 
-      <!-- 데이터 -->
-      <div class="nav-section">
-        <div class="nav-section-title">데이터</div>
+      <!-- 빠른 이동 (최근 방문) -->
+      <div class="nav-section quick-access-section" id="quick-access-section" style="display:none;">
+        <div class="nav-section-title">빠른 이동</div>
+        <nav id="quick-access-nav"></nav>
       </div>
-      <nav id="nav">
-        <button class="nav-btn" data-page="upload">
-          <span class="nav-icon">📂</span> 파일 업로드
+
+      <div class="sidebar-divider" id="quick-access-divider" style="display:none;"></div>
+
+      <!-- 업무 -->
+      <div class="nav-section"><div class="nav-section-title">업무</div></div>
+      <nav class="nav-rich-list">
+        <button class="nav-btn nav-btn-rich" data-page="hub-data">
+          <span class="nav-icon">📂</span>
+          <span class="nav-copy"><span class="nav-main">데이터 가져오기</span></span>
         </button>
-        <button class="nav-btn" data-page="mapping">
-          <span class="nav-icon">📋</span> 데이터 확인
+        <button class="nav-btn nav-btn-rich" data-page="hub-inventory">
+          <span class="nav-icon">📦</span>
+          <span class="nav-copy"><span class="nav-main">재고 관리</span></span>
+        </button>
+        <button class="nav-btn nav-btn-rich" data-page="hub-warehouse">
+          <span class="nav-icon">🏢</span>
+          <span class="nav-copy"><span class="nav-main">창고·거래처</span></span>
         </button>
       </nav>
 
       <div class="sidebar-divider"></div>
 
-      <!-- 관리 -->
-      <div class="nav-section">
-        <div class="nav-section-title">관리</div>
-      </div>
-      <nav id="nav2">
-        <button class="nav-btn" data-page="inventory">
-          <span class="nav-icon">📦</span> 재고 현황
+      <!-- 분석 -->
+      <div class="nav-section"><div class="nav-section-title">분석</div></div>
+      <nav class="nav-rich-list">
+        <button class="nav-btn nav-btn-rich" data-page="hub-order">
+          <span class="nav-icon">🤖</span>
+          <span class="nav-copy"><span class="nav-main">발주·예측</span></span>
         </button>
-        <button class="nav-btn" data-page="inout">
-          <span class="nav-icon">🔄</span> 입출고 관리
+        <button class="nav-btn nav-btn-rich" data-page="hub-report">
+          <span class="nav-icon">📊</span>
+          <span class="nav-copy"><span class="nav-main">보고·분석</span></span>
         </button>
-        <button class="nav-btn" data-page="bulk">
-          <span class="nav-icon">⚡</span> 일괄 처리
-        </button>
-        <!-- 바코드 스캔 — 추후 오픈 예정 (display:none 제거하면 복원) -->
-        <button class="nav-btn" data-page="scanner" style="display:none;">
-          <span class="nav-icon">📱</span> 바코드 스캔
-        </button>
-        <!-- 라벨 인쇄 — 추후 오픈 예정 (display:none 제거하면 복원) -->
-        <button class="nav-btn" data-page="labels" style="display:none;">
-          <span class="nav-icon">🏷️</span> 라벨 인쇄
-        </button>
-        <button class="nav-btn" data-page="warehouses">
-          <span class="nav-icon">🏢</span> 다중 창고 관리
-        </button>
-        <button class="nav-btn" data-page="transfer">
-          <span class="nav-icon">🏭</span> 창고 이동
-        </button>
-        <button class="nav-btn" data-page="stocktake">
-          <span class="nav-icon">📋</span> 재고 실사
-        </button>
-        <button class="nav-btn" data-page="vendors">
-          <span class="nav-icon">🤝</span> 거래처 관리
-        </button>
-        <button class="nav-btn" data-page="auto-order">
-          <span class="nav-icon">🤖</span> 자동 발주 추천
-        </button>
-        <button class="nav-btn" data-page="orders">
-          <span class="nav-icon">📋</span> 발주 이력
-        </button>
-        <button class="nav-btn" data-page="forecast">
-          <span class="nav-icon">🔮</span> AI 수요 예측
+        <button class="nav-btn nav-btn-rich" data-page="hub-documents">
+          <span class="nav-icon">📑</span>
+          <span class="nav-copy"><span class="nav-main">문서·서류</span></span>
         </button>
       </nav>
 
       <div class="sidebar-divider"></div>
 
-      <!-- 보고 -->
-      <div class="nav-section">
-        <div class="nav-section-title">보고</div>
-      </div>
-      <nav id="nav3">
-        <button class="nav-btn" data-page="summary">
-          <span class="nav-icon">📊</span> 요약 보고
+      <!-- 설정·지원 -->
+      <div class="nav-section"><div class="nav-section-title">설정·지원</div></div>
+      <nav class="nav-rich-list">
+        <button class="nav-btn nav-btn-rich" data-page="hub-settings">
+          <span class="nav-icon">⚙️</span>
+          <span class="nav-copy"><span class="nav-main">설정</span></span>
         </button>
-        <button class="nav-btn" data-page="dashboard">
-          <span class="nav-icon">📈</span> 고급 분석
+        <button class="nav-btn nav-btn-rich" data-page="hub-support">
+          <span class="nav-icon">💬</span>
+          <span class="nav-copy"><span class="nav-main">지원</span></span>
         </button>
-        <button class="nav-btn" data-page="costing">
-          <span class="nav-icon">💰</span> 원가 분석
+        <button class="nav-btn nav-btn-rich" data-page="admin" style="display:none;">
+          <span class="nav-icon">👑</span>
+          <span class="nav-copy"><span class="nav-main">관리자</span></span>
         </button>
-        <button class="nav-btn" data-page="accounts">
-          <span class="nav-icon">💳</span> 매출/매입
-        </button>
-        <button class="nav-btn" data-page="ledger">
-          <span class="nav-icon">📒</span> 수불부
-        </button>
-        <button class="nav-btn" data-page="documents">
-          <span class="nav-icon">📄</span> 문서 생성
-        </button>
-        <button class="nav-btn" data-page="tax-reports">
-          <span class="nav-icon">📑</span> 세무/회계 서류
-        </button>
-        <button class="nav-btn" data-page="profit">
-          <span class="nav-icon">💹</span> 손익 분석
-        </button>
-        <button class="nav-btn" data-page="auditlog">
-          <span class="nav-icon">📝</span> 감사 추적
-        </button>
-        <button class="nav-btn" data-page="weekly-report">
-          <span class="nav-icon">📬</span> 주간 보고서
+        <button class="nav-btn nav-btn-rich" data-page="pos" style="display:none;">
+          <span class="nav-icon">🏪</span>
+          <span class="nav-copy"><span class="nav-main">POS 매출분석</span></span>
         </button>
       </nav>
 
-      <div class="sidebar-divider"></div>
-
-      <!-- 설정 -->
-      <nav style="padding:0 12px;">
-        <button class="nav-btn" data-page="settings">
-          <span class="nav-icon">⚙️</span> 설정
-        </button>
-        <button class="nav-btn" data-page="team">
-          <span class="nav-icon">👥</span> 팀 관리
-        </button>
-        <button class="nav-btn" data-page="backup">
-          <span class="nav-icon">💾</span> 백업/복원
-        </button>
-        <button class="nav-btn" data-page="roles">
-          <span class="nav-icon">🔐</span> 권한 관리
-        </button>
-        <!-- API 연동 — 추후 오픈 예정 (display:none 제거하면 복원) -->
-        <button class="nav-btn" data-page="api" style="display:none;">
-          <span class="nav-icon">🔌</span> API 연동
-        </button>
-        <button class="nav-btn" data-page="billing">
-          <span class="nav-icon">💳</span> 구독 관리
-        </button>
-        <button class="nav-btn" data-page="pos" style="display:none;">
-          <span class="nav-icon">🏪</span> POS 매출분석
-        </button>
-        <button class="nav-btn" data-page="admin">
-          <span class="nav-icon">👑</span> 관리자
-        </button>
-      </nav>
-
-      <div class="sidebar-divider"></div>
-
-      <!-- 지원 -->
-      <nav style="padding:0 12px;">
-        <button class="nav-btn" data-page="mypage">
-          <span class="nav-icon">👤</span> 마이페이지
-        </button>
-        <button class="nav-btn" data-page="guide">
-          <span class="nav-icon">📖</span> 사용 가이드
-        </button>
-        <button class="nav-btn" data-page="support">
-          <span class="nav-icon">💬</span> 고객 문의
-        </button>
-        <button class="nav-btn" data-page="referral">
-          <span class="nav-icon">🎁</span> 친구 초대
-        </button>
-      </nav>
 
       <div class="sidebar-footer">
-        <div style="display:flex; gap:4px; margin-bottom:8px; align-items:center;">
-          <button class="btn btn-ghost btn-sm" id="btn-global-search" style="color:rgba(255,255,255,0.7); font-size:12px;" title="검색 (Ctrl+K)">
-            🔍 검색
-          </button>
-          <button class="btn btn-ghost btn-sm" id="btn-notifications" style="color:rgba(255,255,255,0.7); font-size:12px; position:relative;" title="알림">
-            🔔 알림 <span class="notif-badge" id="notif-badge"></span>
-          </button>
-          <button class="btn btn-ghost btn-sm" id="btn-theme-toggle" style="color:rgba(255,255,255,0.7); font-size:12px;" title="테마 전환">
-            🌙 다크
-          </button>
-        </div>
         <!-- 사용자 로그인 영역 -->
-        <div id="user-info-area" style="margin-bottom:8px;"></div>
+        <div id="user-info-area"></div>
         <!-- 현재 요금제 표시 -->
-        <div id="plan-display" style="margin-bottom:8px; padding:6px 10px; border-radius:6px; background:rgba(255,255,255,0.06); text-align:center; cursor:pointer;" title="요금제 변경">
-          <span id="plan-name" style="font-size:11px; font-weight:600;">🆓 Free</span>
+        <div class="sidebar-plan-badge" id="plan-display" title="요금제 변경">
+          <span class="plan-label" id="plan-name">🆓 Free</span>
         </div>
         INVEX v3.0<br/>
         © 2026
       </div>
     </aside>
+
+
+    <!-- 상단 헤더바 — 브레드크럼 + 사용자 정보 -->
+    <header class="top-header" id="top-header">
+      <div class="top-header-left">
+        <nav class="breadcrumb" id="breadcrumb" aria-label="현재 위치">
+          <span class="breadcrumb-current">🏠 대시보드</span>
+        </nav>
+      </div>
+      <div class="top-header-right">
+        <div class="sync-dot" id="sync-dot" title="동기화 연결됨"></div>
+        <div class="top-header-user" id="top-header-user"></div>
+      </div>
+    </header>
 
     <!-- 메인 콘텐츠 -->
     <main id="main-content"></main>

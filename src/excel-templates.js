@@ -1,4 +1,4 @@
-/**
+﻿/**
  * excel-templates.js - 업종별 엑셀 템플릿 생성 & 다운로드
  * 
  * 설계 철학:
@@ -8,7 +8,7 @@
  * - 매입가와 판매가를 모두 수집해야 정확한 이익률 산출 가능
  */
 
-import * as XLSX from 'xlsx';
+import { downloadExcelSheets } from './excel.js';
 
 // === 업종별 템플릿 데이터 정의 ===
 // 핵심: 사용자가 입력하는 컬럼만 포함 (자동계산 컬럼 제거)
@@ -87,28 +87,7 @@ export function downloadTemplate(templateKey) {
   const tpl = TEMPLATES[templateKey];
   if (!tpl) return;
 
-  // 워크북 생성
-  const wb = XLSX.utils.book_new();
-
-  // 데이터 시트 (실제 입력용)
   const sheetData = [tpl.headers, ...tpl.sampleRows];
-  const ws = XLSX.utils.aoa_to_sheet(sheetData);
-
-  // 컬럼 너비 설정 (보기 편하게)
-  ws['!cols'] = [
-    { wch: 22 },  // 품목명
-    { wch: 12 },  // 품목코드
-    { wch: 14 },  // 분류
-    { wch: 10 },  // 수량
-    { wch: 6 },   // 단위
-    { wch: 14 },  // 매입가(원가)
-    { wch: 14 },  // 판매가(소가)
-    { wch: 16 },  // 창고/위치
-    { wch: 24 },  // 비고
-    { wch: 10 },  // 안전재고
-  ];
-
-  XLSX.utils.book_append_sheet(wb, ws, '재고 데이터');
 
   // 안내 시트 (사용법 설명 - 초보자 최적화)
   const guideData = [
@@ -154,13 +133,14 @@ export function downloadTemplate(templateKey) {
     [''],
     ['📎 자세한 사용법: https://invex.io.kr'],
   ];
-  const guideWs = XLSX.utils.aoa_to_sheet(guideData);
-  guideWs['!cols'] = [{ wch: 65 }];
-  XLSX.utils.book_append_sheet(wb, guideWs, '📖 작성방법');
-
-  // 파일 다운로드
-  const fileName = `INVEX_${tpl.name.replace(/[^\w가-힣]/g, '')}_양식.xlsx`;
-  XLSX.writeFile(wb, fileName);
+  const fileName = `INVEX_${tpl.name.replace(/[^\w가-힣]/g, '')}_양식`;
+  downloadExcelSheets(
+    [
+      { name: '재고 데이터', rows: sheetData },
+      { name: '작성방법', rows: guideData },
+    ],
+    fileName,
+  );
 }
 
 /**

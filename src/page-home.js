@@ -1,11 +1,14 @@
-﻿import { getState, setState } from './store.js';
-import { getNotifications } from './notifications.js';
+import { getState, setState } from './store.js';
+import { getNotifications, renderNotificationPanel } from './notifications.js';
 import {
   renderWeeklyTrendChart,
   renderCategoryChart,
   renderMonthlyChart,
   destroyAllCharts,
 } from './charts.js';
+import { renderGuidedPanel } from './ux-toolkit.js';
+
+const HOME_COLLAPSE_STORAGE_KEY = 'invex:home:collapsed-sections:v1';
 
 export function renderHomePage(container, navigateTo) {
   destroyAllCharts();
@@ -16,6 +19,7 @@ export function renderHomePage(container, navigateTo) {
   const safetyStock = state.safetyStock || {};
   const notifications = getNotifications();
   const dashboardMode = state.dashboardMode === 'operator' ? 'operator' : 'executive';
+  const beginnerMode = state.beginnerMode !== false;
 
   const today = new Date();
   const todayKey = toDateKey(today);
@@ -23,7 +27,8 @@ export function renderHomePage(container, navigateTo) {
 
   const totalItems = items.length;
   const totalQty = sumBy(items, item => toNumber(item.quantity));
-  const totalValue = sumBy(items, item => getItemValue(item));
+  const totalSaleValue = sumBy(items, item => getItemSaleValue(item));
+  const totalSupplyValue = sumBy(items, item => getItemSupplyValue(item));
   const totalVendors = new Set([
     ...(state.vendorMaster || []).map(vendor => vendor.name).filter(Boolean),
     ...items.map(item => item.vendor).filter(Boolean),
@@ -87,7 +92,7 @@ export function renderHomePage(container, navigateTo) {
 
   const riskLevel = getRiskLevel(lowStockItems.length, expiringSoonItems.length, deadStockItems.length);
   const executiveSummary = [
-    `총 재고자산은 ${formatCurrency(totalValue)}입니다.`,
+    `총 재고자산은 소가 기준 ${formatCurrency(totalSaleValue)}, 공급가 기준 ${formatCurrency(totalSupplyValue)}입니다.`,
     `안전재고 부족 ${lowStockItems.length}건, 30일 이상 정체 ${deadStockItems.length}건, 유통기한 임박 ${expiringSoonItems.length}건입니다.`,
     `최근 30일 기준 입고 ${formatNumber(last30InQty)}개, 출고 ${formatNumber(last30OutQty)}개가 기록되었습니다.`,
   ].join(' ');
@@ -117,7 +122,7 @@ export function renderHomePage(container, navigateTo) {
   const actionCards = dashboardMode === 'executive'
     ? [
         { title: '자산 집중 점검', desc: '금액이 큰 품목과 정체 재고를 빠르게 확인합니다.', meta: '재고 현황으로 이동', nav: 'inventory' },
-        { title: '손익 분석 열기', desc: '원가와 이익 가능성을 보고 의사결정을 내립니다.', meta: '고급 분석으로 이동', nav: 'dashboard' },
+        { title: '손익 분석 열기', desc: '원가와 이익 가능성을 보고 의사결정을 내립니다.', meta: '손익 분석으로 이동', nav: 'profit' },
         { title: '주간 보고 확인', desc: '운영 지표와 이상 흐름을 한 페이지로 확인합니다.', meta: '주간 보고서 열기', nav: 'weekly-report' },
         { title: '거래처 점검', desc: '공급처와 고객 현황을 보고 거래 집중도를 확인합니다.', meta: '거래처 관리로 이동', nav: 'vendors' },
       ]
@@ -130,6 +135,14 @@ export function renderHomePage(container, navigateTo) {
 
   const weekData = getLast7Days(transactions);
   const monthData = getLast6Months(transactions);
+  const chartSort = {
+    weekly: 'asc',
+    monthly: 'asc',
+    category: 'qty-desc',
+  };
+
+  /* 데이터가 없을 때는 온보딩 중심 간소화 화면 표시 */
+  const hasData = totalItems > 0;
 
   container.innerHTML = `
     <div class="page-header">
@@ -138,33 +151,97 @@ export function renderHomePage(container, navigateTo) {
         <div class="page-desc">${today.toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' })} 운영 요약</div>
       </div>
       <div class="page-actions">
-        ${notifications.length > 0 ? `<span class="badge badge-danger">실시간 알림 ${notifications.length}건</span>` : '<span class="badge badge-success">알림 안정</span>'}
+        <!-- 모드 전환: 헤더 세그먼트 컨트롤로 이동 — 화면 공간 절약 -->
+        <div class="segment-control">
+          <button class="segment-btn ${dashboardMode === 'executive' ? 'is-active' : ''}" data-dashboard-mode="executive">경영자용</button>
+          <button class="segment-btn ${dashboardMode === 'operator' ? 'is-active' : ''}" data-dashboard-mode="operator">실무자용</button>
+        </div>
+        ${notifications.length > 0
+          ? `<button type="button" class="badge badge-danger dashboard-notif-trigger">알림 ${notifications.length}건</button>`
+          : '<span class="badge badge-success">알림 안정</span>'}
       </div>
     </div>
 
-    <div class="card dashboard-mode-shell">
-      <div class="dashboard-mode-top">
+    ${!hasData ? `
+    <!-- 데이터 0건: 온보딩 전용 화면 -->
+    <div class="card" style="text-align:center; padding:48px 24px;">
+      <div style="font-size:48px; margin-bottom:12px;">📦</div>
+      <h2 style="font-size:18px; font-weight:700; margin-bottom:8px;">아직 등록된 데이터가 없습니다</h2>
+      <p style="color:var(--text-muted); margin-bottom:20px;">엑셀 파일을 업로드하거나 품목을 직접 등록하면<br/>여기에 핵심 경영 지표가 자동으로 표시됩니다.</p>
+      <div class="empty-state-actions">
+        <button class="btn btn-primary" data-nav="upload">📂 엑셀 업로드</button>
+        <button class="btn btn-outline" data-nav="inventory">✏️ 품목 직접 등록</button>
+      </div>
+      <div class="empty-state-tip">💡 TIP: 기존 엑셀 파일(.xlsx)을 그대로 드래그하면 자동으로 인식합니다</div>
+    </div>
+    ` : ''}
+
+    ${hasData ? `
+    <div class="card dashboard-quick-card">
+      <div class="dashboard-quick-head">
         <div>
-          <div class="dashboard-eyebrow">대시보드 모드</div>
-          <div class="dashboard-mode-title">${dashboardMode === 'executive' ? '경영자 관점으로 한눈에 보고 있습니다.' : '실무자 관점으로 바로 처리할 항목을 보고 있습니다.'}</div>
-          <div class="dashboard-mode-desc">
-            ${dashboardMode === 'executive'
-              ? '경영자용은 자산 규모, 위험도, 의사결정 포인트를 중심으로 보여줍니다.'
-              : '실무자용은 오늘 해야 할 일, 빠른 실행, 현장 확인 순서를 중심으로 보여줍니다.'}
-          </div>
+          <div class="card-title">홈에서 바로 실행</div>
+          <div class="chart-help-text">자주 쓰는 기능을 바로 열어 입력 단계 없이 즉시 시작할 수 있습니다.</div>
         </div>
-        <div class="dashboard-mode-toggle">
-          <button class="dashboard-mode-btn ${dashboardMode === 'executive' ? 'is-active' : ''}" data-dashboard-mode="executive">경영자용</button>
-          <button class="dashboard-mode-btn ${dashboardMode === 'operator' ? 'is-active' : ''}" data-dashboard-mode="operator">실무자용</button>
-        </div>
+        <span class="badge badge-info">빠른 액션</span>
+      </div>
+      <div class="dashboard-quick-grid">
+        <button class="dashboard-quick-action is-inbound" id="btn-home-quick-in">
+          <div class="dashboard-quick-title">📥 빠른 입고</div>
+          <div class="dashboard-quick-meta">품목 선택 + 수량 입력 모달 바로 열기</div>
+        </button>
+        <button class="dashboard-quick-action is-outbound" id="btn-home-quick-out">
+          <div class="dashboard-quick-title">📤 빠른 출고</div>
+          <div class="dashboard-quick-meta">출고 모달 즉시 열고 재고 차감 등록</div>
+        </button>
+        <button class="dashboard-quick-action" id="btn-home-quick-item">
+          <div class="dashboard-quick-title">📦 새 품목 등록</div>
+          <div class="dashboard-quick-meta">현재 등록 품목 ${formatNumber(totalItems)}건</div>
+        </button>
+        <button class="dashboard-quick-action" id="btn-home-quick-alert">
+          <div class="dashboard-quick-title">🔔 실시간 알림</div>
+          <div class="dashboard-quick-meta">미확인 알림 ${formatNumber(notifications.length)}건</div>
+        </button>
       </div>
     </div>
+    ` : ''}
 
-    ${dashboardMode === 'executive'
+    ${beginnerMode ? renderGuidedPanel({
+      eyebrow: '대시보드 읽는 순서',
+      title: dashboardMode === 'executive' ? '경영자는 위험과 의사결정 포인트부터 보면 됩니다.' : '실무자는 오늘 처리 순서와 현장 우선 품목부터 보면 됩니다.',
+      desc: dashboardMode === 'executive'
+        ? '윗줄 핵심 카드에서 자산과 위험도를 보고, 아래 의사결정 포인트와 자산 집중 품목으로 내려가면 됩니다.'
+        : '윗줄 핵심 카드에서 오늘 입출고와 부족 품목을 보고, 아래 처리 순서와 우선 품목으로 내려가면 됩니다.',
+      badge: dashboardMode === 'executive' ? '경영자용 도움' : '실무자용 도움',
+      tone: dashboardMode === 'executive' ? 'info' : 'success',
+      steps: dashboardMode === 'executive'
+        ? [
+            { kicker: '1', title: '재고자산과 부족 품목 확인', desc: '현재 자산 규모와 가장 급한 리스크를 먼저 봅니다.' },
+            { kicker: '2', title: '의사결정 포인트 점검', desc: '보충, 정리, 할인, 정책 변경이 필요한 항목을 확인합니다.' },
+            { kicker: '3', title: '최근 흐름과 차트 확인', desc: '주간/월간 흐름으로 방향이 맞는지 검증합니다.' },
+          ]
+        : [
+            { kicker: '1', title: '오늘 입고/출고 확인', desc: '오늘 해야 할 기록 누락이 없는지 먼저 봅니다.' },
+            { kicker: '2', title: '부족 품목과 임박 품목 확인', desc: '현장 리스크를 줄일 순서대로 확인합니다.' },
+            { kicker: '3', title: '입출고 등록이나 수불부로 이동', desc: '바로 실행할 페이지로 한 번에 이동할 수 있습니다.' },
+          ],
+      actions: dashboardMode === 'executive'
+        ? [
+            { nav: 'inventory', label: '재고 현황 보기', variant: 'btn-primary' },
+            { nav: 'dashboard', label: '고급 분석 열기', variant: 'btn-outline' },
+          ]
+        : [
+            { nav: 'inout', label: '입출고 등록', variant: 'btn-primary' },
+            { nav: 'ledger', label: '수불부 보기', variant: 'btn-outline' },
+          ],
+    }) : ''}
+
+    ${hasData ? (dashboardMode === 'executive'
       ? renderExecutiveView({
           riskLevel,
           executiveSummary,
-          totalValue,
+          totalSaleValue,
+          totalSupplyValue,
           lowStockItems,
           deadStockItems,
           expiringSoonItems,
@@ -191,17 +268,41 @@ export function renderHomePage(container, navigateTo) {
           actionCards,
           operatorTasks,
           topItems,
-        })}
+        })) : ''}
 
-    <div class="dashboard-chart-grid">
+    ${hasData ? `
       <div class="card">
-        <div class="card-title">최근 7일 입출고 흐름</div>
+        <div class="chart-control-row">
+          <div>
+            <div class="card-title">최근 7일 입출고 흐름</div>
+            <div class="chart-help-text">오래된 날짜부터 볼지, 최신 날짜부터 볼지 바꿔서 확인할 수 있습니다.</div>
+          </div>
+          <div class="chart-control-inline">
+            <span class="chart-control-label">보기 순서</span>
+            <select class="filter-select chart-sort-select" id="weekly-sort">
+              <option value="asc">오래된 날짜부터</option>
+              <option value="desc">최신 날짜부터</option>
+            </select>
+          </div>
+        </div>
         <div style="height:240px; position:relative;">
           <canvas id="chart-weekly"></canvas>
         </div>
       </div>
       <div class="card">
-        <div class="card-title">최근 6개월 입출고 비교</div>
+        <div class="chart-control-row">
+          <div>
+            <div class="card-title">최근 6개월 입출고 비교</div>
+            <div class="chart-help-text">월 흐름도 시간순 또는 최신순으로 바꿔서 볼 수 있습니다.</div>
+          </div>
+          <div class="chart-control-inline">
+            <span class="chart-control-label">보기 순서</span>
+            <select class="filter-select chart-sort-select" id="monthly-sort">
+              <option value="asc">오래된 월부터</option>
+              <option value="desc">최신 월부터</option>
+            </select>
+          </div>
+        </div>
         <div style="height:240px; position:relative;">
           <canvas id="chart-monthly"></canvas>
         </div>
@@ -228,7 +329,20 @@ export function renderHomePage(container, navigateTo) {
 
       <div>
         <div class="card">
-          <div class="card-title">분류별 재고 비중</div>
+          <div class="chart-control-row">
+            <div>
+              <div class="card-title">분류별 재고 비중</div>
+              <div class="chart-help-text">분류 순서를 수량 기준이나 가나다순으로 바꿔서 볼 수 있습니다.</div>
+            </div>
+            <div class="chart-control-inline">
+              <span class="chart-control-label">정렬 기준</span>
+              <select class="filter-select chart-sort-select" id="category-sort">
+                <option value="qty-desc">수량 많은 순</option>
+                <option value="qty-asc">수량 적은 순</option>
+                <option value="name-asc">이름 가나다순</option>
+              </select>
+            </div>
+          </div>
           ${categories.length > 0
             ? `
               <div style="height:220px; position:relative;">
@@ -268,10 +382,28 @@ export function renderHomePage(container, navigateTo) {
         </div>
       </div>
     </div>
+    ` : ''}
   `;
 
   container.querySelectorAll('[data-nav]').forEach(element => {
-    element.addEventListener('click', () => navigateTo(element.dataset.nav));
+    element.addEventListener('click', (event) => {
+      const targetPage = element.dataset.nav;
+      if (targetPage === 'notifications') {
+        event.preventDefault();
+        event.stopPropagation();
+        renderNotificationPanel();
+        return;
+      }
+      navigateTo(targetPage);
+    });
+  });
+
+  container.querySelectorAll('.dashboard-notif-trigger').forEach(button => {
+    button.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      renderNotificationPanel();
+    });
   });
 
   container.querySelectorAll('[data-dashboard-mode]').forEach(button => {
@@ -283,13 +415,123 @@ export function renderHomePage(container, navigateTo) {
     });
   });
 
+  container.querySelector('#btn-home-quick-in')?.addEventListener('click', () => {
+    sessionStorage.setItem('invex:quick-open-inbound', '1');
+    navigateTo('inout');
+  });
+
+  container.querySelector('#btn-home-quick-out')?.addEventListener('click', () => {
+    sessionStorage.setItem('invex:quick-open-outbound', '1');
+    navigateTo('inout');
+  });
+
+  container.querySelector('#btn-home-quick-item')?.addEventListener('click', () => {
+    sessionStorage.setItem('invex:quick-open-item', '1');
+    navigateTo('inventory');
+  });
+
+  container.querySelector('#btn-home-quick-alert')?.addEventListener('click', () => {
+    renderNotificationPanel();
+  });
+
+  container.querySelector('#weekly-sort')?.addEventListener('change', event => {
+    chartSort.weekly = event.target.value;
+    renderDashboardCharts();
+  });
+
+  container.querySelector('#monthly-sort')?.addEventListener('change', event => {
+    chartSort.monthly = event.target.value;
+    renderDashboardCharts();
+  });
+
+  container.querySelector('#category-sort')?.addEventListener('change', event => {
+    chartSort.category = event.target.value;
+    renderDashboardCharts();
+  });
+
   setTimeout(() => {
-    renderWeeklyTrendChart('chart-weekly', weekData);
-    renderMonthlyChart('chart-monthly', monthData);
-    if (categories.length > 0) {
-      renderCategoryChart('chart-category', categories);
-    }
+    renderDashboardCharts();
   }, 50);
+
+  initHomeSectionCollapse();
+
+  function renderDashboardCharts() {
+    renderWeeklyTrendChart('chart-weekly', sortTimeSeriesData(weekData, chartSort.weekly));
+    renderMonthlyChart('chart-monthly', sortTimeSeriesData(monthData, chartSort.monthly));
+    if (categories.length > 0) {
+      renderCategoryChart('chart-category', sortCategorySeries(categories, chartSort.category));
+    }
+  }
+
+  function initHomeSectionCollapse() {
+    const collapsedState = loadHomeCollapsedState();
+    const sectionConfigs = [
+      { id: 'mode', selector: '.dashboard-mode-shell', label: '대시보드 모드' },
+      { id: 'quick', selector: '.dashboard-quick-card', label: '빠른 실행' },
+      { id: 'guide', selector: '.mission-panel', label: '대시보드 가이드' },
+      { id: 'hero', selector: '.dashboard-hero', label: dashboardMode === 'executive' ? '핵심 요약' : '실무 요약' },
+      { id: 'work', selector: '.dashboard-section-grid', label: dashboardMode === 'executive' ? '의사결정과 우선 품목' : '처리 순서와 우선 품목' },
+      { id: 'chart', selector: '.dashboard-chart-grid', label: '차트 분석' },
+      { id: 'side', selector: '.dashboard-side-grid', label: '거래와 분류 현황' },
+    ];
+
+    sectionConfigs.forEach(config => {
+      const sectionEl = container.querySelector(config.selector);
+      if (!sectionEl) return;
+
+      const strip = document.createElement('div');
+      strip.className = 'home-collapse-strip';
+      strip.dataset.homeCollapseId = config.id;
+
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'btn btn-ghost btn-sm home-collapse-toggle';
+      strip.appendChild(button);
+      sectionEl.before(strip);
+
+      const applyState = () => {
+        const collapsed = !!collapsedState[config.id];
+        sectionEl.style.display = collapsed ? 'none' : '';
+        strip.classList.toggle('is-collapsed', collapsed);
+        button.textContent = `${config.label} ${collapsed ? '펼치기' : '접기'}`;
+        button.setAttribute('aria-expanded', String(!collapsed));
+        button.setAttribute('aria-label', `${config.label} ${collapsed ? '펼치기' : '접기'}`);
+      };
+
+      button.addEventListener('click', () => {
+        const isCollapsed = !!collapsedState[config.id];
+        if (isCollapsed) delete collapsedState[config.id];
+        else collapsedState[config.id] = true;
+        saveHomeCollapsedState(collapsedState);
+        applyState();
+
+        if (isCollapsed && (config.id === 'chart' || config.id === 'side')) {
+          setTimeout(() => renderDashboardCharts(), 0);
+        }
+      });
+
+      applyState();
+    });
+  }
+
+  function loadHomeCollapsedState() {
+    try {
+      const raw = localStorage.getItem(HOME_COLLAPSE_STORAGE_KEY);
+      if (!raw) return {};
+      const parsed = JSON.parse(raw);
+      return parsed && typeof parsed === 'object' ? parsed : {};
+    } catch {
+      return {};
+    }
+  }
+
+  function saveHomeCollapsedState(nextState) {
+    try {
+      localStorage.setItem(HOME_COLLAPSE_STORAGE_KEY, JSON.stringify(nextState));
+    } catch {
+      // Ignore storage errors to keep the dashboard functional.
+    }
+  }
 }
 
 function renderExecutiveView(context) {
@@ -303,9 +545,14 @@ function renderExecutiveView(context) {
 
           <div class="dashboard-highlight-grid">
             <div class="dashboard-highlight">
-              <div class="dashboard-highlight-label">총 재고자산</div>
-              <div class="dashboard-highlight-value">${formatCurrency(context.totalValue)}</div>
-              <div class="dashboard-highlight-note">현재 보유 중인 재고 자산 총액입니다.</div>
+              <div class="dashboard-highlight-label">총 재고자산(소가)</div>
+              <div class="dashboard-highlight-value">${formatCurrency(context.totalSaleValue)}</div>
+              <div class="dashboard-highlight-note">판매가가 입력된 품목 기준 재고 자산입니다.</div>
+            </div>
+            <div class="dashboard-highlight">
+              <div class="dashboard-highlight-label">총 재고자산(공급가)</div>
+              <div class="dashboard-highlight-value">${formatCurrency(context.totalSupplyValue)}</div>
+              <div class="dashboard-highlight-note">원가 기준 공급가액 합계입니다.</div>
             </div>
             <div class="dashboard-highlight">
               <div class="dashboard-highlight-label">가장 먼저 볼 리스크</div>
@@ -351,7 +598,7 @@ function renderExecutiveView(context) {
                 <div class="dashboard-signal-head">자산 집중 품목</div>
                 <div class="dashboard-signal-desc">
                   ${context.topValueItem
-                    ? `${escapeHtml(context.topValueItem.itemName)}가 가장 큰 금액 품목이며 현재 가치 ${formatCurrency(getItemValue(context.topValueItem))}입니다.`
+                    ? `${escapeHtml(context.topValueItem.itemName)}가 자산 비중이 가장 큰 품목이며 소가 ${formatCurrency(getItemSaleValue(context.topValueItem))}, 공급가 ${formatCurrency(getItemSupplyValue(context.topValueItem))}입니다.`
                     : '아직 금액 데이터를 계산할 품목이 없습니다.'}
                 </div>
               </div>
@@ -625,8 +872,8 @@ function buildExecutiveDecisions(context) {
           kicker: '알림',
           title: `실시간 알림 ${formatNumber(context.notifications.length)}건`,
           desc: '현장 이슈 또는 운영 알림이 남아 있으니 의사결정 전에 먼저 확인해 주세요.',
-          nav: 'summary',
-          action: '요약 보고 열기',
+          nav: 'notifications',
+          action: '알림 센터 열기',
         }
       : {
           kicker: '분류',
@@ -715,7 +962,7 @@ function buildOperatorTasks(context) {
           kicker: '점검',
           title: `실시간 알림 ${formatNumber(context.notifications.length)}건 확인`,
           desc: '경고를 먼저 확인하면 누락되는 현장 이슈를 줄일 수 있습니다.',
-          nav: 'summary',
+          nav: 'notifications',
           action: '알림 확인',
         }
       : {
@@ -739,9 +986,21 @@ function getRiskLevel(lowStockCount, expiringCount, deadStockCount) {
 }
 
 function getItemValue(item) {
-  const totalPrice = toNumber(item.totalPrice);
-  if (totalPrice > 0) return totalPrice;
-  return toNumber(item.quantity) * toNumber(item.unitPrice || item.salePrice);
+  const saleValue = getItemSaleValue(item);
+  if (saleValue > 0) return saleValue;
+  return getItemSupplyValue(item);
+}
+
+function getItemSaleValue(item) {
+  const salePrice = toNumber(item.salePrice);
+  if (salePrice <= 0) return 0;
+  return toNumber(item.quantity) * salePrice;
+}
+
+function getItemSupplyValue(item) {
+  const supplyValue = toNumber(item.supplyValue);
+  if (supplyValue > 0) return supplyValue;
+  return toNumber(item.quantity) * toNumber(item.unitPrice || item.unitCost);
 }
 
 function getLast7Days(transactions) {
@@ -793,6 +1052,22 @@ function addDays(baseDate, delta) {
 
 function toDateKey(value) {
   return new Date(value).toISOString().split('T')[0];
+}
+
+function sortTimeSeriesData(rows, direction) {
+  const nextRows = [...rows];
+  return direction === 'desc' ? nextRows.reverse() : nextRows;
+}
+
+function sortCategorySeries(rows, mode) {
+  const nextRows = [...rows];
+  if (mode === 'qty-asc') {
+    return nextRows.sort((left, right) => left[1] - right[1]);
+  }
+  if (mode === 'name-asc') {
+    return nextRows.sort((left, right) => String(left[0] || '').localeCompare(String(right[0] || ''), 'ko'));
+  }
+  return nextRows.sort((left, right) => right[1] - left[1]);
 }
 
 function toNumber(value) {

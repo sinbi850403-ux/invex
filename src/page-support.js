@@ -1,10 +1,10 @@
-/**
+﻿/**
  * page-support.js - 고객 문의 (게시판 형태)
  * 왜 게시판? → 이메일은 보내면 끝이지만, 게시판은 문의 내역과 답변 상태를 확인할 수 있음
  */
-import { getCurrentUser, getUserProfileData } from './firebase-auth.js';
-import { collection, addDoc, getDocs, query, where, serverTimestamp, doc, deleteDoc } from 'firebase/firestore';
-import { db, isConfigured } from './firebase-config.js';
+import { getCurrentUser, getUserProfileData } from './auth.js';
+import { collection, addDoc, getDocs, query, where, serverTimestamp, doc, deleteDoc } from './backend-store.js';
+import { db, isConfigured } from './backend-config.js';
 import { showToast } from './toast.js';
 
 // 문의 상태별 라벨
@@ -54,12 +54,12 @@ async function renderListView(container) {
 
   document.getElementById('btn-write').addEventListener('click', () => renderWriteView(container));
 
-  // Firestore에서 내 문의 불러오기
+  // 저장소에서 내 문의 불러오기
   await loadMyTickets(container, user);
 }
 
 /**
- * Firestore에서 내 문의 목록 로드
+ * 저장소에서 내 문의 목록 로드
  */
 async function loadMyTickets(container, user) {
   const listEl = document.getElementById('ticket-list');

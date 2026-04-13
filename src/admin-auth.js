@@ -1,4 +1,4 @@
-import { getCurrentUser } from './firebase-auth.js';
+import { getCurrentUser } from './auth.js';
 
 const ADMIN_EMAILS = [
   'sinbi0214@naver.com',

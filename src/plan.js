@@ -158,7 +158,7 @@ export function canAccessPage(pageId) {
   return plan.pages.includes(pageId);
 }
 
-// 순환참조 방지용: firebase-auth에서 함수를 lazy 주입
+// 순환참조 방지용: auth 모듈에서 함수를 lazy 주입
 let _getCurrentUser = null;
 export function injectGetCurrentUser(fn) { _getCurrentUser = fn; }
 

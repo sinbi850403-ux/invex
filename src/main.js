@@ -1,4 +1,4 @@
-﻿/**
+/**
  * main.js - INVEX ??吏꾩엯??
  * ??븷: ?섏씠吏 ?쇱슦?? ?ㅻ퉬寃뚯씠??愿由? 紐⑤컮??吏?? ?곗씠??諛깆뾽/蹂듭썝
  */
@@ -15,14 +15,12 @@ import { isAdmin } from './admin-auth.js';
 import { checkAndShowOnboarding } from './onboarding.js';
 import { initGlobalSearch, toggleGlobalSearch } from './global-search.js';
 import { initTheme, toggleTheme } from './theme.js';
-import { initAuth, getCurrentUser, getUserProfileData, loginWithGoogle, loginWithEmail, signupWithEmail, resetPassword, logout } from './firebase-auth.js';
-import { startSync, stopSync, syncToCloud, getSyncStatus } from './firebase-sync.js';
-import { startWorkspaceSync, stopWorkspaceSync, syncWorkspaceToCloud } from './workspace.js';
-import { setSyncCallback } from './store.js';
-import { renderNotificationPanel, getNotificationCount } from './notifications.js';
+import { initAuth, getCurrentUser, getUserProfileData, loginWithGoogle, loginWithEmail, signupWithEmail, resetPassword, logout } from './auth.js';
+import { renderNotificationPanel, getNotificationCount, syncExternalNotifications } from './notifications.js';
 import { showToast } from './toast.js';
 import { canAccessPage, getPageBadge, showUpgradeModal, getCurrentPlan, PLANS, setPlan, injectGetCurrentUser, injectGetUserProfile } from './plan.js';
 import { mountAutoTableSort } from './table-auto-sort.js';
+import { renderHubData, renderHubInventory, renderHubWarehouse, renderHubOrder, renderHubReport, renderHubDocuments, renderHubSettings, renderHubSupport, HUB_MAP, PAGE_LABELS } from './page-hubs.js';
 
 // ?ㅽ겕 紐⑤뱶 珥덇린??
 initTheme();
@@ -31,7 +29,7 @@ initTheme();
 injectGetCurrentUser(getCurrentUser);
 injectGetUserProfile(getUserProfileData);
 
-// Firebase ?몄쬆 珥덇린????濡쒓렇???곹깭???곕씪 ???묎렐 ?쒖뼱
+// 인증 초기화 후 로그인 상태에 따라 화면 제어
 let isAuthReady = false;
 
 // === ?쒕뵫 ?섏씠吏 ?대깽??===
@@ -76,15 +74,23 @@ document.getElementById('tab-signup')?.addEventListener('click', () => {
   tabLogin.classList.remove('active', 'active-signup');
 });
 
-// ?대찓??濡쒓렇??
+// 이메일 로그인 — auth.js의 finally 블록이 버튼 복구를 담당하므로
+// 별도 watchdog 없이 단순 호출. 이중 복구 경합(race condition) 방지.
 document.getElementById('gate-email-login')?.addEventListener('click', async () => {
   const email = document.getElementById('login-email').value.trim();
   const password = document.getElementById('login-password').value;
-  if (!email || !password) { showToast('?대찓?쇨낵 鍮꾨?踰덊샇瑜??낅젰?섏꽭??', 'warning'); return; }
+  if (!email || !password) { showToast('이메일과 비밀번호를 입력해 주세요.', 'warning'); return; }
   await loginWithEmail(email, password);
 });
 
-// Enter ?ㅻ줈 濡쒓렇??
+// 입력 필드 포커스 시 이전 에러 메시지 자동 제거 — 재시도 UX 개선
+['login-email', 'login-password'].forEach(id => {
+  document.getElementById(id)?.addEventListener('focusin', () => {
+    document.getElementById('login-error-msg')?.remove();
+  });
+});
+
+// Enter 키로 로그인
 document.getElementById('login-password')?.addEventListener('keydown', (e) => {
   if (e.key === 'Enter') document.getElementById('gate-email-login')?.click();
 });
@@ -96,11 +102,11 @@ document.getElementById('gate-email-signup')?.addEventListener('click', async ()
   const pw = document.getElementById('signup-password').value;
   const pw2 = document.getElementById('signup-password2').value;
   const agreed = document.getElementById('signup-agree')?.checked;
-  if (!name) { showToast('?대쫫???낅젰?섏꽭??', 'warning'); return; }
-  if (!email) { showToast('?대찓?쇱쓣 ?낅젰?섏꽭??', 'warning'); return; }
-  if (pw.length < 6) { showToast('鍮꾨?踰덊샇??6???댁긽?댁뼱???⑸땲??', 'warning'); return; }
-  if (pw !== pw2) { showToast('鍮꾨?踰덊샇媛 ?쇱튂?섏? ?딆뒿?덈떎.', 'warning'); return; }
-  if (!agreed) { showToast('?댁슜?쎄? 諛?媛쒖씤?뺣낫泥섎━諛⑹묠???숈쓽?댁＜?몄슂.', 'warning'); return; }
+  if (!name) { showToast('이름을 입력해 주세요.', 'warning'); return; }
+  if (!email) { showToast('이메일을 입력해 주세요.', 'warning'); return; }
+  if (pw.length < 6) { showToast('비밀번호는 6자 이상이어야 합니다.', 'warning'); return; }
+  if (pw !== pw2) { showToast('비밀번호가 일치하지 않습니다.', 'warning'); return; }
+  if (!agreed) { showToast('이용약관 및 개인정보처리방침에 동의해 주세요.', 'warning'); return; }
   await signupWithEmail(email, pw, name);
 });
 
@@ -112,13 +118,13 @@ document.getElementById('signup-password2')?.addEventListener('keydown', (e) => 
 // ?댁슜?쎄? 紐⑤떖
 document.getElementById('link-terms')?.addEventListener('click', (e) => {
   e.preventDefault();
-  showLegalModal('?쒕퉬???댁슜?쎄?', getTermsContent());
+  showLegalModal('서비스 이용약관', getTermsContent());
 });
 
 // 媛쒖씤?뺣낫泥섎━諛⑹묠 紐⑤떖
 document.getElementById('link-privacy')?.addEventListener('click', (e) => {
   e.preventDefault();
-  showLegalModal('媛쒖씤?뺣낫泥섎━諛⑹묠', getPrivacyContent());
+  showLegalModal('개인정보처리방침', getPrivacyContent());
 });
 
 /**
@@ -132,8 +138,8 @@ function showLegalModal(title, content) {
   modal.innerHTML = `
     <div class="legal-modal">
       <div class="legal-modal-header">
-        <h3>?뱥 ${title}</h3>
-        <button class="legal-modal-close">??/button>
+        <h3>📘 ${title}</h3>
+        <button class="legal-modal-close" aria-label="닫기">닫기</button>
       </div>
       <div class="legal-modal-body">
         ${content}
@@ -146,92 +152,53 @@ function showLegalModal(title, content) {
 }
 
 function getTermsContent() {
-  // ???몃씪??style???쒓굅? ??CSS 蹂?섍? ?쇱씠??紐⑤뱶?먯꽌 ?대몢???됱쓣 諛섑솚?섏뿬
-  // ?대몢??紐⑤떖 諛곌꼍 ?꾩뿉 湲?먭? ??蹂댁씠??臾몄젣 諛쒖깮. auth.css??.legal-modal-body h4 洹쒖튃???곸슜??
   return `
-    <h4>??議?(紐⑹쟻)</h4>
-    <p>???쎄?? INVEX(?댄븯 "?쒕퉬??)媛 ?쒓났?섎뒗 ?ш퀬쨌寃쎌쁺 愿由??쒕퉬?ㅼ쓽 ?댁슜議곌굔 諛??덉감, ?뚯궗? ?댁슜?먯쓽 沅뚮━쨌?섎Т 諛?梨낆엫?ы빆??洹쒖젙?⑥쓣 紐⑹쟻?쇰줈 ?⑸땲??</p>
-    
-    <h4>??議?(?뺤쓽)</h4>
-    <p>??"?쒕퉬??? INVEX媛 ?쒓났?섎뒗 ??湲곕컲 ?ш퀬愿由? ?낆텧怨?泥섎━, ?먭?遺꾩꽍, 臾몄꽌?앹꽦 ?깆쓽 湲곕뒫??留먰빀?덈떎.<br/>
-    ??"?댁슜??? 蹂??쎄????곕씪 ?쒕퉬?ㅻ? ?댁슜?섎뒗 ?먮? 留먰빀?덈떎.<br/>
-    ??"怨꾩젙"?대? ?댁슜?먯쓽 ?앸퀎怨??쒕퉬???댁슜???꾪빐 ?댁슜?먭? ?ㅼ젙?섍퀬 ?뚯궗媛 ?뱀씤?섎뒗 ?대찓??諛?鍮꾨?踰덊샇??議고빀??留먰빀?덈떎.</p>
+    <h4>1. 목적</h4>
+    <p>이 약관은 INVEX가 제공하는 재고·입출고·문서 관리 서비스의 이용 조건과 회사 및 이용자의 권리, 의무, 책임 사항을 정하는 것을 목적으로 합니다.</p>
 
-    <h4>??議?(?쎄????⑤젰 諛?蹂寃?</h4>
-    <p>??蹂??쎄?? ?쒕퉬???붾㈃??寃뚯떆?섍굅???대찓???깆쓽 諛⑸쾿?쇰줈 ?댁슜?먯뿉寃?怨듭??⑥쑝濡쒖뜥 ?⑤젰??諛쒖깮?⑸땲??<br/>
-    ???뚯궗??愿??踰뺣졊???꾨같?섏? ?딅뒗 踰붿쐞?먯꽌 蹂??쎄???媛쒖젙?????덉뒿?덈떎.</p>
+    <h4>2. 서비스 내용</h4>
+    <p>서비스에는 재고 현황 관리, 입출고 기록, 거래처 연동, 보고서 작성, 문서 생성, 팀 협업 기능이 포함됩니다. 일부 기능은 요금제에 따라 제공 범위가 달라질 수 있습니다.</p>
 
-    <h4>??議?(?쒕퉬?ㅼ쓽 ?쒓났)</h4>
-    <p>???뚯궗???ㅼ쓬怨?媛숈? ?쒕퉬?ㅻ? ?쒓났?⑸땲??<br/>
-    - ?ш퀬 ?꾪솴 愿由?諛?紐⑤땲?곕쭅<br/>
-    - ?낆텧怨?泥섎━ 諛??대젰 愿由?br/>
-    - ?먭? 遺꾩꽍 諛?蹂닿퀬???앹꽦<br/>
-    - 諛붿퐫???ㅼ틪 諛??쇰꺼 ?몄뇙<br/>
-    - 嫄곕옒泥?愿由?br/>
-    ???쒕퉬?ㅻ뒗 Free, Pro, Enterprise ?붽툑?쒕줈 援щ텇?섎ŉ, 媛??붽툑?쒕퀎 ?쒓났 湲곕뒫???ㅻ쫭?덈떎.</p>
+    <h4>3. 계정과 이용자 책임</h4>
+    <p>이용자는 정확한 정보를 바탕으로 계정을 생성해야 하며, 계정 정보와 접근 권한을 안전하게 관리할 책임이 있습니다. 계정의 부정 사용이 의심되는 경우 즉시 비밀번호를 변경하고 회사에 알려야 합니다.</p>
 
-    <h4>??議?(?댁슜?먯쓽 ?섎Т)</h4>
-    <p>???댁슜?먮뒗 ??몄쓽 ?뺣낫瑜??꾩슜?섏뿬?쒕뒗 ???⑸땲??<br/>
-    ???댁슜?먮뒗 ?쒕퉬?ㅻ? ?댁슜?섏뿬 遺덈쾿?됱쐞瑜??섏뿬?쒕뒗 ???⑸땲??<br/>
-    ???댁슜?먮뒗 ?먯떊??怨꾩젙 ?뺣낫瑜??덉쟾?섍쾶 愿由ы븷 梨낆엫???덉뒿?덈떎.</p>
+    <h4>4. 제한 사항</h4>
+    <p>이용자는 서비스 운영을 방해하거나, 허위 데이터를 등록하거나, 관련 법령을 위반하는 방식으로 서비스를 사용해서는 안 됩니다. 회사는 필요한 경우 해당 계정의 이용을 제한할 수 있습니다.</p>
 
-    <h4>??議?(?쒕퉬???댁슜 ?쒗븳)</h4>
-    <p>?뚯궗???댁슜?먭? 蹂??쎄????꾨컲?섍굅???쒕퉬?ㅼ쓽 ?뺤긽?곸씤 ?댁쁺??諛⑺빐??寃쎌슦, ?쒕퉬???댁슜???쒗븳?섍굅??怨꾩젙????젣?????덉뒿?덈떎.</p>
+    <h4>5. 요금제와 변경</h4>
+    <p>서비스는 무료 또는 유료 요금제로 제공될 수 있으며, 기능 구성과 가격은 사전 고지 후 변경될 수 있습니다. 유료 기능 사용 여부는 계정 설정 및 결제 상태에 따라 반영됩니다.</p>
 
-    <h4>??議?(硫댁콉議고빆)</h4>
-    <p>??泥쒖옱吏蹂, ?꾩웳 ??遺덇???젰?쇰줈 ?명븳 ?쒕퉬??以묐떒??????뚯궗??梨낆엫??吏吏 ?딆뒿?덈떎.<br/>
-    ???댁슜?먯쓽 洹梨낆궗?좊줈 ?명븳 ?쒕퉬???댁슜 ?μ븷??????뚯궗??梨낆엫??吏吏 ?딆뒿?덈떎.</p>
+    <h4>6. 면책</h4>
+    <p>천재지변, 시스템 장애, 이용자의 입력 오류 또는 외부 서비스 장애로 인해 발생한 손해에 대해서는 관련 법령이 허용하는 범위에서 책임이 제한될 수 있습니다.</p>
 
-    <p class="legal-date">?쒗뻾?? 2026??4??1??/p>
+    <p class="legal-date">시행일: 2026년 4월 1일</p>
   `;
 }
 
 function getPrivacyContent() {
   return `
-    <h4>1. 媛쒖씤?뺣낫???섏쭛 諛??댁슜 紐⑹쟻</h4>
-    <p>INVEX(?댄븯 "?쒕퉬??)???ㅼ쓬??紐⑹쟻???꾪븯??媛쒖씤?뺣낫瑜?泥섎━?⑸땲??</p>
-    <p>???뚯썝 媛??諛?愿由? ?뚯썝 媛???섏궗 ?뺤씤, ?쒕퉬???쒓났???곕Ⅸ 蹂몄씤 ?앸퀎쨌?몄쬆, ?뚯썝?먭꺽 ?좎?쨌愿由?br/>
-    ???쒕퉬???쒓났: ?ш퀬愿由? ?낆텧怨?泥섎━, 蹂닿퀬???앹꽦 ???듭떖 ?쒕퉬???쒓났<br/>
-    ??怨좉컼 吏?? 誘쇱썝 泥섎━, 怨듭??ы빆 ?꾨떖</p>
+    <h4>1. 수집하는 정보</h4>
+    <p>서비스 이용을 위해 이름, 이메일 주소, 로그인 정보, 프로필 정보, 서비스 내 입력 데이터, 접속 기록 등의 정보가 처리될 수 있습니다.</p>
 
-    <h4>2. ?섏쭛?섎뒗 媛쒖씤?뺣낫 ??ぉ</h4>
-    <table>
-      <tr>
-        <td>?꾩닔??ぉ</td>
-        <td>?대쫫(?됰꽕??, ?대찓??二쇱냼, 鍮꾨?踰덊샇</td>
-      </tr>
-      <tr>
-        <td>?먮룞?섏쭛</td>
-        <td>?묒냽 IP, ?묒냽 ?쒓컙, 釉뚮씪?곗? ?뺣낫</td>
-      </tr>
-      <tr>
-        <td>?뚯뀥 濡쒓렇??/td>
-        <td>Google 怨꾩젙 ?대쫫, ?대찓?? ?꾨줈???ъ쭊</td>
-      </tr>
-    </table>
+    <h4>2. 이용 목적</h4>
+    <p>수집한 정보는 회원 식별, 로그인 처리, 재고 및 문서 기능 제공, 고객 문의 대응, 서비스 개선, 보안 및 오류 분석을 위해 사용됩니다.</p>
 
-    <h4>3. 媛쒖씤?뺣낫??蹂댁쑀 諛??댁슜 湲곌컙</h4>
-    <p>???뚯썝 ?덊눜 ?쒓퉴吏 蹂댁쑀?섎ŉ, ?덊눜 ??吏泥??놁씠 ?뚭린?⑸땲??<br/>
-    ???? 愿??踰뺣졊???곕씪 蹂댁〈???꾩슂??寃쎌슦 ?대떦 湲곌컙 ?숈븞 蹂댁〈?⑸땲??</p>
+    <h4>3. 보관 기간</h4>
+    <p>개인정보는 회원 탈퇴 또는 이용 목적 달성 시 지체 없이 삭제합니다. 다만 관계 법령에 따라 일정 기간 보관이 필요한 경우 해당 기간 동안 안전하게 보관합니다.</p>
 
-    <h4>4. 媛쒖씤?뺣낫???????쒓났</h4>
-    <p>?쒕퉬?ㅻ뒗 ?댁슜?먯쓽 媛쒖씤?뺣낫瑜??먯튃?곸쑝濡????먯뿉寃??쒓났?섏? ?딆뒿?덈떎. ?ㅻ쭔, ?ㅼ쓬??寃쎌슦?먮뒗 ?덉쇅濡??⑸땲??<br/>
-    ???댁슜?먭? ?ъ쟾???숈쓽??寃쎌슦<br/>
-    ??踰뺣졊??洹쒖젙???섍굅?섍굅???섏궗 紐⑹쟻?쇰줈 踰뺣졊???뺥빐吏??덉감???곕씪 ?붿껌???덈뒗 寃쎌슦</p>
+    <h4>4. 제3자 제공</h4>
+    <p>회사는 이용자의 개인정보를 원칙적으로 외부에 판매하거나 무단 제공하지 않습니다. 다만 이용자 동의가 있거나 법령에 따른 요청이 있는 경우에 한해 최소 범위 내에서 제공할 수 있습니다.</p>
 
-    <h4>5. 媛쒖씤?뺣낫???덉쟾???뺣낫 議곗튂</h4>
-    <p>?쒕퉬?ㅻ뒗 媛쒖씤?뺣낫???덉쟾???뺣낫瑜??꾪빐 ?ㅼ쓬怨?媛숈? 議곗튂瑜?痍⑦븯怨??덉뒿?덈떎.<br/>
-    ??鍮꾨?踰덊샇 ?뷀샇?????(Firebase Authentication)<br/>
-    ???곗씠???꾩넚 ??SSL/TLS ?뷀샇??br/>
-    ???묎렐 沅뚰븳 愿由?諛??묎렐 ?듭젣</p>
+    <h4>5. 보호 조치</h4>
+    <p>접근 권한 관리, 인증 정보 보호, 전송 구간 암호화, 운영 로그 관리 등 합리적인 수준의 보안 조치를 통해 개인정보를 보호합니다.</p>
 
-    <h4>6. ?댁슜?먯쓽 沅뚮━</h4>
-    <p>?댁슜?먮뒗 ?몄젣?좎? ?먯떊??媛쒖씤?뺣낫瑜?議고쉶, ?섏젙, ??젣?????덉쑝硫? ?뚯썝 ?덊눜瑜??듯빐 媛쒖씤?뺣낫 泥섎━???뺤?瑜??붿껌?????덉뒿?덈떎.</p>
+    <h4>6. 이용자 권리</h4>
+    <p>이용자는 본인의 개인정보에 대해 조회, 수정, 삭제 요청을 할 수 있으며, 서비스 내 계정 관리 기능 또는 고객 지원 채널을 통해 요청할 수 있습니다.</p>
 
-    <h4>7. 媛쒖씤?뺣낫 蹂댄샇梨낆엫??/h4>
-    <p>?대찓?? sinbi0214@naver.com</p>
+    <h4>7. 문의</h4>
+    <p>개인정보 관련 문의: sinbi0214@naver.com</p>
 
-    <p class="legal-date">?쒗뻾?? 2026??4??1??/p>
+    <p class="legal-date">시행일: 2026년 4월 1일</p>
   `;
 }
 
@@ -239,7 +206,7 @@ function getPrivacyContent() {
 document.getElementById('btn-forgot-pw')?.addEventListener('click', async (e) => {
   e.preventDefault();
   const email = document.getElementById('login-email').value.trim();
-  if (!email) { showToast('?대찓??二쇱냼瑜?癒쇱? ?낅젰?댁＜?몄슂.', 'warning'); return; }
+  if (!email) { showToast('이메일 주소를 먼저 입력해 주세요.', 'warning'); return; }
   await resetPassword(email);
 });
 
@@ -262,11 +229,6 @@ initAuth((user, profile) => {
       gate.style.opacity = '0';
       setTimeout(() => { gate.style.display = 'none'; }, 300);
     }
-    startSync(user.uid);
-    // ?뚰겕?ㅽ럹?댁뒪 ?숆린?붾룄 ?쒖옉 (???媛??ㅼ떆媛?怨듭쑀)
-    startWorkspaceSync(user.uid);
-    // ?곗씠??蹂寃????먮룞?쇰줈 ?뚰겕?ㅽ럹?댁뒪???숆린??
-    setSyncCallback(() => syncWorkspaceToCloud());
     updateUserUI(user, profile);
     // ?먮윭 紐⑤땲?곕쭅???ъ슜???뺣낫 ?ㅼ젙 (?대뼡 ?ъ슜?먯뿉寃??먮윭媛 諛쒖깮?덈뒗吏 異붿쟻)
     setMonitorUser(user.uid, user.email);
@@ -283,18 +245,19 @@ initAuth((user, profile) => {
       initAppAfterAuth();
     }
   } else {
-    // ??誘몃줈洹몄씤 ??寃뚯씠???쒖떆
-    stopSync();
-    stopWorkspaceSync();
-    setSyncCallback(null);
+    // 미로그인 상태
     updateUserUI(null, null);
     clearMonitorUser();
-    if (gate) {
-      gate.style.display = 'none';
+
+    // 게이트가 열려 있으면(사용자가 로그인/회원가입 입력 중) 닫지 않음
+    // getSession() timeout이나 onAuthStateChange null 이벤트가
+    // 뒤늦게 도착해도 게이트를 유지 → 입력 중 홈화면 복귀 방지
+    const gateIsOpen = gate && gate.style.display === 'flex';
+    if (!gateIsOpen) {
+      if (gate) gate.style.display = 'none';
+      const landing = document.getElementById('landing-page');
+      if (landing) landing.style.display = 'block';
     }
-    // 誘몃줈洹몄씤 ???쒕뵫 ?섏씠吏 ?쒖떆
-    const landing = document.getElementById('landing-page');
-    if (landing) landing.style.display = 'block';
     isAuthReady = false;
   }
 });
@@ -302,6 +265,9 @@ initAuth((user, profile) => {
 // ?꾩옱 ?섏씠吏 (?덉쓣 湲곕낯?쇰줈)
 let currentPage = 'home';
 let navigationToken = 0;
+const RECENT_PAGES_KEY = 'invex_recent_pages_v1';
+const LAST_PAGE_KEY = 'invex_last_page_v1';
+const MAX_RECENT_PAGES = 6;
 
 const pageLoaders = {
   home: () => import('./page-home.js').then(m => m.renderHomePage),
@@ -341,9 +307,104 @@ const pageLoaders = {
   referral: () => import('./page-referral.js').then(m => m.renderReferralPage),
   'weekly-report': () => import('./page-weekly-report.js').then(m => m.renderWeeklyReportPage),
   pos: () => import('./page-pos.js').then(m => m.renderPosPage),
+  // 허브 페이지 — 하위 기능을 타일 그리드로 묶은 인덱스 페이지
+  'hub-data': async () => renderHubData,
+  'hub-inventory': async () => renderHubInventory,
+  'hub-warehouse': async () => renderHubWarehouse,
+  'hub-order': async () => renderHubOrder,
+  'hub-report': async () => renderHubReport,
+  'hub-documents': async () => renderHubDocuments,
+  'hub-settings': async () => renderHubSettings,
+  'hub-support': async () => renderHubSupport,
 };
 
 const pageRendererCache = {};
+
+function getPageLabel(pageId) {
+  // 허브 기반 네비게이션 — PAGE_LABELS 맵 우선 사용
+  if (PAGE_LABELS[pageId]) return PAGE_LABELS[pageId];
+  const btn = document.querySelector(`.nav-btn[data-page="${pageId}"]`);
+  if (!btn) return pageId;
+  const mainLabel = btn.querySelector('.nav-main');
+  if (mainLabel) return mainLabel.textContent.replace(/\s+/g, ' ').trim();
+  return btn.textContent.replace(/\s+/g, ' ').trim();
+}
+
+function readRecentPages() {
+  try {
+    const raw = localStorage.getItem(RECENT_PAGES_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter(pageId => typeof pageId === 'string' && !!pageLoaders[pageId] && pageId !== 'home');
+  } catch {
+    return [];
+  }
+}
+
+function writeRecentPages(pages) {
+  localStorage.setItem(RECENT_PAGES_KEY, JSON.stringify(pages.slice(0, MAX_RECENT_PAGES)));
+}
+
+function updateRecentPages(pageId) {
+  if (!pageId || pageId === 'home') return;
+  const current = readRecentPages();
+  const next = [pageId, ...current.filter(p => p !== pageId)].slice(0, MAX_RECENT_PAGES);
+  writeRecentPages(next);
+}
+
+function renderQuickAccess() {
+  const section = document.getElementById('quick-access-section');
+  const divider = document.getElementById('quick-access-divider');
+  const nav = document.getElementById('quick-access-nav');
+  if (!section || !divider || !nav) return;
+
+  const recentPages = readRecentPages();
+  if (!recentPages.length) {
+    section.style.display = 'none';
+    divider.style.display = 'none';
+    nav.innerHTML = '';
+    return;
+  }
+
+  nav.innerHTML = recentPages.map(pageId => `
+    <button class="nav-btn nav-btn-quick" data-quick-page="${pageId}" title="${getPageLabel(pageId)}">
+      <span class="nav-icon">🕘</span> ${getPageLabel(pageId)}
+    </button>
+  `).join('');
+
+  nav.querySelectorAll('[data-quick-page]').forEach(btn => {
+    btn.addEventListener('click', () => navigateTo(btn.dataset.quickPage));
+  });
+
+  section.style.display = '';
+  divider.style.display = '';
+}
+
+function initNavigationShortcuts() {
+  document.addEventListener('keydown', (e) => {
+    if (e.altKey && !e.shiftKey && !e.ctrlKey && !e.metaKey && /^[1-9]$/.test(e.key)) {
+      const visibleButtons = Array.from(document.querySelectorAll('.nav-btn[data-page]'))
+        .filter(btn => btn.offsetParent !== null);
+      const target = visibleButtons[Number(e.key) - 1];
+      if (target?.dataset?.page) {
+        e.preventDefault();
+        navigateTo(target.dataset.page);
+      }
+    }
+  });
+}
+
+function initSmartDetailsToggles() {
+  document.addEventListener('click', (event) => {
+    const summary = event.target.closest('details.smart-details > summary');
+    if (!summary) return;
+    const details = summary.parentElement;
+    if (!details || !(details instanceof HTMLDetailsElement)) return;
+    event.preventDefault();
+    details.open = !details.open;
+  }, true);
+}
 
 /**
  * ?섏씠吏 ?꾪솚
@@ -359,22 +420,25 @@ async function navigateTo(pageName) {
   }
 
   currentPage = pageName;
+  localStorage.setItem(LAST_PAGE_KEY, pageName);
+  updateRecentPages(pageName);
+  renderQuickAccess();
   const token = ++navigationToken;
 
   // 紐⑤뱺 nav ?곸뿭??踰꾪듉 ?쒖꽦 ?곹깭 ?낅뜲?댄듃
+  // 사이드바 하이라이트 — 자식 페이지는 부모 허브를 활성화
+  const activeSidebarPage = HUB_MAP[pageName] || pageName;
   document.querySelectorAll('.nav-btn').forEach(btn => {
-    btn.classList.toggle('active', btn.dataset.page === pageName);
+    btn.classList.toggle('active', btn.dataset.page === activeSidebarPage);
   });
+
+  // 브레드크럼 업데이트
+  updateBreadcrumb(pageName);
 
   const mainContent = document.getElementById('main-content');
   mainContent.dataset.page = pageName;
-  mainContent.innerHTML = `
-    <div class="card">
-      <div class="empty-state" style="padding:32px 20px;">
-        <div class="msg">?섏씠吏瑜?遺덈윭?ㅻ뒗 以묒엯?덈떎.</div>
-      </div>
-    </div>
-  `;
+  // 스켈레톤 로딩 UI 표시
+  mainContent.innerHTML = getSkeletonHtml();
   mainContent.scrollTop = 0;
 
   try {
@@ -382,26 +446,32 @@ async function navigateTo(pageName) {
     if (token !== navigationToken || currentPage !== pageName) return;
     mainContent.innerHTML = '';
     renderPage(mainContent, navigateTo);
+    // 페이지 전환 애니메이션 트리거
+    mainContent.classList.remove('page-enter');
+    void mainContent.offsetWidth;
+    mainContent.classList.add('page-enter');
+    initCardCollapsibles(mainContent, pageName);
     mountAutoTableSort(mainContent);
   } catch (error) {
     console.error('Failed to load page:', pageName, error);
     mainContent.innerHTML = `
       <div class="card">
         <div class="empty-state" style="padding:32px 20px;">
-          <div class="msg">?섏씠吏瑜?遺덈윭?ㅼ? 紐삵뻽?듬땲??</div>
-          <div class="sub">?좎떆 ???ㅼ떆 ?쒕룄??二쇱꽭??</div>
+          <div class="msg">페이지를 불러오지 못했습니다.</div>
+          <div class="sub">잠시 후 다시 시도해 주세요.</div>
         </div>
       </div>
     `;
-    showToast('?섏씠吏瑜?遺덈윭?ㅼ? 紐삵뻽?듬땲??', 'warning');
+    showToast('페이지를 불러오지 못했습니다.', 'warning');
     return;
   }
 
   // 紐⑤컮?쇱뿉???ъ씠?쒕컮 ?リ린
   closeSidebar();
 
-  // ?뚮┝ 諭껋? ?낅뜲?댄듃
+  // 알림 뱃지 업데이트
   updateNotifBadge();
+  syncExternalNotifications();
 }
 
 async function resolvePageRenderer(pageName) {
@@ -409,6 +479,68 @@ async function resolvePageRenderer(pageName) {
     pageRendererCache[pageName] = pageLoaders[pageName]();
   }
   return pageRendererCache[pageName];
+}
+
+/** 스켈레톤 로딩 HTML — 페이지 모듈 로딩 중에 표시하여 체감 속도 개선 */
+function getSkeletonHtml() {
+  return `
+    <div class="skeleton-page">
+      <div class="skeleton-header">
+        <div class="skeleton-line skeleton-lg skeleton-w60"></div>
+        <div class="skeleton-line skeleton-sm skeleton-w40"></div>
+      </div>
+      <div class="skeleton-stats">
+        <div class="skeleton-stat"></div>
+        <div class="skeleton-stat"></div>
+        <div class="skeleton-stat"></div>
+        <div class="skeleton-stat"></div>
+      </div>
+      <div class="skeleton-card">
+        <div class="skeleton-line skeleton-w40"></div>
+        <div class="skeleton-line skeleton-w90"></div>
+        <div class="skeleton-line skeleton-w70"></div>
+        <div class="skeleton-line skeleton-w80"></div>
+      </div>
+      <div class="skeleton-card">
+        <div class="skeleton-line skeleton-w50"></div>
+        <div class="skeleton-line skeleton-w80"></div>
+        <div class="skeleton-line skeleton-w60"></div>
+      </div>
+    </div>
+  `;
+}
+
+/** 브레드크럼 업데이트 — 현재 페이지 위치를 허브 계층으로 표시 */
+function updateBreadcrumb(pageName) {
+  const breadcrumb = document.getElementById('breadcrumb');
+  if (!breadcrumb) return;
+
+  const label = PAGE_LABELS[pageName] || pageName;
+  const parentHub = HUB_MAP[pageName];
+
+  if (pageName === 'home') {
+    breadcrumb.innerHTML = `<span class="breadcrumb-current">🏠 대시보드</span>`;
+  } else if (parentHub) {
+    const hubLabel = PAGE_LABELS[parentHub] || parentHub;
+    breadcrumb.innerHTML = `
+      <span class="breadcrumb-item" data-bc-nav="home">🏠</span>
+      <span class="breadcrumb-sep">›</span>
+      <span class="breadcrumb-item" data-bc-nav="${parentHub}">${hubLabel}</span>
+      <span class="breadcrumb-sep">›</span>
+      <span class="breadcrumb-current">${label}</span>
+    `;
+  } else {
+    breadcrumb.innerHTML = `
+      <span class="breadcrumb-item" data-bc-nav="home">🏠</span>
+      <span class="breadcrumb-sep">›</span>
+      <span class="breadcrumb-current">${label}</span>
+    `;
+  }
+
+  // 브레드크럼 클릭 이벤트 바인딩
+  breadcrumb.querySelectorAll('[data-bc-nav]').forEach(el => {
+    el.addEventListener('click', () => navigateTo(el.dataset.bcNav));
+  });
 }
 
 /**
@@ -428,6 +560,328 @@ function updateNotifBadge() {
   }
 }
 
+window.addEventListener('notifications-updated', () => {
+  updateNotifBadge();
+  syncExternalNotifications();
+});
+
+const CARD_STATE_KEY = 'invex_card_state_v1';
+const CARD_PIN_KEY = 'invex_card_pins_v1';
+const DETAILS_STATE_KEY = 'invex_details_state_v1';
+const SUMMARY_MODE_KEY = 'invex_summary_mode_v1';
+
+function readStorageMap(key) {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === 'object' ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function writeStorageMap(key, value) {
+  localStorage.setItem(key, JSON.stringify(value));
+}
+
+function normalizeTitle(value) {
+  return String(value || '').replace(/\s+/g, ' ').trim();
+}
+
+function initCardCollapsibles(container, pageName) {
+  const collapsiblePages = new Set([
+    'inventory', 'inout', 'bulk', 'warehouses', 'transfer', 'stocktake', 'vendors', 'auto-order', 'orders', 'forecast',
+    'summary', 'weekly-report', 'profit', 'accounts', 'costing', 'dashboard', 'tax-reports', 'documents',
+  ]);
+  if (!collapsiblePages.has(pageName)) return;
+
+  const summaryMap = readStorageMap(SUMMARY_MODE_KEY);
+  const summaryMode = summaryMap[pageName] === true;
+  container.classList.toggle('summary-mode', summaryMode);
+  mountSummaryToggle(container, pageName, summaryMode);
+
+  const collapsedMap = readStorageMap(CARD_STATE_KEY);
+  const pinnedMap = readStorageMap(CARD_PIN_KEY);
+  const pinnedList = Array.isArray(pinnedMap[pageName]) ? pinnedMap[pageName] : [];
+
+  const cards = Array.from(container.querySelectorAll('.card'));
+  cards.forEach((card, index) => {
+    if (card.classList.contains('fold-card') || card.classList.contains('mission-panel')) return;
+    if (card.closest('.stat-grid')) return;
+    if (card.querySelector('.card-collapse-toggle')) return;
+
+    const titleEl = card.querySelector('.card-title') || card.querySelector('.chart-control-row .card-title');
+    if (!titleEl) return;
+
+    const titleText = normalizeTitle(titleEl.textContent);
+    const cardId = `${pageName}::${titleText || 'card'}::${index}`;
+    card.dataset.cardId = cardId;
+
+    card.classList.add('card-collapsible');
+    const head = document.createElement('div');
+    head.className = 'card-collapse-head';
+
+    const titleWrap = document.createElement('div');
+    titleWrap.className = 'card-collapse-title';
+    titleWrap.appendChild(titleEl);
+
+    const pin = document.createElement('button');
+    pin.type = 'button';
+    pin.className = 'card-collapse-pin';
+    pin.textContent = pinnedList.includes(cardId) ? '고정됨' : '고정';
+    pin.addEventListener('click', () => {
+      const nextPinned = new Set(pinnedList);
+      if (nextPinned.has(cardId)) {
+        nextPinned.delete(cardId);
+        card.classList.remove('is-pinned');
+      } else {
+        nextPinned.add(cardId);
+        card.classList.add('is-pinned');
+      }
+      const nextList = Array.from(nextPinned);
+      pinnedMap[pageName] = nextList;
+      writeStorageMap(CARD_PIN_KEY, pinnedMap);
+      pin.textContent = nextPinned.has(cardId) ? '고정됨' : '고정';
+      applyPinnedOrder(container, cards, nextList);
+    });
+
+    const toggle = document.createElement('button');
+    toggle.type = 'button';
+    toggle.className = 'card-collapse-toggle';
+    toggle.textContent = '접기 ▲';
+    toggle.setAttribute('aria-expanded', 'true');
+    toggle.addEventListener('click', () => {
+      const isCollapsed = card.classList.toggle('is-collapsed');
+      toggle.textContent = isCollapsed ? '열기 ▼' : '접기 ▲';
+      toggle.setAttribute('aria-expanded', String(!isCollapsed));
+      collapsedMap[cardId] = isCollapsed;
+      writeStorageMap(CARD_STATE_KEY, collapsedMap);
+    });
+
+    head.appendChild(titleWrap);
+    head.appendChild(pin);
+    head.appendChild(toggle);
+
+    const body = document.createElement('div');
+    body.className = 'card-collapse-body';
+    while (card.firstChild) {
+      body.appendChild(card.firstChild);
+    }
+
+    card.appendChild(head);
+    card.appendChild(body);
+
+    if (pinnedList.includes(cardId)) {
+      card.classList.add('is-pinned');
+    }
+
+    if (typeof collapsedMap[cardId] === 'boolean') {
+      const isCollapsed = collapsedMap[cardId];
+      card.classList.toggle('is-collapsed', isCollapsed);
+      toggle.textContent = isCollapsed ? '열기 ▼' : '접기 ▲';
+      toggle.setAttribute('aria-expanded', String(!isCollapsed));
+    } else {
+      const shouldCollapse = summaryMode || /가이드|안내|설명|도움|팁|FAQ/i.test(titleText) || card.classList.contains('quick-start-card');
+      if (shouldCollapse) {
+        card.classList.add('is-collapsed');
+        toggle.textContent = '열기 ▼';
+        toggle.setAttribute('aria-expanded', 'false');
+      }
+    }
+  });
+
+  applyPinnedOrder(container, cards, pinnedList);
+  initDetailsPersistence(container, pageName, summaryMode);
+  mountFoldResetButton(container, pageName, cards);
+  mountPinManagerButton(container, pageName, cards);
+}
+
+function applyPinnedOrder(container, cards, pinnedList) {
+  if (!pinnedList?.length) return;
+  const byParent = new Map();
+  cards.forEach(card => {
+    if (!card.dataset.cardId || !pinnedList.includes(card.dataset.cardId)) return;
+    const parent = card.parentElement;
+    if (!parent) return;
+    if (!byParent.has(parent)) byParent.set(parent, []);
+    byParent.get(parent).push(card);
+  });
+  byParent.forEach((pinnedCards, parent) => {
+    pinnedCards
+      .sort((a, b) => pinnedList.indexOf(a.dataset.cardId) - pinnedList.indexOf(b.dataset.cardId))
+      .forEach(card => parent.insertBefore(card, parent.firstChild));
+  });
+}
+
+function initDetailsPersistence(container, pageName, summaryMode) {
+  const detailsMap = readStorageMap(DETAILS_STATE_KEY);
+  const detailsList = Array.from(container.querySelectorAll('details.fold-card, details.smart-details'));
+  detailsList.forEach((details, index) => {
+    const summary = details.querySelector('summary');
+    const summaryText = normalizeTitle(summary?.textContent);
+    const detailsId = details.dataset.foldId || summaryText || `details-${index}`;
+    const key = `${pageName}::details::${detailsId}`;
+    if (typeof detailsMap[key] === 'boolean') {
+      details.open = detailsMap[key];
+    } else if (summaryMode) {
+      details.open = false;
+    }
+    details.addEventListener('toggle', () => {
+      detailsMap[key] = details.open;
+      writeStorageMap(DETAILS_STATE_KEY, detailsMap);
+    });
+  });
+}
+
+function mountSummaryToggle() { /* 드롭다운으로 이전 */ }
+
+function mountFoldResetButton() { /* 드롭다운으로 이전 */ }
+
+function mountPinManagerButton(container, pageName, cards) {
+  const actionSlot = container.querySelector('.page-header .page-actions');
+  if (!actionSlot) return;
+  if (actionSlot.querySelector('[data-view-settings]')) return;
+
+  const summaryMap = readStorageMap(SUMMARY_MODE_KEY);
+  const isSummary = summaryMap[pageName] === true;
+
+  const wrap = document.createElement('div');
+  wrap.className = 'view-settings-wrap';
+  wrap.dataset.viewSettings = 'true';
+
+  const triggerBtn = document.createElement('button');
+  triggerBtn.type = 'button';
+  triggerBtn.className = 'btn btn-outline';
+  triggerBtn.textContent = '⚙️ 보기 설정';
+  triggerBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    menu.classList.toggle('is-open');
+  });
+
+  const menu = document.createElement('div');
+  menu.className = 'view-settings-menu';
+  menu.innerHTML = `
+    <button class="btn btn-ghost btn-sm" data-action="summary">${isSummary ? '📖 설명 펼치기' : '📋 요약만 보기'}</button>
+    <button class="btn btn-ghost btn-sm" data-action="fold-reset">🔄 접기 초기화</button>
+    <button class="btn btn-ghost btn-sm" data-action="pin-manager">📌 고정 관리</button>
+  `;
+
+  menu.querySelector('[data-action="summary"]').addEventListener('click', () => {
+    const map = readStorageMap(SUMMARY_MODE_KEY);
+    const nextMode = !container.classList.contains('summary-mode');
+    container.classList.toggle('summary-mode', nextMode);
+    map[pageName] = nextMode;
+    writeStorageMap(SUMMARY_MODE_KEY, map);
+    menu.querySelector('[data-action="summary"]').textContent = nextMode ? '📖 설명 펼치기' : '📋 요약만 보기';
+    menu.classList.remove('is-open');
+  });
+
+  menu.querySelector('[data-action="fold-reset"]').addEventListener('click', () => {
+    const collapsedMap = readStorageMap(CARD_STATE_KEY);
+    Object.keys(collapsedMap).forEach(key => {
+      if (key.startsWith(`${pageName}::`)) delete collapsedMap[key];
+    });
+    writeStorageMap(CARD_STATE_KEY, collapsedMap);
+    const detailsMap = readStorageMap(DETAILS_STATE_KEY);
+    Object.keys(detailsMap).forEach(key => {
+      if (key.startsWith(`${pageName}::details::`)) delete detailsMap[key];
+    });
+    writeStorageMap(DETAILS_STATE_KEY, detailsMap);
+    const sMap = readStorageMap(SUMMARY_MODE_KEY);
+    sMap[pageName] = false;
+    writeStorageMap(SUMMARY_MODE_KEY, sMap);
+    container.classList.remove('summary-mode');
+    cards.forEach(card => {
+      if (!card.classList.contains('card-collapsible')) return;
+      card.classList.remove('is-collapsed');
+      const toggle = card.querySelector('.card-collapse-toggle');
+      if (toggle) { toggle.textContent = '접기 ▲'; toggle.setAttribute('aria-expanded', 'true'); }
+    });
+    container.querySelectorAll('details.fold-card, details.smart-details').forEach(d => { d.open = true; });
+    menu.querySelector('[data-action="summary"]').textContent = '📋 요약만 보기';
+    menu.classList.remove('is-open');
+  });
+
+  menu.querySelector('[data-action="pin-manager"]').addEventListener('click', () => {
+    menu.classList.remove('is-open');
+    openPinManagerModal(container, pageName, cards);
+  });
+
+  wrap.appendChild(triggerBtn);
+  wrap.appendChild(menu);
+  actionSlot.prepend(wrap);
+  document.addEventListener('click', () => { menu.classList.remove('is-open'); });
+}
+
+function openPinManagerModal(container, pageName, cards) {
+  const existing = document.getElementById('pin-manager-modal');
+  if (existing) {
+    existing.remove();
+  }
+
+  const pinnedMap = readStorageMap(CARD_PIN_KEY);
+  const pinnedList = Array.isArray(pinnedMap[pageName]) ? pinnedMap[pageName] : [];
+
+  const overlay = document.createElement('div');
+  overlay.id = 'pin-manager-modal';
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = `
+    <div class="modal" style="max-width:560px;">
+      <div class="modal-header">
+        <h3 class="modal-title">고정 카드 관리</h3>
+        <button class="modal-close" data-pin-close>✕</button>
+      </div>
+      <div class="modal-body" id="pin-manager-body"></div>
+    </div>
+  `;
+
+  const body = overlay.querySelector('#pin-manager-body');
+  if (!pinnedList.length) {
+    body.innerHTML = `
+      <div class="empty-state" style="padding:24px;">
+        <div class="icon">📌</div>
+        <div class="msg">고정된 카드가 없습니다.</div>
+      </div>
+    `;
+  } else {
+    body.innerHTML = `
+      <div style="display:grid; gap:8px;">
+        ${pinnedList.map(id => {
+          const card = cards.find(c => c.dataset.cardId === id);
+          const title = normalizeTitle(card?.querySelector('.card-title')?.textContent) || '카드';
+          return `
+            <div class="pin-manager-item">
+              <div class="pin-manager-title">${title}</div>
+              <button class="btn btn-outline btn-sm" data-unpin="${id}">고정 해제</button>
+            </div>
+          `;
+        }).join('')}
+      </div>
+    `;
+  }
+
+  overlay.querySelector('[data-pin-close]')?.addEventListener('click', () => overlay.remove());
+  overlay.addEventListener('click', (event) => {
+    if (event.target === overlay) overlay.remove();
+  });
+
+  body.querySelectorAll('[data-unpin]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.dataset.unpin;
+      const nextPinned = pinnedList.filter(item => item !== id);
+      pinnedMap[pageName] = nextPinned;
+      writeStorageMap(CARD_PIN_KEY, pinnedMap);
+      const card = cards.find(c => c.dataset.cardId === id);
+      if (card) card.classList.remove('is-pinned');
+      applyPinnedOrder(container, cards, nextPinned);
+      openPinManagerModal(container, pageName, cards);
+    });
+  });
+
+  document.body.appendChild(overlay);
+}
+
 // ?ъ씠?쒕컮 硫붾돱???붽툑??諛곗? ?곸슜 + ?대깽???곌껐
 function updateSidebarBadges() {
   document.querySelectorAll('.nav-btn').forEach(btn => {
@@ -442,12 +896,11 @@ function updateSidebarBadges() {
 
     const badge = getPageBadge(pageId);
     if (badge) {
-      // ?좉툑 ?ㅽ????곸슜
       btn.style.opacity = '0.55';
       const badgeEl = document.createElement('span');
-      badgeEl.className = 'plan-badge';
+      badgeEl.className = 'plan-badge badge';
       badgeEl.textContent = badge.text;
-      badgeEl.style.cssText = `font-size:9px; background:linear-gradient(135deg,${badge.color},${badge.color}cc); color:#fff; padding:1px 5px; border-radius:4px; margin-left:auto;`;
+      badgeEl.style.background = `linear-gradient(135deg,${badge.color},${badge.color}cc)`;
       btn.appendChild(badgeEl);
     } else {
       btn.style.opacity = '1';
@@ -455,6 +908,7 @@ function updateSidebarBadges() {
   });
 }
 updateSidebarBadges();
+renderQuickAccess();
 
 // ?ъ씠?쒕컮 ?섎떒 ?붽툑???쒖떆 ?낅뜲?댄듃
 function updatePlanDisplay() {
@@ -481,8 +935,8 @@ document.getElementById('plan-display')?.addEventListener('click', () => {
   modal.innerHTML = `
     <div class="modal" style="max-width:600px;">
       <div class="modal-header">
-        <h3>?뱥 ?붽툑???좏깮</h3>
-        <button class="btn btn-ghost btn-sm" id="plan-pick-close">??/button>
+        <h3>📦 요금제 선택</h3>
+        <button class="btn btn-ghost btn-sm" id="plan-pick-close">닫기</button>
       </div>
       <div class="modal-body">
         <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:12px;">
@@ -518,7 +972,7 @@ document.getElementById('plan-display')?.addEventListener('click', () => {
       const planId = card.dataset.plan;
       setPlan(planId);
       modal.remove();
-      showToast(`${PLANS[planId].icon} ${PLANS[planId].name} ?붽툑?쒕줈 蹂寃쎈릺?덉뒿?덈떎.`, 'success');
+      showToast(`${PLANS[planId].icon} ${PLANS[planId].name} 요금제로 변경되었습니다.`, 'success');
       // ?ъ씠?쒕컮 諛곗? + ?쒖떆 媛깆떊
       updateSidebarBadges();
       updatePlanDisplay();
@@ -543,7 +997,8 @@ document.getElementById('btn-theme-toggle')?.addEventListener('click', () => {
   toggleTheme();
   const isDark = document.documentElement.classList.contains('dark-mode');
   const btn = document.getElementById('btn-theme-toggle');
-  if (btn) btn.textContent = isDark ? '라이트 모드' : '다크 모드';
+  if (btn) btn.textContent = isDark ? '☀️' : '🌙';
+  btn?.setAttribute('title', isDark ? '라이트 모드' : '다크 모드');
 });
 
 // === 紐⑤컮???좉? ===
@@ -585,23 +1040,29 @@ overlay?.addEventListener('click', closeSidebar);
 // ??遺꾨━? ???몄쬆 ?뺤씤 ?꾩뿉 IndexedDB 蹂듭썝?섎㈃ 鍮??곗씠?곌? 濡쒕뱶?????덉쓬
 async function initAppAfterAuth() {
   await restoreState();
+  const lastPage = localStorage.getItem(LAST_PAGE_KEY);
+  if (lastPage && pageLoaders[lastPage]) {
+    currentPage = lastPage;
+  }
   // ?붽툑??諛곗? & ?쒖떆 理쒖떊??
   updateSidebarBadges();
+  renderQuickAccess();
   updatePlanDisplay();
   await navigateTo(currentPage);
   // 泥?濡쒓렇???ъ슜?먯뿉寃??⑤낫??留덈쾿???쒖떆
   checkAndShowOnboarding(navigateTo);
 }
 
-// Firebase 誘몄꽕??濡쒖뺄 媛쒕컻) ?쒖뿉??寃뚯씠???먮룞 ?댁젣
-// isConfigured媛 false硫?initAuth?먯꽌 user=null濡?肄쒕갚 ??寃뚯씠?멸? ?⑥?留? 
-// 濡쒖뺄 媛쒕컻???꾪빐 ?먮룞 ?댁젣
-import { isConfigured } from './firebase-config.js';
-if (!isConfigured) {
+// Supabase 미설정(로컬 개발) 시에는 게이트 자동 제거
+import { isSupabaseConfigured } from './supabase-client.js';
+if (!isSupabaseConfigured) {
   const gate = document.getElementById('auth-gate');
   if (gate) gate.style.display = 'none';
   initAppAfterAuth();
 }
+
+initNavigationShortcuts();
+initSmartDetailsToggles();
 
 // ?ъ슜??UI ?낅뜲?댄듃 (濡쒓렇??濡쒓렇?꾩썐 ???몄텧)
 function updateUserUI(user, profile) {
@@ -612,18 +1073,35 @@ function updateUserUI(user, profile) {
     const name = profile?.name || user.displayName || '사용자';
     const photo = user.photoURL;
     const plan = (profile?.plan || 'free').toUpperCase();
-    const syncStatus = getSyncStatus();
     userArea.innerHTML = `
-      <div style="display:flex; align-items:center; gap:8px; padding:4px 0;">
-        ${photo ? `<img src="${photo}" style="width:24px; height:24px; border-radius:50%; border:1px solid rgba(255,255,255,0.2);" />` : ''}
-        <div style="flex:1; min-width:0;">
-          <div style="font-size:11px; font-weight:600; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${name}</div>
-          <div style="font-size:10px; color:rgba(255,255,255,0.5);">${plan} ${syncStatus.isConnected ? '동기화' : ''}</div>
+      <div class="sidebar-user">
+        ${photo ? `<img src="${photo}" class="sidebar-user-avatar" />` : ''}
+        <div class="sidebar-user-info">
+          <div class="sidebar-user-name">${name}</div>
+          <div class="sidebar-user-plan">${plan}</div>
         </div>
         <button class="btn-icon" id="btn-logout" title="로그아웃" style="font-size:11px; color:rgba(255,255,255,0.5);">로그아웃</button>
       </div>
     `;
-    document.getElementById('btn-logout')?.addEventListener('click', () => { logout(); });
+    document.getElementById('btn-logout')?.addEventListener('click', async () => {
+      const btn = document.getElementById('btn-logout');
+      if (btn) btn.disabled = true;
+      try {
+        await logout();
+      } finally {
+        if (btn) btn.disabled = false;
+      }
+    });
+    // 상단 헤더 사용자 영역 업데이트
+    const topUser = document.getElementById('top-header-user');
+    if (topUser) {
+      topUser.innerHTML = `
+        <div class="top-user-compact">
+          ${photo ? `<img src="${photo}" class="top-user-avatar" />` : `<span class="top-user-avatar-placeholder">${name[0]}</span>`}
+          <span class="top-user-name">${name}</span>
+        </div>
+      `;
+    }
   } else {
     userArea.innerHTML = `
       <button class="btn btn-ghost btn-sm" id="btn-login" style="color:rgba(255,255,255,0.7); font-size:12px; width:100%;">
@@ -631,17 +1109,28 @@ function updateUserUI(user, profile) {
       </button>
     `;
     document.getElementById('btn-login')?.addEventListener('click', () => { loginWithGoogle(); });
+    const topUser2 = document.getElementById('top-header-user');
+    if (topUser2) topUser2.innerHTML = '';
   }
 }
 
-// PWA Service Worker ?깅줉
+// PWA Service Worker: 로그인 안정화를 위해 기존 SW/캐시 정리
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js')
-      .then(() => console.log('SW registered'))
-      .catch((err) => console.log('SW failed:', err));
+    navigator.serviceWorker.getRegistrations()
+      .then((regs) => Promise.all(regs.map((reg) => reg.unregister())))
+      .catch(() => {});
+
+    if ('caches' in window) {
+      caches.keys()
+        .then((keys) => Promise.all(
+          keys
+            .filter((key) => key.includes('erp-lite') || key.includes('invex'))
+            .map((key) => caches.delete(key))
+        ))
+        .catch(() => {});
+    }
   });
 }
-
 
 

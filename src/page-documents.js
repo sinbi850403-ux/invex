@@ -1,7 +1,7 @@
 /**
  * page-documents.js - 문서 자동생성 페이지
- * 역할: 발주서, 견적서, 거래명세서를 자동 생성하고 PDF로 다운로드
- * 왜 필요? → 소규모 업체에서 가장 시간 많이 쓰는 업무를 자동화
+ * 왜: 발주서, 견적서, 거래명세서를 자동 생성하고 PDF로 다운로드
+ * 소규모 업체에서 가장 시간이 많이 걸리는 서류를 자동화
  */
 
 import { jsPDF } from 'jspdf';
@@ -12,6 +12,7 @@ applyPlugin(jsPDF);
 import { getState } from './store.js';
 import { showToast } from './toast.js';
 import { applyKoreanFont, getKoreanFontStyle } from './pdf-font.js';
+import { renderGuidedPanel, renderInsightHero } from './ux-toolkit.js';
 
 /**
  * 문서 자동생성 페이지 렌더링
@@ -29,6 +30,12 @@ export function renderDocumentsPage(container, navigateTo) {
 
   // 거래처 목록
   const vendors = [...new Set(items.map(i => i.vendor).filter(Boolean))].sort();
+  const recentTransactionCount = (state.transactions || []).filter(tx => {
+    const txDate = String(tx.date || '');
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - 30);
+    return txDate >= cutoff.toISOString().split('T')[0];
+  }).length;
 
   container.innerHTML = `
     <div class="page-header">
@@ -38,23 +45,65 @@ export function renderDocumentsPage(container, navigateTo) {
       </div>
     </div>
 
-    <!-- 문서 유형 선택 -->
+    ${renderInsightHero({
+      eyebrow: '문서 작업 센터',
+      title: '필요한 문서를 고르고, 추천 항목을 확인한 뒤 바로 PDF로 만들 수 있습니다.',
+      desc: '부족 재고, 연결된 거래처, 최근 거래 기록을 먼저 보여줘서 어떤 문서를 먼저 만들어야 하는지 한눈에 판단할 수 있습니다.',
+      tone: lowStockItems.length > 0 ? 'warning' : 'info',
+      metrics: [
+        {
+          label: '발주 추천 품목',
+          value: lowStockItems.length > 0 ? `${lowStockItems.length}건` : '없음',
+          note: '안전재고 이하 품목 기준 추천입니다.',
+          stateClass: lowStockItems.length > 0 ? 'text-danger' : 'text-success',
+        },
+        {
+          label: '연결 거래처',
+          value: `${vendors.length}곳`,
+          note: '문서 수신처로 바로 사용할 수 있는 거래처 수입니다.',
+        },
+        {
+          label: '최근 30일 거래',
+          value: `${recentTransactionCount}건`,
+          note: '거래명세서 작성에 활용할 수 있는 최근 거래 기록입니다.',
+        },
+      ],
+      bullets: [
+        lowStockItems.length > 0 ? `발주서는 부족 품목 ${lowStockItems.length}건을 기본 추천으로 채워줍니다.` : '현재 부족 품목이 없어도 발주서는 수동으로 작성할 수 있습니다.',
+        vendors.length === 0 ? '거래처가 아직 없으면 문서는 만들 수 있지만, 받는 쪽 정보가 비어 있을 수 있습니다.' : '거래처가 연결되어 있어 문서 작성 속도가 빨라집니다.',
+        '문서마다 필요한 정보만 먼저 보이고, 추가 입력은 아래 편집 영역에서 이어서 채울 수 있습니다.',
+      ],
+    })}
+
+    ${renderGuidedPanel({
+      eyebrow: '문서 작성 흐름',
+      title: '처음이어도 세 단계만 따라가면 바로 만들 수 있습니다.',
+      desc: '문서 종류 선택, 기본 정보 입력, PDF 생성 순서로 정리했습니다.',
+      badge: '초보자 안내',
+      tone: 'info',
+      steps: [
+        { kicker: 'STEP 1', title: '문서 종류 선택', desc: '발주서, 견적서, 거래명세서 중 지금 필요한 문서를 먼저 고릅니다.' },
+        { kicker: 'STEP 2', title: '받는 곳 정보와 품목 확인', desc: '거래처, 날짜, 품목만 채워도 기본 문서를 바로 만들 수 있습니다.' },
+        { kicker: 'STEP 3', title: 'PDF 생성 후 전달', desc: '작성한 내용이 즉시 반영된 PDF를 내려받아 바로 전달할 수 있습니다.' },
+      ],
+    })}
+
     <div class="stat-grid" style="grid-template-columns: repeat(3, 1fr);">
       <div class="card doc-type-card active" data-doc="purchase" style="cursor:pointer;">
-        <div style="font-size:28px; margin-bottom:8px;">📋</div>
+        <div style="font-size:28px; margin-bottom:8px;">🧾</div>
         <div style="font-weight:600; margin-bottom:4px;">발주서</div>
-        <div style="font-size:12px; color:var(--text-muted);">부족 품목 자동 추천</div>
+        <div style="font-size:12px; color:var(--text-muted);">부족 품목을 기준으로 자동 추천합니다.</div>
         ${lowStockItems.length > 0 ? `<span class="badge badge-danger" style="margin-top:6px;">${lowStockItems.length}건 부족</span>` : ''}
       </div>
       <div class="card doc-type-card" data-doc="quote" style="cursor:pointer;">
-        <div style="font-size:28px; margin-bottom:8px;">💰</div>
+        <div style="font-size:28px; margin-bottom:8px;">📄</div>
         <div style="font-weight:600; margin-bottom:4px;">견적서</div>
-        <div style="font-size:12px; color:var(--text-muted);">품목 선택 후 생성</div>
+        <div style="font-size:12px; color:var(--text-muted);">품목을 선택해 바로 금액을 계산합니다.</div>
       </div>
       <div class="card doc-type-card" data-doc="statement" style="cursor:pointer;">
-        <div style="font-size:28px; margin-bottom:8px;">📝</div>
+        <div style="font-size:28px; margin-bottom:8px;">📋</div>
         <div style="font-weight:600; margin-bottom:4px;">거래명세서</div>
-        <div style="font-size:12px; color:var(--text-muted);">입출고 기반 생성</div>
+        <div style="font-size:12px; color:var(--text-muted);">입출고 기록을 기준으로 문서를 만듭니다.</div>
       </div>
     </div>
 
@@ -96,7 +145,7 @@ export function renderDocumentsPage(container, navigateTo) {
 
 /**
  * 발주서 작성 UI
- * 왜 이 구조? → 안전재고 부족 품목을 자동으로 추천 + 거래처별 그룹핑
+ * 왜: 안전재고 부족 품목을 자동으로 추천 + 거래처별 그룹화
  */
 function renderPurchaseOrder(el, items, lowStockItems, vendors, safetyStock) {
   const today = new Date().toISOString().split('T')[0];
@@ -106,7 +155,7 @@ function renderPurchaseOrder(el, items, lowStockItems, vendors, safetyStock) {
 
     ${lowStockItems.length > 0 ? `
       <div class="alert alert-warning" style="margin-bottom:16px;">
-        ⚠️ 안전재고 부족 품목이 <strong>${lowStockItems.length}건</strong> 있습니다. 자동으로 추천됩니다.
+        ⚠️ 안전재고 부족 품목이 <strong>${lowStockItems.length}건</strong> 있습니다. 자동으로 추천합니다.
       </div>
     ` : ''}
 
@@ -179,7 +228,7 @@ function renderPurchaseOrder(el, items, lowStockItems, vendors, safetyStock) {
     </div>
 
     <div style="display:flex; gap:8px; justify-content:flex-end;">
-      <button class="btn btn-primary btn-lg" id="btn-generate-po">📄 발주서 PDF 생성</button>
+      <button class="btn btn-primary btn-lg" id="btn-generate-po">📋 발주서 PDF 생성</button>
     </div>
   `;
 
@@ -206,7 +255,7 @@ function renderPurchaseOrder(el, items, lowStockItems, vendors, safetyStock) {
 
     const info = {
       date: el.querySelector('#po-date').value,
-      vendor: el.querySelector('#po-vendor').value || '전체',
+      vendor: el.querySelector('#po-vendor').value || '전체 거래처',
       company: el.querySelector('#po-company').value || 'INVEX 사용자',
       manager: el.querySelector('#po-manager').value || '',
       note: el.querySelector('#po-note').value || '',
@@ -223,7 +272,7 @@ function renderQuote(el, items) {
   const today = new Date().toISOString().split('T')[0];
 
   el.innerHTML = `
-    <div class="card-title">💰 견적서 작성</div>
+    <div class="card-title">📄 견적서 작성</div>
 
     <div class="form-row" style="margin-bottom:16px;">
       <div class="form-group">
@@ -231,7 +280,7 @@ function renderQuote(el, items) {
         <input class="form-input" type="date" id="qt-date" value="${today}" />
       </div>
       <div class="form-group">
-        <label class="form-label">거래처(수신)</label>
+        <label class="form-label">거래처 (수신)</label>
         <input class="form-input" id="qt-to" placeholder="견적 받을 업체명" />
       </div>
     </div>
@@ -272,7 +321,7 @@ function renderQuote(el, items) {
           </tr>
         </thead>
         <tbody id="qt-items-body">
-          <tr><td colspan="6" style="text-align:center; padding:24px; color:var(--text-muted);">품목을 추가해 주세요</td></tr>
+          <tr><td colspan="6" style="text-align:center; padding:24px; color:var(--text-muted);">품목을 추가해 주세요.</td></tr>
         </tbody>
         <tfoot>
           <tr style="font-weight:700; background:var(--bg-card);">
@@ -285,7 +334,7 @@ function renderQuote(el, items) {
     </div>
 
     <div style="display:flex; gap:8px; justify-content:flex-end;">
-      <button class="btn btn-primary btn-lg" id="btn-generate-qt">💰 견적서 PDF 생성</button>
+      <button class="btn btn-primary btn-lg" id="btn-generate-qt">📄 견적서 PDF 생성</button>
     </div>
   `;
 
@@ -306,7 +355,7 @@ function renderQuote(el, items) {
   function renderQuoteTable() {
     const tbody = el.querySelector('#qt-items-body');
     if (quoteItems.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:24px; color:var(--text-muted);">품목을 추가해 주세요</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:24px; color:var(--text-muted);">품목을 추가해 주세요.</td></tr>';
       el.querySelector('#qt-total').textContent = '₩0';
       return;
     }
@@ -373,7 +422,7 @@ function renderStatement(el, items, transactions) {
   const fromDate = monthAgo.toISOString().split('T')[0];
 
   el.innerHTML = `
-    <div class="card-title">📝 거래명세서 작성</div>
+    <div class="card-title">📋 거래명세서 작성</div>
 
     <div class="form-row" style="margin-bottom:16px;">
       <div class="form-group">
@@ -403,7 +452,7 @@ function renderStatement(el, items, transactions) {
     </div>
 
     <div style="display:flex; gap:8px; justify-content:flex-end;">
-      <button class="btn btn-primary btn-lg" id="btn-generate-st">📝 거래명세서 PDF 생성</button>
+      <button class="btn btn-primary btn-lg" id="btn-generate-st">📋 거래명세서 PDF 생성</button>
     </div>
   `;
 
@@ -432,7 +481,7 @@ function renderStatement(el, items, transactions) {
       const from = el.querySelector('#st-from').value;
       const to = el.querySelector('#st-to').value;
       const count = transactions.filter(tx => tx.date >= from && tx.date <= to).length;
-      el.querySelector('#st-count').textContent = count + '건';
+      el.querySelector('#st-count').textContent = `${count}건`;
     });
   });
 }
@@ -441,7 +490,7 @@ function renderStatement(el, items, transactions) {
 
 /**
  * 발주서 PDF 생성
- * 왜 jsPDF? → 외부 서버 없이 브라우저에서 바로 PDF를 만들 수 있어서 보안성도 높음
+ * 왜: jsPDF와 한글 폰트 없이 브라우저에서 바로 PDF를 만들 수 있어야 보안성도 높음
  */
 async function generatePurchaseOrderPDF(selectedItems, info) {
   try {
@@ -452,7 +501,7 @@ async function generatePurchaseOrderPDF(selectedItems, info) {
 
     // 헤더
     doc.setFontSize(20);
-    doc.text('발 주 서', 105, 20, { align: 'center' });
+    doc.text('발주서', 105, 20, { align: 'center' });
     doc.setFontSize(10);
     doc.text(`발주일자: ${info.date}`, 15, 35);
     doc.text(`발주회사: ${info.company}`, 15, 42);
@@ -504,7 +553,7 @@ async function generateQuotePDF(quoteItems, info) {
     await applyKoreanFont(doc);
 
     doc.setFontSize(20);
-    doc.text('견 적 서', 105, 20, { align: 'center' });
+    doc.text('견적서', 105, 20, { align: 'center' });
     doc.setFontSize(10);
     doc.text(`견적일자: ${info.date}`, 15, 35);
     doc.text(`수신: ${info.to}`, 15, 42);
@@ -549,7 +598,7 @@ async function generateStatementPDF(transactions, info) {
     await applyKoreanFont(doc);
 
     doc.setFontSize(20);
-    doc.text('거 래 명 세 서', 105, 20, { align: 'center' });
+    doc.text('거래명세서', 105, 20, { align: 'center' });
     doc.setFontSize(10);
     doc.text(`기간: ${info.from} ~ ${info.to}`, 15, 35);
     doc.text(`공급자: ${info.supplier}`, 15, 42);

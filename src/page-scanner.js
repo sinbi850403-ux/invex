@@ -242,33 +242,42 @@ export function renderScannerPage(container, navigateTo) {
       }
 
       const note = resultBody.querySelector('#scan-note').value.trim();
-      addTransaction({
-        type: scanType,
-        itemName: matchedItem.itemName,
-        itemCode: matchedItem.itemCode || '',
-        quantity: qty,
-        unitPrice: parseFloat(matchedItem.unitPrice) || 0,
-        date: today,
-        note: note ? `[스캔] ${note}` : '[스캔]',
-      });
-
-      // 이력 추가
-      scanHistory.unshift({
-        time: new Date().toLocaleTimeString('ko-KR'),
-        type: scanType,
-        name: matchedItem.itemName,
-        code: matchedItem.itemCode,
+      openScanConfirm({
+        item: matchedItem,
         qty,
+        note,
+        type: scanType,
+        date: today,
+        currentQty,
+      }, () => {
+        addTransaction({
+          type: scanType,
+          itemName: matchedItem.itemName,
+          itemCode: matchedItem.itemCode || '',
+          quantity: qty,
+          unitPrice: parseFloat(matchedItem.unitPrice) || 0,
+          date: today,
+          note: note ? `[스캔] ${note}` : '[스캔]',
+        });
+
+        // 이력 추가
+        scanHistory.unshift({
+          time: new Date().toLocaleTimeString('ko-KR'),
+          type: scanType,
+          name: matchedItem.itemName,
+          code: matchedItem.itemCode,
+          qty,
+        });
+
+        showToast(
+          `${scanType === 'in' ? '입고' : '출고'} 등록: ${matchedItem.itemName} ${qty}개`,
+          scanType === 'in' ? 'success' : 'info'
+        );
+
+        // 결과 초기화 & 이력 업데이트
+        resultCard.style.display = 'none';
+        renderScanHistory();
       });
-
-      showToast(
-        `${scanType === 'in' ? '입고' : '출고'} 등록: ${matchedItem.itemName} ${qty}개`,
-        scanType === 'in' ? 'success' : 'info'
-      );
-
-      // 결과 초기화 & 이력 업데이트
-      resultCard.style.display = 'none';
-      renderScanHistory();
     });
 
     // Enter 키로 바로 등록
@@ -309,5 +318,50 @@ export function renderScannerPage(container, navigateTo) {
         </span>
       </div>
     `).join('');
+  }
+
+  function openScanConfirm(payload, onConfirm) {
+    const existing = document.getElementById('scan-confirm-modal');
+    if (existing) existing.remove();
+
+    const overlay = document.createElement('div');
+    overlay.id = 'scan-confirm-modal';
+    overlay.className = 'modal-overlay';
+    overlay.innerHTML = `
+      <div class="modal" style="max-width:520px;">
+        <div class="modal-header">
+          <h3 class="modal-title">스캔 등록 확인</h3>
+          <button class="modal-close" data-scan-close>✕</button>
+        </div>
+        <div class="modal-body">
+          <div style="display:grid; gap:10px;">
+            <div><strong>${payload.item.itemName}</strong> (${payload.item.itemCode || '-'})</div>
+            <div>유형: <strong>${payload.type === 'in' ? '입고' : '출고'}</strong></div>
+            <div>수량: <strong>${payload.qty.toLocaleString('ko-KR')}개</strong></div>
+            <div>기준 재고: ${payload.currentQty.toLocaleString('ko-KR')}개 → ${
+              payload.type === 'in'
+                ? (payload.currentQty + payload.qty).toLocaleString('ko-KR')
+                : Math.max(0, payload.currentQty - payload.qty).toLocaleString('ko-KR')
+            }개</div>
+            <div>날짜: ${payload.date}</div>
+            ${payload.note ? `<div>메모: ${payload.note}</div>` : ''}
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-outline" data-scan-cancel>취소</button>
+          <button class="btn btn-primary" data-scan-confirm>등록</button>
+        </div>
+      </div>
+    `;
+    overlay.querySelector('[data-scan-close]')?.addEventListener('click', () => overlay.remove());
+    overlay.querySelector('[data-scan-cancel]')?.addEventListener('click', () => overlay.remove());
+    overlay.querySelector('[data-scan-confirm]')?.addEventListener('click', () => {
+      overlay.remove();
+      onConfirm();
+    });
+    overlay.addEventListener('click', (event) => {
+      if (event.target === overlay) overlay.remove();
+    });
+    document.body.appendChild(overlay);
   }
 }

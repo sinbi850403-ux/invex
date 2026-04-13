@@ -1,50 +1,52 @@
 /**
- * page-inventory.js - 재고 현황 페이지
- * 실무 기능: 수동 품목 추가/편집, 안전재고 경고, 검색/필터, 페이지네이션, 엑셀 내보내기
- * **컬럼 표시 설정**: 사용자가 보고 싶은 컬럼만 선택해서 볼 수 있음
+ * page-inventory.js - ?ш퀬 ?꾪솴 ?섏씠吏
+ * ?ㅻТ 湲곕뒫: ?섎룞 ?덈ぉ 異붽?/?몄쭛, ?덉쟾?ш퀬 寃쎄퀬, 寃???꾪꽣, ?섏씠吏?ㅼ씠?? ?묒? ?대낫?닿린
+ * **而щ읆 ?쒖떆 ?ㅼ젙**: ?ъ슜?먭? 蹂닿퀬 ?띠? 而щ읆留??좏깮?댁꽌 蹂????덉쓬
  */
 
-import { getState, setState, addItem, updateItem, deleteItem, setSafetyStock } from './store.js';
+import { getState, setState, addItem, updateItem, deleteItem, restoreItem, setSafetyStock } from './store.js';
 import { showToast } from './toast.js';
 import { downloadExcel } from './excel.js';
 import { generateInventoryPDF } from './pdf-generator.js';
+import { renderItemTimelineChart } from './charts.js';
+import { renderGuidedPanel, renderInsightHero, renderQuickFilterRow } from './ux-toolkit.js';
 
-// 페이지당 행 수
+// ?섏씠吏??????
 const PAGE_SIZE = 20;
 
-// 전체 필드 정의 (순서 유지)
+// ?꾩껜 ?꾨뱶 ?뺤쓽 (?쒖꽌 ?좎?)
 const ALL_FIELDS = [
-  { key: 'itemName',   label: '품목명',    numeric: false },
-  { key: 'itemCode',   label: '품목코드',  numeric: false },
-  { key: 'category',   label: '분류',      numeric: false },
-  { key: 'vendor',     label: '거래처',    numeric: false },
-  { key: 'quantity',   label: '수량',      numeric: true  },
-  { key: 'unit',       label: '단위',      numeric: false },
-  { key: 'unitPrice',  label: '매입가(원가)', numeric: true  },
-  { key: 'salePrice',  label: '판매가(소가)',  numeric: true  },
-  { key: 'supplyValue',label: '공급가액',  numeric: true  },
-  { key: 'vat',        label: '부가세',    numeric: true  },
-  { key: 'totalPrice', label: '합계금액',  numeric: true  },
-  { key: 'warehouse',  label: '창고/위치', numeric: false },
-  { key: 'expiryDate', label: '유통기한',  numeric: false },
-  { key: 'lotNumber',  label: 'LOT번호',  numeric: false },
-  { key: 'note',       label: '비고',      numeric: false },
+  { key: 'itemName', label: '품목명', numeric: false },
+  { key: 'itemCode', label: '품목코드', numeric: false },
+  { key: 'category', label: '분류', numeric: false },
+  { key: 'vendor', label: '거래처', numeric: false },
+  { key: 'quantity', label: '수량', numeric: true },
+  { key: 'unit', label: '단위', numeric: false },
+  { key: 'unitPrice', label: '매입가(원가)', numeric: true },
+  { key: 'salePrice', label: '판매가(소가)', numeric: true },
+  { key: 'supplyValue', label: '공급가액', numeric: true },
+  { key: 'vat', label: '부가세', numeric: true },
+  { key: 'totalPrice', label: '합계금액', numeric: true },
+  { key: 'warehouse', label: '창고/위치', numeric: false },
+  { key: 'expiryDate', label: '유통기한', numeric: false },
+  { key: 'lotNumber', label: 'LOT번호', numeric: false },
+  { key: 'note', label: '비고', numeric: false },
 ];
 
-// 간편 참조 맵
+// 媛꾪렪 李몄“ 留?
 const FIELD_LABELS = {};
 ALL_FIELDS.forEach(f => { FIELD_LABELS[f.key] = f.label; });
 
 /**
- * 현재 표시할 컬럼 목록 결정
- * 왜 이 로직? → visibleColumns 설정이 있으면 그걸 따르고,
- * 없으면 데이터에 실제 값이 있는 필드만 자동 선택
+ * ?꾩옱 ?쒖떆??而щ읆 紐⑸줉 寃곗젙
+ * ????濡쒖쭅? ??visibleColumns ?ㅼ젙???덉쑝硫?洹멸구 ?곕Ⅴ怨?
+ * ?놁쑝硫??곗씠?곗뿉 ?ㅼ젣 媛믪씠 ?덈뒗 ?꾨뱶留??먮룞 ?좏깮
  */
 function getVisibleFields(data) {
   const state = getState();
   const visibleColumns = state.visibleColumns;
 
-  // 데이터에 실제 값이 들어있는 필드 목록
+  // ?곗씠?곗뿉 ?ㅼ젣 媛믪씠 ?ㅼ뼱?덈뒗 ?꾨뱶 紐⑸줉
   const hasData = new Set(
     ALL_FIELDS.map(f => f.key).filter(key =>
       data.some(row => row[key] !== '' && row[key] !== undefined && row[key] !== null)
@@ -52,22 +54,22 @@ function getVisibleFields(data) {
   );
 
   if (visibleColumns && Array.isArray(visibleColumns)) {
-    // [VAT 패치] 기존 설정이 있더라도 새롭게 추가된 공급가액, 부가세는 우선 보이게 보정
+    // [VAT ?⑥튂] 湲곗〈 ?ㅼ젙???덈뜑?쇰룄 ?덈∼寃?異붽???怨듦툒媛?? 遺媛?몃뒗 ?곗꽑 蹂댁씠寃?蹂댁젙
     const updatedVisible = [...visibleColumns];
     if (!updatedVisible.includes('supplyValue')) updatedVisible.push('supplyValue');
     if (!updatedVisible.includes('vat')) updatedVisible.push('vat');
     
-    // 사용자 설정이 있으면 → 설정에 포함된 것만 (순서는 ALL_FIELDS 순서 유지)
+    // ?ъ슜???ㅼ젙???덉쑝硫????ㅼ젙???ы븿??寃껊쭔 (?쒖꽌??ALL_FIELDS ?쒖꽌 ?좎?)
     return ALL_FIELDS.filter(f => updatedVisible.includes(f.key)).map(f => f.key);
   }
 
-  // 설정 없으면 → 데이터가 있는 필드만 자동 선택
-  // 여기도 신규 컬럼이 비어있더라도 일단 헤더에 보이도록 강제 포함 (유저 요청)
+  // ?ㅼ젙 ?놁쑝硫????곗씠?곌? ?덈뒗 ?꾨뱶留??먮룞 ?좏깮
+  // ?ш린???좉퇋 而щ읆??鍮꾩뼱?덈뜑?쇰룄 ?쇰떒 ?ㅻ뜑??蹂댁씠?꾨줉 媛뺤젣 ?ы븿 (?좎? ?붿껌)
   return ALL_FIELDS.filter(f => hasData.has(f.key) || f.key === 'supplyValue' || f.key === 'vat').map(f => f.key);
 }
 
 /**
- * 재고 현황 페이지 렌더링
+ * ?ш퀬 ?꾪솴 ?섏씠吏 ?뚮뜑留?
  */
 export function renderInventoryPage(container, navigateTo) {
   const state = getState();
@@ -79,7 +81,7 @@ export function renderInventoryPage(container, navigateTo) {
       <div class="page-header">
         <div>
           <h1 class="page-title"><span class="title-icon">📦</span> 재고 현황</h1>
-          <div class="page-desc">품목의 재고 수량과 금액을 관리합니다.</div>
+          <div class="page-desc">품목별 재고 수량과 금액을 관리합니다.</div>
         </div>
         <div class="page-actions">
           <button class="btn btn-primary" id="btn-add-item">+ 품목 추가</button>
@@ -89,33 +91,73 @@ export function renderInventoryPage(container, navigateTo) {
         <div class="empty-state">
           <div class="icon">📦</div>
           <div class="msg">아직 등록된 품목이 없습니다</div>
-          <div class="sub">파일을 업로드하거나, 위의 "품목 추가" 버튼으로 직접 등록하세요.</div>
-          <br/>
-          <button class="btn btn-outline" id="btn-go-upload">파일 업로드하기</button>
+          <div class="sub">엑셀 파일을 업로드하거나 품목을 직접 등록해 주세요.</div>
+          <div class="empty-state-actions">
+            <button class="btn btn-primary" id="btn-go-upload">📂 엑셀 업로드</button>
+            <button class="btn btn-outline" id="btn-add-item-empty">✏️ 직접 입력</button>
+          </div>
+          <div class="empty-state-tip">💡 TIP: 기존 엑셀 파일(.xlsx)을 그대로 드래그하면 자동으로 인식합니다</div>
         </div>
       </div>
     `;
     container.querySelector('#btn-go-upload')?.addEventListener('click', () => navigateTo('upload'));
     container.querySelector('#btn-add-item')?.addEventListener('click', () => openItemModal(container, navigateTo));
+    container.querySelector('#btn-add-item-empty')?.addEventListener('click', () => openItemModal(container, navigateTo));
     return;
   }
 
-  // 현재 표시할 필드 목록
+  // ?꾩옱 ?쒖떆???꾨뱶 紐⑸줉
   let activeFields = getVisibleFields(data);
 
-  // 데이터에 값이 있는 전체 필드 목록 (컬럼 설정 패널에서 사용)
+  // ?곗씠?곗뿉 媛믪씠 ?덈뒗 ?꾩껜 ?꾨뱶 紐⑸줉 (而щ읆 ?ㅼ젙 ?⑤꼸?먯꽌 ?ъ슜)
   const allAvailableFields = ALL_FIELDS.filter(f =>
     data.some(row => row[f.key] !== '' && row[f.key] !== undefined && row[f.key] !== null)
   );
 
-  // 안전재고 이하 항목 카운트
+  // ?덉쟾?ш퀬 ?댄븯 ??ぉ 移댁슫??
   const warningCount = data.filter(d => {
     const min = safetyStock[d.itemName];
     const qtyStr = typeof d.quantity === 'string' ? d.quantity.replace(/,/g, '') : d.quantity;
     return min !== undefined && (parseFloat(qtyStr) || 0) <= min;
   }).length;
+  const missingVendorCount = data.filter(row => !String(row.vendor || '').trim()).length;
+  const missingWarehouseCount = data.filter(row => !String(row.warehouse || '').trim()).length;
+  const missingSalePriceCount = data.filter(row => !(parseFloat(row.salePrice) > 0)).length;
   const beginnerMode = state.beginnerMode !== false;
   const hasTransactions = (state.transactions || []).length > 0;
+  const inventoryHealthMetrics = [
+    {
+      label: '부족 품목',
+      value: warningCount > 0 ? `${warningCount}건` : '안정',
+      note: '안전재고 아래로 내려간 품목 수입니다.',
+      stateClass: warningCount > 0 ? 'text-danger' : 'text-success',
+    },
+    {
+      label: '거래처 미연결',
+      value: missingVendorCount > 0 ? `${missingVendorCount}건` : '완료',
+      note: '거래처를 연결하면 발주와 보고가 더 쉬워집니다.',
+      stateClass: missingVendorCount > 0 ? 'text-warning' : 'text-success',
+    },
+    {
+      label: '위치 미입력',
+      value: missingWarehouseCount > 0 ? `${missingWarehouseCount}건` : '완료',
+      note: '창고나 위치를 넣어두면 현장 찾기가 쉬워집니다.',
+      stateClass: missingWarehouseCount > 0 ? 'text-warning' : 'text-success',
+    },
+    {
+      label: '판매가 미입력',
+      value: missingSalePriceCount > 0 ? `${missingSalePriceCount}건` : '완료',
+      note: '판매가를 넣어두면 이익과 마진을 더 정확히 볼 수 있습니다.',
+      stateClass: missingSalePriceCount > 0 ? 'text-warning' : 'text-success',
+    },
+  ];
+  const inventoryFocusChips = [
+    { value: 'all', label: '전체 보기' },
+    { value: 'low', label: '부족 품목' },
+    { value: 'zero', label: '수량 0' },
+    { value: 'missingVendor', label: '거래처 미입력' },
+    { value: 'missingWarehouse', label: '위치 미입력' },
+  ];
   const sortOptions = [
     { value: 'default', label: '정렬 없음 (원본 순서)' },
     { value: 'itemName:asc', label: '품목명 오름차순' },
@@ -139,62 +181,115 @@ export function renderInventoryPage(container, navigateTo) {
       </div>
     </div>
 
-    <!-- 통계 카드 -->
-    <div class="stat-grid">
-      <div class="stat-card">
-        <div class="stat-label">전체 품목</div>
-        <div class="stat-value text-accent" id="stat-total">${data.length}</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">총 수량</div>
-        <div class="stat-value text-accent" id="stat-qty">${calcTotalQty(data)}</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">합계 공급가액</div>
-        <div class="stat-value text-accent" id="stat-supply">${calcTotalSupply(data)}</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">합계 부가세</div>
-        <div class="stat-value text-accent" id="stat-vat">${calcTotalVat(data)}</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">총 합계금액</div>
-        <div class="stat-value text-success" id="stat-price">${calcTotalPrice(data)}</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">재고 부족 경고</div>
-        <div class="stat-value ${warningCount > 0 ? 'text-danger' : ''}" id="stat-warn">
-          ${warningCount > 0 ? warningCount + '건' : '없음'}
+    <!-- ?듦퀎 移대뱶 -->
+    <div class="inventory-collapsible-section" data-collapsible-section="inventory-stats" data-collapsible-label="핵심 지표">
+      <div class="stat-grid">
+        <div class="stat-card">
+          <div class="stat-label">전체 품목</div>
+          <div class="stat-value text-accent" id="stat-total">${data.length}</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">총 수량</div>
+          <div class="stat-value text-accent" id="stat-qty">${calcTotalQty(data)}</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">합계 공급가액</div>
+          <div class="stat-value text-accent" id="stat-supply">${calcTotalSupply(data)}</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">합계 부가세</div>
+          <div class="stat-value text-accent" id="stat-vat">${calcTotalVat(data)}</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">총 합계금액</div>
+          <div class="stat-value text-success" id="stat-price">${calcTotalPrice(data)}</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">재고 부족 경고</div>
+          <div class="stat-value ${warningCount > 0 ? 'text-danger' : ''}" id="stat-warn">
+            ${warningCount > 0 ? `${warningCount}건` : '없음'}
+          </div>
         </div>
       </div>
     </div>
 
-    ${beginnerMode && !hasTransactions ? `
-    <div class="card quick-start-card">
-      <div class="quick-start-head">
-        <div>
-          <div class="quick-start-title">처음 사용자 추천 흐름</div>
-          <div class="quick-start-desc">3단계만 따라하면 바로 실무 운영이 가능합니다.</div>
+    ${state.lastUploadDiff ? `
+      <div class="card upload-diff-card" id="upload-diff-card">
+        <div class="upload-diff-head">
+          <div>
+            <div class="card-title">업로드 변경 요약</div>
+            <div class="upload-diff-meta">${state.lastUploadDiff.fileName || state.fileName || '최근 업로드'} · ${new Date(state.lastUploadDiff.at || Date.now()).toLocaleString('ko-KR')}</div>
+          </div>
+          <button class="btn btn-ghost btn-sm" id="btn-dismiss-upload-diff">닫기</button>
         </div>
-        <span class="badge badge-info">초보 모드</span>
+        <div class="upload-diff-grid">
+          <div class="upload-diff-item"><span>신규</span><strong>${state.lastUploadDiff.added || 0}건</strong></div>
+          <div class="upload-diff-item"><span>수정</span><strong>${state.lastUploadDiff.updated || 0}건</strong></div>
+          <div class="upload-diff-item"><span>유지</span><strong>${state.lastUploadDiff.unchanged || 0}건</strong></div>
+          <div class="upload-diff-item"><span>미포함</span><strong>${state.lastUploadDiff.removed || 0}건</strong></div>
+        </div>
       </div>
-      <div class="quick-start-steps">
-        <div class="quick-start-step is-done">1) 재고 품목 확인 완료</div>
-        <div class="quick-start-step">2) 첫 입출고 등록</div>
-        <div class="quick-start-step">3) 대시보드에서 현황 확인</div>
-      </div>
-      <div class="quick-start-actions">
-        <button class="btn btn-primary btn-sm" id="btn-quick-inout">첫 입출고 등록</button>
-        <button class="btn btn-outline btn-sm" id="btn-quick-guide">사용 가이드</button>
-        <button class="btn btn-ghost btn-sm" id="btn-quick-dashboard">대시보드 이동</button>
-      </div>
-    </div>
     ` : ''}
 
-    <!-- 검색/필터 + 정렬 + 컬럼 설정 -->
+    <div class="inventory-collapsible-section" data-collapsible-section="inventory-health" data-collapsible-label="재고 운영 상태">
+      ${renderInsightHero({
+        eyebrow: '재고 운영 상태',
+        title: '누가 봐도 바로 이해되는 재고 상태를 먼저 보여줍니다.',
+        desc: '수량, 금액, 거래처 연결, 위치 입력 상태를 한 번에 묶어 초보자도 무엇부터 정리할지 바로 판단할 수 있게 구성했습니다.',
+        tone: warningCount > 0 ? 'warning' : 'success',
+        metrics: inventoryHealthMetrics,
+        bullets: [
+          warningCount > 0 ? `부족 품목 ${warningCount}건을 먼저 보충할지 여부를 판단해 보세요.` : '부족 품목이 없습니다. 현재 재고 흐름이 안정적입니다.',
+          missingVendorCount > 0 ? `거래처가 비어 있는 품목 ${missingVendorCount}건은 발주와 문서 연결 전에 보완하는 것이 좋습니다.` : '거래처 정보가 충분히 연결되어 있습니다.',
+          missingWarehouseCount > 0 ? '위치가 비어 있으면 현장 조회가 느려집니다. 위치 미입력 품목을 우선 정리해 주세요.' : '위치 정보도 잘 정리되어 있습니다.',
+        ],
+        actions: [
+          { id: 'btn-add-item-inline', label: '품목 바로 추가', variant: 'btn-primary' },
+          { nav: 'dashboard', label: '고급 분석 보기', variant: 'btn-outline' },
+        ],
+      })}
+    </div>
+
+    <div class="inventory-collapsible-section" data-collapsible-section="inventory-filters" data-collapsible-label="검색 · 필터 · 일괄 작업">
+      ${renderQuickFilterRow({
+        label: '빠른 보기',
+        attr: 'data-inventory-focus',
+        chips: inventoryFocusChips.map(chip => ({ ...chip, active: chip.value === 'all' })),
+      })}
+
+    <!-- 검색 + 필터 — 기본은 검색만, 상세 필터는 토글로 열림 -->
     <div class="toolbar">
       <input type="text" class="search-input" id="search-input"
-        placeholder="품목명, 코드, 분류로 검색..." />
+        placeholder="스마트 검색: 품목명, 분류:식품, 창고:본사, 재고>=10, 부족, 품절" />
+      <button class="filter-toggle-btn" id="btn-filter-toggle">🔍 상세 필터</button>
+      <button class="btn btn-ghost btn-sm" id="btn-filter-reset" title="필터 초기화">초기화</button>
+      <div class="col-settings-wrap" style="position:relative;">
+        <button class="btn btn-outline btn-sm" id="btn-col-settings" title="표시 열 선택">
+          표시 항목 설정
+        </button>
+        <div class="col-settings-panel" id="col-settings-panel">
+          <div class="col-settings-header">
+            <strong>표시 항목 선택</strong>
+            <button class="col-settings-close" id="col-settings-close">닫기</button>
+          </div>
+          <div class="col-settings-body">
+            ${allAvailableFields.map(f => `
+              <label class="col-settings-item">
+                <input type="checkbox" class="col-check" data-key="${f.key}"
+                  ${activeFields.includes(f.key) ? 'checked' : ''} />
+                <span>${f.label}</span>
+              </label>
+            `).join('')}
+          </div>
+          <div class="col-settings-footer">
+            <button class="btn btn-ghost btn-sm" id="col-select-all">전체 선택</button>
+            <button class="btn btn-primary btn-sm" id="col-apply">적용</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- 상세 필터 패널 — 기본 숨김, 토글 버튼으로 열림 -->
+    <div class="filter-detail-panel" id="filter-detail-panel">
       <select class="filter-select" id="filter-item-code">
         <option value="">전체 품목코드</option>
         ${getItemCodes(data).map(c => `<option value="${c}">${c}</option>`).join('')}
@@ -213,63 +308,158 @@ export function renderInventoryPage(container, navigateTo) {
       </select>
       <select class="filter-select" id="filter-stock">
         <option value="">전체 재고</option>
-        <option value="low">⚠️ 부족 항목만</option>
+        <option value="low">부족 항목만</option>
       </select>
       <select class="filter-select" id="sort-preset" title="정렬">
         ${sortOptions.map(option => `<option value="${option.value}">${option.label}</option>`).join('')}
       </select>
-      <button class="btn btn-ghost btn-sm" id="btn-filter-reset" title="필터 초기화">🔄 초기화</button>
-      <div class="col-settings-wrap" style="position:relative;">
-        <button class="btn btn-outline btn-sm" id="btn-col-settings" title="표시할 컬럼 선택">
-          ⚙️ 표시 항목
-        </button>
-        <div class="col-settings-panel" id="col-settings-panel">
-          <div class="col-settings-header">
-            <strong>📋 표시할 항목 선택</strong>
-            <button class="col-settings-close" id="col-settings-close">✕</button>
-          </div>
-          <div class="col-settings-body">
-            ${allAvailableFields.map(f => `
-              <label class="col-settings-item">
-                <input type="checkbox" class="col-check" data-key="${f.key}"
-                  ${activeFields.includes(f.key) ? 'checked' : ''} />
-                <span>${f.label}</span>
-              </label>
-            `).join('')}
-          </div>
-          <div class="col-settings-footer">
-            <button class="btn btn-ghost btn-sm" id="col-select-all">전체 선택</button>
-            <button class="btn btn-primary btn-sm" id="col-apply">적용</button>
-          </div>
-        </div>
-      </div>
+    </div>
+    <div class="smart-search-row" style="display:flex; flex-wrap:wrap; gap:6px; align-items:center; margin:8px 0 4px;">
+      <span style="font-size:12px; color:var(--text-muted);">빠른 검색</span>
+      <button class="btn btn-ghost btn-sm" type="button" data-smart-query="부족">부족</button>
+      <button class="btn btn-ghost btn-sm" type="button" data-smart-query="품절">품절</button>
+      <button class="btn btn-ghost btn-sm" type="button" data-smart-query="거래처없음">거래처없음</button>
+      <button class="btn btn-ghost btn-sm" type="button" data-smart-query="위치없음">위치없음</button>
+      <button class="btn btn-ghost btn-sm" type="button" data-smart-query="재고>=10">재고>=10</button>
     </div>
     <div class="filter-summary" id="inventory-filter-summary"></div>
 
-    <!-- 데이터 테이블 -->
-    <div class="card card-flush">
-      <div class="table-wrapper" style="border:none;">
-        <table class="data-table" id="inventory-table">
-          <thead id="inventory-thead"></thead>
-          <tbody id="inventory-body"></tbody>
-        </table>
+      <div class="card inventory-bulk-bar" id="inventory-bulk-bar">
+        <div class="inventory-bulk-count" id="inventory-selected-count">선택 0개</div>
+        <div class="inventory-bulk-actions">
+          <button class="btn btn-outline btn-sm" id="btn-bulk-category" disabled>선택 분류 변경</button>
+          <button class="btn btn-outline btn-sm" id="btn-bulk-export" disabled>선택 엑셀 내보내기</button>
+          <button class="btn btn-danger btn-sm" id="btn-bulk-delete" disabled>선택 삭제</button>
+        </div>
       </div>
-      <div class="pagination" id="pagination"></div>
+    </div>
+
+    <!-- ?곗씠???뚯씠釉?-->
+    <div class="inventory-collapsible-section" data-collapsible-section="inventory-table" data-collapsible-label="재고 테이블">
+      <div class="card card-flush">
+        <div class="table-wrapper" style="border:none;">
+          <table class="data-table" id="inventory-table">
+            <thead id="inventory-thead"></thead>
+            <tbody id="inventory-body"></tbody>
+          </table>
+        </div>
+        <div class="pagination" id="pagination"></div>
+      </div>
+    </div>
+
+    <div class="inventory-collapsible-section" data-collapsible-section="inventory-timeline" data-collapsible-label="품목 이력 타임라인">
+      <div class="card inventory-timeline-card">
+        <div class="inventory-timeline-head">
+          <div>
+            <div class="card-title" id="item-timeline-title">품목 이력 타임라인</div>
+            <div class="chart-help-text" id="item-timeline-meta">테이블에서 품목을 선택하면 입출고 흐름과 최근 이력을 바로 확인할 수 있습니다.</div>
+          </div>
+          <button class="btn btn-ghost btn-sm" id="btn-item-history-inout">입출고 기록 열기</button>
+        </div>
+        <div class="inventory-timeline-grid">
+          <div class="inventory-timeline-chart">
+            <canvas id="chart-item-timeline"></canvas>
+          </div>
+          <div class="inventory-timeline-list" id="item-timeline-list"></div>
+        </div>
+      </div>
     </div>
 
     <div style="font-size:12px; color:var(--text-muted); margin-top:8px;">
-      💡 셀을 더블클릭하면 직접 수정할 수 있습니다. | ⚙️ 표시 항목 버튼으로 보고 싶은 컬럼을 선택하세요.
+      두 번 클릭하면 값을 바로 수정할 수 있습니다. 표시 항목 설정 버튼으로 보고 싶은 열만 선택해 주세요.
     </div>
   `;
 
-  // === 상태 변수 ===
-  const defaultFilter = { keyword: '', category: '', warehouse: '', stock: '', itemCode: '', vendor: '' };
+  // === ?곹깭 蹂??===
+  const defaultFilter = { keyword: '', category: '', warehouse: '', stock: '', itemCode: '', vendor: '', focus: 'all' };
   const defaultSort = { key: '', direction: '' };
   const savedViewPrefs = state.inventoryViewPrefs || {};
   let currentFilter = sanitizeInventoryFilter(savedViewPrefs.filter);
   let currentPageNum = 1;
   let currentSort = sanitizeInventorySort(savedViewPrefs.sort);
   let persistTimer = null;
+  let selectedIndexes = new Set();
+  let focusedItemKey = data[0] ? getItemKey(data[0]) : '';
+  const COLLAPSE_STORAGE_KEY = 'invex:inventory:collapsed-sections:v1';
+  const collapsedSections = loadCollapsedSections();
+
+  function loadCollapsedSections() {
+    try {
+      const raw = localStorage.getItem(COLLAPSE_STORAGE_KEY);
+      if (!raw) return {};
+      const parsed = JSON.parse(raw);
+      return parsed && typeof parsed === 'object' ? parsed : {};
+    } catch (error) {
+      return {};
+    }
+  }
+
+  function persistCollapsedSections() {
+    try {
+      localStorage.setItem(COLLAPSE_STORAGE_KEY, JSON.stringify(collapsedSections));
+    } catch (error) {
+      // Ignore storage errors and keep UI usable.
+    }
+  }
+
+  function updateCollapsibleSection(sectionEl) {
+    if (!sectionEl) return;
+    const sectionId = sectionEl.dataset.collapsibleSection;
+    if (!sectionId) return;
+
+    const label = sectionEl.dataset.collapsibleLabel || '섹션';
+    const collapsed = !!collapsedSections[sectionId];
+    sectionEl.classList.toggle('is-collapsed', collapsed);
+
+    const toggleBtn = sectionEl.querySelector('.inventory-collapse-toggle');
+    if (!toggleBtn) return;
+    toggleBtn.textContent = `${label} ${collapsed ? '펼치기' : '접기'}`;
+    toggleBtn.setAttribute('aria-expanded', String(!collapsed));
+    toggleBtn.setAttribute('aria-label', `${label} ${collapsed ? '펼치기' : '접기'}`);
+  }
+
+  function initCollapsibleSections() {
+    container.querySelectorAll('[data-collapsible-section]').forEach((sectionEl, index) => {
+      if (!sectionEl.dataset.collapsibleSection) {
+        sectionEl.dataset.collapsibleSection = `inventory-section-${index + 1}`;
+      }
+
+      if (sectionEl.dataset.collapseReady !== '1') {
+        const sectionId = sectionEl.dataset.collapsibleSection;
+
+        const body = document.createElement('div');
+        body.className = 'inventory-collapsible-body';
+        while (sectionEl.firstChild) {
+          body.appendChild(sectionEl.firstChild);
+        }
+
+        const header = document.createElement('div');
+        header.className = 'inventory-collapse-header';
+
+        const toggleBtn = document.createElement('button');
+        toggleBtn.type = 'button';
+        toggleBtn.className = 'btn btn-ghost btn-sm inventory-collapse-toggle';
+        header.appendChild(toggleBtn);
+
+        sectionEl.appendChild(header);
+        sectionEl.appendChild(body);
+        sectionEl.dataset.collapseReady = '1';
+
+        toggleBtn.addEventListener('click', () => {
+          const nextCollapsed = !collapsedSections[sectionId];
+          if (nextCollapsed) {
+            collapsedSections[sectionId] = true;
+          } else {
+            delete collapsedSections[sectionId];
+          }
+          persistCollapsedSections();
+          updateCollapsibleSection(sectionEl);
+        });
+      }
+
+      updateCollapsibleSection(sectionEl);
+    });
+  }
 
   function sanitizeInventoryFilter(raw) {
     const candidate = raw || {};
@@ -280,6 +470,7 @@ export function renderInventoryPage(container, navigateTo) {
       stock: candidate.stock === 'low' ? 'low' : '',
       itemCode: typeof candidate.itemCode === 'string' ? candidate.itemCode : '',
       vendor: typeof candidate.vendor === 'string' ? candidate.vendor : '',
+      focus: ['all', 'low', 'zero', 'missingVendor', 'missingWarehouse'].includes(candidate.focus) ? candidate.focus : 'all',
     };
   }
 
@@ -309,7 +500,7 @@ export function renderInventoryPage(container, navigateTo) {
     setState({ inventoryViewPrefs: payload });
   }
 
-  // === 정렬 유틸 ===
+  // === ?뺣젹 ?좏떥 ===
   function getSortOptionLabel(sort) {
     if (!sort.key || !sort.direction) return '정렬 없음';
     const option = sortOptions.find(opt => opt.value === `${sort.key}:${sort.direction}`);
@@ -343,6 +534,165 @@ export function renderInventoryPage(container, navigateTo) {
     const cleaned = typeof value === 'string' ? value.replace(/,/g, '') : value;
     const num = parseFloat(cleaned);
     return Number.isNaN(num) ? null : num;
+  }
+
+  function getItemKey(row) {
+    if (!row) return '';
+    const code = String(row.itemCode || '').trim();
+    const name = String(row.itemName || '').trim();
+    return `${code}::${name}`;
+  }
+
+  function escapeText(value) {
+    return String(value ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  function normalizeToken(value) {
+    return String(value || '').trim().toLowerCase();
+  }
+
+  function parseSmartKeyword(rawKeyword) {
+    const source = String(rawKeyword || '').trim();
+    const parsed = {
+      textTerms: [],
+      containsFilters: {},
+      numericFilters: [],
+      flags: {
+        lowStock: false,
+        zeroStock: false,
+        missingVendor: false,
+        missingWarehouse: false,
+      },
+      summaryChips: [],
+    };
+    if (!source) return parsed;
+
+    const containsAliases = {
+      분류: 'category',
+      카테고리: 'category',
+      category: 'category',
+      창고: 'warehouse',
+      위치: 'warehouse',
+      warehouse: 'warehouse',
+      거래처: 'vendor',
+      벤더: 'vendor',
+      vendor: 'vendor',
+      코드: 'itemCode',
+      품목코드: 'itemCode',
+      itemcode: 'itemCode',
+    };
+
+    const numericAliases = {
+      재고: 'quantity',
+      수량: 'quantity',
+      qty: 'quantity',
+      원가: 'unitPrice',
+      매입가: 'unitPrice',
+      단가: 'unitPrice',
+      unitprice: 'unitPrice',
+      소가: 'salePrice',
+      판매가: 'salePrice',
+      saleprice: 'salePrice',
+      공급가: 'supplyValue',
+      공급가액: 'supplyValue',
+      supplyvalue: 'supplyValue',
+      합계: 'totalPrice',
+      합계금액: 'totalPrice',
+      totalprice: 'totalPrice',
+    };
+
+    const summarySet = new Set();
+    const tokens = source.split(/\s+/).filter(Boolean);
+
+    tokens.forEach(token => {
+      const lowered = normalizeToken(token);
+
+      if (['부족', '안전재고', 'low'].includes(lowered)) {
+        parsed.flags.lowStock = true;
+        summarySet.add('스마트: 부족');
+        return;
+      }
+      if (['품절', '재고0', '수량0', 'zero'].includes(lowered)) {
+        parsed.flags.zeroStock = true;
+        summarySet.add('스마트: 품절');
+        return;
+      }
+      if (['거래처없음', '거래처미입력', 'vendor:none'].includes(lowered)) {
+        parsed.flags.missingVendor = true;
+        summarySet.add('스마트: 거래처없음');
+        return;
+      }
+      if (['위치없음', '창고없음', '위치미입력', 'warehouse:none'].includes(lowered)) {
+        parsed.flags.missingWarehouse = true;
+        summarySet.add('스마트: 위치없음');
+        return;
+      }
+
+      const colonIndex = token.indexOf(':');
+      if (colonIndex > 0) {
+        const keyAlias = normalizeToken(token.slice(0, colonIndex));
+        const rawValue = token.slice(colonIndex + 1).trim();
+        const key = containsAliases[keyAlias];
+        if (key) {
+          if (rawValue) {
+            parsed.containsFilters[key] = normalizeToken(rawValue);
+            summarySet.add(`스마트: ${token.slice(0, colonIndex)}:${rawValue}`);
+          }
+          return;
+        }
+      }
+
+      const numericMatch = token.match(/^([^:><=]+)(>=|<=|=|>|<)(-?\d+(?:\.\d+)?)$/);
+      if (numericMatch) {
+        const alias = normalizeToken(numericMatch[1]);
+        const key = numericAliases[alias];
+        if (key) {
+          parsed.numericFilters.push({
+            key,
+            op: numericMatch[2],
+            value: Number.parseFloat(numericMatch[3]),
+            label: `스마트: ${token}`,
+          });
+          summarySet.add(`스마트: ${token}`);
+          return;
+        }
+      }
+
+      parsed.textTerms.push(lowered);
+    });
+
+    parsed.summaryChips = [...summarySet];
+    return parsed;
+  }
+
+  function getNumericFieldValue(row, key) {
+    if (key === 'supplyValue') {
+      const supply = getNumericValue(row.supplyValue);
+      if (supply !== null) return supply;
+      return (getNumericValue(row.quantity) || 0) * (getNumericValue(row.unitPrice) || 0);
+    }
+    if (key === 'totalPrice') {
+      const totalPrice = getNumericValue(row.totalPrice);
+      if (totalPrice !== null) return totalPrice;
+      const supply = getNumericFieldValue(row, 'supplyValue');
+      const vat = getNumericValue(row.vat) || Math.floor((supply || 0) * 0.1);
+      return (supply || 0) + vat;
+    }
+    return getNumericValue(row[key]);
+  }
+
+  function matchNumericRule(actualValue, op, expectedValue) {
+    if (actualValue === null || Number.isNaN(actualValue)) return false;
+    if (op === '>=') return actualValue >= expectedValue;
+    if (op === '<=') return actualValue <= expectedValue;
+    if (op === '>') return actualValue > expectedValue;
+    if (op === '<') return actualValue < expectedValue;
+    return actualValue === expectedValue;
   }
 
   function isLowStockRow(row) {
@@ -397,13 +747,19 @@ export function renderInventoryPage(container, navigateTo) {
     const summaryEl = container.querySelector('#inventory-filter-summary');
     if (!summaryEl) return;
 
+    const smartQuery = parseSmartKeyword(currentFilter.keyword);
     const chips = [];
-    if (currentFilter.keyword) chips.push(`검색: ${currentFilter.keyword}`);
+    if (smartQuery.textTerms.length > 0) chips.push(`텍스트 검색: ${smartQuery.textTerms.join(' ')}`);
+    chips.push(...smartQuery.summaryChips);
     if (currentFilter.itemCode) chips.push(`품목코드: ${currentFilter.itemCode}`);
     if (currentFilter.vendor) chips.push(`거래처: ${currentFilter.vendor}`);
     if (currentFilter.category) chips.push(`분류: ${currentFilter.category}`);
     if (currentFilter.warehouse) chips.push(`창고: ${currentFilter.warehouse}`);
     if (currentFilter.stock === 'low') chips.push('부족 항목만');
+    if (currentFilter.focus === 'zero') chips.push('수량 0');
+    if (currentFilter.focus === 'missingVendor') chips.push('거래처 미입력');
+    if (currentFilter.focus === 'missingWarehouse') chips.push('위치 미입력');
+    if (currentFilter.focus === 'low') chips.push('빠른 보기: 부족 품목');
     if (currentSort.key && currentSort.direction) chips.push(`정렬: ${getSortOptionLabel(currentSort)}`);
 
     const chipsHtml = chips.length > 0
@@ -451,11 +807,14 @@ export function renderInventoryPage(container, navigateTo) {
     });
   }
 
-  // === 테이블 헤더 렌더링 (컬럼 변경 시 재호출) ===
+  // === ?뚯씠釉??ㅻ뜑 ?뚮뜑留?(而щ읆 蹂寃????ы샇異? ===
   function renderTableHeader() {
     const thead = container.querySelector('#inventory-thead');
     thead.innerHTML = `
       <tr>
+        <th class="col-check">
+          <input type="checkbox" class="table-row-check" id="inv-select-all" aria-label="현재 페이지 전체 선택" />
+        </th>
         <th class="col-num">#</th>
         ${activeFields.map(key => `
           <th
@@ -477,41 +836,65 @@ export function renderInventoryPage(container, navigateTo) {
     attachSortHeaderEvents();
   }
 
-  // === 필터링 ===
+  // === ?꾪꽣留?===
   function getFilteredData() {
+    const smartQuery = parseSmartKeyword(currentFilter.keyword);
     return data.filter(row => {
-      const kw = currentFilter.keyword.toLowerCase();
-      if (kw && !(
-        (row.itemName || '').toLowerCase().includes(kw) ||
-        (row.itemCode || '').toLowerCase().includes(kw) ||
-        (row.category || '').toLowerCase().includes(kw)
-      )) return false;
+      if (smartQuery.textTerms.length > 0) {
+        const haystack = [
+          row.itemName,
+          row.itemCode,
+          row.category,
+          row.vendor,
+          row.warehouse,
+          row.note,
+          row.lotNumber,
+        ].map(value => String(value || '').toLowerCase()).join(' ');
+        if (!smartQuery.textTerms.every(term => haystack.includes(term))) return false;
+      }
 
       if (currentFilter.category && row.category !== currentFilter.category) return false;
       if (currentFilter.warehouse && row.warehouse !== currentFilter.warehouse) return false;
       if (currentFilter.itemCode && row.itemCode !== currentFilter.itemCode) return false;
       if (currentFilter.vendor && row.vendor !== currentFilter.vendor) return false;
+      if (smartQuery.containsFilters.category && !String(row.category || '').toLowerCase().includes(smartQuery.containsFilters.category)) return false;
+      if (smartQuery.containsFilters.warehouse && !String(row.warehouse || '').toLowerCase().includes(smartQuery.containsFilters.warehouse)) return false;
+      if (smartQuery.containsFilters.vendor && !String(row.vendor || '').toLowerCase().includes(smartQuery.containsFilters.vendor)) return false;
+      if (smartQuery.containsFilters.itemCode && !String(row.itemCode || '').toLowerCase().includes(smartQuery.containsFilters.itemCode)) return false;
       if (currentFilter.stock === 'low' && !isLowStockRow(row)) return false;
+      if (currentFilter.focus === 'low' && !isLowStockRow(row)) return false;
+      if (currentFilter.focus === 'zero' && getNumericValue(row.quantity) !== 0) return false;
+      if (currentFilter.focus === 'missingVendor' && String(row.vendor || '').trim()) return false;
+      if (currentFilter.focus === 'missingWarehouse' && String(row.warehouse || '').trim()) return false;
+      if (smartQuery.flags.lowStock && !isLowStockRow(row)) return false;
+      if (smartQuery.flags.zeroStock && (getNumericValue(row.quantity) || 0) !== 0) return false;
+      if (smartQuery.flags.missingVendor && String(row.vendor || '').trim()) return false;
+      if (smartQuery.flags.missingWarehouse && String(row.warehouse || '').trim()) return false;
+      if (smartQuery.numericFilters.some(rule => !matchNumericRule(getNumericFieldValue(row, rule.key), rule.op, rule.value))) return false;
       return true;
     });
   }
 
-  // === 테이블 바디 렌더링 ===
+  // === ?뚯씠釉?諛붾뵒 ?뚮뜑留?===
   function renderTable() {
     const filtered = getFilteredData();
     const sorted = sortRows(filtered);
     const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
     if (currentPageNum > totalPages) currentPageNum = totalPages;
+    if (sorted.length > 0 && !sorted.some(row => getItemKey(row) === focusedItemKey)) {
+      focusedItemKey = getItemKey(sorted[0]);
+    }
 
     const start = (currentPageNum - 1) * PAGE_SIZE;
     const pageData = sorted.slice(start, start + PAGE_SIZE);
 
     const tbody = container.querySelector('#inventory-body');
     if (sorted.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="${activeFields.length + 3}" style="text-align:center; padding:32px; color:var(--text-muted);">
+      tbody.innerHTML = `<tr><td colspan="${activeFields.length + 4}" style="text-align:center; padding:32px; color:var(--text-muted);">
         검색 결과가 없습니다.
       </td></tr>`;
     } else {
+      selectedIndexes = new Set([...selectedIndexes].filter(index => Number.isInteger(index) && index >= 0 && index < data.length));
       tbody.innerHTML = pageData.map((row, i) => {
         const realIdx = data.indexOf(row);
         const min = safetyStock[row.itemName];
@@ -519,9 +902,14 @@ export function renderInventoryPage(container, navigateTo) {
         const qty = parseFloat(qtyStr) || 0;
         const isLow = min !== undefined && qty <= min;
         const isDanger = min !== undefined && qty === 0;
+        const rowKey = getItemKey(row);
+        const isFocused = focusedItemKey === rowKey;
 
         return `
-          <tr class="${isDanger ? 'row-danger' : isLow ? 'row-warning' : ''}" data-idx="${realIdx}">
+          <tr class="${isDanger ? 'row-danger' : isLow ? 'row-warning' : ''} ${isFocused ? 'row-focused' : ''}" data-idx="${realIdx}" data-row-key="${rowKey}">
+            <td class="col-check">
+              <input type="checkbox" class="table-row-check inv-row-check" data-idx="${realIdx}" ${selectedIndexes.has(realIdx) ? 'checked' : ''} aria-label="행 선택" />
+            </td>
             <td class="col-num">${start + i + 1}</td>
             ${activeFields.map(key => `
               <td class="editable-cell ${ALL_FIELDS.find(f => f.key === key)?.numeric ? 'text-right' : ''}"
@@ -535,12 +923,12 @@ export function renderInventoryPage(container, navigateTo) {
                 title="클릭하여 안전재고 수량 설정"
                 style="font-size:11px; padding:2px 6px; border-radius:4px;
                   ${min !== undefined ? 'background:rgba(63,185,80,0.15); color:var(--success);' : 'color:var(--text-muted);'}">
-                ${min !== undefined ? `🔔 ${min}` : '설정'}
+                ${min !== undefined ? `기준 ${min}` : '설정'}
               </button>
             </td>
             <td class="col-actions">
-              <button class="btn-icon btn-edit" data-idx="${realIdx}" title="편집">✏️</button>
-              <button class="btn-icon btn-icon-danger btn-del" data-idx="${realIdx}" title="삭제">🗑️</button>
+              <button class="btn-icon btn-edit" data-idx="${realIdx}" title="수정">수정</button>
+              <button class="btn-icon btn-icon-danger btn-del" data-idx="${realIdx}" title="삭제">삭제</button>
             </td>
           </tr>
         `;
@@ -549,13 +937,13 @@ export function renderInventoryPage(container, navigateTo) {
 
     renderFilterSummary(sorted.length, data.length);
 
-    // 페이지네이션
+    // ?섏씠吏?ㅼ씠??
     const paginationEl = container.querySelector('#pagination');
     const pageStart = sorted.length === 0 ? 0 : start + 1;
     paginationEl.innerHTML = `
       <span>${sorted.length}건 중 ${pageStart}~${Math.min(start + PAGE_SIZE, sorted.length)}</span>
       <div class="pagination-btns">
-        <button class="page-btn" id="page-prev" ${currentPageNum <= 1 ? 'disabled' : ''}>← 이전</button>
+        <button class="page-btn" id="page-prev" ${currentPageNum <= 1 ? 'disabled' : ''}>이전</button>
         ${Array.from({length: Math.min(totalPages, 7)}, (_, i) => {
           let p;
           if (totalPages <= 7) { p = i + 1; }
@@ -564,18 +952,238 @@ export function renderInventoryPage(container, navigateTo) {
           else { p = currentPageNum - 3 + i; }
           return `<button class="page-btn ${p === currentPageNum ? 'active' : ''}" data-p="${p}">${p}</button>`;
         }).join('')}
-        <button class="page-btn" id="page-next" ${currentPageNum >= totalPages ? 'disabled' : ''}>다음 →</button>
+        <button class="page-btn" id="page-next" ${currentPageNum >= totalPages ? 'disabled' : ''}>다음</button>
       </div>
     `;
 
-    // 이벤트 재연결
+    // ?대깽???ъ뿰寃?
     attachTableEvents();
     attachPaginationEvents();
+    updateSelectAllState(pageData);
+    refreshBulkActions();
+    renderItemTimelinePanel(sorted);
   }
 
-  // === 테이블 이벤트 (인라인 편집, 삭제 등) ===
+  function updateSelectAllState(pageRows) {
+    const selectAll = container.querySelector('#inv-select-all');
+    if (!selectAll) return;
+
+    const pageIndexes = pageRows.map(row => data.indexOf(row)).filter(index => index >= 0);
+    if (pageIndexes.length === 0) {
+      selectAll.checked = false;
+      selectAll.indeterminate = false;
+      return;
+    }
+
+    const checkedCount = pageIndexes.filter(index => selectedIndexes.has(index)).length;
+    selectAll.checked = checkedCount === pageIndexes.length;
+    selectAll.indeterminate = checkedCount > 0 && checkedCount < pageIndexes.length;
+  }
+
+  function getCurrentPageRows() {
+    const sorted = sortRows(getFilteredData());
+    const start = (currentPageNum - 1) * PAGE_SIZE;
+    return sorted.slice(start, start + PAGE_SIZE);
+  }
+
+  function refreshBulkActions() {
+    const selectedCount = selectedIndexes.size;
+    const countEl = container.querySelector('#inventory-selected-count');
+    const bulkCategoryBtn = container.querySelector('#btn-bulk-category');
+    const bulkExportBtn = container.querySelector('#btn-bulk-export');
+    const bulkDeleteBtn = container.querySelector('#btn-bulk-delete');
+
+    if (countEl) countEl.textContent = `선택 ${selectedCount}개`;
+    if (bulkCategoryBtn) bulkCategoryBtn.disabled = selectedCount === 0;
+    if (bulkExportBtn) bulkExportBtn.disabled = selectedCount === 0;
+    if (bulkDeleteBtn) bulkDeleteBtn.disabled = selectedCount === 0;
+  }
+
+  function shiftSelectionAfterDelete(index) {
+    const next = new Set();
+    selectedIndexes.forEach(selectedIndex => {
+      if (selectedIndex === index) return;
+      next.add(selectedIndex > index ? selectedIndex - 1 : selectedIndex);
+    });
+    selectedIndexes = next;
+  }
+
+  function applyBulkCategory() {
+    if (selectedIndexes.size === 0) {
+      showToast('선택된 품목이 없습니다.', 'warning');
+      return;
+    }
+
+    const nextCategory = prompt(`선택한 ${selectedIndexes.size}개 품목에 적용할 분류를 입력해 주세요.`);
+    if (nextCategory === null) return;
+    const trimmed = nextCategory.trim();
+    if (!trimmed) {
+      showToast('분류 이름을 입력해 주세요.', 'warning');
+      return;
+    }
+
+    [...selectedIndexes].forEach(index => updateItem(index, { category: trimmed }));
+    showToast(`${selectedIndexes.size}개 품목의 분류를 "${trimmed}"로 변경했습니다.`, 'success');
+    renderTable();
+    updateStats();
+  }
+
+  function exportSelectedRows() {
+    if (selectedIndexes.size === 0) {
+      showToast('선택된 품목이 없습니다.', 'warning');
+      return;
+    }
+
+    const selectedRows = [...selectedIndexes]
+      .sort((a, b) => a - b)
+      .map(index => data[index])
+      .filter(Boolean);
+
+    const exportData = selectedRows.map(row => {
+      const obj = {};
+      activeFields.forEach(key => { obj[FIELD_LABELS[key]] = row[key]; });
+      return obj;
+    });
+
+    const baseName = (state.fileName || '재고현황').replace(/\.[^.]+$/, '');
+    downloadExcel(exportData, `${baseName}_선택품목`);
+    showToast(`선택한 ${selectedRows.length}개 품목을 내보냈습니다.`, 'success');
+  }
+
+  function deleteSelectedRows() {
+    if (selectedIndexes.size === 0) {
+      showToast('선택된 품목이 없습니다.', 'warning');
+      return;
+    }
+
+    const sortedIndexes = [...selectedIndexes].sort((a, b) => b - a);
+    const removedItems = [];
+    sortedIndexes.forEach(index => {
+      const removed = deleteItem(index);
+      if (removed?.deleted) removedItems.push({ index: removed.index, item: removed.deleted });
+    });
+
+    selectedIndexes.clear();
+    renderTable();
+    updateStats();
+
+    showToast(`${removedItems.length}개 품목을 삭제했습니다.`, 'info', 5000, {
+      actionLabel: '실행 취소',
+      onAction: () => {
+        removedItems
+          .sort((a, b) => a.index - b.index)
+          .forEach(({ item, index }) => restoreItem(item, index));
+        renderTable();
+        updateStats();
+        showToast(`${removedItems.length}개 품목을 복원했습니다.`, 'success');
+      },
+    });
+  }
+
+  function renderItemTimelinePanel(currentSortedRows) {
+    const timelineList = container.querySelector('#item-timeline-list');
+    const timelineTitle = container.querySelector('#item-timeline-title');
+    const timelineMeta = container.querySelector('#item-timeline-meta');
+    if (!timelineList || !timelineTitle || !timelineMeta) return;
+
+    const rows = currentSortedRows || [];
+    if (rows.length === 0) {
+      timelineTitle.textContent = '품목 이력 타임라인';
+      timelineMeta.textContent = '표시할 품목이 없습니다.';
+      timelineList.innerHTML = '<div class="dashboard-empty-note">필터 결과가 없어 이력을 표시할 수 없습니다.</div>';
+      renderItemTimelineChart('chart-item-timeline', []);
+      return;
+    }
+
+    const focusedRow = rows.find(row => getItemKey(row) === focusedItemKey) || rows[0];
+    focusedItemKey = getItemKey(focusedRow);
+
+    const allTransactions = (getState().transactions || [])
+      .filter((tx) => {
+        const sameCode = focusedRow.itemCode && tx.itemCode && String(focusedRow.itemCode) === String(tx.itemCode);
+        const sameName = String(focusedRow.itemName || '').trim() === String(tx.itemName || '').trim();
+        return sameCode || sameName;
+      })
+      .sort((left, right) => String(left.date || left.createdAt || '').localeCompare(String(right.date || right.createdAt || '')));
+
+    timelineTitle.textContent = `${focusedRow.itemName || '선택 품목'} 이력 타임라인`;
+    timelineMeta.textContent = `현재 재고 ${Math.round(getNumericValue(focusedRow.quantity) || 0).toLocaleString('ko-KR')}개 · 총 이력 ${allTransactions.length}건`;
+
+    if (allTransactions.length === 0) {
+      timelineList.innerHTML = '<div class="dashboard-empty-note">선택 품목의 입출고 이력이 아직 없습니다.</div>';
+      renderItemTimelineChart('chart-item-timeline', []);
+      return;
+    }
+
+    let runningQty = 0;
+    const chartSeries = allTransactions.map((tx, index) => {
+      const quantity = Math.abs(getNumericValue(tx.quantity) || 0);
+      const delta = tx.type === 'in' ? quantity : -quantity;
+      runningQty += delta;
+      return {
+        label: `${String(tx.date || tx.createdAt || '').slice(0, 10)} ${index + 1}`,
+        value: runningQty,
+        delta,
+      };
+    });
+    renderItemTimelineChart('chart-item-timeline', chartSeries);
+
+    const recentList = [...allTransactions].reverse().slice(0, 8);
+    timelineList.innerHTML = recentList.map((tx) => `
+      <div class="inventory-timeline-item">
+        <span class="badge ${tx.type === 'in' ? 'badge-success' : 'badge-danger'}">${tx.type === 'in' ? '입고' : '출고'}</span>
+        <div class="inventory-timeline-main">
+          <div class="inventory-timeline-line">${escapeText(tx.date || '-')} · ${Math.round(Math.abs(getNumericValue(tx.quantity) || 0)).toLocaleString('ko-KR')}개</div>
+          <div class="inventory-timeline-sub">${escapeText(tx.vendor || '거래처 미입력')} · ${escapeText(tx.note || '메모 없음')}</div>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  // === ?뚯씠釉??대깽??(?몃씪???몄쭛, ??젣 ?? ===
   function attachTableEvents() {
-    // 인라인 편집
+    const selectAll = container.querySelector('#inv-select-all');
+    selectAll?.addEventListener('change', () => {
+      const rowChecks = container.querySelectorAll('.inv-row-check');
+      rowChecks.forEach((check) => {
+        const idx = parseInt(check.dataset.idx, 10);
+        check.checked = selectAll.checked;
+        if (selectAll.checked) selectedIndexes.add(idx);
+        else selectedIndexes.delete(idx);
+      });
+      refreshBulkActions();
+      updateSelectAllState(getCurrentPageRows());
+    });
+
+    container.querySelectorAll('.inv-row-check').forEach(check => {
+      check.addEventListener('change', () => {
+        const idx = parseInt(check.dataset.idx, 10);
+        if (check.checked) selectedIndexes.add(idx);
+        else selectedIndexes.delete(idx);
+        refreshBulkActions();
+        updateSelectAllState(getCurrentPageRows());
+      });
+      check.addEventListener('click', event => event.stopPropagation());
+    });
+
+    const bulkCategoryBtn = container.querySelector('#btn-bulk-category');
+    const bulkExportBtn = container.querySelector('#btn-bulk-export');
+    const bulkDeleteBtn = container.querySelector('#btn-bulk-delete');
+    const timelineInoutBtn = container.querySelector('#btn-item-history-inout');
+    if (bulkCategoryBtn) bulkCategoryBtn.onclick = applyBulkCategory;
+    if (bulkExportBtn) bulkExportBtn.onclick = exportSelectedRows;
+    if (bulkDeleteBtn) bulkDeleteBtn.onclick = deleteSelectedRows;
+    if (timelineInoutBtn) timelineInoutBtn.onclick = () => navigateTo('inout');
+
+    container.querySelectorAll('#inventory-body tr[data-row-key]').forEach(rowEl => {
+      rowEl.addEventListener('click', (event) => {
+        if (event.target.closest('button, input, select, a, label, .editable-cell')) return;
+        focusedItemKey = rowEl.dataset.rowKey || focusedItemKey;
+        renderTable();
+      });
+    });
+
+    // ?몃씪???몄쭛
     container.querySelectorAll('.editable-cell').forEach(cell => {
       cell.addEventListener('dblclick', () => {
         const idx = parseInt(cell.dataset.idx);
@@ -595,7 +1203,7 @@ export function renderInventoryPage(container, navigateTo) {
         const save = () => {
           const newVal = input.value;
           updateItem(idx, { [field]: newVal });
-          // 합계 재계산 (매입단가 또는 판매단가 변경 시)
+          // ?⑷퀎 ?ш퀎??(留ㅼ엯?④? ?먮뒗 ?먮ℓ?④? 蹂寃???
           if (field === 'quantity' || field === 'unitPrice' || field === 'salePrice') {
             const q = parseFloat(data[idx].quantity) || 0;
             const p = parseFloat(data[idx].unitPrice) || 0;
@@ -618,21 +1226,33 @@ export function renderInventoryPage(container, navigateTo) {
       });
     });
 
-    // 삭제
+    // ??젣
     container.querySelectorAll('.btn-del').forEach(btn => {
       btn.addEventListener('click', () => {
         const idx = parseInt(btn.dataset.idx);
-        const name = data[idx]?.itemName || `${idx + 1}번 항목`;
-        if (confirm(`"${name}"을(를) 삭제하시겠습니까?`)) {
-          deleteItem(idx);
-          renderTable();
-          updateStats();
-          showToast(`"${name}" 항목을 삭제했습니다.`, 'info');
+        const name = data[idx]?.itemName || `${idx + 1}번 품목`;
+        const removed = deleteItem(idx);
+        if (!removed?.deleted) {
+          showToast('삭제할 품목을 찾지 못했습니다.', 'warning');
+          return;
         }
+
+        shiftSelectionAfterDelete(idx);
+        renderTable();
+        updateStats();
+        showToast(`"${name}" 품목을 삭제했습니다.`, 'info', 5000, {
+          actionLabel: '실행 취소',
+          onAction: () => {
+            restoreItem(removed.deleted, removed.index);
+            renderTable();
+            updateStats();
+            showToast(`"${name}" 품목을 복원했습니다.`, 'success');
+          },
+        });
       });
     });
 
-    // 편집 (모달)
+    // ?몄쭛 (紐⑤떖)
     container.querySelectorAll('.btn-edit').forEach(btn => {
       btn.addEventListener('click', () => {
         const idx = parseInt(btn.dataset.idx);
@@ -640,19 +1260,19 @@ export function renderInventoryPage(container, navigateTo) {
       });
     });
 
-    // 안전재고 설정
+    // ?덉쟾?ш퀬 ?ㅼ젙
     container.querySelectorAll('.btn-safety').forEach(btn => {
       btn.addEventListener('click', () => {
         const name = btn.dataset.name;
         const currentMin = btn.dataset.min;
         const input = prompt(
-          `"${name}"의 안전재고(최소 수량)를 입력하세요.\n비워두면 해제됩니다.`,
+          `"${name}" 품목의 안전재고(최소 수량)를 입력해 주세요.\n비워 두면 해제됩니다.`,
           currentMin
         );
-        if (input === null) return; // 취소
+        if (input === null) return; // 痍⑥냼
         if (input.trim() === '') {
           setSafetyStock(name, undefined);
-          showToast(`"${name}" 안전재고 해제`, 'info');
+          showToast(`"${name}" 안전재고를 해제했습니다.`, 'info');
         } else {
           const num = parseInt(input);
           if (isNaN(num) || num < 0) {
@@ -660,7 +1280,7 @@ export function renderInventoryPage(container, navigateTo) {
             return;
           }
           setSafetyStock(name, num);
-          showToast(`"${name}" 안전재고를 ${num}으로 설정했습니다.`, 'success');
+          showToast(`"${name}" 안전재고를 ${num}로 설정했습니다.`, 'success');
         }
         renderTable();
         updateStats();
@@ -668,7 +1288,7 @@ export function renderInventoryPage(container, navigateTo) {
     });
   }
 
-  // 페이지네이션 이벤트
+  // ?섏씠吏?ㅼ씠???대깽??
   function attachPaginationEvents() {
     container.querySelector('#page-prev')?.addEventListener('click', () => {
       if (currentPageNum > 1) { currentPageNum--; renderTable(); }
@@ -685,7 +1305,7 @@ export function renderInventoryPage(container, navigateTo) {
     });
   }
 
-  // 통계 업데이트
+  // ?듦퀎 ?낅뜲?댄듃
   function updateStats() {
     const d = getState().mappedData || [];
     const ss = getState().safetyStock || {};
@@ -701,21 +1321,23 @@ export function renderInventoryPage(container, navigateTo) {
       const qtyStr = typeof r.quantity === 'string' ? r.quantity.replace(/,/g, '') : r.quantity;
       return min !== undefined && (parseFloat(qtyStr) || 0) <= min;
     }).length;
-    // warningCount 엘리먼트는 위에서 제가 display:none 하거나 아예 뺐는데... (어이쿠 뺐네요)
-    // 다시 생각해 보니 재고 부족 경고 카드는 중요합니다.
+    // warningCount ?섎━癒쇳듃???꾩뿉???쒓? display:none ?섍굅???꾩삁 類먮뒗??.. (?댁씠荑?類먮꽕??
+    // ?ㅼ떆 ?앷컖??蹂대땲 ?ш퀬 遺議?寃쎄퀬 移대뱶??以묒슂?⑸땲??
     const warnEl = container.querySelector('#stat-warn');
     if (warnEl) {
-      warnEl.textContent = wc > 0 ? wc + '건' : '없음';
+      warnEl.textContent = wc > 0 ? `${wc}건` : '없음';
       warnEl.className = `stat-value ${wc > 0 ? 'text-danger' : ''}`;
     }
   }
 
-  // === 컬럼 설정 패널 이벤트 ===
+  initCollapsibleSections();
+
+  // === 而щ읆 ?ㅼ젙 ?⑤꼸 ?대깽??===
 
   const colPanel = container.querySelector('#col-settings-panel');
   const colBtn = container.querySelector('#btn-col-settings');
 
-  // 패널 열기/닫기
+  // ?⑤꼸 ?닿린/?リ린
   colBtn.addEventListener('click', (e) => {
     e.stopPropagation();
     colPanel.classList.toggle('open');
@@ -725,19 +1347,19 @@ export function renderInventoryPage(container, navigateTo) {
     colPanel.classList.remove('open');
   });
 
-  // 패널 외부 클릭 시 닫기
+  // ?⑤꼸 ?몃? ?대┃ ???リ린
   document.addEventListener('click', (e) => {
     if (!colPanel.contains(e.target) && e.target !== colBtn) {
       colPanel.classList.remove('open');
     }
   });
 
-  // 전체 선택 버튼
+  // ?꾩껜 ?좏깮 踰꾪듉
   container.querySelector('#col-select-all').addEventListener('click', () => {
     container.querySelectorAll('.col-check').forEach(cb => { cb.checked = true; });
   });
 
-  // 적용 버튼 — 선택한 컬럼을 저장하고 테이블 새로 그리기
+  // ?곸슜 踰꾪듉 ???좏깮??而щ읆????ν븯怨??뚯씠釉??덈줈 洹몃━湲?
   container.querySelector('#col-apply').addEventListener('click', () => {
     const checked = [];
     container.querySelectorAll('.col-check:checked').forEach(cb => {
@@ -749,32 +1371,88 @@ export function renderInventoryPage(container, navigateTo) {
       return;
     }
 
-    // 전체 선택이면 null로 저장 (기본값 = 자동)
+    // ?꾩껜 ?좏깮?대㈃ null濡????(湲곕낯媛?= ?먮룞)
     const allKeys = allAvailableFields.map(f => f.key);
     const isAll = checked.length === allKeys.length && allKeys.every(k => checked.includes(k));
 
     setState({ visibleColumns: isAll ? null : checked });
     activeFields = checked;
 
-    // 테이블 헤더+바디 다시 그리기
+    // ?뚯씠釉??ㅻ뜑+諛붾뵒 ?ㅼ떆 洹몃━湲?
     renderTableHeader();
     renderTable();
     colPanel.classList.remove('open');
-    showToast(`${checked.length}개 항목 표시`, 'success');
+    showToast(`${checked.length}개 항목을 표시하도록 적용했습니다.`, 'success');
   });
 
-  // 초심자 빠른 액션
+  // 珥덉떖??鍮좊Ⅸ ?≪뀡
   container.querySelector('#btn-quick-inout')?.addEventListener('click', () => navigateTo('inout'));
   container.querySelector('#btn-quick-guide')?.addEventListener('click', () => navigateTo('guide'));
   container.querySelector('#btn-quick-dashboard')?.addEventListener('click', () => navigateTo('home'));
+  container.querySelector('#btn-add-item-inline')?.addEventListener('click', () => openItemModal(container, navigateTo));
+  container.querySelector('#btn-dismiss-upload-diff')?.addEventListener('click', () => {
+    setState({ lastUploadDiff: null });
+    container.querySelector('#upload-diff-card')?.remove();
+  });
+  container.querySelectorAll('[data-nav]').forEach(button => {
+    button.addEventListener('click', () => navigateTo(button.dataset.nav));
+  });
 
-  // === 검색/필터/정렬 이벤트 ===
-  container.querySelector('#search-input').addEventListener('input', (e) => {
-    currentFilter.keyword = e.target.value;
+  function syncFocusChips() {
+    container.querySelectorAll('[data-inventory-focus]').forEach(button => {
+      button.classList.toggle('is-active', button.dataset.inventoryFocus === currentFilter.focus);
+    });
+  }
+
+  container.querySelectorAll('[data-inventory-focus]').forEach(button => {
+    button.addEventListener('click', () => {
+      currentFilter.focus = button.dataset.inventoryFocus || 'all';
+      if (currentFilter.focus === 'low') {
+        currentFilter.stock = 'low';
+        const stockFilter = container.querySelector('#filter-stock');
+        if (stockFilter) stockFilter.value = 'low';
+      } else if (currentFilter.stock === 'low' && currentFilter.focus !== 'all') {
+        currentFilter.stock = '';
+        const stockFilter = container.querySelector('#filter-stock');
+        if (stockFilter) stockFilter.value = '';
+      }
+      if (currentFilter.focus === 'all') {
+        currentFilter.stock = '';
+        const stockFilter = container.querySelector('#filter-stock');
+        if (stockFilter) stockFilter.value = '';
+      }
+      currentPageNum = 1;
+      renderTable();
+      highlightActiveFilters();
+      syncFocusChips();
+      persistInventoryPrefs();
+    });
+  });
+
+  // === 寃???꾪꽣/?뺣젹 ?대깽??===
+  function applyKeywordFilter(nextKeyword, { debounced = true } = {}) {
+    currentFilter.keyword = nextKeyword;
     currentPageNum = 1;
     renderTable();
     highlightActiveFilters();
-    persistInventoryPrefs({ debounced: true });
+    persistInventoryPrefs({ debounced });
+  }
+
+  container.querySelectorAll('[data-smart-query]').forEach(button => {
+    button.addEventListener('click', () => {
+      const keywordInput = container.querySelector('#search-input');
+      const token = String(button.dataset.smartQuery || '').trim();
+      if (!keywordInput || !token) return;
+      const current = String(keywordInput.value || '').trim();
+      const next = current ? `${current} ${token}` : token;
+      keywordInput.value = next;
+      applyKeywordFilter(next);
+      keywordInput.focus();
+    });
+  });
+
+  container.querySelector('#search-input').addEventListener('input', (e) => {
+    applyKeywordFilter(e.target.value);
   });
   container.querySelector('#filter-item-code').addEventListener('change', (e) => {
     currentFilter.itemCode = e.target.value;
@@ -806,9 +1484,12 @@ export function renderInventoryPage(container, navigateTo) {
   });
   container.querySelector('#filter-stock').addEventListener('change', (e) => {
     currentFilter.stock = e.target.value;
+    if (e.target.value === 'low') currentFilter.focus = 'low';
+    else if (currentFilter.focus === 'low') currentFilter.focus = 'all';
     currentPageNum = 1;
     renderTable();
     highlightActiveFilters();
+    syncFocusChips();
     persistInventoryPrefs();
   });
   container.querySelector('#sort-preset').addEventListener('change', (e) => {
@@ -819,7 +1500,7 @@ export function renderInventoryPage(container, navigateTo) {
     persistInventoryPrefs();
   });
 
-  // 필터/정렬 초기화 버튼
+  // ?꾪꽣/?뺣젹 珥덇린??踰꾪듉
   container.querySelector('#btn-filter-reset').addEventListener('click', () => {
     currentFilter = { ...defaultFilter };
     currentSort = { ...defaultSort };
@@ -834,11 +1515,18 @@ export function renderInventoryPage(container, navigateTo) {
     renderTableHeader();
     renderTable();
     highlightActiveFilters();
+    syncFocusChips();
     persistInventoryPrefs();
     showToast('필터와 정렬을 초기화했습니다.', 'info');
   });
 
-  // 필터 활성 상태 시각적 표시
+  // 상세 필터 토글 — 기본 숨김, 클릭 시 패널 열기/닫기
+  container.querySelector('#btn-filter-toggle')?.addEventListener('click', () => {
+    const panel = container.querySelector('#filter-detail-panel');
+    if (panel) panel.classList.toggle('is-open');
+  });
+
+  // ?꾪꽣 ?쒖꽦 ?곹깭 ?쒓컖???쒖떆
   function highlightActiveFilters() {
     const filterIds = ['filter-item-code', 'filter-vendor', 'filter-category', 'filter-warehouse', 'filter-stock', 'sort-preset'];
     filterIds.forEach(id => {
@@ -855,7 +1543,7 @@ export function renderInventoryPage(container, navigateTo) {
     if (searchEl) searchEl.classList.toggle('filter-active', !!currentFilter.keyword);
   }
 
-  // 엑셀 내보내기 — 현재 표시 중인 컬럼만 내보내기
+  // ?묒? ?대낫?닿린 ???꾩옱 ?쒖떆 以묒씤 而щ읆留??대낫?닿린
   container.querySelector('#btn-export').addEventListener('click', () => {
     try {
       const exportData = data.map(row => {
@@ -865,23 +1553,23 @@ export function renderInventoryPage(container, navigateTo) {
       });
       const baseName = (state.fileName || '재고현황').replace(/\.[^.]+$/, '');
       downloadExcel(exportData, `${baseName}_재고현황`);
-      showToast('엑셀 파일을 다운로드했습니다.', 'success');
+      showToast('엑셀 파일을 내려받았습니다.', 'success');
     } catch (err) {
       showToast(err.message, 'error');
     }
   });
 
-  // PDF 내보내기
+  // PDF ?대낫?닿린
   container.querySelector('#btn-export-pdf')?.addEventListener('click', () => {
     generateInventoryPDF(data);
   });
 
-  // 품목 추가 버튼
+  // ?덈ぉ 異붽? 踰꾪듉
   container.querySelector('#btn-add-item').addEventListener('click', () => {
     openItemModal(container, navigateTo);
   });
 
-  // === 초기 렌더링 ===
+  // === 珥덇린 ?뚮뜑留?===
   container.querySelector('#search-input').value = currentFilter.keyword;
   container.querySelector('#filter-item-code').value = currentFilter.itemCode;
   container.querySelector('#filter-vendor').value = currentFilter.vendor;
@@ -892,171 +1580,254 @@ export function renderInventoryPage(container, navigateTo) {
   renderTableHeader();
   renderTable();
   highlightActiveFilters();
+  syncFocusChips();
+
+  if (sessionStorage.getItem('invex:quick-open-item') === '1') {
+    sessionStorage.removeItem('invex:quick-open-item');
+    setTimeout(() => openItemModal(container, navigateTo), 20);
+  }
 }
 
-// === 품목 추가/편집 모달 ===
+// === ?덈ぉ 異붽?/?몄쭛 紐⑤떖 ===
 
 function openItemModal(container, navigateTo, editIdx = null) {
   const state = getState();
   const isEdit = editIdx !== null;
   const item = isEdit ? (state.mappedData[editIdx] || {}) : {};
 
-  // 모달 HTML
   const overlay = document.createElement('div');
   overlay.className = 'modal-overlay';
   overlay.innerHTML = `
-    <div class="modal">
+    <div class="modal" style="max-width:980px;">
       <div class="modal-header">
         <h3 class="modal-title">${isEdit ? '품목 수정' : '새 품목 추가'}</h3>
         <button class="modal-close" id="modal-close">✕</button>
       </div>
       <div class="modal-body">
-        <div class="form-row">
-          <div class="form-group">
-            <label class="form-label">품목명 <span class="required">*</span></label>
-            <input class="form-input" id="f-itemName" value="${item.itemName || ''}" placeholder="예: A4용지" />
+        <div class="form-shell">
+          <div class="form-shell-main">
+            ${renderGuidedPanel({
+              eyebrow: '품목 입력 순서',
+              title: isEdit ? '필수값만 먼저 확인하고 빠르게 수정하세요.' : '필수값만 입력해도 바로 저장할 수 있습니다.',
+              desc: '품목명, 수량, 원가만 입력하면 재고 금액 계산이 즉시 됩니다. 거래처, 위치, 판매가는 나중에 채워도 괜찮습니다.',
+              badge: isEdit ? '수정 모드' : '초보자 추천',
+              steps: [
+                { kicker: 'STEP 1', title: '품목명과 수량 입력', desc: '현장에서 부르는 이름 그대로 적으면 검색이 빨라집니다.' },
+                { kicker: 'STEP 2', title: '원가와 판매가 확인', desc: '판매가를 넣으면 손익 분석 정확도가 올라갑니다.' },
+                { kicker: 'STEP 3', title: '거래처와 위치는 보강 추천', desc: '지금 급하면 비워두고 저장 후 다시 수정해도 됩니다.' },
+              ],
+            })}
+
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">품목명<span class="required">*</span></label>
+                <input class="form-input" id="f-itemName" value="${item.itemName || ''}" placeholder="예: A4용지, 복사용지 80g" />
+              </div>
+              <div class="form-group">
+                <label class="form-label">품목코드</label>
+                <input class="form-input" id="f-itemCode" value="${item.itemCode || ''}" placeholder="예: P-001" />
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">수량 <span class="required">*</span></label>
+                <input class="form-input" type="number" id="f-quantity" value="${item.quantity ?? ''}" placeholder="0" />
+              </div>
+              <div class="form-group">
+                <label class="form-label">단위</label>
+                <input class="form-input" id="f-unit" value="${item.unit || ''}" placeholder="EA, BOX, KG ..." />
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">매입가(원가)</label>
+                <input class="form-input" type="number" id="f-unitPrice" value="${item.unitPrice ?? ''}" placeholder="0" />
+              </div>
+              <div class="form-group">
+                <label class="form-label">판매단가</label>
+                <input class="form-input" type="number" id="f-salePrice" value="${item.salePrice ?? ''}" placeholder="미입력 시 손익 정확도가 내려갑니다." />
+              </div>
+            </div>
+
+            <details class="smart-details" open>
+              <summary>추가 정보 더 보기</summary>
+              <div class="smart-details-body">
+                <div class="form-row">
+                  <div class="form-group">
+                    <label class="form-label">분류</label>
+                    <input class="form-input" id="f-category" value="${item.category || ''}" placeholder="예: 사무용품" />
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">거래처</label>
+                    <input class="form-input" id="f-vendor" value="${item.vendor || ''}" placeholder="예: (주)신성상사" />
+                  </div>
+                </div>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label class="form-label">창고/위치</label>
+                    <input class="form-input" id="f-warehouse" value="${item.warehouse || ''}" placeholder="예: 본사 1층 A-03" />
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">비고</label>
+                    <input class="form-input" id="f-note" value="${item.note || ''}" placeholder="메모" />
+                  </div>
+                </div>
+              </div>
+            </details>
           </div>
-          <div class="form-group">
-            <label class="form-label">품목코드</label>
-            <input class="form-input" id="f-itemCode" value="${item.itemCode || ''}" placeholder="예: P-001" />
-          </div>
-        </div>
-        <div class="form-row">
-          <div class="form-group">
-            <label class="form-label">분류</label>
-            <input class="form-input" id="f-category" value="${item.category || ''}" placeholder="예: 사무용품" />
-          </div>
-          <div class="form-group">
-            <label class="form-label">거래처</label>
-            <input class="form-input" id="f-vendor" value="${item.vendor || ''}" placeholder="예: (\uc8fc)한국상사" />
-          </div>
-        </div>
-        <div class="form-row">
-          <div class="form-group">
-            <label class="form-label">수량 <span class="required">*</span></label>
-            <input class="form-input" type="number" id="f-quantity" value="${item.quantity ?? ''}" placeholder="0" />
-          </div>
-        </div>
-        <div class="form-row">
-          <div class="form-group">
-            <label class="form-label">단위</label>
-            <input class="form-input" id="f-unit" value="${item.unit || ''}" placeholder="EA, KG, M ..." />
-          </div>
-          <div class="form-group">
-            <label class="form-label">매입가(원가)</label>
-            <input class="form-input" type="number" id="f-unitPrice" value="${item.unitPrice ?? ''}" placeholder="0" />
-          </div>
-        </div>
-        <div class="form-row">
-          <div class="form-group">
-            <label class="form-label">판매단가 <span style="font-size:11px;color:var(--text-muted);">(소가)</span></label>
-            <input class="form-input" type="number" id="f-salePrice" value="${item.salePrice ?? ''}" placeholder="판매 시 가격" />
-          </div>
-          <div class="form-group" style="display:flex;align-items:flex-end;">
-            <div style="font-size:11px;color:var(--text-muted);padding-bottom:8px;">💡 판매단가를 입력하면 정확한 이익률을 계산할 수 있습니다.</div>
-          </div>
-        </div>
-        <div class="form-row" style="background:var(--bg-hover); padding:10px; border-radius:6px; margin-bottom:12px;">
-          <div class="form-group">
-            <label class="form-label" style="font-size:12px;">공급가액</label>
-            <input class="form-input" type="number" id="f-supplyValue" value="${item.supplyValue ?? ''}" disabled style="background:#eef1f5;" />
-          </div>
-          <div class="form-group">
-            <label class="form-label" style="font-size:12px;">부가세</label>
-            <input class="form-input" type="number" id="f-vat" value="${item.vat ?? ''}" disabled style="background:#eef1f5;" />
-          </div>
-          <div class="form-group">
-            <label class="form-label" style="font-size:12px;">합계금액</label>
-            <input class="form-input" type="number" id="f-totalPrice" value="${item.totalPrice ?? ''}" disabled style="background:#eef1f5;" />
-          </div>
-        </div>
-        <div class="form-row">
-          <div class="form-group">
-            <label class="form-label">창고/위치</label>
-            <input class="form-input" id="f-warehouse" value="${item.warehouse || ''}" placeholder="예: 본사 1층" />
-          </div>
-          <div class="form-group">
-            <label class="form-label">비고</label>
-            <input class="form-input" id="f-note" value="${item.note || ''}" placeholder="메모" />
+
+          <div class="form-shell-side">
+            <div class="form-card">
+              <div class="form-card-title">입력 진행 상태</div>
+              <div class="form-card-desc">필수값만 채워도 저장됩니다. 판매가, 거래처, 위치는 보강 추천 항목입니다.</div>
+              <div class="form-status-list" id="item-status-list"></div>
+            </div>
+            <div class="smart-summary-grid">
+              <div class="smart-summary-item">
+                <div class="smart-summary-label">현재 재고 가치</div>
+                <div class="smart-summary-value" id="f-totalPriceLabel">₩0</div>
+                <div class="smart-summary-note" id="item-price-note">수량과 원가를 입력하면 공급가액, 부가세, 합계가 자동 계산됩니다.</div>
+                <input type="hidden" id="f-supplyValue" value="${item.supplyValue ?? ''}" />
+                <input type="hidden" id="f-vat" value="${item.vat ?? ''}" />
+                <input type="hidden" id="f-totalPrice" value="${item.totalPrice ?? ''}" />
+              </div>
+              <div class="smart-summary-item">
+                <div class="smart-summary-label">예상 판매 기준 차익</div>
+                <div class="smart-summary-value" id="f-marginLabel">미입력</div>
+                <div class="smart-summary-note" id="item-margin-note">판매가를 넣으면 원가 대비 차익을 바로 볼 수 있습니다.</div>
+              </div>
+              <div class="smart-summary-item">
+                <div class="smart-summary-label">데이터 품질</div>
+                <div class="smart-summary-value" id="item-quality-label">기본 입력 전</div>
+                <div class="smart-summary-note" id="item-quality-note">거래처와 위치 정보가 있으면 발주와 보고가 훨씬 쉬워집니다.</div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
       <div class="modal-footer">
         <button class="btn btn-outline" id="modal-cancel">취소</button>
-        <button class="btn btn-primary" id="modal-save">${isEdit ? '수정' : '추가'}</button>
+        <button class="btn btn-primary" id="modal-save">${isEdit ? '수정 저장' : '품목 저장'}</button>
       </div>
     </div>
   `;
 
   document.body.appendChild(overlay);
 
-  // 닫기
   const close = () => overlay.remove();
   overlay.querySelector('#modal-close').addEventListener('click', close);
   overlay.querySelector('#modal-cancel').addEventListener('click', close);
   overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
 
-  // 실시간 계산
-  const qtyInput = overlay.querySelector('#f-quantity');
-  const priceInput = overlay.querySelector('#f-unitPrice');
-  const calcTotals = () => {
-    const q = parseFloat(qtyInput.value) || 0;
-    const p = parseFloat(priceInput.value) || 0;
-    const supply = q * p;
+  const inputs = {
+    name: overlay.querySelector('#f-itemName'),
+    code: overlay.querySelector('#f-itemCode'),
+    quantity: overlay.querySelector('#f-quantity'),
+    unit: overlay.querySelector('#f-unit'),
+    unitPrice: overlay.querySelector('#f-unitPrice'),
+    salePrice: overlay.querySelector('#f-salePrice'),
+    category: overlay.querySelector('#f-category'),
+    vendor: overlay.querySelector('#f-vendor'),
+    warehouse: overlay.querySelector('#f-warehouse'),
+    note: overlay.querySelector('#f-note'),
+  };
+
+  const formatMoney = (value) => `₩${Math.round(value || 0).toLocaleString('ko-KR')}`;
+
+  const refreshItemSummary = () => {
+    const qty = parseFloat(inputs.quantity.value) || 0;
+    const unitPrice = parseFloat(inputs.unitPrice.value) || 0;
+    const salePrice = parseFloat(inputs.salePrice.value) || 0;
+    const supply = qty * unitPrice;
     const vat = Math.floor(supply * 0.1);
+    const total = supply + vat;
+
     overlay.querySelector('#f-supplyValue').value = supply;
     overlay.querySelector('#f-vat').value = vat;
-    overlay.querySelector('#f-totalPrice').value = supply + vat;
-  };
-  qtyInput.addEventListener('input', calcTotals);
-  priceInput.addEventListener('input', calcTotals);
+    overlay.querySelector('#f-totalPrice').value = total;
+    overlay.querySelector('#f-totalPriceLabel').textContent = total > 0 ? formatMoney(total) : '₩0';
+    overlay.querySelector('#item-price-note').textContent =
+      total > 0
+        ? `공급가액 ${formatMoney(supply)} / 부가세 ${formatMoney(vat)} / 합계 ${formatMoney(total)}`
+        : '수량과 원가를 입력하면 공급가액, 부가세, 합계가 자동 계산됩니다.';
 
-  // 저장
+    const marginPerUnit = salePrice > 0 ? salePrice - unitPrice : null;
+    overlay.querySelector('#f-marginLabel').textContent =
+      marginPerUnit === null ? '미입력' : `${marginPerUnit >= 0 ? '+' : '-'}${formatMoney(Math.abs(marginPerUnit))}`;
+    overlay.querySelector('#item-margin-note').textContent =
+      marginPerUnit === null
+        ? '판매가를 넣으면 원가 대비 차익을 바로 볼 수 있습니다.'
+        : `판매단가 기준 예상 차익은 개당 ${marginPerUnit >= 0 ? '+' : '-'}${formatMoney(Math.abs(marginPerUnit))}입니다.`;
+
+    const statusItems = [
+      { done: !!inputs.name.value.trim(), text: '품목명이 입력되었습니다.' },
+      { done: inputs.quantity.value !== '', text: '수량이 입력되었습니다.' },
+      { done: unitPrice > 0, text: '원가가 입력되었습니다.' },
+      { done: salePrice > 0, text: '판매가가 입력되었습니다.' },
+      { done: !!inputs.vendor.value.trim(), text: '거래처가 연결되었습니다.' },
+      { done: !!inputs.warehouse.value.trim(), text: '창고/위치가 입력되었습니다.' },
+    ];
+    overlay.querySelector('#item-status-list').innerHTML = statusItems.map(entry => `
+      <div class="form-status-item ${entry.done ? 'is-complete' : ''}">${entry.text}</div>
+    `).join('');
+
+    const completedQuality = statusItems.filter(entry => entry.done).length;
+    overlay.querySelector('#item-quality-label').textContent = `${completedQuality}/6 단계 완료`;
+    overlay.querySelector('#item-quality-note').textContent =
+      completedQuality >= 5
+        ? '보고와 발주에 필요한 정보가 대부분 잘 채워져 있습니다.'
+        : '거래처, 위치, 판매가를 채우면 보고와 원가 분석 품질이 더 좋아집니다.';
+  };
+
+  Object.values(inputs).forEach(input => {
+    input?.addEventListener('input', refreshItemSummary);
+  });
+  refreshItemSummary();
+
   overlay.querySelector('#modal-save').addEventListener('click', () => {
-    const name = overlay.querySelector('#f-itemName').value.trim();
-    const qty = overlay.querySelector('#f-quantity').value;
+    const name = inputs.name.value.trim();
+    const qty = inputs.quantity.value;
 
     if (!name) {
       showToast('품목명은 필수입니다.', 'warning');
-      overlay.querySelector('#f-itemName').focus();
+      inputs.name.focus();
       return;
     }
 
     const newItem = {
       itemName: name,
-      itemCode: overlay.querySelector('#f-itemCode').value.trim(),
-      category: overlay.querySelector('#f-category').value.trim(),
-      vendor: overlay.querySelector('#f-vendor').value.trim(),
+      itemCode: inputs.code.value.trim(),
+      category: inputs.category.value.trim(),
+      vendor: inputs.vendor.value.trim(),
       quantity: qty === '' ? 0 : parseFloat(qty),
-      unit: overlay.querySelector('#f-unit').value.trim(),
-      unitPrice: parseFloat(overlay.querySelector('#f-unitPrice').value) || 0,
-      salePrice: parseFloat(overlay.querySelector('#f-salePrice').value) || 0,
-      warehouse: overlay.querySelector('#f-warehouse').value.trim(),
-      note: overlay.querySelector('#f-note').value.trim(),
+      unit: inputs.unit.value.trim(),
+      unitPrice: parseFloat(inputs.unitPrice.value) || 0,
+      salePrice: parseFloat(inputs.salePrice.value) || 0,
+      warehouse: inputs.warehouse.value.trim(),
+      note: inputs.note.value.trim(),
     };
-    // 합계 자동 계산 (매입가 기준)
     newItem.supplyValue = newItem.quantity * newItem.unitPrice;
     newItem.vat = Math.floor(newItem.supplyValue * 0.1);
     newItem.totalPrice = newItem.supplyValue + newItem.vat;
 
     if (isEdit) {
       updateItem(editIdx, newItem);
-      showToast(`"${name}" 항목을 수정했습니다.`, 'success');
+      showToast(`"${name}" 품목을 수정했습니다.`, 'success');
     } else {
       addItem(newItem);
-      showToast(`"${name}" 항목을 추가했습니다.`, 'success');
+      showToast(`"${name}" 품목을 추가했습니다.`, 'success');
     }
 
     close();
-    // 페이지 새로 그리기
     renderInventoryPage(container, navigateTo);
   });
 
-  // 첫 입력란에 포커스
   setTimeout(() => overlay.querySelector('#f-itemName').focus(), 100);
 }
 
-// === 유틸 ===
+// === ?좏떥 ===
 
 function formatCell(key, value) {
   if (value === '' || value === null || value === undefined) return '';
@@ -1064,7 +1835,7 @@ function formatCell(key, value) {
     const valStr = typeof value === 'string' ? value.replace(/,/g, '') : value;
     const num = parseFloat(valStr);
     if (!isNaN(num)) {
-      // 왜 Math.round? → 원단위 반올림 (한국 원화는 소수점 없음)
+      // ??Math.round? ???먮떒??諛섏삱由?(?쒓뎅 ?먰솕???뚯닔???놁쓬)
       if (key === 'unitPrice' || key === 'salePrice' || key === 'supplyValue' || key === 'vat' || key === 'totalPrice') {
         return '₩' + Math.round(num).toLocaleString('ko-KR');
       }
@@ -1114,17 +1885,18 @@ function getWarehouses(data) {
 }
 
 /**
- * 품목코드 목록 추출
- * 왜 별도 함수? → 드롭다운 필터에서 특정 품목코드로 빠르게 조회하기 위함
+ * ?덈ぉ肄붾뱶 紐⑸줉 異붿텧
+ * ??蹂꾨룄 ?⑥닔? ???쒕∼?ㅼ슫 ?꾪꽣?먯꽌 ?뱀젙 ?덈ぉ肄붾뱶濡?鍮좊Ⅴ寃?議고쉶?섍린 ?꾪븿
  */
 function getItemCodes(data) {
   return [...new Set(data.map(r => r.itemCode).filter(Boolean))].sort();
 }
 
 /**
- * 거래처 목록 추출
- * 왜 별도 함수? → 거래처별 필터로 특정 업체의 품목만 볼 수 있게 하기 위함
+ * 嫄곕옒泥?紐⑸줉 異붿텧
+ * ??蹂꾨룄 ?⑥닔? ??嫄곕옒泥섎퀎 ?꾪꽣濡??뱀젙 ?낆껜???덈ぉ留?蹂????덇쾶 ?섍린 ?꾪븿
  */
 function getVendors(data) {
   return [...new Set(data.map(r => r.vendor).filter(Boolean))].sort();
 }
+

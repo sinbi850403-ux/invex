@@ -1,14 +1,15 @@
-/**
- * page-summary.js - 요약 보고 페이지
- * 실무 기능: 분류별/창고별/기간별 집계, 입출고 추이, 재고 부족 경고 목록
+﻿/**
+ * page-summary.js - ?붿빟 蹂닿퀬 ?섏씠吏
+ * ?ㅻТ 湲곕뒫: 遺꾨쪟蹂?李쎄퀬蹂?湲곌컙蹂?吏묎퀎, ?낆텧怨?異붿씠, ?ш퀬 遺議?寃쎄퀬 紐⑸줉
  */
 
 import { getState } from './store.js';
 import { showToast } from './toast.js';
 import { downloadExcel } from './excel.js';
+import { renderInsightHero } from './ux-toolkit.js';
 
 /**
- * 요약 보고 페이지 렌더링
+ * ?붿빟 蹂닿퀬 ?섏씠吏 ?뚮뜑留?
  */
 export function renderSummaryPage(container, navigateTo) {
   const state = getState();
@@ -24,8 +25,8 @@ export function renderSummaryPage(container, navigateTo) {
       <div class="card">
         <div class="empty-state">
           <div class="icon">📊</div>
-          <div class="msg">아직 보고할 데이터가 없습니다</div>
-          <div class="sub">파일을 업로드하거나 품목을 등록하면 자동으로 보고서가 생성됩니다.</div>
+          <div class="msg">아직 보고할 데이터가 없습니다.</div>
+          <div class="sub">파일을 업로드하거나 품목을 등록하면 요약 보고가 자동으로 생성됩니다.</div>
           <br/>
           <button class="btn btn-primary" id="btn-go-upload">파일 업로드하기</button>
         </div>
@@ -41,15 +42,33 @@ export function renderSummaryPage(container, navigateTo) {
     <div class="page-header">
       <div>
         <h1 class="page-title"><span class="title-icon">📊</span> 요약 보고</h1>
-        <div class="page-desc">재고 현황 및 입출고 통계를 한눈에 확인합니다.</div>
+        <div class="page-desc">재고 현황과 입출고 통계를 한눈에 확인합니다.</div>
       </div>
       <div class="page-actions">
-        <button class="btn btn-outline" id="btn-export-summary">📥 보고서 내보내기</button>
-        <button class="btn btn-outline" id="btn-print">🖨️ 인쇄</button>
+        <button class="btn btn-outline" id="btn-export-summary">요약 보고서 내보내기</button>
+        <button class="btn btn-outline" id="btn-print">인쇄</button>
       </div>
     </div>
 
-    <!-- 핵심 지표 -->
+    ${renderInsightHero({
+      eyebrow: '보고 한눈 요약',
+      title: '표를 읽기 전에 핵심 숫자와 우선 확인 항목부터 보여줍니다.',
+      desc: '총 재고, 부족 품목, 가장 큰 분류, 최근 흐름을 먼저 정리해서 누구나 페이지 맨 위에서 상황을 파악할 수 있게 구성했습니다.',
+      tone: summary.warnings.length > 0 ? 'warning' : 'success',
+      metrics: [
+        { label: '부족 품목', value: summary.warnings.length > 0 ? `${summary.warnings.length}건` : '없음', note: '안전재고 기준 이하 품목 수입니다.', stateClass: summary.warnings.length > 0 ? 'text-danger' : 'text-success' },
+        { label: '가장 큰 분류', value: summary.categories[0]?.name || '미분류', note: summary.categories[0] ? `${summary.categories[0].qty.toLocaleString('ko-KR')}개 보유` : '분류 데이터가 아직 없습니다.' },
+        { label: '최근 7일 순증감', value: `${(summary.dailyTrend || []).reduce((acc, day) => acc + day.net, 0).toLocaleString('ko-KR')}`, note: '최근 7일 입출고 순증감입니다.' },
+        { label: '연결 거래처', value: `${summary.vendors.length}곳`, note: '보고서에 잡히는 거래처 수입니다.' },
+      ],
+      bullets: [
+        summary.warnings.length > 0 ? `부족 품목 ${summary.warnings.length}건은 발주 또는 보충 여부를 먼저 판단하세요.` : '지금은 부족 품목이 없어 운영 상태가 안정적입니다.',
+        summary.categories[0] ? `${summary.categories[0].name || '미분류'} 분류가 현재 가장 큰 비중을 차지하고 있습니다.` : '분류를 채우면 보고 정확도가 더 좋아집니다.',
+        transactions.length > 0 ? '아래 표는 모두 헤더 클릭 정렬이 가능하므로 원하는 기준으로 바로 다시 볼 수 있습니다.' : '거래 기록이 쌓이면 최근 흐름과 순증감 표가 더 풍부해집니다.',
+      ],
+    })}
+
+    <!-- ?듭떖 吏??-->
     <div class="stat-grid">
       <div class="stat-card">
         <div class="stat-label">전체 품목</div>
@@ -69,11 +88,11 @@ export function renderSummaryPage(container, navigateTo) {
       </div>
     </div>
 
-    <!-- 재고 부족 경고 -->
+    <!-- ?ш퀬 遺議?寃쎄퀬 -->
     ${summary.warnings.length > 0 ? `
       <div class="card" style="border-left: 3px solid var(--danger);">
         <div class="card-title" style="color:var(--danger);">
-          ⚠️ 재고 부족 경고 <span class="badge badge-danger" style="margin-left:8px;">${summary.warnings.length}건</span>
+          재고 부족 경고 <span class="badge badge-danger" style="margin-left:8px;">${summary.warnings.length}건</span>
         </div>
         <div class="table-wrapper" style="border:none;">
           <table class="data-table">
@@ -105,12 +124,12 @@ export function renderSummaryPage(container, navigateTo) {
       </div>
     ` : ''}
 
-    <!-- 분류별 시각 차트 -->
+    <!-- 遺꾨쪟蹂??쒓컖 李⑦듃 -->
     ${summary.categories.length > 1 ? `
       <div style="display:grid; grid-template-columns: 1fr 1fr; gap:16px; margin-bottom:16px;">
-        <!-- 도넛 차트: 분류별 금액 비율 -->
+        <!-- ?꾨꽋 李⑦듃: 遺꾨쪟蹂?湲덉븸 鍮꾩쑉 -->
         <div class="card">
-          <div class="card-title">💰 분류별 금액 비율</div>
+          <div class="card-title">분류별 금액 비중</div>
           <div style="display:flex; align-items:center; gap:24px; padding:8px 0;">
             <div id="donut-chart" style="position:relative; width:140px; height:140px; flex-shrink:0;">
               ${buildDonutChart(summary.categories, summary.totalPrice)}
@@ -129,9 +148,9 @@ export function renderSummaryPage(container, navigateTo) {
           </div>
         </div>
 
-        <!-- 수평 바 차트: 분류별 수량 -->
+        <!-- ?섑룊 諛?李⑦듃: 遺꾨쪟蹂??섎웾 -->
         <div class="card">
-          <div class="card-title">📦 분류별 수량 분포</div>
+          <div class="card-title">분류별 수량 분포</div>
           <div style="display:flex; flex-direction:column; gap:10px; padding:8px 0;">
             ${summary.categories.map((cat, i) => {
               const colors = ['#2563eb', '#16a34a', '#d97706', '#dc2626', '#7c3aed', '#0891b2', '#be185d', '#ca8a04'];
@@ -152,10 +171,10 @@ export function renderSummaryPage(container, navigateTo) {
       </div>
     ` : ''}
 
-    <!-- 분류별 현황 -->
+    <!-- 遺꾨쪟蹂??꾪솴 -->
     ${summary.categories.length > 0 ? `
       <div class="card">
-        <div class="card-title">📂 분류별 현황</div>
+        <div class="card-title">분류별 현황</div>
         <div class="table-wrapper" style="border:none;">
           <table class="data-table">
             <thead>
@@ -190,10 +209,10 @@ export function renderSummaryPage(container, navigateTo) {
       </div>
     ` : ''}
 
-    <!-- 창고/위치별 -->
+    <!-- 李쎄퀬/?꾩튂蹂?-->
     ${summary.warehouses.length > 0 ? `
       <div class="card">
-        <div class="card-title">🏢 창고/위치별 현황</div>
+        <div class="card-title">창고/위치별 현황</div>
         <div class="table-wrapper" style="border:none;">
           <table class="data-table">
             <thead>
@@ -219,10 +238,10 @@ export function renderSummaryPage(container, navigateTo) {
       </div>
     ` : ''}
 
-    <!-- 거래처별 현황 -->
+    <!-- 嫄곕옒泥섎퀎 ?꾪솴 -->
     ${summary.vendors.length > 0 ? `
       <div class="card">
-        <div class="card-title">🤝 거래처별 현황</div>
+        <div class="card-title">거래처별 현황</div>
         <div class="table-wrapper" style="border:none;">
           <table class="data-table">
             <thead>
@@ -248,20 +267,20 @@ export function renderSummaryPage(container, navigateTo) {
       </div>
     ` : ''}
 
-    <!-- 입출고 최근 동향 -->
+    <!-- ?낆텧怨?理쒓렐 ?숉뼢 -->
     ${transactions.length > 0 ? `
       <div class="card">
-        <div class="card-title">🔄 최근 입출고 동향 <span class="card-subtitle">(최근 7일)</span></div>
+        <div class="card-title">최근 입출고 동향 <span class="card-subtitle">(최근 7일)</span></div>
         <div class="table-wrapper" style="border:none;">
           <table class="data-table">
             <thead>
               <tr>
                 <th>날짜</th>
-                <th class="text-right">입고 건</th>
+                <th class="text-right">입고 건수</th>
                 <th class="text-right">입고 수량</th>
-                <th class="text-right">출고 건</th>
+                <th class="text-right">출고 건수</th>
                 <th class="text-right">출고 수량</th>
-                <th class="text-right">순변동</th>
+                <th class="text-right">순증감</th>
               </tr>
             </thead>
             <tbody>
@@ -283,9 +302,9 @@ export function renderSummaryPage(container, navigateTo) {
       </div>
     ` : ''}
 
-    <!-- 수량 상위 품목 -->
+    <!-- ?섎웾 ?곸쐞 ?덈ぉ -->
     <div class="card">
-      <div class="card-title">🏆 수량 상위 10개 품목</div>
+      <div class="card-title">수량 상위 10개 품목</div>
       <div class="table-wrapper" style="border:none;">
         <table class="data-table">
           <thead>
@@ -317,7 +336,7 @@ export function renderSummaryPage(container, navigateTo) {
     </div>
   `;
 
-  // --- 이벤트 ---
+  // --- ?대깽??---
   container.querySelector('#btn-export-summary')?.addEventListener('click', () => {
     try {
       const exportData = summary.categories.map(cat => ({
@@ -341,13 +360,13 @@ export function renderSummaryPage(container, navigateTo) {
 }
 
 /**
- * 요약 데이터 계산
+ * ?붿빟 ?곗씠??怨꾩궛
  */
 function buildSummary(data, transactions, safetyStock) {
   const totalQty = data.reduce((s, r) => s + (parseFloat(r.quantity) || 0), 0);
   const totalPrice = data.reduce((s, r) => s + (parseFloat(r.totalPrice) || 0), 0);
 
-  // 분류별
+  // 遺꾨쪟蹂?
   const catMap = {};
   data.forEach(row => {
     const cat = row.category || '';
@@ -363,7 +382,7 @@ function buildSummary(data, transactions, safetyStock) {
       ratio: data.length > 0 ? Math.round((c.count / data.length) * 100) : 0,
     }));
 
-  // 창고별
+  // 李쎄퀬蹂?
   const whMap = {};
   data.forEach(row => {
     const wh = row.warehouse || '';
@@ -375,7 +394,7 @@ function buildSummary(data, transactions, safetyStock) {
   });
   const warehouses = Object.values(whMap).sort((a, b) => b.qty - a.qty);
 
-  // 거래처별 집계
+  // 嫄곕옒泥섎퀎 吏묎퀎
   const vendorMap = {};
   data.forEach(row => {
     const v = row.vendor || '';
@@ -387,12 +406,12 @@ function buildSummary(data, transactions, safetyStock) {
   });
   const vendors = Object.values(vendorMap).sort((a, b) => b.qty - a.qty);
 
-  // 수량 상위 10
+  // ?섎웾 ?곸쐞 10
   const topByQty = [...data]
     .sort((a, b) => (parseFloat(b.quantity) || 0) - (parseFloat(a.quantity) || 0))
     .slice(0, 10);
 
-  // 재고 경고
+  // ?ш퀬 寃쎄퀬
   const warnings = data
     .filter(d => {
       const min = safetyStock[d.itemName];
@@ -405,7 +424,7 @@ function buildSummary(data, transactions, safetyStock) {
     }))
     .sort((a, b) => a.qty - b.qty);
 
-  // 최근 7일 입출고 추이
+  // 理쒓렐 7???낆텧怨?異붿씠
   const dailyTrend = [];
   for (let i = 6; i >= 0; i--) {
     const d = new Date();
@@ -433,8 +452,8 @@ function buildSummary(data, transactions, safetyStock) {
 }
 
 /**
- * CSS conic-gradient 기반 도넛 차트 생성
- * 왜 CSS? → 외부 차트 라이브러리 없이도 시각적 효과를 낼 수 있어서 번들 크기를 줄임
+ * CSS conic-gradient 湲곕컲 ?꾨꽋 李⑦듃 ?앹꽦
+ * ??CSS? ???몃? 李⑦듃 ?쇱씠釉뚮윭由??놁씠???쒓컖???④낵瑜??????덉뼱??踰덈뱾 ?ш린瑜?以꾩엫
  */
 function buildDonutChart(categories, totalPrice) {
   const colors = ['#2563eb', '#16a34a', '#d97706', '#dc2626', '#7c3aed', '#0891b2', '#be185d', '#ca8a04'];
@@ -443,7 +462,7 @@ function buildDonutChart(categories, totalPrice) {
     return `<div style="width:140px; height:140px; border-radius:50%; background:#e5e7eb; display:flex; align-items:center; justify-content:center; color:var(--text-muted); font-size:12px;">데이터 없음</div>`;
   }
 
-  // conic-gradient 세그먼트 계산
+  // conic-gradient ?멸렇癒쇳듃 怨꾩궛
   let cumulative = 0;
   const segments = categories.map((cat, i) => {
     const ratio = cat.price / totalPrice;
@@ -473,7 +492,7 @@ function buildDonutChart(categories, totalPrice) {
         align-items: center;
         justify-content: center;
       ">
-        <div style="font-size:10px; color:var(--text-muted);">총 금액</div>
+        <div style="font-size:10px; color:var(--text-muted);">珥?湲덉븸</div>
         <div style="font-size:11px; font-weight:700; color:var(--text-primary);">
           ${totalPrice >= 100000000
             ? '₩' + (totalPrice / 100000000).toFixed(1) + '억'
@@ -486,3 +505,4 @@ function buildDonutChart(categories, totalPrice) {
     </div>
   `;
 }
+
