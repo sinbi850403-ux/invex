@@ -9,7 +9,7 @@ import { showToast } from './toast.js';
 import { downloadExcel } from './excel.js';
 import { generateInventoryPDF } from './pdf-generator.js';
 import { renderItemTimelineChart } from './charts.js';
-import { renderGuidedPanel, renderInsightHero, renderQuickFilterRow } from './ux-toolkit.js';
+import { renderGuidedPanel, renderInsightHero, renderQuickFilterRow, escapeHtml } from './ux-toolkit.js';
 
 // 페이지당 행 수
 const PAGE_SIZE = 20;
@@ -919,7 +919,7 @@ export function renderInventoryPage(container, navigateTo) {
               </td>
             `).join('')}
             <td class="text-center">
-              <button class="btn-icon btn-safety" data-name="${row.itemName}" data-min="${min ?? ''}"
+              <button class="btn-icon btn-safety" data-name="${escapeHtml(row.itemName)}" data-min="${min ?? ''}"
                 title="클릭하여 안전재고 수량 설정"
                 style="font-size:11px; padding:2px 6px; border-radius:4px;
                   ${min !== undefined ? 'background:rgba(63,185,80,0.15); color:var(--success);' : 'color:var(--text-muted);'}">
@@ -1842,7 +1842,7 @@ function formatCell(key, value) {
       return Math.round(num).toLocaleString('ko-KR');
     }
   }
-  return String(value);
+  return escapeHtml(String(value));
 }
 
 function calcTotalQty(data) {
