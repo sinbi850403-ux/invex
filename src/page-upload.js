@@ -104,8 +104,8 @@ export function renderUploadPage(container, navigateTo) {
         <button class="btn btn-outline btn-sm" id="btn-clear" style="margin-left:12px;">
           새 파일로 교체
         </button>
-        <button class="btn btn-primary btn-sm" id="btn-go-inv" style="margin-left:4px;">
-          재고 현황 보기 →
+        <button class="btn btn-primary btn-sm" id="btn-go-mapping" style="margin-left:4px;">
+          데이터 확인하기 →
         </button>
       </div>
     ` : ''}
@@ -147,8 +147,8 @@ export function renderUploadPage(container, navigateTo) {
     });
   });
 
-  container.querySelector('#btn-go-inv')?.addEventListener('click', () => {
-    navigateTo('inventory');
+  container.querySelector('#btn-go-mapping')?.addEventListener('click', () => {
+    navigateTo('mapping');
   });
 }
 
@@ -199,7 +199,7 @@ async function handleFile(file, navigateTo) {
       sheetNames: result.sheetNames,
       activeSheet,
       fileName: file.name,
-      currentStep: 3,
+      currentStep: 2,
       allSheets: result.sheets,
       columnMapping: mapping,
       mappedData,
@@ -208,12 +208,12 @@ async function handleFile(file, navigateTo) {
     });
 
     showToast(
-      `"${file.name}" → ${mappedData.length}건 등록 (${mappedCount}개 필드 자동 매핑)`,
+      `"${file.name}" 파일을 읽었습니다. 데이터 매핑을 확인해 주세요.`,
       'success'
     );
 
-    // 바로 재고 현황으로
-    navigateTo('inventory');
+    // 컬럼 매핑 확인 화면으로 이동
+    navigateTo('mapping');
   } catch (err) {
     showToast(err.message, 'error');
   }
@@ -261,7 +261,7 @@ function loadSampleData(navigateTo) {
     sheetNames: ['샘플데이터'],
     activeSheet: '샘플데이터',
     fileName: '샘플_재고데이터.xlsx',
-    currentStep: 3,
+    currentStep: 2,
     allSheets: { '샘플데이터': sampleData },
     columnMapping: mapping,
     mappedData,
@@ -269,8 +269,8 @@ function loadSampleData(navigateTo) {
     lastUploadDiff: buildUploadDiff(previousMappedData, mappedData, '샘플_재고데이터.xlsx'),
   });
 
-  showToast(`샘플 데이터 ${mappedData.length}건 자동 등록 완료`, 'success');
-  navigateTo('inventory');
+  showToast(`샘플 데이터를 불러왔습니다. 매핑을 확인해 주세요.`, 'success');
+  navigateTo('mapping');
 }
 
 // === 자동 매핑 유틸 ===
