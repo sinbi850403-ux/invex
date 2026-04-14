@@ -390,6 +390,47 @@ export async function restoreState() {
 // === 입출고 관련 유틸 ===
 
 /**
+ * 콤마 포함 숫자 문자열 안전 파싱 (Excel 가져오기 대응)
+ * parseFloat("1,000") = 1 오류 방지
+ */
+function toNum(value) {
+  if (value === null || value === undefined || value === '') return 0;
+  const n = parseFloat(String(value).replace(/,/g, ''));
+  return isNaN(n) ? 0 : n;
+}
+
+/**
+ * 품목의 VAT 비율 추론 (면세 0% vs 과세 10%)
+ * 기존 supplyValue/vat 비율로 판단, 애매하면 10% 기본값
+ */
+function inferVatRate(item) {
+  const sv = toNum(item.supplyValue);
+  const vat = toNum(item.vat);
+  if (sv > 0) {
+    const rate = vat / sv;
+    return rate < 0.05 ? 0 : 0.1;
+  }
+  return 0.1;
+}
+
+/**
+ * 품목의 공급가액/부가세/합계 재계산
+ * price가 0이면 기존 단가 유지 — 단가 없는 입출고가 금액을 0으로 날리지 않도록 방지
+ */
+function recalcItemAmounts(item) {
+  const qty = toNum(item.quantity);
+  const price = toNum(item.unitPrice);
+  if (price <= 0) {
+    // 단가 없으면 금액 필드는 건드리지 않음 (기존값 유지)
+    return;
+  }
+  const vatRate = inferVatRate(item);
+  item.supplyValue = qty * price;
+  item.vat = Math.floor(item.supplyValue * vatRate);
+  item.totalPrice = item.supplyValue + item.vat;
+}
+
+/**
  * 새 입출고 기록 추가
  * @param {object} tx - {type:'in'|'out', itemName, quantity, date, note, unitPrice}
  */
@@ -403,40 +444,31 @@ export function addTransaction(tx) {
 
   // 재고 데이터에 수량 반영
   const item = state.mappedData.find(d =>
-    d.itemName === tx.itemName ||
-    (d.itemCode && d.itemCode === tx.itemCode)
+    String(d.itemName || '').trim() === String(tx.itemName || '').trim() ||
+    (d.itemCode && tx.itemCode && String(d.itemCode).trim() === String(tx.itemCode).trim())
   );
   if (item) {
-    const qty = parseFloat(tx.quantity) || 0;
-    const currentQty = parseFloat(item.quantity) || 0;
+    const qty = toNum(tx.quantity);
+    const currentQty = toNum(item.quantity);
     if (tx.type === 'in') {
       item.quantity = currentQty + qty;
     } else {
       item.quantity = Math.max(0, currentQty - qty);
     }
-    // 합계금액 재계산 (기존 VAT 비율 유지, 면세/영세 고려)
-    const price = parseFloat(item.unitPrice) || parseFloat(tx.unitPrice) || 0;
-    const prevSupplyValue = parseFloat(item.supplyValue) || 0;
-    const prevVat = parseFloat(item.vat) || 0;
-    
-    let vatRate = 0.1;
-    if (prevSupplyValue > 0) {
-      vatRate = prevVat / prevSupplyValue;
-      // 0 근처면 면세 상품으로 처리, 아니면 통상적인 10%
-      if (vatRate < 0.05) vatRate = 0;
-      else vatRate = 0.1;
-    } else if (prevSupplyValue === 0 && prevVat === 0 && item.quantity > 0) {
-      vatRate = 0.1;
+
+    // 트랜잭션에 단가가 있고 품목에 단가가 없을 때만 단가 업데이트
+    const txPrice = toNum(tx.unitPrice);
+    const itemPrice = toNum(item.unitPrice);
+    if (txPrice > 0 && itemPrice === 0) {
+      item.unitPrice = txPrice;
     }
 
-    item.unitPrice = price; // 트랜잭션 등에서 파생된 단가 동기화
-    item.supplyValue = item.quantity * price;
-    item.vat = Math.floor(item.supplyValue * vatRate);
-    item.totalPrice = item.supplyValue + item.vat;
+    // 금액 재계산 (단가가 있을 때만)
+    recalcItemAmounts(item);
   } else {
-    // 기존에 없는 품목일 경우, 재고 마스터(mappedData)에 신규 자동 생성
-    const qty = tx.type === 'in' ? (parseFloat(tx.quantity) || 0) : 0;
-    const price = parseFloat(tx.unitPrice) || 0;
+    // 기존에 없는 품목 → 재고 마스터에 신규 자동 생성
+    const qty = tx.type === 'in' ? toNum(tx.quantity) : 0;
+    const price = toNum(tx.unitPrice);
     const supplyValue = qty * price;
     const vat = Math.floor(supplyValue * 0.1);
 
@@ -453,9 +485,9 @@ export function addTransaction(tx) {
       totalPrice: supplyValue + vat,
       warehouse: tx.warehouse || '',
       note: '입출고 등록에 의한 자동 생성',
-      safetyStock: 0
+      safetyStock: 0,
     };
-    
+
     state.mappedData = [newItem, ...state.mappedData];
   }
 
@@ -477,35 +509,20 @@ export function deleteTransaction(id) {
   const index = state.transactions.findIndex(t => t.id === id);
   if (index === -1) return null;
   const target = state.transactions[index];
-  
+
   const item = (state.mappedData || []).find(d =>
-    d.itemName === target.itemName ||
-    (d.itemCode && d.itemCode === target.itemCode)
+    String(d.itemName || '').trim() === String(target.itemName || '').trim() ||
+    (d.itemCode && target.itemCode && String(d.itemCode).trim() === String(target.itemCode).trim())
   );
   if (item) {
-    const qty = parseFloat(target.quantity) || 0;
-    const currentQty = parseFloat(item.quantity) || 0;
+    const qty = toNum(target.quantity);
+    const currentQty = toNum(item.quantity);
     if (target.type === 'in') {
       item.quantity = Math.max(0, currentQty - qty);
     } else {
       item.quantity = currentQty + qty;
     }
-    // 합계금액 재계산 (기존 VAT 비율 유지)
-    const price = parseFloat(item.unitPrice) || parseFloat(target.unitPrice) || 0;
-    const prevSupplyValue = parseFloat(item.supplyValue) || 0;
-    const prevVat = parseFloat(item.vat) || 0;
-    
-    let vatRate = 0.1;
-    if (prevSupplyValue > 0) {
-      vatRate = prevVat / prevSupplyValue;
-      if (vatRate < 0.05) vatRate = 0;
-      else vatRate = 0.1;
-    }
-    
-    item.unitPrice = price;
-    item.supplyValue = item.quantity * price;
-    item.vat = Math.floor(item.supplyValue * vatRate);
-    item.totalPrice = item.supplyValue + item.vat;
+    recalcItemAmounts(item);
   }
 
   // Supabase에서도 삭제
@@ -568,6 +585,7 @@ export function updateItem(index, item) {
  */
 export function deleteItem(index) {
   const deleted = state.mappedData[index];
+  if (!deleted) return null;
   state.mappedData.splice(index, 1);
   saveToDB();
 
@@ -580,6 +598,7 @@ export function deleteItem(index) {
   if (isSupabaseConfigured) {
     scheduleSyncToSupabase(['mappedData']);
   }
+  return { deleted, index };
 }
 
 /**
@@ -611,9 +630,26 @@ export function restoreTransaction(tx, index = 0) {
   // 복원된 건은 다시 동기화 필요
   tx._synced = false;
   state.transactions.splice(safeIndex, 0, tx);
+
+  // 재고 수량도 복원 (deleteTransaction에서 조정한 수량을 원복)
+  const item = (state.mappedData || []).find(d =>
+    String(d.itemName || '').trim() === String(tx.itemName || '').trim() ||
+    (d.itemCode && tx.itemCode && String(d.itemCode).trim() === String(tx.itemCode).trim())
+  );
+  if (item) {
+    const qty = toNum(tx.quantity);
+    const currentQty = toNum(item.quantity);
+    if (tx.type === 'in') {
+      item.quantity = currentQty + qty;
+    } else {
+      item.quantity = Math.max(0, currentQty - qty);
+    }
+    recalcItemAmounts(item);
+  }
+
   saveToDB();
   if (isSupabaseConfigured) {
-    scheduleSyncToSupabase(['transactions']);
+    scheduleSyncToSupabase(['transactions', 'mappedData']);
   }
   return tx;
 }

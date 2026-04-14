@@ -541,13 +541,14 @@ export function renderInoutPage(container, navigateTo) {
         if (selectedTxIds.size === 0) return;
         if (!confirm(\`선택한 \${selectedTxIds.size}건의 기록을 삭제하시겠습니까?\`)) return;
         
+        const totalSelected = selectedTxIds.size;
         let failCount = 0;
         selectedTxIds.forEach(id => {
           const res = deleteTransaction(id);
           if(!res) failCount++;
         });
         selectedTxIds.clear();
-        showToast(\`일괄 삭제 완료! (선택 \${selectedTxIds.size}건 중 실패 \${failCount}건)\`, 'success');
+        showToast(\`일괄 삭제 완료! (\${totalSelected}건 중 \${totalSelected - failCount}건 삭제)\`, 'success');
         renderInoutPage(container, navigateTo);
       };
     }

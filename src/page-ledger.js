@@ -466,8 +466,8 @@ function buildLedger(items, transactions, from, to, itemFilter, openingOverrides
       unit: item.unit || '',
       unitPrice,
       openingQty: Math.max(0, openingQty),
-      inQty: transaction.inQty,
-      outQty: transaction.outQty,
+      inQty: periodInQty,
+      outQty: periodOutQty,
       closingQty,
       closingValue,
     };
