@@ -507,6 +507,8 @@ export function addTransaction(tx) {
   }
 
   saveToDB();
+  // UI 즉시 갱신 (재고 현황 자동 반영)
+  if (_syncCallback) _syncCallback();
   // Supabase에 입출고 + 품목 수량 변경 동기화
   if (isSupabaseConfigured) {
     scheduleSyncToSupabase(['transactions', 'mappedData']);

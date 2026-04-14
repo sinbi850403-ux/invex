@@ -508,7 +508,11 @@ export function renderInoutPage(container, navigateTo) {
               </span>
             </td>
             <td data-label="거래처" style="font-size:12px; ${indent}">${tx.vendor || '<span style="color:var(--text-muted)">-</span>'}</td>
-            <td data-label="품목명" style="${indent}"><span style="color:var(--text-muted); font-size:12px;">${isChild ? tx.itemName || '-' : ''}</span></td>
+            <td data-label="품목명" style="${indent}">
+              ${isChild
+                ? `<span style="color:var(--text-muted); font-size:12px;">${tx.itemName || '-'}</span>`
+                : `<strong>${tx.itemName || '-'}</strong>`}
+            </td>
             <td data-label="품목코드" style="color:var(--text-muted); font-size:12px;">${tx.itemCode || '-'}</td>
             <td data-label="수량" class="text-right">
               <span class="${tx.type === 'in' ? 'type-in' : 'type-out'}">
