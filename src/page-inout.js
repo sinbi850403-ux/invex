@@ -222,6 +222,7 @@ export function renderInoutPage(container, navigateTo) {
 
   let currentPageNum = 1;
   let selectedTxIds = new Set();
+  const expandedGroups = new Set(); // 펼쳐진 그룹 키
   const defaultFilter = { keyword: '', type: '', date: '', vendor: '', itemCode: '', quick: 'all' };
   const defaultSort = { key: 'date', direction: 'desc' };
   const savedViewPrefs = state.inoutViewPrefs || {};
@@ -469,49 +470,108 @@ export function renderInoutPage(container, navigateTo) {
         ${transactions.length === 0 ? '아직 입출고 기록이 없습니다. 위 버튼으로 먼저 등록해 주세요.' : '검색 결과가 없습니다.'}
       </td></tr>`;
     } else {
-      tbody.innerHTML = pageData.map((tx, i) => `
-        <tr class="${selectedTxIds.has(tx.id) ? 'selected' : ''}">
-          <td data-label="" style="text-align:center;">
-            <input type="checkbox" class="tx-select-row" value="${tx.id}" ${selectedTxIds.has(tx.id) ? 'checked' : ''} />
-          </td>
-          <td class="col-num">${start + i + 1}</td>
-          <td data-label="구분">
-            <span class="${tx.type === 'in' ? 'type-in' : 'type-out'}">
-              ${tx.type === 'in' ? '입고' : '출고'}
-            </span>
-          </td>
-          <td data-label="거래처" style="font-size:12px;">${tx.vendor || '<span style="color:var(--text-muted)">-</span>'}</td>
-          <td data-label="품목명"><strong>${tx.itemName || '-'}</strong></td>
-          <td data-label="품목코드" style="color:var(--text-muted);">${tx.itemCode || '-'}</td>
-          <td data-label="수량" class="text-right">
-            <span class="${tx.type === 'in' ? 'type-in' : 'type-out'}">
-              ${tx.type === 'in' ? '+' : '-'}${parseFloat(tx.quantity || 0).toLocaleString('ko-KR')}
-            </span>
-          </td>
-          <td data-label="원가" class="text-right">${tx.unitPrice ? '₩' + Math.round(parseFloat(tx.unitPrice)).toLocaleString('ko-KR') : '-'}</td>
-          <td data-label="판매가" class="text-right editable-price-cell" data-tx-id="${tx.id}" data-field="sellingPrice" title="클릭하여 수정">
-            <span class="price-display">${tx.sellingPrice ? '₩' + Math.round(parseFloat(tx.sellingPrice)).toLocaleString('ko-KR') : '<span style="color:var(--text-muted)">-</span>'}</span>
-          </td>
-          <td data-label="실판매가" class="text-right editable-price-cell" data-tx-id="${tx.id}" data-field="actualSellingPrice" title="클릭하여 수정">
-            <span class="price-display">${tx.actualSellingPrice ? '₩' + Math.round(parseFloat(tx.actualSellingPrice)).toLocaleString('ko-KR') : '<span style="color:var(--text-muted)">-</span>'}</span>
-          </td>
-          <td data-label="이익률" class="text-right">${(() => {
-            const cost = parseFloat(tx.unitPrice) || 0;
-            const actual = parseFloat(tx.actualSellingPrice) || 0;
-            if (cost > 0 && actual > 0) {
-              const margin = ((actual - cost) / cost * 100).toFixed(1);
-              const color = parseFloat(margin) > 0 ? 'var(--success)' : parseFloat(margin) < 0 ? 'var(--danger)' : 'var(--text-muted)';
-              return `<span style="color:${color}; font-weight:600;">${parseFloat(margin) > 0 ? '+' : ''}${margin}%</span>`;
-            }
-            return '<span style="color:var(--text-muted)">-</span>';
-          })()}</td>
-          <td data-label="날짜">${formatDate(tx.date)}</td>
-          <td data-label="비고" style="color:var(--text-muted); font-size:13px;">${tx.note || ''}</td>
-          <td data-label="" class="text-center">
-            <button class="btn-icon btn-icon-danger btn-del-tx" data-id="${tx.id}" title="삭제">삭제</button>
-          </td>
-        </tr>
-      `).join('');
+      // ── 동일 품목별 그룹핑 ─────────────────────────────────
+      const groupOrder = [];
+      const groupMap = new Map();
+      pageData.forEach(tx => {
+        const key = tx.itemCode ? tx.itemCode : (tx.itemName || '');
+        if (!groupMap.has(key)) {
+          groupMap.set(key, []);
+          groupOrder.push(key);
+        }
+        groupMap.get(key).push(tx);
+      });
+
+      const renderMargin = (tx) => {
+        const cost = parseFloat(tx.unitPrice) || 0;
+        const actual = parseFloat(tx.actualSellingPrice) || 0;
+        if (cost > 0 && actual > 0) {
+          const margin = ((actual - cost) / cost * 100).toFixed(1);
+          const color = parseFloat(margin) > 0 ? 'var(--success)' : parseFloat(margin) < 0 ? 'var(--danger)' : 'var(--text-muted)';
+          return `<span style="color:${color}; font-weight:600;">${parseFloat(margin) > 0 ? '+' : ''}${margin}%</span>`;
+        }
+        return '<span style="color:var(--text-muted)">-</span>';
+      };
+
+      const renderTxRow = (tx, isChild = false) => {
+        const childStyle = isChild ? 'background:var(--bg-lighter);' : '';
+        const indent = isChild ? 'padding-left:24px;' : '';
+        return `
+          <tr class="${selectedTxIds.has(tx.id) ? 'selected' : ''} ${isChild ? 'tx-child-row' : ''}" data-tx-id="${tx.id}" style="${childStyle}">
+            <td style="text-align:center;">
+              <input type="checkbox" class="tx-select-row" value="${tx.id}" ${selectedTxIds.has(tx.id) ? 'checked' : ''} />
+            </td>
+            <td class="col-num"></td>
+            <td data-label="구분">
+              <span class="${tx.type === 'in' ? 'type-in' : 'type-out'}">
+                ${tx.type === 'in' ? '입고' : '출고'}
+              </span>
+            </td>
+            <td data-label="거래처" style="font-size:12px; ${indent}">${tx.vendor || '<span style="color:var(--text-muted)">-</span>'}</td>
+            <td data-label="품목명" style="${indent}"><span style="color:var(--text-muted); font-size:12px;">${isChild ? tx.itemName || '-' : ''}</span></td>
+            <td data-label="품목코드" style="color:var(--text-muted); font-size:12px;">${tx.itemCode || '-'}</td>
+            <td data-label="수량" class="text-right">
+              <span class="${tx.type === 'in' ? 'type-in' : 'type-out'}">
+                ${tx.type === 'in' ? '+' : '-'}${parseFloat(tx.quantity || 0).toLocaleString('ko-KR')}
+              </span>
+            </td>
+            <td data-label="원가" class="text-right">${tx.unitPrice ? '₩' + Math.round(parseFloat(tx.unitPrice)).toLocaleString('ko-KR') : '-'}</td>
+            <td data-label="판매가" class="text-right editable-price-cell" data-tx-id="${tx.id}" data-field="sellingPrice" title="클릭하여 수정">
+              <span class="price-display">${tx.sellingPrice ? '₩' + Math.round(parseFloat(tx.sellingPrice)).toLocaleString('ko-KR') : '<span style="color:var(--text-muted)">-</span>'}</span>
+            </td>
+            <td data-label="실판매가" class="text-right editable-price-cell" data-tx-id="${tx.id}" data-field="actualSellingPrice" title="클릭하여 수정">
+              <span class="price-display">${tx.actualSellingPrice ? '₩' + Math.round(parseFloat(tx.actualSellingPrice)).toLocaleString('ko-KR') : '<span style="color:var(--text-muted)">-</span>'}</span>
+            </td>
+            <td data-label="이익률" class="text-right">${renderMargin(tx)}</td>
+            <td data-label="날짜">${formatDate(tx.date)}</td>
+            <td data-label="비고" style="color:var(--text-muted); font-size:13px;">${tx.note || ''}</td>
+            <td class="text-center">
+              <button class="btn-icon btn-icon-danger btn-del-tx" data-id="${tx.id}" title="삭제">삭제</button>
+            </td>
+          </tr>`;
+      };
+
+      let rowNum = start + 1;
+      let html = '';
+      groupOrder.forEach(key => {
+        const group = groupMap.get(key);
+        if (group.length === 1) {
+          // 단일 거래: 그냥 일반 행
+          const tx = group[0];
+          html += renderTxRow(tx, false).replace('<td class="col-num"></td>', `<td class="col-num">${rowNum++}</td>`);
+        } else {
+          // 복수 거래: 그룹 헤더 + 하위 행
+          const isExpanded = expandedGroups.has(key);
+          const firstName = group[0].itemName || '-';
+          const firstCode = group[0].itemCode || '';
+          const totalInQty = group.filter(t => t.type === 'in').reduce((s, t) => s + (parseFloat(t.quantity) || 0), 0);
+          const totalOutQty = group.filter(t => t.type === 'out').reduce((s, t) => s + (parseFloat(t.quantity) || 0), 0);
+          const qtyLabel = [
+            totalInQty > 0 ? `<span class="type-in">+${totalInQty.toLocaleString('ko-KR')}</span>` : '',
+            totalOutQty > 0 ? `<span class="type-out">-${totalOutQty.toLocaleString('ko-KR')}</span>` : '',
+          ].filter(Boolean).join(' ');
+
+          html += `
+            <tr class="tx-group-header" data-group-key="${escapeHtml(key)}" style="cursor:pointer; background:var(--bg-card); border-left:3px solid var(--accent);">
+              <td style="text-align:center;">
+                <span style="color:var(--text-muted); font-size:11px;">${group.length}건</span>
+              </td>
+              <td class="col-num">${rowNum++}</td>
+              <td colspan="3" style="padding-left:8px;">
+                <span class="group-toggle-icon" style="margin-right:6px; font-size:12px;">${isExpanded ? '▼' : '▶'}</span>
+                <strong>${escapeHtml(firstName)}</strong>
+                ${firstCode ? `<span style="color:var(--text-muted); font-size:11px; margin-left:6px;">${escapeHtml(firstCode)}</span>` : ''}
+                <span style="font-size:11px; color:var(--text-muted); margin-left:8px;">거래 ${group.length}건</span>
+              </td>
+              <td class="col-num"></td>
+              <td class="text-right">${qtyLabel}</td>
+              <td colspan="6"></td>
+              <td></td>
+            </tr>
+            ${isExpanded ? group.map(tx => renderTxRow(tx, true)).join('') : ''}`;
+        }
+      });
+      tbody.innerHTML = html;
     }
 
     renderFilterSummary(sorted.length);
@@ -527,6 +587,19 @@ export function renderInoutPage(container, navigateTo) {
         <button class="page-btn" id="tx-next" ${currentPageNum >= totalPages ? 'disabled' : ''}>다음</button>
       </div>
     `;
+
+    // 그룹 헤더 클릭 → 펼치기/접기
+    container.querySelectorAll('.tx-group-header').forEach(row => {
+      row.addEventListener('click', () => {
+        const key = row.dataset.groupKey;
+        if (expandedGroups.has(key)) {
+          expandedGroups.delete(key);
+        } else {
+          expandedGroups.add(key);
+        }
+        renderTxTable();
+      });
+    });
 
     // 판매가/실판매가 인라인 편집
     container.querySelectorAll('.editable-price-cell').forEach(cell => {
