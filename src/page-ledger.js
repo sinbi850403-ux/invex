@@ -423,18 +423,6 @@ function formatLedgerMoney(value) {
  * 기초재고 = 현재재고 - 기간입고 + 기간출고
  */
 function buildLedger(items, transactions, from, to, itemFilter, openingOverrides = {}) {
-  const periodTransactions = transactions.filter(tx => tx.date >= from && tx.date <= to);
-  const transactionMap = {};
-
-  periodTransactions.forEach(tx => {
-    const key = tx.itemName;
-    if (!transactionMap[key]) transactionMap[key] = { inQty: 0, outQty: 0 };
-
-    const qty = parseFloat(tx.quantity) || 0;
-    if (tx.type === 'in') transactionMap[key].inQty += qty;
-    else transactionMap[key].outQty += qty;
-  });
-
   const targetItems = itemFilter
     ? items.filter(item => item.itemName === itemFilter)
     : items;
@@ -442,12 +430,34 @@ function buildLedger(items, transactions, from, to, itemFilter, openingOverrides
   return targetItems.map(item => {
     const currentQty = parseFloat(item.quantity) || 0;
     const unitPrice = parseFloat(item.unitPrice) || 0;
-    const transaction = transactionMap[item.itemName] || { inQty: 0, outQty: 0 };
+
+    let periodInQty = 0;
+    let periodOutQty = 0;
+    let openingQty = currentQty;
+
+    transactions.forEach(tx => {
+      if (tx.itemName !== item.itemName) return;
+      const qty = parseFloat(tx.quantity) || 0;
+
+      // from 날짜 '이후'에 발생한 트랜잭션의 효과를 역산하여 from 직전의 재고(기초재고) 도출
+      if (tx.date >= from) {
+        if (tx.type === 'in') openingQty -= qty;
+        else openingQty += qty;
+      }
+
+      // 지정된 [from, to] 기간 동안의 입출고 실적 합산
+      if (tx.date >= from && tx.date <= to) {
+        if (tx.type === 'in') periodInQty += qty;
+        else periodOutQty += qty;
+      }
+    });
+
     const override = openingOverrides[item.itemName];
-    const openingQty = override !== undefined && override !== null && override !== ''
+    const finalOpeningQty = override !== undefined && override !== null && override !== ''
       ? Math.max(0, parseFloat(override) || 0)
-      : currentQty - transaction.inQty + transaction.outQty;
-    const closingQty = Math.max(0, openingQty + transaction.inQty - transaction.outQty);
+      : Math.max(0, openingQty);
+
+    const closingQty = Math.max(0, finalOpeningQty + periodInQty - periodOutQty);
     const closingValue = closingQty * unitPrice;
 
     return {

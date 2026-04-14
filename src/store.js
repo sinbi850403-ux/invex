@@ -414,10 +414,26 @@ export function addTransaction(tx) {
     } else {
       item.quantity = Math.max(0, currentQty - qty);
     }
-    // 합계금액 재계산
-    const price = parseFloat(item.unitPrice) || 0;
+    // 합계금액 재계산 (기존 VAT 비율 유지, 면세/영세 고려)
+    const price = parseFloat(item.unitPrice) || parseFloat(tx.unitPrice) || 0;
+    const prevSupplyValue = parseFloat(item.supplyValue) || 0;
+    const prevVat = parseFloat(item.vat) || 0;
+    
+    let vatRate = 0.1;
+    if (prevSupplyValue > 0) {
+      vatRate = prevVat / prevSupplyValue;
+      // 0 근처면 면세 상품으로 처리, 아니면 통상적인 10%
+      if (vatRate < 0.05) vatRate = 0;
+      else vatRate = 0.1;
+    } else if (prevSupplyValue === 0 && prevVat === 0 && item.quantity > 0) {
+      // 기존에도 0 재고인 경우 10% 또는 transaction.vat이 없으므로 기본 10%를 적용하지만, 항목이 면세 명시일 수도 있으므로 주의
+      // (여기서는 일반적인 기본값 10% 적용)
+      vatRate = 0.1;
+    }
+
+    item.unitPrice = price; // 트랜잭션 등에서 파생된 단가 동기화
     item.supplyValue = item.quantity * price;
-    item.vat = Math.floor(item.supplyValue * 0.1);
+    item.vat = Math.floor(item.supplyValue * vatRate);
     item.totalPrice = item.supplyValue + item.vat;
   }
 
@@ -450,9 +466,21 @@ export function deleteTransaction(id) {
       } else {
         item.quantity = currentQty + qty;
       }
-      const price = parseFloat(item.unitPrice) || 0;
+      // 합계금액 재계산 (기존 VAT 비율 유지)
+      const price = parseFloat(item.unitPrice) || parseFloat(target.unitPrice) || 0;
+      const prevSupplyValue = parseFloat(item.supplyValue) || 0;
+      const prevVat = parseFloat(item.vat) || 0;
+      
+      let vatRate = 0.1;
+      if (prevSupplyValue > 0) {
+        vatRate = prevVat / prevSupplyValue;
+        if (vatRate < 0.05) vatRate = 0;
+        else vatRate = 0.1;
+      }
+      
+      item.unitPrice = price;
       item.supplyValue = item.quantity * price;
-      item.vat = Math.floor(item.supplyValue * 0.1);
+      item.vat = Math.floor(item.supplyValue * vatRate);
       item.totalPrice = item.supplyValue + item.vat;
     }
 
