@@ -303,6 +303,7 @@ const pageLoaders = {
   profit: () => import('./page-profit.js').then(m => m.renderProfitPage),
   backup: () => import('./page-backup.js').then(m => m.renderBackupPage),
   orders: () => import('./page-orders.js').then(m => m.renderOrdersPage),
+  sales: () => import('./page-sales.js').then(m => m.renderSalesPage),
   forecast: () => import('./page-forecast.js').then(m => m.renderForecastPage),
   referral: () => import('./page-referral.js').then(m => m.renderReferralPage),
   'weekly-report': () => import('./page-weekly-report.js').then(m => m.renderWeeklyReportPage),
