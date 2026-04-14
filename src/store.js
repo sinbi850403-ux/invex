@@ -66,6 +66,10 @@ const DEFAULT_STATE = {
   accountEntries: [],   // [{id, type, vendorName, amount, currency, date, ...}]
   // 발주 이력
   purchaseOrders: [],   // [{id, orderNo, vendor, items, status, paymentDueDate, ...}]
+  // 수주 이력 (판매 플로우)
+  salesOrders: [],      // [{id, orderNo, customer, items, status, shippedItems, receivableEntryId, ...}]
+  // 세금계산서 (매입/매출 공용)
+  taxInvoices: [],      // [{id, invoiceNo, type, vendor/customer, items, supply, vat, total, ...}]
   // 통화 설정
   currency: { code: 'KRW', symbol: '₩', rate: 1 },
   // 사용자명
