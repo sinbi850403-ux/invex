@@ -416,8 +416,9 @@ function inferVatRate(item) {
 /**
  * 품목의 공급가액/부가세/합계 재계산
  * price가 0이면 기존 단가 유지 — 단가 없는 입출고가 금액을 0으로 날리지 않도록 방지
+ * @public store 외부(페이지)에서도 사용 가능하도록 export
  */
-function recalcItemAmounts(item) {
+export function recalcItemAmounts(item) {
   const qty = toNum(item.quantity);
   const price = toNum(item.unitPrice);
   if (price <= 0) {
@@ -456,11 +457,25 @@ export function addTransaction(tx) {
       item.quantity = Math.max(0, currentQty - qty);
     }
 
-    // 트랜잭션에 단가가 있고 품목에 단가가 없을 때만 단가 업데이트
+    // 단가 업데이트: 입고 시 가중평균 단가 적용 (costMethod 설정 기반)
     const txPrice = toNum(tx.unitPrice);
     const itemPrice = toNum(item.unitPrice);
-    if (txPrice > 0 && itemPrice === 0) {
-      item.unitPrice = txPrice;
+    if (txPrice > 0) {
+      if (tx.type === 'in') {
+        const costMethod = state.costMethod || 'weighted-avg';
+        if (costMethod === 'weighted-avg' && itemPrice > 0) {
+          // 가중평균: (이전재고 × 이전단가 + 입고량 × 입고단가) / 신규합계
+          const prevQty = Math.max(0, toNum(item.quantity) - qty);
+          const totalValue = (prevQty * itemPrice) + (qty * txPrice);
+          const totalQty = prevQty + qty;
+          if (totalQty > 0) {
+            item.unitPrice = Math.round(totalValue / totalQty);
+          }
+        } else if (itemPrice === 0) {
+          item.unitPrice = txPrice;
+        }
+      }
+      // 출고 시에는 단가 변경 안 함 (기존 단가 유지)
     }
 
     // 금액 재계산 (단가가 있을 때만)
@@ -535,7 +550,8 @@ export function deleteTransaction(id) {
   state.transactions.splice(index, 1);
   saveToDB();
   if (isSupabaseConfigured) {
-    scheduleSyncToSupabase(['mappedData']);
+    // transactions도 함께 동기화 (삭제 반영)
+    scheduleSyncToSupabase(['transactions', 'mappedData']);
   }
   if (typeof window !== 'undefined') {
     window.dispatchEvent(new CustomEvent('notifications-updated'));
@@ -690,9 +706,17 @@ export function rebuildInventoryFromTransactions() {
 
     const qty = toNum(tx.quantity);
     if (tx.type === 'in') {
-      itemQtyMap[key] += qty;
       const txPrice = toNum(tx.unitPrice);
-      if (txPrice > 0 && itemPriceMap[key] === 0) itemPriceMap[key] = txPrice;
+      if (txPrice > 0) {
+        // 가중평균 단가 계산
+        const prevQty = itemQtyMap[key];
+        const prevPrice = itemPriceMap[key];
+        const totalQty = prevQty + qty;
+        itemPriceMap[key] = totalQty > 0
+          ? Math.round(((prevQty * prevPrice) + (qty * txPrice)) / totalQty)
+          : txPrice;
+      }
+      itemQtyMap[key] += qty;
     } else {
       itemQtyMap[key] = Math.max(0, itemQtyMap[key] - qty);
     }

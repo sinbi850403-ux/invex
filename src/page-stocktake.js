@@ -4,7 +4,7 @@
  * 왜 필수? → 시스템 데이터와 실물이 다르면 ERP는 의미 없음. 정기 실사는 필수!
  */
 
-import { getState, setState } from './store.js';
+import { getState, setState, recalcItemAmounts } from './store.js';
 import { showToast } from './toast.js';
 import { downloadExcel } from './excel.js';
 import { canAction } from './auth.js';
@@ -236,11 +236,10 @@ export function renderStocktakePage(container, navigateTo) {
         if (isNaN(actualQty)) return;
         const sysQty = parseFloat(items[i].quantity) || 0;
         if (actualQty !== sysQty) {
-          updatedItems[i] = {
-            ...updatedItems[i],
-            quantity: actualQty,
-            totalPrice: actualQty * (parseFloat(updatedItems[i].unitPrice) || 0),
-          };
+          // 수량을 먼저 업데이트한 후 금액 재계산
+          const adjusted = { ...updatedItems[i], quantity: actualQty };
+          recalcItemAmounts(adjusted); // supplyValue, vat, totalPrice 정확히 재계산
+          updatedItems[i] = adjusted;
           adjustCount++;
         }
       });

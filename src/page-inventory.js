@@ -4,7 +4,7 @@
  * **컬럼 표시 설정**: 사용자가 보고 싶은 컬럼만 선택해서 볼 수 있음
  */
 
-import { getState, setState, addItem, updateItem, deleteItem, restoreItem, setSafetyStock, rebuildInventoryFromTransactions } from './store.js';
+import { getState, setState, addItem, updateItem, deleteItem, restoreItem, setSafetyStock, rebuildInventoryFromTransactions, recalcItemAmounts } from './store.js';
 import { showToast } from './toast.js';
 import { downloadExcel } from './excel.js';
 import { generateInventoryPDF } from './pdf-generator.js';
@@ -1216,15 +1216,14 @@ export function renderInventoryPage(container, navigateTo) {
           const newVal = input.value;
           updateItem(idx, { [field]: newVal });
           // ?⑷퀎 ?ш퀎??(留ㅼ엯?④? ?먮뒗 ?먮ℓ?④? 蹂寃???
+          // 수량·단가·판매가 변경 시 금액 재계산 (VAT 비율은 기존 품목 설정 유지)
           if (field === 'quantity' || field === 'unitPrice' || field === 'salePrice') {
-            const q = parseFloat(data[idx].quantity) || 0;
-            const p = parseFloat(data[idx].unitPrice) || 0;
-            const supply = q * p;
-            const vat = Math.floor(supply * 0.1);
-            updateItem(idx, { 
-              supplyValue: supply,
-              vat: vat,
-              totalPrice: supply + vat 
+            const current = { ...data[idx] };
+            recalcItemAmounts(current); // supplyValue, vat, totalPrice 정확히 재계산
+            updateItem(idx, {
+              supplyValue: current.supplyValue,
+              vat: current.vat,
+              totalPrice: current.totalPrice,
             });
           }
           renderTable();
@@ -1915,9 +1914,21 @@ function openItemModal(container, navigateTo, editIdx = null) {
         warehouse: inputs.warehouse.value.trim(),
         note:      inputs.note.value.trim(),
       };
-      newItem.supplyValue = newItem.quantity * newItem.unitPrice;
-      newItem.vat         = Math.floor(newItem.supplyValue * 0.1);
-      newItem.totalPrice  = newItem.supplyValue + newItem.vat;
+      // 수정 시 기존 VAT 비율 유지, 신규는 기본 10%
+      if (isEdit) {
+        // 기존 품목 VAT 비율 추론하여 유지
+        const prevItem = getState().mappedData[editIdx] || {};
+        const prevSv = parseFloat(prevItem.supplyValue) || 0;
+        const prevVat = parseFloat(prevItem.vat) || 0;
+        const vatRate = (prevSv > 0 && prevVat / prevSv < 0.05) ? 0 : 0.1;
+        newItem.supplyValue = newItem.quantity * newItem.unitPrice;
+        newItem.vat         = Math.floor(newItem.supplyValue * vatRate);
+        newItem.totalPrice  = newItem.supplyValue + newItem.vat;
+      } else {
+        newItem.supplyValue = newItem.quantity * newItem.unitPrice;
+        newItem.vat         = Math.floor(newItem.supplyValue * 0.1);
+        newItem.totalPrice  = newItem.supplyValue + newItem.vat;
+      }
 
       if (isEdit) {
         updateItem(editIdx, newItem);

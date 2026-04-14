@@ -39,8 +39,13 @@ export function renderDashboardPage(container, navigateTo) {
   const monthlyTrend = calcMonthlyTrend(transactions);
   const expiryAlerts = getExpiryAlerts(items);
 
-  // ?듭떖 KPI
-  const totalValue = items.reduce((s, r) => s + (parseFloat(r.totalPrice) || 0), 0);
+  // 핵심 KPI
+  // 공급가(VAT 제외) 기준 재고 자산 합계 — home 페이지와 동일 기준으로 통일
+  const totalValue = items.reduce((s, r) => {
+    const sv = parseFloat(r.supplyValue);
+    if (!isNaN(sv) && sv > 0) return s + sv;
+    return s + (parseFloat(r.quantity) || 0) * (parseFloat(r.unitPrice) || 0);
+  }, 0);
   const totalItems = items.length;
   const avgTurnover = turnoverData.length > 0
     ? (turnoverData.reduce((s, t) => s + t.turnover, 0) / turnoverData.length).toFixed(1)
@@ -61,7 +66,7 @@ export function renderDashboardPage(container, navigateTo) {
     <!-- KPI 移대뱶 -->
     <div class="stat-grid">
       <div class="stat-card">
-        <div class="stat-label">총 재고 가치</div>
+        <div class="stat-label">총 재고 가치 <span style="font-size:10px;color:var(--text-muted);font-weight:400;">(공급가)</span></div>
         <div class="stat-value text-accent">${totalValue > 0 ? '₩' + Math.round(totalValue).toLocaleString('ko-KR') : '-'}</div>
       </div>
       <div class="stat-card">
@@ -132,7 +137,7 @@ export function renderDashboardPage(container, navigateTo) {
                 <td><strong>${d.itemName}</strong></td>
                 <td style="color:var(--text-muted);">${d.itemCode || '-'}</td>
                 <td class="text-right">${parseFloat(d.quantity || 0).toLocaleString('ko-KR')}</td>
-                <td class="text-right">${d.totalPrice > 0 ? '₩' + Math.round(d.totalPrice).toLocaleString('ko-KR') : '-'}</td>
+                <td class="text-right">${d._abcValue > 0 ? '₩' + Math.round(d._abcValue).toLocaleString('ko-KR') : '-'}</td>
                 <td class="text-right">
                   <div class="ratio-bar">
                     <div class="ratio-bar-track"><div class="ratio-bar-fill" style="width:${d.cumPercent}%;"></div></div>
@@ -260,7 +265,7 @@ export function renderDashboardPage(container, navigateTo) {
         '품목명': d.itemName,
         '품목코드': d.itemCode || '',
         '수량': d.quantity,
-        '금액': d.totalPrice,
+        '금액(공급가)': d._abcValue,
         '누적비중(%)': d.cumPercent,
       }));
       downloadExcel(exportData, 'ABC분석');
@@ -279,18 +284,23 @@ export function renderDashboardPage(container, navigateTo) {
  * A: 금액 상위 80%, B: 80~95%, C: 나머지
  */
 function calcABCAnalysis(items) {
+  // 공급가(VAT 제외) 기준으로 재고 자산 계산 — totalValue와 동일 기준
   const sorted = items
-    .map(item => ({
-      ...item,
-      totalPrice: parseFloat(item.totalPrice) || (parseFloat(item.quantity) || 0) * (parseFloat(item.unitPrice) || 0),
-    }))
-    .sort((a, b) => b.totalPrice - a.totalPrice);
+    .map(item => {
+      const sv = parseFloat(item.supplyValue);
+      const supplyVal = (!isNaN(sv) && sv > 0)
+        ? sv
+        : (parseFloat(item.quantity) || 0) * (parseFloat(item.unitPrice) || 0);
+      return { ...item, _abcValue: supplyVal };
+    })
+    .sort((a, b) => b._abcValue - a._abcValue);
 
-  const grandTotal = sorted.reduce((s, r) => s + r.totalPrice, 0) || 1;
+  const grandTotal = sorted.reduce((s, r) => s + r._abcValue, 0) || 1;
   let cumulative = 0;
 
   return sorted.map(item => {
-    cumulative += item.totalPrice;
+    cumulative += item._abcValue;
+    // totalPrice 필드는 하위 호환성을 위해 유지
     const cumPercent = Math.round((cumulative / grandTotal) * 100);
     let grade = 'C';
     if (cumPercent <= 80) grade = 'A';
