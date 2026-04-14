@@ -349,9 +349,12 @@ export function renderInoutPage(container, navigateTo) {
         </th>
         <th class="sortable-header text-right ${sort.key === 'unitPrice' ? 'is-active' : ''}" data-sort-key="unitPrice" title="클릭하여 정렬" aria-sort="${sort.key === 'unitPrice' ? (sort.direction === 'asc' ? 'ascending' : sort.direction === 'desc' ? 'descending' : 'none') : 'none'}">
           <button type="button" class="sort-hitbox" tabindex="-1" aria-hidden="true">
-            <span class="sort-label">단가</span><span class="sort-indicator">${getSortIndicator('unitPrice')}</span>
+            <span class="sort-label">원가</span><span class="sort-indicator">${getSortIndicator('unitPrice')}</span>
           </button>
         </th>
+        <th class="text-right">판매가</th>
+        <th class="text-right">실판매가</th>
+        <th class="text-right">이익률</th>
         <th class="sortable-header ${sort.key === 'date' ? 'is-active' : ''}" data-sort-key="date" title="클릭하여 정렬" aria-sort="${sort.key === 'date' ? (sort.direction === 'asc' ? 'ascending' : sort.direction === 'desc' ? 'descending' : 'none') : 'none'}">
           <button type="button" class="sort-hitbox" tabindex="-1" aria-hidden="true">
             <span class="sort-label">날짜</span><span class="sort-indicator">${getSortIndicator('date')}</span>
@@ -462,7 +465,7 @@ export function renderInoutPage(container, navigateTo) {
 
     const tbody = container.querySelector('#tx-body');
     if (sorted.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="11" style="text-align:center; padding:32px; color:var(--text-muted);">
+      tbody.innerHTML = `<tr><td colspan="14" style="text-align:center; padding:32px; color:var(--text-muted);">
         ${transactions.length === 0 ? '아직 입출고 기록이 없습니다. 위 버튼으로 먼저 등록해 주세요.' : '검색 결과가 없습니다.'}
       </td></tr>`;
     } else {
@@ -485,7 +488,19 @@ export function renderInoutPage(container, navigateTo) {
               ${tx.type === 'in' ? '+' : '-'}${parseFloat(tx.quantity || 0).toLocaleString('ko-KR')}
             </span>
           </td>
-          <td data-label="단가" class="text-right">${tx.unitPrice ? '₩' + Math.round(parseFloat(tx.unitPrice)).toLocaleString('ko-KR') : '-'}</td>
+          <td data-label="원가" class="text-right">${tx.unitPrice ? '₩' + Math.round(parseFloat(tx.unitPrice)).toLocaleString('ko-KR') : '-'}</td>
+          <td data-label="판매가" class="text-right">${tx.sellingPrice ? '₩' + Math.round(parseFloat(tx.sellingPrice)).toLocaleString('ko-KR') : '-'}</td>
+          <td data-label="실판매가" class="text-right">${tx.actualSellingPrice ? '₩' + Math.round(parseFloat(tx.actualSellingPrice)).toLocaleString('ko-KR') : '-'}</td>
+          <td data-label="이익률" class="text-right">${(() => {
+            const cost = parseFloat(tx.unitPrice) || 0;
+            const actual = parseFloat(tx.actualSellingPrice) || 0;
+            if (cost > 0 && actual > 0) {
+              const margin = ((actual - cost) / cost * 100).toFixed(1);
+              const color = parseFloat(margin) > 0 ? 'var(--success)' : parseFloat(margin) < 0 ? 'var(--danger)' : 'var(--text-muted)';
+              return `<span style="color:${color}; font-weight:600;">${parseFloat(margin) > 0 ? '+' : ''}${margin}%</span>`;
+            }
+            return '<span style="color:var(--text-muted)">-</span>';
+          })()}</td>
           <td data-label="날짜">${formatDate(tx.date)}</td>
           <td data-label="비고" style="color:var(--text-muted); font-size:13px;">${tx.note || ''}</td>
           <td data-label="" class="text-center">
@@ -737,17 +752,27 @@ export function renderInoutPage(container, navigateTo) {
       showToast('내보낼 기록이 없습니다.', 'warning');
       return;
     }
-    const exportData = transactions.map(tx => ({
-      '구분': tx.type === 'in' ? '입고' : '출고',
-      '거래처': tx.vendor || '',
-      '품목명': tx.itemName,
-      '품목코드': tx.itemCode || '',
-      '수량': tx.quantity,
-      '단가': tx.unitPrice || '',
-      '날짜': tx.date,
-      '비고': tx.note || '',
-      '등록시간': tx.createdAt,
-    }));
+    const exportData = transactions.map(tx => {
+      const cost = parseFloat(tx.unitPrice) || 0;
+      const actual = parseFloat(tx.actualSellingPrice) || 0;
+      const marginStr = cost > 0 && actual > 0
+        ? `${((actual - cost) / cost * 100).toFixed(1)}%`
+        : '';
+      return {
+        '구분': tx.type === 'in' ? '입고' : '출고',
+        '날짜': tx.date,
+        '거래처': tx.vendor || '',
+        '품목명': tx.itemName,
+        '품목코드': tx.itemCode || '',
+        '수량': tx.quantity,
+        '원가': tx.unitPrice || '',
+        '판매가': tx.sellingPrice || '',
+        '실판매가': tx.actualSellingPrice || '',
+        '이익률': marginStr,
+        '비고': tx.note || '',
+        '등록시간': tx.createdAt,
+      };
+    });
     downloadExcel(exportData, '입출고이력');
     showToast('이력을 엑셀로 내보냈습니다.', 'success');
   });
@@ -1101,10 +1126,28 @@ function openTxModal(container, navigateTo, type, items) {
                 <input class="form-input" type="number" id="tx-qty" placeholder="0" min="1" />
               </div>
               <div class="form-group">
-                <label class="form-label">단가</label>
+                <label class="form-label">원가 (매입단가)</label>
                 <input class="form-input" type="number" id="tx-price" placeholder="선택 사항" />
               </div>
             </div>
+
+            ${type === 'in' ? `
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">판매가</label>
+                <input class="form-input" type="number" id="tx-selling-price" placeholder="선택 사항" />
+              </div>
+              <div class="form-group">
+                <label class="form-label">실판매가</label>
+                <input class="form-input" type="number" id="tx-actual-price" placeholder="선택 사항" />
+              </div>
+            </div>
+            <div class="form-group" id="tx-margin-display" style="display:none;">
+              <label class="form-label">이익률</label>
+              <div class="form-input" style="background:var(--bg-lighter); cursor:default; font-weight:600;" id="tx-margin-value">-</div>
+              <div class="smart-inline-note">이익률 = (실판매가 - 원가) ÷ 원가 × 100</div>
+            </div>
+            ` : ''}
 
             <details class="smart-details" open>
               <summary>날짜와 메모 더 보기</summary>
@@ -1143,7 +1186,12 @@ function openTxModal(container, navigateTo, type, items) {
               <div class="smart-summary-item">
                 <div class="smart-summary-label">예상 반영 금액</div>
                 <div class="smart-summary-value" id="tx-summary-amount">₩0</div>
-                <div class="smart-summary-note" id="tx-summary-amount-note">수량과 단가를 넣으면 금액을 즉시 계산합니다.</div>
+                <div class="smart-summary-note" id="tx-summary-amount-note">수량과 원가를 넣으면 금액을 즉시 계산합니다.</div>
+              </div>
+              <div class="smart-summary-item" id="tx-summary-margin-wrap" style="display:none;">
+                <div class="smart-summary-label">이익률</div>
+                <div class="smart-summary-value" id="tx-summary-margin" style="color:var(--success);">-</div>
+                <div class="smart-summary-note" id="tx-summary-margin-note">원가와 실판매가를 입력하면 자동 계산됩니다.</div>
               </div>
             </div>
           </div>
@@ -1166,6 +1214,8 @@ function openTxModal(container, navigateTo, type, items) {
     itemName: overlay.querySelector('#tx-item-name'),
     qty: overlay.querySelector('#tx-qty'),
     price: overlay.querySelector('#tx-price'),
+    sellingPrice: overlay.querySelector('#tx-selling-price'),
+    actualPrice: overlay.querySelector('#tx-actual-price'),
     date: overlay.querySelector('#tx-date'),
     note: overlay.querySelector('#tx-note'),
   };
@@ -1235,7 +1285,33 @@ function openTxModal(container, navigateTo, type, items) {
     overlay.querySelector('#tx-summary-amount').textContent = qty > 0 && price > 0 ? formatMoney(qty * price) : '₩0';
     overlay.querySelector('#tx-summary-amount-note').textContent = qty > 0 && price > 0
       ? `${qty.toLocaleString('ko-KR')}개 × ${formatMoney(price)} 기준 금액입니다.`
-      : '수량과 단가를 넣으면 금액을 즉시 계산합니다.';
+      : '수량과 원가를 넣으면 금액을 즉시 계산합니다.';
+
+    // 이익률 계산 (입고 전용)
+    if (type === 'in') {
+      const actualPrice = parseFloat(inputs.actualPrice?.value) || 0;
+      const marginDisplayEl = overlay.querySelector('#tx-margin-display');
+      const marginValueEl = overlay.querySelector('#tx-margin-value');
+      const summaryMarginWrap = overlay.querySelector('#tx-summary-margin-wrap');
+      const summaryMargin = overlay.querySelector('#tx-summary-margin');
+      const summaryMarginNote = overlay.querySelector('#tx-summary-margin-note');
+
+      if (price > 0 && actualPrice > 0) {
+        const margin = ((actualPrice - price) / price * 100).toFixed(1);
+        const marginNum = parseFloat(margin);
+        const marginColor = marginNum > 0 ? 'var(--success)' : marginNum < 0 ? 'var(--danger)' : 'var(--text-muted)';
+        const marginText = `${marginNum > 0 ? '+' : ''}${margin}%`;
+
+        if (marginDisplayEl) marginDisplayEl.style.display = '';
+        if (marginValueEl) { marginValueEl.textContent = marginText; marginValueEl.style.color = marginColor; }
+        if (summaryMarginWrap) summaryMarginWrap.style.display = '';
+        if (summaryMargin) { summaryMargin.textContent = marginText; summaryMargin.style.color = marginColor; }
+        if (summaryMarginNote) summaryMarginNote.textContent = `원가 ${formatMoney(price)} → 실판매가 ${formatMoney(actualPrice)}`;
+      } else {
+        if (marginDisplayEl) marginDisplayEl.style.display = 'none';
+        if (summaryMarginWrap) summaryMarginWrap.style.display = 'none';
+      }
+    }
 
     const statusItems = [
       { done: !!(selectedItem || inputs.itemName?.value?.trim()), text: '품목이 선택되었습니다.' },
@@ -1375,13 +1451,15 @@ function openTxModal(container, navigateTo, type, items) {
     try {
       addTransaction({
         type,
-        vendor:    inputs.vendor.value || '',
+        vendor:              inputs.vendor.value || '',
         itemName,
         itemCode,
-        quantity:  qty,
-        unitPrice: parseFloat(inputs.price?.value) || 0,
+        quantity:            qty,
+        unitPrice:           parseFloat(inputs.price?.value) || 0,
+        sellingPrice:        parseFloat(inputs.sellingPrice?.value) || 0,
+        actualSellingPrice:  parseFloat(inputs.actualPrice?.value) || 0,
         date,
-        note:      inputs.note.value.trim(),
+        note:                inputs.note.value.trim(),
       });
       showToast(`${typeLabel} 기록: ${itemName} ${qty}개`, type === 'in' ? 'success' : 'info');
       close();
