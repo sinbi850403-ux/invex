@@ -470,7 +470,18 @@ export function renderInoutPage(container, navigateTo) {
         ${transactions.length === 0 ? '아직 입출고 기록이 없습니다. 위 버튼으로 먼저 등록해 주세요.' : '검색 결과가 없습니다.'}
       </td></tr>`;
     } else {
-      // ── 동일 품목별 그룹핑 ─────────────────────────────────
+      // ── 전체 필터 결과 기준 품목별 집계 (페이지 무관) ──────
+      const allQtyByKey = new Map();
+      sorted.forEach(tx => {
+        const key = tx.itemCode ? tx.itemCode : (tx.itemName || '');
+        if (!allQtyByKey.has(key)) allQtyByKey.set(key, { inQty: 0, outQty: 0, count: 0, itemName: tx.itemName, itemCode: tx.itemCode });
+        const entry = allQtyByKey.get(key);
+        if (tx.type === 'in') entry.inQty += parseFloat(tx.quantity) || 0;
+        else entry.outQty += parseFloat(tx.quantity) || 0;
+        entry.count++;
+      });
+
+      // ── 현재 페이지 동일 품목별 그룹핑 ─────────────────────
       const groupOrder = [];
       const groupMap = new Map();
       pageData.forEach(tx => {
@@ -548,24 +559,27 @@ export function renderInoutPage(container, navigateTo) {
           const isExpanded = expandedGroups.has(key);
           const firstName = group[0].itemName || '-';
           const firstCode = group[0].itemCode || '';
-          const totalInQty = group.filter(t => t.type === 'in').reduce((s, t) => s + (parseFloat(t.quantity) || 0), 0);
-          const totalOutQty = group.filter(t => t.type === 'out').reduce((s, t) => s + (parseFloat(t.quantity) || 0), 0);
+          const allEntry = allQtyByKey.get(key) || { inQty: 0, outQty: 0, count: group.length };
+          const totalInQty = allEntry.inQty;
+          const totalOutQty = allEntry.outQty;
+          const totalCount = allEntry.count;
           const qtyLabel = [
             totalInQty > 0 ? `<span class="type-in">+${totalInQty.toLocaleString('ko-KR')}</span>` : '',
             totalOutQty > 0 ? `<span class="type-out">-${totalOutQty.toLocaleString('ko-KR')}</span>` : '',
           ].filter(Boolean).join(' ');
+          const pageCountNote = group.length < totalCount ? ` <span style="color:var(--text-muted); font-size:10px;">(이 페이지 ${group.length}건)</span>` : '';
 
           html += `
             <tr class="tx-group-header" data-group-key="${escapeHtml(key)}" style="cursor:pointer; background:var(--bg-card); border-left:3px solid var(--accent);">
               <td style="text-align:center;">
-                <span style="color:var(--text-muted); font-size:11px;">${group.length}건</span>
+                <span style="color:var(--text-muted); font-size:11px;">${totalCount}건</span>
               </td>
               <td class="col-num">${rowNum++}</td>
               <td colspan="3" style="padding-left:8px;">
                 <span class="group-toggle-icon" style="margin-right:6px; font-size:12px;">${isExpanded ? '▼' : '▶'}</span>
                 <strong>${escapeHtml(firstName)}</strong>
                 ${firstCode ? `<span style="color:var(--text-muted); font-size:11px; margin-left:6px;">${escapeHtml(firstCode)}</span>` : ''}
-                <span style="font-size:11px; color:var(--text-muted); margin-left:8px;">거래 ${group.length}건</span>
+                <span style="font-size:11px; color:var(--text-muted); margin-left:8px;">총 ${totalCount}건${pageCountNote}</span>
               </td>
               <td class="col-num"></td>
               <td class="text-right">${qtyLabel}</td>

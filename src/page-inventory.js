@@ -4,7 +4,7 @@
  * **컬럼 표시 설정**: 사용자가 보고 싶은 컬럼만 선택해서 볼 수 있음
  */
 
-import { getState, setState, addItem, updateItem, deleteItem, restoreItem, setSafetyStock, rebuildInventoryFromTransactions, recalcItemAmounts } from './store.js';
+import { getState, setState, addItem, updateItem, deleteItem, restoreItem, setSafetyStock, rebuildInventoryFromTransactions, recalcItemAmounts, setSyncCallback } from './store.js';
 import { showToast } from './toast.js';
 import { downloadExcel } from './excel.js';
 import { generateInventoryPDF } from './pdf-generator.js';
@@ -1682,6 +1682,12 @@ export function renderInventoryPage(container, navigateTo) {
   renderTable();
   highlightActiveFilters();
   syncFocusChips();
+
+  // 입출고 변경 시 재고 현황 즉시 자동 반영
+  setSyncCallback(() => {
+    rebuildInventoryFromTransactions();
+    renderTable();
+  });
 
   if (sessionStorage.getItem('invex:quick-open-item') === '1') {
     sessionStorage.removeItem('invex:quick-open-item');

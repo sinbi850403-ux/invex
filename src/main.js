@@ -9,7 +9,7 @@ import { initErrorMonitor, setMonitorUser, clearMonitorUser } from './error-moni
 // ?먮윭 紐⑤땲?곕쭅 珥덇린??(媛?ν븳 ??鍮⑤━ ?ㅽ뻾)
 // 여기서부터는 초기화 과정에서 에러를 잡기 위함
 initErrorMonitor();
-import { restoreState, getState, setState } from './store.js';
+import { restoreState, getState, setState, setSyncCallback } from './store.js';
 import { renderAuditLogPage } from './audit-log.js';
 import { isAdmin } from './admin-auth.js';
 import { checkAndShowOnboarding } from './onboarding.js';
@@ -412,6 +412,9 @@ function initSmartDetailsToggles() {
  */
 async function navigateTo(pageName) {
   if (!pageLoaders[pageName]) return;
+
+  // 페이지 전환 시 이전 페이지의 동기화 콜백 해제
+  setSyncCallback(null);
 
   // 요금제 체크 (plan.js)
   if (!canAccessPage(pageName)) {
