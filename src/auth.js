@@ -236,6 +236,19 @@ function renderInlineLoginError(loginBtn, email, errorMsg, showResetAction) {
   msgEl.textContent = errorMsg;
   errorContainer.appendChild(msgEl);
 
+  // 네트워크 오류 시 재시도 버튼 표시
+  if (errorMsg.includes('지연') || errorMsg.includes('불안정') || errorMsg.includes('오프라인')) {
+    const retryBtn = document.createElement('button');
+    retryBtn.style.cssText = 'width:100%; margin-top:8px; padding:10px 16px; background:linear-gradient(135deg, #3b82f6, #6366f1); color:white; border:none; border-radius:8px; cursor:pointer; font-size:13px; font-weight:600;';
+    retryBtn.textContent = '🔄 다시 시도';
+    retryBtn.addEventListener('click', () => {
+      const existingError = document.getElementById('login-error-msg');
+      if (existingError) existingError.remove();
+      document.getElementById('gate-email-login')?.click();
+    });
+    errorContainer.appendChild(retryBtn);
+  }
+
   if (showResetAction && email) {
     const helpBox = document.createElement('div');
     helpBox.style.cssText = 'margin-top:8px; padding:12px 14px; background:rgba(99,102,241,0.1); border-radius:8px; border:1px solid rgba(99,102,241,0.2);';
@@ -429,40 +442,58 @@ export async function loginWithEmail(email, password) {
   const existingError = document.getElementById('login-error-msg');
   if (existingError) existingError.remove();
 
+  // 로그인 시도 함수 (재시도 지원)
+  async function attemptLogin(attempt = 1) {
+    const timeout = attempt === 1 ? 15000 : 20000; // 1차 15s, 재시도 20s
+    try {
+      const { data, error } = await withTimeout(
+        supabase.auth.signInWithPassword({ email, password }),
+        timeout,
+        'login',
+      );
+      if (error) throw error;
+      return data.user;
+    } catch (err) {
+      const msg = String(err?.message || '').toLowerCase();
+      const isNetwork = msg.includes('fetch') || msg.includes('network') || msg.includes('timeout') || msg.includes('abort');
+      if (isNetwork && attempt === 1) {
+        // 1차 실패 시 1.5초 대기 후 directPasswordLogin 시도
+        await new Promise(r => setTimeout(r, 1500));
+        purgeLegacyAuthStorage({ includeSupabaseSession: true });
+        const fallbackUser = await directPasswordLogin(email, password);
+        return fallbackUser;
+      }
+      throw err;
+    }
+  }
+
   try {
-    const { data, error } = await withTimeout(
-      supabase.auth.signInWithPassword({ email, password }),
-      12000,
-      'login',
-    );
+    const user = await attemptLogin(1).catch(async (err) => {
+      const msg = String(err?.message || '').toLowerCase();
+      const isNetwork = msg.includes('fetch') || msg.includes('network') || msg.includes('timeout') || msg.includes('abort');
+      if (isNetwork) {
+        // 2차 재시도 (2초 대기 후)
+        await new Promise(r => setTimeout(r, 2000));
+        return attemptLogin(2);
+      }
+      throw err;
+    });
 
-    if (error) throw error;
-
-    showToast(`${data.user?.user_metadata?.full_name || '사용자'}님, 로그인되었습니다.`, 'success');
-    return toCompatUser(data.user);
+    showToast(`${user?.user_metadata?.full_name || '사용자'}님, 로그인되었습니다.`, 'success');
+    return toCompatUser(user);
   } catch (error) {
     let resolvedError = error;
     let lowerMessage = String(resolvedError?.message || '').toLowerCase();
+
+    let errorMsg = '';
+    let showResetAction = false;
+
+    // isConnectivityIssue 변수 재정의 (이미 재시도 후 실패한 경우)
     const isConnectivityIssue =
       lowerMessage.includes('fetch') ||
       lowerMessage.includes('network') ||
       lowerMessage.includes('timeout') ||
       lowerMessage.includes('abort');
-
-    if (isConnectivityIssue) {
-      try {
-        purgeLegacyAuthStorage({ includeSupabaseSession: true });
-        const fallbackUser = await directPasswordLogin(email, password);
-        showToast(`${fallbackUser?.user_metadata?.full_name || '사용자'}님, 로그인되었습니다.`, 'success');
-        return toCompatUser(fallbackUser);
-      } catch (fallbackError) {
-        resolvedError = fallbackError;
-        lowerMessage = String(resolvedError?.message || '').toLowerCase();
-      }
-    }
-
-    let errorMsg = '';
-    let showResetAction = false;
 
     if (
       lowerMessage.includes('invalid login') ||
@@ -476,25 +507,20 @@ export async function loginWithEmail(email, password) {
     } else if (lowerMessage.includes('email not confirmed')) {
       errorMsg = '이메일 인증이 완료되지 않았습니다. 메일함을 확인해 주세요.';
       showToast(errorMsg, 'warning', 5000);
-    } else if (
-      lowerMessage.includes('network') ||
-      lowerMessage.includes('fetch') ||
-      lowerMessage.includes('timeout') ||
-      lowerMessage.includes('abort')
-    ) {
+    } else if (isConnectivityIssue) {
       const debug = getSupabaseDebugInfo();
       if (typeof navigator !== 'undefined' && navigator.onLine === false) {
         errorMsg = '현재 오프라인 상태입니다. 네트워크 연결을 확인한 뒤 다시 시도해 주세요.';
       } else {
-        errorMsg = '인증 서버 연결이 불안정합니다. 잠시 후 다시 시도해 주세요.';
+        errorMsg = '인증 서버 응답이 지연되고 있습니다. 잠시 후 [재시도] 버튼을 눌러주세요.';
       }
-      console.error('[Auth] Network/login error', {
+      console.error('[Auth] Network/login error (after retries)', {
         message: resolvedError?.message,
         name: resolvedError?.name,
-        online: navigator.onLine,
+        online: navigator?.onLine,
         supabase: debug,
       });
-      showToast(errorMsg, 'error');
+      showToast(errorMsg, 'error', 8000);
     } else {
       errorMsg = `로그인 실패: ${resolvedError?.message || '알 수 없는 오류'}`;
       showToast(errorMsg, 'error');
