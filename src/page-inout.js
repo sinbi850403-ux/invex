@@ -8,6 +8,8 @@ import { getState, setState, addTransaction, deleteTransaction, restoreTransacti
 import { showToast } from './toast.js';
 import { downloadExcel, readExcelFile } from './excel.js';
 import { escapeHtml, renderGuidedPanel, renderInsightHero, renderQuickFilterRow } from './ux-toolkit.js';
+import { canAction } from './auth.js';
+import { handlePageError } from './error-monitor.js';
 
 const PAGE_SIZE = 15;
 
@@ -31,6 +33,12 @@ function formatDate(dateStr) {
  * 입출고 관리 페이지 렌더링
  */
 export function renderInoutPage(container, navigateTo) {
+  // ── 권한 플래그 ──────────────────────────────────────────
+  const canCreate = canAction('inout:create');
+  const canDelete = canAction('inout:delete');
+  const canBulk   = canAction('inout:bulk');
+  // ─────────────────────────────────────────────────────────
+
   const state = getState();
   const items = state.mappedData || [];
   const transactions = state.transactions || [];
@@ -503,23 +511,34 @@ export function renderInoutPage(container, navigateTo) {
     // 삭제 이벤트
     container.querySelectorAll('.btn-del-tx').forEach(btn => {
       btn.addEventListener('click', () => {
-        const removed = deleteTransaction(btn.dataset.id);
-        if (!removed || !removed.deleted) {
-          showToast('삭제할 기록을 찾지 못했습니다.', 'warning');
+        if (!canAction('inout:delete')) {
+          showToast('삭제 권한이 없습니다. 매니저 이상만 가능합니다.', 'warning');
           return;
         }
-
-        const itemName = removed.deleted.itemName || '선택 기록';
-        selectedTxIds.delete(btn.dataset.id); // 혹시 선택되어 있으면 해제
-        renderInoutPage(container, navigateTo);
-        showToast(`"${itemName}" 기록을 삭제했습니다.`, 'info', 5000, {
-          actionLabel: '실행 취소',
-          onAction: () => {
-            restoreTransaction(removed.deleted, removed.index);
-            renderInoutPage(container, navigateTo);
-            showToast(`"${itemName}" 기록을 복원했습니다.`, 'success');
-          },
-        });
+        try {
+          const removed = deleteTransaction(btn.dataset.id);
+          if (!removed || !removed.deleted) {
+            showToast('삭제할 기록을 찾지 못했습니다.', 'warning');
+            return;
+          }
+          const itemName = removed.deleted.itemName || '선택 기록';
+          selectedTxIds.delete(btn.dataset.id);
+          renderInoutPage(container, navigateTo);
+          showToast(`"${itemName}" 기록을 삭제했습니다.`, 'info', 5000, {
+            actionLabel: '실행 취소',
+            onAction: () => {
+              try {
+                restoreTransaction(removed.deleted, removed.index);
+                renderInoutPage(container, navigateTo);
+                showToast(`"${itemName}" 기록을 복원했습니다.`, 'success');
+              } catch (err) {
+                handlePageError(err, { page: 'inout', action: 'restore-transaction' });
+              }
+            },
+          });
+        } catch (err) {
+          handlePageError(err, { page: 'inout', action: 'delete-transaction' });
+        }
       });
     });
 
@@ -554,18 +573,25 @@ export function renderInoutPage(container, navigateTo) {
     if (bulkDelBtn) {
       bulkDelBtn.disabled = selectedTxIds.size === 0;
       bulkDelBtn.onclick = () => {
+        if (!canAction('inout:bulk')) {
+          showToast('일괄 삭제 권한이 없습니다. 매니저 이상만 가능합니다.', 'warning');
+          return;
+        }
         if (selectedTxIds.size === 0) return;
-        if (!confirm("선택한 " + selectedTxIds.size + "건의 기록을 삭제하시겠습니까?")) return;
-        
-        const totalSelected = selectedTxIds.size;
-        let failCount = 0;
-        selectedTxIds.forEach(id => {
-          const res = deleteTransaction(id);
-          if(!res) failCount++;
-        });
-        selectedTxIds.clear();
-        showToast("일괄 삭제 완료! (" + totalSelected + "건 중 " + (totalSelected - failCount) + "건 삭제)", 'success');
-        renderInoutPage(container, navigateTo);
+        if (!confirm(`선택한 ${selectedTxIds.size}건의 기록을 삭제하시겠습니까?`)) return;
+        try {
+          const totalSelected = selectedTxIds.size;
+          let failCount = 0;
+          selectedTxIds.forEach(id => {
+            const res = deleteTransaction(id);
+            if (!res) failCount++;
+          });
+          selectedTxIds.clear();
+          showToast(`일괄 삭제 완료! (${totalSelected}건 중 ${totalSelected - failCount}건 삭제)`, 'success');
+          renderInoutPage(container, navigateTo);
+        } catch (err) {
+          handlePageError(err, { page: 'inout', action: 'bulk-delete' });
+        }
       };
     }
 
@@ -575,11 +601,20 @@ export function renderInoutPage(container, navigateTo) {
   }
 
   container.querySelector('#btn-quick-item')?.addEventListener('click', () => navigateTo('inventory'));
-  container.querySelector('#btn-quick-first-tx')?.addEventListener('click', () => openTxModal(container, navigateTo, 'in', items));
+  container.querySelector('#btn-quick-first-tx')?.addEventListener('click', () => {
+    if (!canCreate) { showToast('등록 권한이 없습니다. 직원 이상만 가능합니다.', 'warning'); return; }
+    openTxModal(container, navigateTo, 'in', items);
+  });
   container.querySelector('#btn-quick-guide')?.addEventListener('click', () => navigateTo('guide'));
   container.querySelector('#btn-quick-summary')?.addEventListener('click', () => navigateTo('summary'));
-  container.querySelector('#btn-open-inbound-inline')?.addEventListener('click', () => openTxModal(container, navigateTo, 'in', items));
-  container.querySelector('#btn-open-outbound-inline')?.addEventListener('click', () => openTxModal(container, navigateTo, 'out', items));
+  container.querySelector('#btn-open-inbound-inline')?.addEventListener('click', () => {
+    if (!canCreate) { showToast('입고 등록 권한이 없습니다. 직원 이상만 가능합니다.', 'warning'); return; }
+    openTxModal(container, navigateTo, 'in', items);
+  });
+  container.querySelector('#btn-open-outbound-inline')?.addEventListener('click', () => {
+    if (!canCreate) { showToast('출고 등록 권한이 없습니다. 직원 이상만 가능합니다.', 'warning'); return; }
+    openTxModal(container, navigateTo, 'out', items);
+  });
   container.querySelectorAll('[data-nav]').forEach(button => {
     button.addEventListener('click', () => navigateTo(button.dataset.nav));
   });

@@ -14,6 +14,7 @@
  */
 
 import * as Sentry from '@sentry/browser';
+import { showToast } from './toast.js';
 
 // ⚠️ Sentry 프로젝트 DSN을 여기에 입력하세요
 // 예시: 'https://abcdef1234567890@o123456.ingest.sentry.io/1234567'
@@ -99,6 +100,60 @@ export function reportMessage(message, context = {}) {
     Sentry.captureMessage(message, { extra: context });
   }
   console.warn('[INVEX 주의]', message, context);
+}
+
+// ─── 영문 에러 → 한국어 변환 테이블 ─────────────────────────────────────────
+const ERROR_TRANSLATIONS = [
+  { test: /network|fetch|failed to fetch|net::/i,  msg: '네트워크 연결을 확인해 주세요.' },
+  { test: /timeout|timed out/i,                    msg: '요청 시간이 초과됐습니다. 잠시 후 다시 시도해 주세요.' },
+  { test: /permission|policy|403|not authorized/i, msg: '접근 권한이 없습니다.' },
+  { test: /not found|404|pgrst116/i,               msg: '데이터를 찾을 수 없습니다.' },
+  { test: /duplicate|unique|already exists/i,      msg: '이미 동일한 데이터가 존재합니다.' },
+  { test: /quota|storage full/i,                   msg: '저장 공간이 부족합니다.' },
+  { test: /invalid|validation/i,                   msg: '입력값을 다시 확인해 주세요.' },
+  { test: /jwt|token|session|auth/i,               msg: '로그인이 만료됐습니다. 다시 로그인해 주세요.' },
+  { test: /abort/i,                                msg: '작업이 취소됐습니다.' },
+];
+
+/**
+ * 영문 기술 에러 메시지를 한국어 사용자 메시지로 변환
+ */
+export function translateError(message) {
+  if (!message) return '알 수 없는 오류가 발생했습니다.';
+  for (const { test, msg } of ERROR_TRANSLATIONS) {
+    if (test.test(message)) return msg;
+  }
+  return '오류가 발생했습니다. 잠시 후 다시 시도해 주세요.';
+}
+
+/**
+ * 에러를 Sentry에 보고하고 사용자에게 한국어 토스트를 표시하는 통합 핸들러
+ *
+ * 사용 예시:
+ *   } catch (err) {
+ *     handlePageError(err, { page: 'inventory', action: 'delete' });
+ *   }
+ *
+ * @param {Error}  error        - 발생한 에러 객체
+ * @param {object} context      - 디버깅용 컨텍스트 (page, action 등)
+ * @param {string} [userMsg]    - 직접 지정할 사용자 메시지 (없으면 자동 번역)
+ * @param {'error'|'warning'} [toastType] - 토스트 유형 (기본 'error')
+ */
+export function handlePageError(error, context = {}, userMsg = null, toastType = 'error') {
+  // 1. Sentry / 콘솔에 기록
+  reportError(error, context);
+
+  // 2. 사용자 메시지 결정
+  const msg = userMsg || translateError(error?.message || '');
+
+  // 3. 토스트 표시
+  try {
+    showToast(msg, toastType);
+  } catch {
+    // showToast 자체가 실패해도 앱이 죽으면 안 됨
+  }
+
+  return msg;
 }
 
 /**

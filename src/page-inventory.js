@@ -10,6 +10,8 @@ import { downloadExcel } from './excel.js';
 import { generateInventoryPDF } from './pdf-generator.js';
 import { renderItemTimelineChart } from './charts.js';
 import { renderGuidedPanel, renderInsightHero, renderQuickFilterRow, escapeHtml } from './ux-toolkit.js';
+import { canAction } from './auth.js';
+import { handlePageError } from './error-monitor.js';
 
 // 페이지당 행 수
 const PAGE_SIZE = 20;
@@ -72,6 +74,13 @@ function getVisibleFields(data) {
  * 현재 표시할 컬럼 목록 결정
  */
 export function renderInventoryPage(container, navigateTo) {
+  // ── 권한 플래그 ──────────────────────────────────────────
+  const canEdit   = canAction('item:edit');
+  const canDelete = canAction('item:delete');
+  const canCreate = canAction('item:create');
+  const canBulk   = canAction('item:bulk');
+  // ─────────────────────────────────────────────────────────
+
   const state = getState();
   const data = state.mappedData || [];
   const safetyStock = state.safetyStock || {};
@@ -175,10 +184,10 @@ export function renderInventoryPage(container, navigateTo) {
         <div class="page-desc">${state.fileName ? `📄 ${state.fileName}` : ''} 총 ${data.length}개 품목</div>
       </div>
       <div class="page-actions">
-        <button class="btn btn-outline" id="btn-rebuild-inventory" title="입출고 이력 기준으로 재고 수량 재계산">🔄 재고 재계산</button>
+        ${canBulk ? `<button class="btn btn-outline" id="btn-rebuild-inventory" title="입출고 이력 기준으로 재고 수량 재계산">🔄 재고 재계산</button>` : ''}
         <button class="btn btn-outline" id="btn-export">📥 엑셀</button>
         <button class="btn btn-outline" id="btn-export-pdf">📄 PDF</button>
-        <button class="btn btn-primary" id="btn-add-item">+ 품목 추가</button>
+        ${canCreate ? `<button class="btn btn-primary" id="btn-add-item">+ 품목 추가</button>` : ''}
       </div>
     </div>
 
@@ -328,9 +337,9 @@ export function renderInventoryPage(container, navigateTo) {
       <div class="card inventory-bulk-bar" id="inventory-bulk-bar">
         <div class="inventory-bulk-count" id="inventory-selected-count">선택 0개</div>
         <div class="inventory-bulk-actions">
-          <button class="btn btn-outline btn-sm" id="btn-bulk-category" disabled>선택 분류 변경</button>
+          ${canBulk ? `<button class="btn btn-outline btn-sm" id="btn-bulk-category" disabled>선택 분류 변경</button>` : ''}
           <button class="btn btn-outline btn-sm" id="btn-bulk-export" disabled>선택 엑셀 내보내기</button>
-          <button class="btn btn-danger btn-sm" id="btn-bulk-delete" disabled>선택 삭제</button>
+          ${canDelete ? `<button class="btn btn-danger btn-sm" id="btn-bulk-delete" disabled>선택 삭제</button>` : ''}
         </div>
       </div>
     </div>
@@ -928,8 +937,8 @@ export function renderInventoryPage(container, navigateTo) {
               </button>
             </td>
             <td class="col-actions">
-              <button class="btn-icon btn-edit" data-idx="${realIdx}" title="수정">수정</button>
-              <button class="btn-icon btn-icon-danger btn-del" data-idx="${realIdx}" title="삭제">삭제</button>
+              ${canEdit   ? `<button class="btn-icon btn-edit" data-idx="${realIdx}" title="수정">수정</button>` : `<button class="btn-icon" title="권한 없음" disabled style="opacity:0.3;cursor:not-allowed;">수정</button>`}
+              ${canDelete ? `<button class="btn-icon btn-icon-danger btn-del" data-idx="${realIdx}" title="삭제">삭제</button>` : ''}
             </td>
           </tr>
         `;
@@ -1227,37 +1236,56 @@ export function renderInventoryPage(container, navigateTo) {
       });
     });
 
-    // ??젣
+    // 삭제
     container.querySelectorAll('.btn-del').forEach(btn => {
       btn.addEventListener('click', () => {
-        const idx = parseInt(btn.dataset.idx);
-        const name = data[idx]?.itemName || `${idx + 1}번 품목`;
-        const removed = deleteItem(idx);
-        if (!removed?.deleted) {
-          showToast('삭제할 품목을 찾지 못했습니다.', 'warning');
+        if (!canAction('item:delete')) {
+          showToast('삭제 권한이 없습니다. 매니저 이상만 가능합니다.', 'warning');
           return;
         }
-
-        shiftSelectionAfterDelete(idx);
-        renderTable();
-        updateStats();
-        showToast(`"${name}" 품목을 삭제했습니다.`, 'info', 5000, {
-          actionLabel: '실행 취소',
-          onAction: () => {
-            restoreItem(removed.deleted, removed.index);
-            renderTable();
-            updateStats();
-            showToast(`"${name}" 품목을 복원했습니다.`, 'success');
-          },
-        });
+        try {
+          const idx = parseInt(btn.dataset.idx);
+          const name = data[idx]?.itemName || `${idx + 1}번 품목`;
+          const removed = deleteItem(idx);
+          if (!removed?.deleted) {
+            showToast('삭제할 품목을 찾지 못했습니다.', 'warning');
+            return;
+          }
+          shiftSelectionAfterDelete(idx);
+          renderTable();
+          updateStats();
+          showToast(`"${name}" 품목을 삭제했습니다.`, 'info', 5000, {
+            actionLabel: '실행 취소',
+            onAction: () => {
+              try {
+                restoreItem(removed.deleted, removed.index);
+                renderTable();
+                updateStats();
+                showToast(`"${name}" 품목을 복원했습니다.`, 'success');
+              } catch (err) {
+                handlePageError(err, { page: 'inventory', action: 'restore-item' });
+              }
+            },
+          });
+        } catch (err) {
+          handlePageError(err, { page: 'inventory', action: 'delete-item' });
+        }
       });
     });
 
-    // 전체 필드 정의 (순서 유지)
+    // 수정
     container.querySelectorAll('.btn-edit').forEach(btn => {
       btn.addEventListener('click', () => {
-        const idx = parseInt(btn.dataset.idx);
-        openItemModal(container, navigateTo, idx);
+        if (!canAction('item:edit')) {
+          showToast('수정 권한이 없습니다. 직원 이상만 가능합니다.', 'warning');
+          return;
+        }
+        try {
+          const idx = parseInt(btn.dataset.idx);
+          openItemModal(container, navigateTo, idx);
+        } catch (err) {
+          handlePageError(err, { page: 'inventory', action: 'open-edit-modal' });
+        }
       });
     });
 

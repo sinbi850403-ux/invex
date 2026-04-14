@@ -7,8 +7,15 @@
 import { getState, setState } from './store.js';
 import { showToast } from './toast.js';
 import { downloadExcel } from './excel.js';
+import { canAction } from './auth.js';
+import { handlePageError } from './error-monitor.js';
 
 export function renderStocktakePage(container, navigateTo) {
+  // ── 권한 플래그 ──────────────────────────────────────────
+  const canAdjust   = canAction('stocktake:adjust');
+  const canComplete = canAction('stocktake:complete');
+  // ─────────────────────────────────────────────────────────
+
   const state = getState();
   const items = state.mappedData || [];
   const today = new Date().toISOString().split('T')[0];
@@ -110,7 +117,7 @@ export function renderStocktakePage(container, navigateTo) {
 
           <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:16px;">
             <button class="btn btn-outline" id="btn-st-export">📥 실사표 내보내기</button>
-            <button class="btn btn-danger" id="btn-st-adjust">⚠️ 재고 조정 반영</button>
+            <button class="btn btn-danger" id="btn-st-adjust" ${!canAdjust ? 'disabled title="매니저 이상만 조정할 수 있습니다" style="opacity:0.4;cursor:not-allowed;"' : ''}>⚠️ 재고 조정 반영</button>
           </div>
         </div>
       `}
@@ -214,45 +221,52 @@ export function renderStocktakePage(container, navigateTo) {
 
   // 재고 조정 반영
   container.querySelector('#btn-st-adjust')?.addEventListener('click', () => {
-    const inputs = container.querySelectorAll('.st-actual');
-    let adjustCount = 0;
-    const updatedItems = [...items];
-
-    inputs.forEach((input, i) => {
-      if (input.value === '') return;
-      const actualQty = parseFloat(input.value);
-      if (isNaN(actualQty)) return;
-      const sysQty = parseFloat(items[i].quantity) || 0;
-      if (actualQty !== sysQty) {
-        updatedItems[i] = {
-          ...updatedItems[i],
-          quantity: actualQty,
-          totalPrice: actualQty * (parseFloat(updatedItems[i].unitPrice) || 0),
-        };
-        adjustCount++;
-      }
-    });
-
-    if (adjustCount === 0) {
-      showToast('조정할 차이가 없습니다.', 'info');
+    if (!canAdjust) {
+      showToast('재고 조정 권한이 없습니다. 매니저 이상만 가능합니다.', 'warning');
       return;
     }
+    try {
+      const inputs = container.querySelectorAll('.st-actual');
+      let adjustCount = 0;
+      const updatedItems = [...items];
 
-    if (!confirm(`${adjustCount}건의 재고를 실물 수량으로 조정하시겠습니까?`)) return;
+      inputs.forEach((input, i) => {
+        if (input.value === '') return;
+        const actualQty = parseFloat(input.value);
+        if (isNaN(actualQty)) return;
+        const sysQty = parseFloat(items[i].quantity) || 0;
+        if (actualQty !== sysQty) {
+          updatedItems[i] = {
+            ...updatedItems[i],
+            quantity: actualQty,
+            totalPrice: actualQty * (parseFloat(updatedItems[i].unitPrice) || 0),
+          };
+          adjustCount++;
+        }
+      });
 
-    // 실사 이력 저장
-    const record = {
-      date: container.querySelector('#st-date').value,
-      inspector: container.querySelector('#st-inspector').value || '',
-      adjustCount,
-      totalItems: items.length,
-    };
+      if (adjustCount === 0) {
+        showToast('조정할 차이가 없습니다.', 'info');
+        return;
+      }
 
-    const history = [...(state.stocktakeHistory || []), record];
-    setState({ mappedData: updatedItems, stocktakeHistory: history });
+      if (!confirm(`${adjustCount}건의 재고를 실물 수량으로 조정하시겠습니까?`)) return;
 
-    showToast(`${adjustCount}건 재고 조정 완료`, 'success');
-    renderStocktakePage(container, navigateTo);
+      const record = {
+        date: container.querySelector('#st-date').value,
+        inspector: container.querySelector('#st-inspector').value || '',
+        adjustCount,
+        totalItems: items.length,
+      };
+
+      const history = [...(state.stocktakeHistory || []), record];
+      setState({ mappedData: updatedItems, stocktakeHistory: history });
+
+      showToast(`${adjustCount}건 재고 조정 완료`, 'success');
+      renderStocktakePage(container, navigateTo);
+    } catch (err) {
+      handlePageError(err, { page: 'stocktake', action: 'adjust' });
+    }
   });
 
   // 실사 이력

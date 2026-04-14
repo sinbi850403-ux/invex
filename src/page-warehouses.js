@@ -6,6 +6,8 @@
 
 import { getState, setState } from './store.js';
 import { showToast } from './toast.js';
+import { canAction } from './auth.js';
+import { handlePageError } from './error-monitor.js';
 
 /**
  * 창고 ID 생성 유틸
@@ -277,7 +279,13 @@ export function renderWarehousesPage(container, navigateTo) {
   function closeAssignModal() { assignModal.style.display = 'none'; }
 
   // 창고 추가 버튼
-  container.querySelector('#btn-add-warehouse').addEventListener('click', () => openModal());
+  container.querySelector('#btn-add-warehouse').addEventListener('click', () => {
+    if (!canAction('warehouse:create')) {
+      showToast('창고 추가 권한이 없습니다. 관리자만 가능합니다.', 'warning');
+      return;
+    }
+    openModal();
+  });
 
   // 모달 닫기
   container.querySelector('#wh-modal-close').addEventListener('click', closeModal);
@@ -351,27 +359,33 @@ export function renderWarehousesPage(container, navigateTo) {
   container.querySelectorAll('.btn-delete-wh').forEach(btn => {
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
-      const whId = btn.dataset.whId;
-      const wh = warehouses.find(w => w.id === whId);
-      if (!wh) return;
-
-      // 해당 창고에 품목이 있으면 경고
-      const whItems = items.filter(i => i.warehouse === wh.name);
-      if (whItems.length > 0) {
-        if (!confirm(`"${wh.name}"에 ${whItems.length}개 품목이 있습니다.\n삭제하면 해당 품목들은 미배정 상태가 됩니다.\n계속하시겠습니까?`)) return;
-        // 품목의 warehouse를 비움
-        const updatedItems = items.map(i =>
-          i.warehouse === wh.name ? { ...i, warehouse: '' } : i
-        );
-        setState({ mappedData: updatedItems });
-      } else {
-        if (!confirm(`"${wh.name}" 창고를 삭제하시겠습니까?`)) return;
+      if (!canAction('warehouse:delete')) {
+        showToast('창고 삭제 권한이 없습니다. 관리자만 가능합니다.', 'warning');
+        return;
       }
+      try {
+        const whId = btn.dataset.whId;
+        const wh = warehouses.find(w => w.id === whId);
+        if (!wh) return;
 
-      const updatedWarehouses = warehouses.filter(w => w.id !== whId);
-      setState({ warehouses: updatedWarehouses });
-      showToast(`"${wh.name}" 창고를 삭제했습니다.`, 'info');
-      renderWarehousesPage(container, navigateTo);
+        const whItems = items.filter(i => i.warehouse === wh.name);
+        if (whItems.length > 0) {
+          if (!confirm(`"${wh.name}"에 ${whItems.length}개 품목이 있습니다.\n삭제하면 해당 품목들은 미배정 상태가 됩니다.\n계속하시겠습니까?`)) return;
+          const updatedItems = items.map(i =>
+            i.warehouse === wh.name ? { ...i, warehouse: '' } : i
+          );
+          setState({ mappedData: updatedItems });
+        } else {
+          if (!confirm(`"${wh.name}" 창고를 삭제하시겠습니까?`)) return;
+        }
+
+        const updatedWarehouses = warehouses.filter(w => w.id !== whId);
+        setState({ warehouses: updatedWarehouses });
+        showToast(`"${wh.name}" 창고를 삭제했습니다.`, 'info');
+        renderWarehousesPage(container, navigateTo);
+      } catch (err) {
+        handlePageError(err, { page: 'warehouses', action: 'delete-warehouse' });
+      }
     });
   });
 

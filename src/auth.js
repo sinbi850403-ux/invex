@@ -591,6 +591,102 @@ export function hasPlan(requiredPlan) {
   return (plans[userProfile.plan] || 0) >= (plans[requiredPlan] || 0);
 }
 
+// ─── 역할 레이블 (UI 표시용) ─────────────────────────────────────────────────
+export const ROLE_LABELS = {
+  viewer:  '열람자(Viewer)',
+  staff:   '직원(Staff)',
+  manager: '매니저(Manager)',
+  admin:   '관리자(Admin)',
+};
+
+// ─── 페이지별 최소 역할 요구사항 ─────────────────────────────────────────────
+// Supabase 미설정(1인 오프라인) 모드에서는 모든 페이지 허용
+export const PAGE_MIN_ROLE = {
+  // viewer 이상
+  home:         'viewer',
+  inventory:    'viewer',
+  summary:      'viewer',
+  ledger:       'viewer',
+  dashboard:    'viewer',
+  forecast:     'viewer',
+  // staff 이상
+  inout:        'staff',
+  transfer:     'staff',
+  scanner:      'staff',
+  labels:       'staff',
+  vendors:      'staff',
+  upload:       'staff',
+  mapping:      'staff',
+  // manager 이상
+  stocktake:    'manager',
+  bulk:         'manager',
+  costing:      'manager',
+  accounts:     'manager',
+  orders:       'manager',
+  'auto-order': 'manager',
+  profit:       'manager',
+  'weekly-report': 'manager',
+  'tax-reports':'manager',
+  // admin 이상
+  warehouses:   'admin',
+  settings:     'admin',
+  roles:        'admin',
+  api:          'admin',
+  team:         'admin',
+  backup:       'admin',
+};
+
+// ─── 액션별 최소 역할 (버튼 표시/숨김 제어) ──────────────────────────────────
+export const ACTION_MIN_ROLE = {
+  'item:create':        'staff',
+  'item:edit':          'staff',
+  'item:delete':        'manager',
+  'item:bulk':          'manager',
+  'inout:create':       'staff',
+  'inout:delete':       'manager',
+  'inout:bulk':         'manager',
+  'transfer:create':    'staff',
+  'transfer:delete':    'manager',
+  'stocktake:adjust':   'manager',
+  'stocktake:complete': 'manager',
+  'vendor:create':      'staff',
+  'vendor:edit':        'staff',
+  'vendor:delete':      'manager',
+  'warehouse:create':   'admin',
+  'warehouse:edit':     'admin',
+  'warehouse:delete':   'admin',
+  'settings:save':      'admin',
+  'backup:restore':     'admin',
+  'order:create':       'manager',
+  'order:delete':       'manager',
+};
+
+/**
+ * 현재 사용자가 특정 액션을 수행할 권한이 있는지 확인
+ * Supabase 미설정(오프라인 1인 모드)이면 항상 허용
+ */
+export function canAction(actionKey) {
+  // 로컬 전용 모드(Supabase 없음) — 제한 없음
+  if (!isSupabaseConfigured) return true;
+  // 프로필 미로드 상태 — 안전하게 차단
+  if (!userProfile) return false;
+  const required = ACTION_MIN_ROLE[actionKey];
+  if (!required) return true;
+  return hasRole(required);
+}
+
+/**
+ * 현재 사용자가 특정 페이지에 접근할 역할 권한이 있는지 확인
+ * plan.js의 canAccessPage()와 별개 — 역할(role) 기반 체크
+ */
+export function canAccessByRole(pageName) {
+  if (!isSupabaseConfigured) return true;
+  if (!userProfile) return false;
+  const minRole = PAGE_MIN_ROLE[pageName];
+  if (!minRole) return true;
+  return hasRole(minRole);
+}
+
 export function renderLoginScreen(container) {
   container.innerHTML = `
     <div style="display:flex; align-items:center; justify-content:center; min-height:80vh;">

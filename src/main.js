@@ -15,7 +15,7 @@ import { isAdmin } from './admin-auth.js';
 import { checkAndShowOnboarding } from './onboarding.js';
 import { initGlobalSearch, toggleGlobalSearch } from './global-search.js';
 import { initTheme, toggleTheme } from './theme.js';
-import { initAuth, getCurrentUser, getUserProfileData, loginWithGoogle, loginWithEmail, signupWithEmail, resetPassword, logout } from './auth.js';
+import { initAuth, getCurrentUser, getUserProfileData, loginWithGoogle, loginWithEmail, signupWithEmail, resetPassword, logout, canAccessByRole, ROLE_LABELS } from './auth.js';
 import { renderNotificationPanel, getNotificationCount, syncExternalNotifications } from './notifications.js';
 import { showToast } from './toast.js';
 import { canAccessPage, getPageBadge, showUpgradeModal, getCurrentPlan, PLANS, setPlan, injectGetCurrentUser, injectGetUserProfile } from './plan.js';
@@ -413,9 +413,36 @@ function initSmartDetailsToggles() {
 async function navigateTo(pageName) {
   if (!pageLoaders[pageName]) return;
 
-  // ?붽툑???묎렐 ?쒖뼱
+  // 요금제 체크 (plan.js)
   if (!canAccessPage(pageName)) {
     showUpgradeModal(pageName);
+    return;
+  }
+
+  // 역할(role) 권한 체크 — viewer/staff/manager/admin 계층
+  if (!canAccessByRole(pageName)) {
+    const profile = getUserProfileData();
+    const { PAGE_MIN_ROLE } = await import('./auth.js');
+    const minRole = PAGE_MIN_ROLE[pageName];
+    const minLabel = ROLE_LABELS[minRole] || minRole;
+    const myLabel  = ROLE_LABELS[profile?.role] || (profile?.role ?? '없음');
+    const mainContent = document.getElementById('main-content');
+    if (mainContent) {
+      mainContent.innerHTML = `
+        <div class="card" style="margin:32px auto; max-width:480px; text-align:center;">
+          <div style="padding:48px 24px;">
+            <div style="font-size:52px; margin-bottom:16px;">🔒</div>
+            <div style="font-size:18px; font-weight:700; margin-bottom:8px;">접근 권한이 없습니다</div>
+            <div style="color:var(--text-muted); font-size:14px; line-height:1.7; margin-bottom:20px;">
+              이 페이지는 <strong>${minLabel}</strong> 이상만 접근할 수 있습니다.<br>
+              현재 역할: <strong>${myLabel}</strong>
+            </div>
+            <div style="font-size:12px; color:var(--text-muted);">관리자에게 권한 변경을 요청하세요.</div>
+          </div>
+        </div>
+      `;
+    }
+    showToast(`이 페이지는 ${minLabel} 이상만 접근할 수 있습니다.`, 'warning');
     return;
   }
 
