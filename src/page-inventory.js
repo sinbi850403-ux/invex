@@ -21,6 +21,7 @@ const PAGE_SIZE = 20;
 const ALL_FIELDS = [
   { key: 'itemName', label: '품목명', numeric: false },
   { key: 'itemCode', label: '품목코드', numeric: false },
+  { key: 'spec', label: '규격/스펙', numeric: false },
   { key: 'category', label: '분류', numeric: false },
   { key: 'vendor', label: '거래처', numeric: false },
   { key: 'quantity', label: '수량', numeric: true },
@@ -1718,6 +1719,19 @@ function openItemModal(container, navigateTo, editIdx = null) {
   const isEdit = editIdx !== null;
   const item = isEdit ? (state.mappedData[editIdx] || {}) : {};
 
+  /* ── 마스터 데이터 조회 ── */
+  const vendors   = (state.vendorMaster || []).filter(v => v.type === 'supplier' || v.type === 'both');
+  const existingCats = [...new Set((state.mappedData || []).map(d => d.category).filter(Boolean))].sort();
+  const existingUnits = [...new Set((state.mappedData || []).map(d => d.unit).filter(Boolean))].sort();
+
+  /* ── 품목코드 자동생성 ── */
+  function genItemCode() {
+    const items = state.mappedData || [];
+    const nums = items.map(d => parseInt((d.itemCode || '').replace(/\D/g, '')) || 0);
+    const next = nums.length > 0 ? Math.max(...nums) + 1 : 1;
+    return 'I' + String(next).padStart(5, '0');
+  }
+
   const overlay = document.createElement('div');
   overlay.className = 'modal-overlay';
   overlay.innerHTML = `
@@ -1741,14 +1755,32 @@ function openItemModal(container, navigateTo, editIdx = null) {
               ],
             })}
 
+            <!-- datalist 마스터 -->
+            <datalist id="dl-category">${existingCats.map(c => `<option value="${c}">`).join('')}</datalist>
+            <datalist id="dl-unit">${existingUnits.map(u => `<option value="${u}">`).join('')}<option value="EA"><option value="BOX"><option value="KG"><option value="L"><option value="M"><option value="SET"></datalist>
+
             <div class="form-row">
               <div class="form-group">
-                <label class="form-label">품목명<span class="required">*</span></label>
+                <label class="form-label">품목명 <span class="required">*</span></label>
                 <input class="form-input" id="f-itemName" value="${item.itemName || ''}" placeholder="예: A4용지, 복사용지 80g" />
               </div>
               <div class="form-group">
                 <label class="form-label">품목코드</label>
-                <input class="form-input" id="f-itemCode" value="${item.itemCode || ''}" placeholder="예: P-001" />
+                <div style="display:flex; gap:6px;">
+                  <input class="form-input" id="f-itemCode" value="${item.itemCode || ''}" placeholder="예: I00001" style="flex:1;" />
+                  ${!isEdit ? `<button type="button" class="btn btn-outline btn-sm" id="btn-auto-code" title="자동생성" style="white-space:nowrap; padding:0 10px;">자동</button>` : ''}
+                </div>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">규격/스펙</label>
+                <input class="form-input" id="f-spec" value="${item.spec || ''}" placeholder="예: 80g/m², A4, 500매" />
+              </div>
+              <div class="form-group">
+                <label class="form-label">분류(카테고리)</label>
+                <input class="form-input" id="f-category" list="dl-category" value="${item.category || ''}" placeholder="예: 사무용품" autocomplete="off" />
               </div>
             </div>
 
@@ -1759,7 +1791,7 @@ function openItemModal(container, navigateTo, editIdx = null) {
               </div>
               <div class="form-group">
                 <label class="form-label">단위</label>
-                <input class="form-input" id="f-unit" value="${item.unit || ''}" placeholder="EA, BOX, KG ..." />
+                <input class="form-input" id="f-unit" list="dl-unit" value="${item.unit || ''}" placeholder="EA, BOX, KG ..." autocomplete="off" />
               </div>
             </div>
 
@@ -1779,19 +1811,19 @@ function openItemModal(container, navigateTo, editIdx = null) {
               <div class="smart-details-body">
                 <div class="form-row">
                   <div class="form-group">
-                    <label class="form-label">분류</label>
-                    <input class="form-input" id="f-category" value="${item.category || ''}" placeholder="예: 사무용품" />
+                    <label class="form-label">주공급처</label>
+                    <select class="form-select" id="f-vendor">
+                      <option value="">-- 선택 또는 직접 입력 --</option>
+                      ${vendors.map(v => `<option value="${v.name}" ${item.vendor === v.name ? 'selected' : ''}>${v.name}${v.code ? ` (${v.code})` : ''}</option>`).join('')}
+                      ${item.vendor && !vendors.find(v => v.name === item.vendor) ? `<option value="${item.vendor}" selected>${item.vendor}</option>` : ''}
+                    </select>
                   </div>
-                  <div class="form-group">
-                    <label class="form-label">거래처</label>
-                    <input class="form-input" id="f-vendor" value="${item.vendor || ''}" placeholder="예: (주)신성상사" />
-                  </div>
-                </div>
-                <div class="form-row">
                   <div class="form-group">
                     <label class="form-label">창고/위치</label>
                     <input class="form-input" id="f-warehouse" value="${item.warehouse || ''}" placeholder="예: 본사 1층 A-03" />
                   </div>
+                </div>
+                <div class="form-row">
                   <div class="form-group">
                     <label class="form-label">비고</label>
                     <input class="form-input" id="f-note" value="${item.note || ''}" placeholder="메모" />
@@ -1845,17 +1877,23 @@ function openItemModal(container, navigateTo, editIdx = null) {
   overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
 
   const inputs = {
-    name: overlay.querySelector('#f-itemName'),
-    code: overlay.querySelector('#f-itemCode'),
-    quantity: overlay.querySelector('#f-quantity'),
-    unit: overlay.querySelector('#f-unit'),
+    name:      overlay.querySelector('#f-itemName'),
+    code:      overlay.querySelector('#f-itemCode'),
+    spec:      overlay.querySelector('#f-spec'),
+    quantity:  overlay.querySelector('#f-quantity'),
+    unit:      overlay.querySelector('#f-unit'),
     unitPrice: overlay.querySelector('#f-unitPrice'),
     salePrice: overlay.querySelector('#f-salePrice'),
-    category: overlay.querySelector('#f-category'),
-    vendor: overlay.querySelector('#f-vendor'),
+    category:  overlay.querySelector('#f-category'),
+    vendor:    overlay.querySelector('#f-vendor'),
     warehouse: overlay.querySelector('#f-warehouse'),
-    note: overlay.querySelector('#f-note'),
+    note:      overlay.querySelector('#f-note'),
   };
+
+  /* ── 품목코드 자동생성 버튼 ── */
+  overlay.querySelector('#btn-auto-code')?.addEventListener('click', () => {
+    inputs.code.value = genItemCode();
+  });
 
   const formatMoney = (value) => `₩${Math.round(value || 0).toLocaleString('ko-KR')}`;
 
@@ -1986,8 +2024,9 @@ function openItemModal(container, navigateTo, editIdx = null) {
       const newItem = {
         itemName:  name,
         itemCode:  inputs.code.value.trim(),
+        spec:      inputs.spec.value.trim(),
         category:  inputs.category.value.trim(),
-        vendor:    inputs.vendor.value.trim(),
+        vendor:    inputs.vendor.value,
         quantity:  qty,
         unit:      inputs.unit.value.trim(),
         unitPrice,
