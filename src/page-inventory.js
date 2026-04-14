@@ -391,6 +391,7 @@ export function renderInventoryPage(container, navigateTo) {
   let persistTimer = null;
   let selectedIndexes = new Set();
   let focusedItemKey = data[0] ? getItemKey(data[0]) : '';
+  const expandedInvGroups = new Set(); // 재고 테이블 펼쳐진 그룹 키
   const COLLAPSE_STORAGE_KEY = 'invex:inventory:collapsed-sections:v1';
   const collapsedSections = loadCollapsedSections();
 
@@ -906,7 +907,20 @@ export function renderInventoryPage(container, navigateTo) {
       </td></tr>`;
     } else {
       selectedIndexes = new Set([...selectedIndexes].filter(index => Number.isInteger(index) && index >= 0 && index < data.length));
-      tbody.innerHTML = pageData.map((row, i) => {
+
+      // ── 동일 품목명/코드 기준 그룹핑 ─────────────────────
+      const invGroupOrder = [];
+      const invGroupMap = new Map();
+      pageData.forEach(row => {
+        const grpKey = row.itemCode ? String(row.itemCode).trim() : String(row.itemName || '').trim();
+        if (!invGroupMap.has(grpKey)) {
+          invGroupMap.set(grpKey, []);
+          invGroupOrder.push(grpKey);
+        }
+        invGroupMap.get(grpKey).push(row);
+      });
+
+      const renderInvRow = (row, isChild = false) => {
         const realIdx = data.indexOf(row);
         const min = safetyStock[row.itemName];
         const qtyStr = typeof row.quantity === 'string' ? row.quantity.replace(/,/g, '') : row.quantity;
@@ -915,13 +929,15 @@ export function renderInventoryPage(container, navigateTo) {
         const isDanger = min !== undefined && qty === 0;
         const rowKey = getItemKey(row);
         const isFocused = focusedItemKey === rowKey;
+        const childStyle = isChild ? 'background:var(--bg-lighter);' : '';
 
         return `
-          <tr class="${isDanger ? 'row-danger' : isLow ? 'row-warning' : ''} ${isFocused ? 'row-focused' : ''}" data-idx="${realIdx}" data-row-key="${rowKey}">
+          <tr class="${isDanger ? 'row-danger' : isLow ? 'row-warning' : ''} ${isFocused ? 'row-focused' : ''} ${isChild ? 'inv-child-row' : ''}"
+              data-idx="${realIdx}" data-row-key="${rowKey}" style="${childStyle}">
             <td data-label="" class="col-check">
               <input type="checkbox" class="table-row-check inv-row-check" data-idx="${realIdx}" ${selectedIndexes.has(realIdx) ? 'checked' : ''} aria-label="행 선택" />
             </td>
-            <td class="col-num">${start + i + 1}</td>
+            <td class="col-num"></td>
             ${activeFields.map(key => `
               <td class="editable-cell ${ALL_FIELDS.find(f => f.key === key)?.numeric ? 'text-right' : ''}"
                   data-label="${FIELD_LABELS[key] || key}"
@@ -944,10 +960,53 @@ export function renderInventoryPage(container, navigateTo) {
             </td>
           </tr>
         `;
-      }).join('');
+      };
+
+      let invRowNum = start + 1;
+      let invHtml = '';
+      const totalCols = activeFields.length + 4;
+
+      invGroupOrder.forEach(grpKey => {
+        const group = invGroupMap.get(grpKey);
+        if (group.length === 1) {
+          invHtml += renderInvRow(group[0], false).replace('<td class="col-num"></td>', `<td class="col-num">${invRowNum++}</td>`);
+        } else {
+          const isExpanded = expandedInvGroups.has(grpKey);
+          const firstName = group[0].itemName || '-';
+          const firstCode = group[0].itemCode || '';
+          const totalQty = group.reduce((s, r) => s + (parseFloat(String(r.quantity || '').replace(/,/g, '')) || 0), 0);
+          invHtml += `
+            <tr class="inv-group-header" data-inv-group-key="${escapeHtml(grpKey)}" style="cursor:pointer; background:var(--bg-card); border-left:3px solid var(--accent);">
+              <td class="col-check"><span style="color:var(--text-muted); font-size:11px;">${group.length}건</span></td>
+              <td class="col-num">${invRowNum++}</td>
+              <td colspan="${totalCols - 2}" style="padding-left:8px;">
+                <span class="inv-toggle-icon" style="margin-right:6px; font-size:12px;">${isExpanded ? '▼' : '▶'}</span>
+                <strong>${escapeHtml(firstName)}</strong>
+                ${firstCode ? `<span style="color:var(--text-muted); font-size:11px; margin-left:6px;">${escapeHtml(firstCode)}</span>` : ''}
+                <span style="font-size:11px; color:var(--text-muted); margin-left:8px;">총 ${totalQty.toLocaleString('ko-KR')}개 · ${group.length}항목</span>
+              </td>
+            </tr>
+            ${isExpanded ? group.map(row => renderInvRow(row, true)).join('') : ''}
+          `;
+        }
+      });
+      tbody.innerHTML = invHtml;
     }
 
     renderFilterSummary(sorted.length, data.length);
+
+    // 재고 그룹 헤더 클릭 → 펼치기/접기
+    container.querySelectorAll('.inv-group-header').forEach(row => {
+      row.addEventListener('click', () => {
+        const key = row.dataset.invGroupKey;
+        if (expandedInvGroups.has(key)) {
+          expandedInvGroups.delete(key);
+        } else {
+          expandedInvGroups.add(key);
+        }
+        renderTable();
+      });
+    });
 
     // 페이지당 행 수
     const paginationEl = container.querySelector('#pagination');

@@ -6,6 +6,9 @@
 
 import { getState, setState } from './store.js';
 import { showToast } from './toast.js';
+import { escapeHtml } from './ux-toolkit.js';
+
+const expandedTransferGroups = new Set();
 
 export function renderTransferPage(container, navigateTo) {
   const state = getState();
@@ -81,24 +84,78 @@ export function renderTransferPage(container, navigateTo) {
                 <th>비고</th>
               </tr>
             </thead>
-            <tbody>
-              ${[...transfers].reverse().slice(0, 30).map(transfer => `
-                <tr>
-                  <td style="font-size:12px; color:var(--text-muted);">${transfer.date} ${transfer.time || ''}</td>
-                  <td><strong>${transfer.itemName}</strong></td>
-                  <td><span class="badge badge-default">${transfer.fromWarehouse}</span></td>
-                  <td style="text-align:center;">→</td>
-                  <td><span class="badge badge-info">${transfer.toWarehouse}</span></td>
-                  <td class="text-right">${transfer.quantity}</td>
-                  <td style="font-size:12px; color:var(--text-muted);">${transfer.note || '-'}</td>
-                </tr>
-              `).join('')}
+            <tbody id="transfer-tbody">
+              ${(() => {
+                const recent = [...transfers].reverse().slice(0, 30);
+                const groupOrder = [];
+                const groupMap = new Map();
+                recent.forEach(t => {
+                  const key = t.itemCode ? String(t.itemCode).trim() : String(t.itemName || '').trim();
+                  if (!groupMap.has(key)) { groupMap.set(key, []); groupOrder.push(key); }
+                  groupMap.get(key).push(t);
+                });
+
+                let html = '';
+                groupOrder.forEach(key => {
+                  const group = groupMap.get(key);
+                  const isExpanded = expandedTransferGroups.has(key);
+                  if (group.length === 1) {
+                    const t = group[0];
+                    html += `<tr>
+                      <td style="font-size:12px; color:var(--text-muted);">${t.date} ${t.time || ''}</td>
+                      <td><strong>${escapeHtml(t.itemName)}</strong></td>
+                      <td><span class="badge badge-default">${escapeHtml(t.fromWarehouse)}</span></td>
+                      <td style="text-align:center;">→</td>
+                      <td><span class="badge badge-info">${escapeHtml(t.toWarehouse)}</span></td>
+                      <td class="text-right">${t.quantity}</td>
+                      <td style="font-size:12px; color:var(--text-muted);">${t.note || '-'}</td>
+                    </tr>`;
+                  } else {
+                    const totalQty = group.reduce((s, t) => s + (parseFloat(t.quantity) || 0), 0);
+                    html += `<tr class="transfer-group-header" data-transfer-group-key="${escapeHtml(key)}"
+                      style="cursor:pointer; background:var(--bg-card); border-left:3px solid var(--accent);">
+                      <td colspan="7" style="padding-left:8px;">
+                        <span style="margin-right:6px; font-size:12px;">${isExpanded ? '▼' : '▶'}</span>
+                        <strong>${escapeHtml(group[0].itemName)}</strong>
+                        <span style="font-size:11px; color:var(--text-muted); margin-left:8px;">이동 ${group.length}건 · 총 ${totalQty.toLocaleString('ko-KR')}개</span>
+                      </td>
+                    </tr>`;
+                    if (isExpanded) {
+                      group.forEach(t => {
+                        html += `<tr class="transfer-child-row" style="background:var(--bg-lighter);">
+                          <td style="font-size:12px; color:var(--text-muted); padding-left:24px;">${t.date} ${t.time || ''}</td>
+                          <td style="font-size:12px; color:var(--text-muted);">${escapeHtml(t.itemName)}</td>
+                          <td><span class="badge badge-default">${escapeHtml(t.fromWarehouse)}</span></td>
+                          <td style="text-align:center;">→</td>
+                          <td><span class="badge badge-info">${escapeHtml(t.toWarehouse)}</span></td>
+                          <td class="text-right">${t.quantity}</td>
+                          <td style="font-size:12px; color:var(--text-muted);">${t.note || '-'}</td>
+                        </tr>`;
+                      });
+                    }
+                  }
+                });
+                return html;
+              })()}
             </tbody>
           </table>
         </div>
       ` : '<div style="text-align:center; padding:24px; color:var(--text-muted);">아직 이동 이력이 없습니다.</div>'}
     </div>
   `;
+
+  // 이동 이력 그룹 헤더 클릭 → 펼치기/접기
+  container.querySelectorAll('.transfer-group-header').forEach(row => {
+    row.addEventListener('click', () => {
+      const key = row.dataset.transferGroupKey;
+      if (expandedTransferGroups.has(key)) {
+        expandedTransferGroups.delete(key);
+      } else {
+        expandedTransferGroups.add(key);
+      }
+      renderTransferPage(container, navigateTo);
+    });
+  });
 
   const toSelect = container.querySelector('#tf-to');
   const newInput = container.querySelector('#tf-new-warehouse');
