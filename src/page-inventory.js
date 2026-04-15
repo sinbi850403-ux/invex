@@ -937,6 +937,7 @@ export function renderInventoryPage(container, navigateTo) {
         invGroupMap.get(grpKey).push(row);
       });
 
+      const _todayKey = new Date().toISOString().slice(0, 10);
       const renderInvRow = (row, isChild = false) => {
         const realIdx = data.indexOf(row);
         const min = safetyStock[row.itemName];
@@ -947,6 +948,7 @@ export function renderInventoryPage(container, navigateTo) {
         const rowKey = getItemKey(row);
         const isFocused = focusedItemKey === rowKey;
         const childStyle = isChild ? 'background:var(--bg-lighter);' : '';
+        const isLocked = row.lockedUntil && row.lockedUntil >= _todayKey;
 
         return `
           <tr class="${isDanger ? 'row-danger' : isLow ? 'row-warning' : ''} ${isFocused ? 'row-focused' : ''} ${isChild ? 'inv-child-row' : ''}"
@@ -959,6 +961,7 @@ export function renderInventoryPage(container, navigateTo) {
               <td class="editable-cell ${ALL_FIELDS.find(f => f.key === key)?.numeric ? 'text-right' : ''}"
                   data-label="${FIELD_LABELS[key] || key}"
                   data-field="${key}" data-idx="${realIdx}">
+                ${key === 'itemName' && isLocked ? '<span title="잠금 품목 (수정 제한)" style="margin-right:4px;">🔒</span>' : ''}
                 ${formatCell(key, row[key])}
                 ${key === 'quantity' && isLow ? ' <span class="badge badge-danger" style="font-size:10px;">부족</span>' : ''}
               </td>
@@ -1829,6 +1832,17 @@ function openItemModal(container, navigateTo, editIdx = null) {
                     <input class="form-input" id="f-note" value="${item.note || ''}" placeholder="메모" />
                   </div>
                 </div>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label class="form-label">🔒 품목 잠금 해제일</label>
+                    <input class="form-input" type="date" id="f-lockedUntil" value="${item.lockedUntil || ''}" />
+                  </div>
+                  <div class="form-group">
+                    <div style="font-size:12px; color:var(--text-muted); margin-top:28px; line-height:1.6;">
+                      잠금 해제일까지 🔒 표시됩니다.<br>해당 날짜가 지나면 자동으로 잠금이 해제됩니다.
+                    </div>
+                  </div>
+                </div>
               </div>
             </details>
           </div>
@@ -1885,9 +1899,10 @@ function openItemModal(container, navigateTo, editIdx = null) {
     unitPrice: overlay.querySelector('#f-unitPrice'),
     salePrice: overlay.querySelector('#f-salePrice'),
     category:  overlay.querySelector('#f-category'),
-    vendor:    overlay.querySelector('#f-vendor'),
-    warehouse: overlay.querySelector('#f-warehouse'),
-    note:      overlay.querySelector('#f-note'),
+    vendor:       overlay.querySelector('#f-vendor'),
+    warehouse:    overlay.querySelector('#f-warehouse'),
+    note:         overlay.querySelector('#f-note'),
+    lockedUntil:  overlay.querySelector('#f-lockedUntil'),
   };
 
   /* ── 품목코드 자동생성 버튼 ── */
@@ -2022,17 +2037,18 @@ function openItemModal(container, navigateTo, editIdx = null) {
     const restore = setSavingState(overlay.querySelector('#modal-save'));
     try {
       const newItem = {
-        itemName:  name,
-        itemCode:  inputs.code.value.trim(),
-        spec:      inputs.spec.value.trim(),
-        category:  inputs.category.value.trim(),
-        vendor:    inputs.vendor.value,
-        quantity:  qty,
-        unit:      inputs.unit.value.trim(),
+        itemName:    name,
+        itemCode:    inputs.code.value.trim(),
+        spec:        inputs.spec.value.trim(),
+        category:    inputs.category.value.trim(),
+        vendor:      inputs.vendor.value,
+        quantity:    qty,
+        unit:        inputs.unit.value.trim(),
         unitPrice,
         salePrice,
-        warehouse: inputs.warehouse.value.trim(),
-        note:      inputs.note.value.trim(),
+        warehouse:   inputs.warehouse.value.trim(),
+        note:        inputs.note.value.trim(),
+        lockedUntil: inputs.lockedUntil.value || null,
       };
       // 수정 시 기존 VAT 비율 유지, 신규는 기본 10%
       if (isEdit) {

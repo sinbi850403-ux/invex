@@ -43,8 +43,9 @@ export function renderProfitPage(container, navigateTo) {
       const totalCost = Math.round(quantity * unitCost);
       const totalRevenue = Math.round(quantity * salePrice);
       const profit = totalRevenue - totalCost;
-      const profitRate = totalRevenue > 0 ? (profit / totalRevenue) * 100 : 0;
-      const marginRate = totalCost > 0 ? (profit / totalCost) * 100 : 0;
+      const profitRate = totalRevenue > 0 ? (profit / totalRevenue) * 100 : 0;   // 매출총이익률
+      const marginRate = totalCost > 0 ? (profit / totalCost) * 100 : 0;         // 마진율
+      const costRatio = totalRevenue > 0 ? (totalCost / totalRevenue) * 100 : 0; // 매출원가율
 
       return {
         name: item.itemName || '(미분류 품목)',
@@ -59,6 +60,7 @@ export function renderProfitPage(container, navigateTo) {
         profit,
         profitRate,
         marginRate,
+        costRatio,
       };
     })
     .filter((row) => row.quantity > 0 || row.totalCost > 0);
@@ -81,6 +83,7 @@ export function renderProfitPage(container, navigateTo) {
       g.unitCost = combinedQty > 0 ? Math.round(combinedCost / combinedQty) : 0;
       g.profitRate = combinedRevenue > 0 ? (g.profit / combinedRevenue) * 100 : 0;
       g.marginRate = combinedCost > 0 ? (g.profit / combinedCost) * 100 : 0;
+      g.costRatio = combinedRevenue > 0 ? (combinedCost / combinedRevenue) * 100 : 0;
       g.hasSalePrice = g.hasSalePrice || row.hasSalePrice;
       if (!g.salePrice && row.salePrice) g.salePrice = row.salePrice;
     }
@@ -97,8 +100,9 @@ export function renderProfitPage(container, navigateTo) {
   const totalCost = sumBy(rows, (row) => row.totalCost);
   const totalRevenue = sumBy(rows, (row) => row.totalRevenue);
   const totalProfit = totalRevenue - totalCost;
-  const avgProfitRate = totalRevenue > 0 ? (totalProfit / totalRevenue) * 100 : 0;
-  const avgMarginRate = totalCost > 0 ? (totalProfit / totalCost) * 100 : 0;
+  const avgProfitRate = totalRevenue > 0 ? (totalProfit / totalRevenue) * 100 : 0;  // 매출총이익률
+  const avgMarginRate = totalCost > 0 ? (totalProfit / totalCost) * 100 : 0;         // 마진율(수익률)
+  const totalCostRatio = totalRevenue > 0 ? (totalCost / totalRevenue) * 100 : 0;    // 매출원가율
 
   const salePriceCount = rows.filter((row) => row.hasSalePrice).length;
   const salePriceRate = rows.length > 0 ? (salePriceCount / rows.length) * 100 : 0;
@@ -242,9 +246,14 @@ export function renderProfitPage(container, navigateTo) {
         <div class="stat-value ${totalProfit >= 0 ? 'text-success' : 'text-danger'}">${formatSignedMoney(totalProfit)}</div>
       </div>
       <div class="stat-card">
-        <div class="stat-label">평균 이익률</div>
+        <div class="stat-label">매출총이익률</div>
         <div class="stat-value ${avgProfitRate >= 0 ? 'text-success' : 'text-danger'}">${formatPercent(avgProfitRate)}</div>
-        <div class="stat-change">마진율 ${formatPercent(avgMarginRate)}</div>
+        <div class="stat-change">(판매가-원가) / 판매가</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">매출원가율</div>
+        <div class="stat-value ${totalCostRatio <= 80 ? 'text-success' : 'text-danger'}">${formatPercent(totalCostRatio)}</div>
+        <div class="stat-change">원가 / 매출 · 수익률 ${formatPercent(avgMarginRate)}</div>
       </div>
       <div class="stat-card">
         <div class="stat-label">판매가 입력률</div>
@@ -356,7 +365,9 @@ export function renderProfitPage(container, navigateTo) {
                 <th class="text-right">판매가</th>
                 <th class="text-right">개당 이익</th>
                 <th class="text-right">총 이익</th>
-                <th class="text-right">이익률</th>
+                <th class="text-right">매출총이익률</th>
+                <th class="text-right">매출원가율</th>
+                <th class="text-right">수익률(마진)</th>
                 <th class="text-center">상태</th>
               </tr>
             </thead>
@@ -391,6 +402,8 @@ export function renderProfitPage(container, navigateTo) {
                   <td class="text-right ${perUnitProfit >= 0 ? 'type-in' : 'type-out'}">${formatSignedMoney(perUnitProfit)}</td>
                   <td class="text-right ${row.profit >= 0 ? 'type-in' : 'type-out'}">${formatSignedMoney(row.profit)}</td>
                   <td class="text-right" style="font-weight:700; color:${tone};">${formatPercent(row.profitRate)}</td>
+                  <td class="text-right" style="color:${row.costRatio <= 80 ? 'var(--success)' : 'var(--danger)'};">${formatPercent(row.costRatio)}</td>
+                  <td class="text-right" style="color:${row.marginRate >= 0 ? 'var(--success)' : 'var(--danger)'};">${formatPercent(row.marginRate)}</td>
                   <td class="text-center">
                     <span class="badge ${
                       row.profit < 0 ? 'badge-danger' : row.profitRate < 10 ? 'badge-warning' : 'badge-success'
@@ -518,8 +531,9 @@ export function renderProfitPage(container, navigateTo) {
         <div>
           <div style="font-size:12px; color:var(--text-muted);">해석 기준</div>
           <div style="margin-top:6px; font-size:12px; color:var(--text-secondary); line-height:1.7;">
-            <div>이익률 = (판매가 - 원가) / 판매가</div>
-            <div>마진율 = (판매가 - 원가) / 원가</div>
+            <div>매출총이익률 = (판매가 - 원가) / 판매가</div>
+            <div>매출원가율 = 원가 / 판매가 &nbsp;(낮을수록 좋음)</div>
+            <div>수익률(마진) = (판매가 - 원가) / 원가</div>
             <div>판매가 미입력 품목은 기본 마진 규칙으로 추정됩니다.</div>
           </div>
         </div>
