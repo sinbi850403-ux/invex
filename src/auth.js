@@ -1,4 +1,4 @@
-import { supabase, isSupabaseConfigured, getSupabaseConfig, getSupabaseDebugInfo } from './supabase-client.js';
+import { supabase, isSupabaseConfigured, getSupabaseDebugInfo } from './supabase-client.js';
 import { showToast } from './toast.js';
 
 let currentUser = null;
@@ -15,12 +15,19 @@ const AUTH_STORAGE_PATTERNS = [
 ];
 const LEGACY_AUTH_PREFIX = `${String.fromCharCode(102, 105, 114, 101, 98, 97, 115, 101)}:`;
 
+class TimeoutError extends Error {
+  constructor(label) {
+    super(`${label} timeout`);
+    this.name = 'TimeoutError';
+  }
+}
+
 function withTimeout(promise, ms, label) {
   let timer = null;
   return Promise.race([
     promise,
     new Promise((_, reject) => {
-      timer = setTimeout(() => reject(new Error(`${label} timeout`)), ms);
+      timer = setTimeout(() => reject(new TimeoutError(label)), ms);
     }),
   ]).finally(() => {
     if (timer) clearTimeout(timer);
@@ -179,50 +186,20 @@ async function applySession(session) {
   emitAuthChanged();
 }
 
-async function directPasswordLogin(email, password) {
-  const { url, anonKey } = getSupabaseConfig();
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 10000);
-
-  try {
-    const response = await fetch(`${url}/auth/v1/token?grant_type=password`, {
-      method: 'POST',
-      headers: {
-        apikey: anonKey,
-        Authorization: `Bearer ${anonKey}`,
-        'Content-Type': 'application/json',
-        'X-Client-Info': 'invex-direct-auth',
-      },
-      body: JSON.stringify({ email, password }),
-      signal: controller.signal,
-    });
-
-    const payload = await response.json().catch(() => ({}));
-    if (!response.ok) {
-      throw new Error(
-        payload?.msg ||
-        payload?.message ||
-        payload?.error_description ||
-        payload?.error ||
-        'Direct auth request failed',
-      );
-    }
-
-    const { error } = await withTimeout(
-      supabase.auth.setSession({
-        access_token: payload.access_token,
-        refresh_token: payload.refresh_token,
-      }),
-      8000,
-      'set-session',
-    );
-
-    if (error) throw error;
-    return payload.user || null;
-  } finally {
-    clearTimeout(timer);
-  }
+function classifyLoginError(err) {
+  if (err instanceof TimeoutError) return 'timeout';
+  const msg = String(err?.message || '').toLowerCase();
+  if (
+    msg.includes('invalid login') ||
+    msg.includes('invalid credentials') ||
+    msg.includes('email or password') ||
+    msg.includes('invalid email or password')
+  ) return 'credentials';
+  if (msg.includes('email not confirmed')) return 'unconfirmed';
+  if (msg.includes('fetch') || msg.includes('network') || msg.includes('abort')) return 'network';
+  return 'unknown';
 }
+
 
 function renderInlineLoginError(loginBtn, email, errorMsg, showResetAction) {
   if (!loginBtn) return;
@@ -417,18 +394,12 @@ export async function loginWithEmail(email, password) {
     return null;
   }
 
-  // 로그인 시도 전 Supabase 클라이언트 내부 상태까지 완전 초기화
-  // localStorage 정리만으로는 클라이언트 객체 내부의 세션/토큰 갱신 상태가 남아
-  // signInWithPassword 호출 시 충돌하거나 fetch timeout이 발생하는 근본 원인
-  try {
-    await withTimeout(
-      supabase.auth.signOut({ scope: 'local' }),
-      3000,
-      'pre-login-signout',
-    );
-  } catch {
-    // signOut 실패해도 로그인 시도 계속
+  if (isLoggingIn) {
+    showToast('로그인 처리 중입니다. 잠시만 기다려 주세요.', 'info');
+    return null;
   }
+  isLoggingIn = true;
+
   purgeLegacyAuthStorage({ includeSupabaseSession: true });
 
   const loginBtn = document.getElementById('gate-email-login');
@@ -442,93 +413,68 @@ export async function loginWithEmail(email, password) {
   const existingError = document.getElementById('login-error-msg');
   if (existingError) existingError.remove();
 
-  // 로그인 시도 함수 (재시도 지원)
   async function attemptLogin(attempt = 1) {
-    const timeout = attempt === 1 ? 15000 : 20000; // 1차 15s, 재시도 20s
-    try {
-      const { data, error } = await withTimeout(
-        supabase.auth.signInWithPassword({ email, password }),
-        timeout,
-        'login',
-      );
-      if (error) throw error;
-      return data.user;
-    } catch (err) {
-      const msg = String(err?.message || '').toLowerCase();
-      const isNetwork = msg.includes('fetch') || msg.includes('network') || msg.includes('timeout') || msg.includes('abort');
-      if (isNetwork && attempt === 1) {
-        // 1차 실패 시 1.5초 대기 후 directPasswordLogin 시도
-        await new Promise(r => setTimeout(r, 1500));
-        purgeLegacyAuthStorage({ includeSupabaseSession: true });
-        const fallbackUser = await directPasswordLogin(email, password);
-        return fallbackUser;
-      }
-      throw err;
-    }
+    const timeout = attempt === 1 ? 8000 : 12000; // 1차 8s, 재시도 12s
+    const { data, error } = await withTimeout(
+      supabase.auth.signInWithPassword({ email, password }),
+      timeout,
+      'login',
+    );
+    if (error) throw error;
+    return data.user;
   }
 
   try {
-    const user = await attemptLogin(1).catch(async (err) => {
-      const msg = String(err?.message || '').toLowerCase();
-      const isNetwork = msg.includes('fetch') || msg.includes('network') || msg.includes('timeout') || msg.includes('abort');
-      if (isNetwork) {
-        // 2차 재시도 (2초 대기 후)
-        await new Promise(r => setTimeout(r, 2000));
-        return attemptLogin(2);
+    let user;
+    try {
+      user = await attemptLogin(1);
+    } catch (err) {
+      const kind = classifyLoginError(err);
+      if (kind === 'timeout' || kind === 'network') {
+        // 네트워크/타임아웃 오류 시 1.5초 대기 후 1회 재시도
+        await new Promise(r => setTimeout(r, 1500));
+        user = await attemptLogin(2);
+      } else {
+        throw err;
       }
-      throw err;
-    });
+    }
 
     showToast(`${user?.user_metadata?.full_name || '사용자'}님, 로그인되었습니다.`, 'success');
     return toCompatUser(user);
   } catch (error) {
-    let resolvedError = error;
-    let lowerMessage = String(resolvedError?.message || '').toLowerCase();
-
+    const kind = classifyLoginError(error);
     let errorMsg = '';
     let showResetAction = false;
 
-    // isConnectivityIssue 변수 재정의 (이미 재시도 후 실패한 경우)
-    const isConnectivityIssue =
-      lowerMessage.includes('fetch') ||
-      lowerMessage.includes('network') ||
-      lowerMessage.includes('timeout') ||
-      lowerMessage.includes('abort');
-
-    if (
-      lowerMessage.includes('invalid login') ||
-      lowerMessage.includes('invalid credentials') ||
-      lowerMessage.includes('email or password') ||
-      lowerMessage.includes('invalid email or password')
-    ) {
+    if (kind === 'credentials') {
       errorMsg = '이메일 또는 비밀번호가 올바르지 않습니다.';
       showResetAction = true;
       showToast('로그인 정보를 확인해 주세요.', 'error', 3000);
-    } else if (lowerMessage.includes('email not confirmed')) {
+    } else if (kind === 'unconfirmed') {
       errorMsg = '이메일 인증이 완료되지 않았습니다. 메일함을 확인해 주세요.';
       showToast(errorMsg, 'warning', 5000);
-    } else if (isConnectivityIssue) {
-      const debug = getSupabaseDebugInfo();
+    } else if (kind === 'timeout' || kind === 'network') {
       if (typeof navigator !== 'undefined' && navigator.onLine === false) {
         errorMsg = '현재 오프라인 상태입니다. 네트워크 연결을 확인한 뒤 다시 시도해 주세요.';
       } else {
         errorMsg = '인증 서버 응답이 지연되고 있습니다. 잠시 후 [재시도] 버튼을 눌러주세요.';
       }
       console.error('[Auth] Network/login error (after retries)', {
-        message: resolvedError?.message,
-        name: resolvedError?.name,
+        message: error?.message,
+        name: error?.name,
         online: navigator?.onLine,
-        supabase: debug,
+        supabase: getSupabaseDebugInfo(),
       });
       showToast(errorMsg, 'error', 8000);
     } else {
-      errorMsg = `로그인 실패: ${resolvedError?.message || '알 수 없는 오류'}`;
+      errorMsg = `로그인 실패: ${error?.message || '알 수 없는 오류'}`;
       showToast(errorMsg, 'error');
     }
 
     renderInlineLoginError(loginBtn, email, errorMsg, showResetAction);
     return null;
   } finally {
+    isLoggingIn = false;
     if (loginBtn) {
       loginBtn.disabled = false;
       loginBtn.textContent = originalText;
