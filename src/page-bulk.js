@@ -72,15 +72,19 @@ export function renderBulkPage(container, navigateTo) {
 
   function addBulkRow() {
     const tbody = container.querySelector('#bulk-rows');
+    if (!tbody) return;
     const rowIdx = bulkRows.length;
     bulkRows.push({ itemIdx: '', qty: 1 });
+
+    // 항상 최신 state에서 품목 읽기 (페이지 렌더 후 늦게 로드된 경우 대응)
+    const latestItems = getState().mappedData || [];
 
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td>
         <select class="form-select bulk-item" data-row="${rowIdx}" style="min-width:180px;">
           <option value="">-- 선택 --</option>
-          ${items.map((item, i) => `<option value="${i}">${item.itemName} (${item.itemCode || '-'}) [재고:${parseFloat(item.quantity) || 0}]</option>`).join('')}
+          ${latestItems.map((item, i) => `<option value="${i}">${item.itemName} (${item.itemCode || '-'}) [재고:${parseFloat(item.quantity) || 0}]</option>`).join('')}
         </select>
       </td>
       <td class="text-right bulk-current" data-row="${rowIdx}">-</td>
@@ -94,8 +98,9 @@ export function renderBulkPage(container, navigateTo) {
     tr.querySelector('.bulk-item').addEventListener('change', (e) => {
       const idx = parseInt(e.target.value);
       const currentEl = tr.querySelector(`.bulk-current`);
-      if (!isNaN(idx)) {
-        currentEl.textContent = (parseFloat(items[idx].quantity) || 0).toLocaleString('ko-KR');
+      const currentItems = getState().mappedData || [];
+      if (!isNaN(idx) && currentItems[idx]) {
+        currentEl.textContent = (parseFloat(currentItems[idx].quantity) || 0).toLocaleString('ko-KR');
         bulkRows[rowIdx].itemIdx = idx;
       } else {
         currentEl.textContent = '-';
@@ -122,6 +127,7 @@ export function renderBulkPage(container, navigateTo) {
   container.querySelector('#btn-bulk-execute')?.addEventListener('click', () => {
     const rows = container.querySelectorAll('#bulk-rows tr');
     const today = new Date().toISOString().split('T')[0];
+    const execItems = getState().mappedData || [];
     let count = 0;
 
     rows.forEach(tr => {
@@ -132,7 +138,7 @@ export function renderBulkPage(container, navigateTo) {
       const itemIdx = parseInt(select?.value);
       if (isNaN(itemIdx)) return;
 
-      const item = items[itemIdx];
+      const item = execItems[itemIdx];
       const qty = parseInt(qtyInput?.value) || 0;
       if (qty <= 0) return;
 
