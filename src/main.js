@@ -998,7 +998,7 @@ if ('serviceWorker' in navigator) {
       caches.keys()
         .then((keys) => Promise.all(
           keys
-            .filter((key) => key.includes('erp-lite') || key.includes('invex'))
+            .filter((key) => key.includes('invex'))
             .map((key) => caches.delete(key))
         ))
         .catch(() => {});

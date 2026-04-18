@@ -391,7 +391,7 @@ export async function restoreState() {
 
   // 3. localStorage 폴백 (최후 수단)
   try {
-    const fallback = localStorage.getItem('invex-fallback') || localStorage.getItem('erp-lite-fallback');
+    const fallback = localStorage.getItem('invex-fallback');
     if (fallback) {
       const parsed = JSON.parse(fallback);
       state = { ...DEFAULT_STATE, ...parsed };
