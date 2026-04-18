@@ -20,8 +20,14 @@ function toMin(t) {
  * @param {number} breakMin - 휴게시간(분)
  * @param {boolean} isHoliday - 휴일 여부
  * @returns {{regular:number, overtime:number, night:number, holiday:number, totalWork:number}}
- *   - 야간은 22:00~06:00 구간 교집합(연장과 중복 가능 — 회계 표시용 별도 집계)
- *   - 휴일이면 totalWork가 그대로 holiday, 정규근무 시간은 0
+ *
+ * ■ 야간(night): 22:00~06:00 구간과 체류시간의 교집합에서 휴게비율만큼 차감
+ *   → 정확한 야간 시작/종료 시각을 모르므로 휴게시간을 비례 배분하여 차감
+ *   → 연장근로와 중복 가능 (급여 계산 시 야간+연장 stacking 별도 처리)
+ * ■ 휴일(isHoliday): totalWork 전체가 holiday, 정규근무는 0
+ * ■ 연장(overtime): 실근무 8시간(480분) 초과분 (근기법 §50)
+ *
+ * [알려진 한계] 휴게 시각을 알 수 없어 비례 차감 사용 — 야간에만 쉰 경우 약간 과소산정 가능
  */
 export function classifyWorkMinutes(checkIn, checkOut, breakMin = 0, isHoliday = false) {
   const inMin = toMin(checkIn);
@@ -30,20 +36,26 @@ export function classifyWorkMinutes(checkIn, checkOut, breakMin = 0, isHoliday =
     return { regular: 0, overtime: 0, night: 0, holiday: 0, totalWork: 0 };
   }
   if (outMin <= inMin) outMin += 24 * 60; // 익일 퇴근
-  const worked = Math.max(0, outMin - inMin - (breakMin || 0));
+  const totalSpan = outMin - inMin;                       // 체류 시간(분)
+  const worked = Math.max(0, totalSpan - (breakMin || 0)); // 실근무 시간
 
-  // 야간 교집합: [22:00, 30:00) 또는 [-2:00, 6:00) → 0시 기준 [-2h,+6h)
-  const nightStart = 22 * 60, nightEnd = 30 * 60; // 익일 06:00
-  const nightStart2 = -2 * 60, nightEnd2 = 6 * 60;
+  // ── 야간 교집합 계산 ───────────────────────────────────────
+  // 야간 구간: 22:00(1320) ~ 익일 06:00(1320+480=1800)
+  //           + 당일 00:00(0) ~ 06:00(360) (전날 22시 이후 출근한 당일 새벽 포함)
+  // 두 구간은 실제 시간축 상 절대 중복되지 않음.
   const overlap = (a, b, c, d) => Math.max(0, Math.min(b, d) - Math.max(a, c));
-  const night = overlap(inMin, outMin, nightStart, nightEnd)
-              + overlap(inMin, outMin, nightStart2, nightEnd2);
+  const rawNight = overlap(inMin, outMin, 22 * 60, 30 * 60)  // 22:00 ~ (익일)06:00
+                 + overlap(inMin, outMin, 0,       6 * 60);  // 00:00 ~ 06:00 (새벽 출근)
+
+  // 휴게시간을 비례 배분하여 야간에서 차감 (휴게 위치 미상이므로 비례 추정)
+  const breakRatio = totalSpan > 0 ? (breakMin || 0) / totalSpan : 0;
+  const night = Math.max(0, Math.round(rawNight * (1 - breakRatio)));
 
   if (isHoliday) {
     return { regular: 0, overtime: 0, night, holiday: worked, totalWork: worked };
   }
 
-  // 법정 1일 소정근로 8시간(480분) 초과분은 연장
+  // 법정 1일 소정근로 8시간(480분) 초과분은 연장 (근기법 §50)
   const regular = Math.min(worked, 480);
   const overtime = Math.max(0, worked - 480);
 
