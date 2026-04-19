@@ -35,10 +35,17 @@ export function isAdmin() {
  */
 async function fetchAllUsers() {
   try {
-    const { data, error } = await supabase
+    // 타임아웃 10초
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('Supabase query timeout')), 10000)
+    );
+
+    const queryPromise = supabase
       .from('profiles')
       .select('*')
       .order('created_at', { ascending: false });
+
+    const { data, error } = await Promise.race([queryPromise, timeoutPromise]);
 
     if (error) {
       console.warn('사용자 목록 조회 실패:', error);
@@ -46,7 +53,7 @@ async function fetchAllUsers() {
     }
     return Array.isArray(data) ? data : [];
   } catch (e) {
-    console.warn('사용자 목록 조회 실패:', e);
+    console.warn('사용자 목록 조회 실패:', e.message);
     return [];
   }
 }
