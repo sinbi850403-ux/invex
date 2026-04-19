@@ -49,8 +49,12 @@ export function renderForecastPage(container, navigateTo) {
     const weightedAvg = monthlyOut.reduce((s, m, i) => s + m.qty * weights[i], 0) / weightSum;
 
     // 추세 계산 (최근 3개월 기울기)
+    // 기울기 = (마지막 - 처음) / 구간수. 3개월이면 구간 수는 2 (length-1).
+    // length로 나누면 33% 과소평가됨 → (length - 1) 사용.
     const recent3 = monthlyOut.slice(-3).map(m => m.qty);
-    const trend = recent3.length >= 2 ? (recent3[recent3.length - 1] - recent3[0]) / recent3.length : 0;
+    const trend = recent3.length >= 2
+      ? (recent3[recent3.length - 1] - recent3[0]) / (recent3.length - 1)
+      : 0;
 
     // 예측값 = 가중평균 + 추세
     const predicted = Math.max(0, Math.round(weightedAvg + trend));

@@ -356,55 +356,129 @@
 
       <div class="sidebar-divider" id="quick-access-divider" style="display:none;"></div>
 
+      <!-- ===== ERP 트리 네비게이션 ===== -->
+      <!-- 왜 트리인가: 허브 페이지 거치지 않고 1클릭으로 하위 기능 직접 접근 -->
+
       <!-- 업무 -->
       <div class="nav-section"><div class="nav-section-title">업무</div></div>
-      <nav class="nav-rich-list">
-        <button class="nav-btn nav-btn-rich" data-page="hub-data">
-          <span class="nav-icon">📂</span>
-          <span class="nav-copy"><span class="nav-main">데이터 가져오기</span></span>
-        </button>
-        <button class="nav-btn nav-btn-rich" data-page="hub-inventory">
-          <span class="nav-icon">📦</span>
-          <span class="nav-copy"><span class="nav-main">재고 관리</span></span>
-        </button>
-        <button class="nav-btn nav-btn-rich" data-page="hub-warehouse">
-          <span class="nav-icon">🏢</span>
-          <span class="nav-copy"><span class="nav-main">창고·거래처</span></span>
-        </button>
+      <nav class="nav-tree" id="nav-tree-work">
+        <div class="tree-node" data-tree-hub="hub-data">
+          <button class="tree-parent" data-page="hub-data">
+            <span class="tree-icon">📂</span>
+            <span class="tree-label">데이터 가져오기</span>
+            <span class="tree-arrow">▸</span>
+          </button>
+          <div class="tree-children">
+            <button class="tree-child nav-btn" data-page="upload"><span class="tree-dot"></span> 파일 업로드</button>
+            <button class="tree-child nav-btn" data-page="mapping"><span class="tree-dot"></span> 데이터 확인</button>
+          </div>
+        </div>
+        <div class="tree-node" data-tree-hub="hub-inventory">
+          <button class="tree-parent" data-page="hub-inventory">
+            <span class="tree-icon">📦</span>
+            <span class="tree-label">재고 관리</span>
+            <span class="tree-arrow">▸</span>
+          </button>
+          <div class="tree-children">
+            <button class="tree-child nav-btn" data-page="inventory"><span class="tree-dot"></span> 재고 현황</button>
+            <button class="tree-child nav-btn" data-page="inout"><span class="tree-dot"></span> 입출고 관리</button>
+            <button class="tree-child nav-btn" data-page="bulk"><span class="tree-dot"></span> 일괄 처리</button>
+            <button class="tree-child nav-btn" data-page="stocktake"><span class="tree-dot"></span> 재고 실사</button>
+          </div>
+        </div>
+        <div class="tree-node" data-tree-hub="hub-warehouse">
+          <button class="tree-parent" data-page="hub-warehouse">
+            <span class="tree-icon">🏢</span>
+            <span class="tree-label">창고·거래처</span>
+            <span class="tree-arrow">▸</span>
+          </button>
+          <div class="tree-children">
+            <button class="tree-child nav-btn" data-page="warehouses"><span class="tree-dot"></span> 다중 창고 관리</button>
+            <button class="tree-child nav-btn" data-page="transfer"><span class="tree-dot"></span> 창고 이동</button>
+            <button class="tree-child nav-btn" data-page="vendors"><span class="tree-dot"></span> 거래처 관리</button>
+          </div>
+        </div>
       </nav>
 
       <div class="sidebar-divider"></div>
 
       <!-- 분석 -->
       <div class="nav-section"><div class="nav-section-title">분석</div></div>
-      <nav class="nav-rich-list">
-        <button class="nav-btn nav-btn-rich" data-page="hub-order">
-          <span class="nav-icon">🤖</span>
-          <span class="nav-copy"><span class="nav-main">발주·예측</span></span>
-        </button>
-        <button class="nav-btn nav-btn-rich" data-page="hub-report">
-          <span class="nav-icon">📊</span>
-          <span class="nav-copy"><span class="nav-main">보고·분석</span></span>
-        </button>
-        <button class="nav-btn nav-btn-rich" data-page="hub-documents">
-          <span class="nav-icon">📑</span>
-          <span class="nav-copy"><span class="nav-main">문서·서류</span></span>
-        </button>
+      <nav class="nav-tree" id="nav-tree-analysis">
+        <div class="tree-node" data-tree-hub="hub-order">
+          <button class="tree-parent" data-page="hub-order">
+            <span class="tree-icon">🤖</span>
+            <span class="tree-label">발주·예측</span>
+            <span class="tree-arrow">▸</span>
+          </button>
+          <div class="tree-children">
+            <button class="tree-child nav-btn" data-page="auto-order"><span class="tree-dot"></span> 자동 발주 추천</button>
+            <button class="tree-child nav-btn" data-page="orders"><span class="tree-dot"></span> 발주 이력</button>
+            <button class="tree-child nav-btn" data-page="forecast"><span class="tree-dot"></span> AI 수요 예측</button>
+          </div>
+        </div>
+        <div class="tree-node" data-tree-hub="hub-report">
+          <button class="tree-parent" data-page="hub-report">
+            <span class="tree-icon">📊</span>
+            <span class="tree-label">보고·분석</span>
+            <span class="tree-arrow">▸</span>
+          </button>
+          <div class="tree-children">
+            <button class="tree-child nav-btn" data-page="summary"><span class="tree-dot"></span> 요약 보고</button>
+            <button class="tree-child nav-btn" data-page="weekly-report"><span class="tree-dot"></span> 주간 보고서</button>
+            <button class="tree-child nav-btn" data-page="profit"><span class="tree-dot"></span> 손익 분석</button>
+            <button class="tree-child nav-btn" data-page="accounts"><span class="tree-dot"></span> 매출/매입</button>
+            <button class="tree-child nav-btn" data-page="costing"><span class="tree-dot"></span> 원가 분석</button>
+            <button class="tree-child nav-btn" data-page="dashboard"><span class="tree-dot"></span> 고급 분석</button>
+          </div>
+        </div>
+        <div class="tree-node" data-tree-hub="hub-documents">
+          <button class="tree-parent" data-page="hub-documents">
+            <span class="tree-icon">📑</span>
+            <span class="tree-label">문서·서류</span>
+            <span class="tree-arrow">▸</span>
+          </button>
+          <div class="tree-children">
+            <button class="tree-child nav-btn" data-page="tax-reports"><span class="tree-dot"></span> 세무/회계 서류</button>
+            <button class="tree-child nav-btn" data-page="documents"><span class="tree-dot"></span> 문서 생성</button>
+            <button class="tree-child nav-btn" data-page="ledger"><span class="tree-dot"></span> 수불부</button>
+            <button class="tree-child nav-btn" data-page="auditlog"><span class="tree-dot"></span> 감사 추적</button>
+          </div>
+        </div>
       </nav>
 
       <div class="sidebar-divider"></div>
 
       <!-- 설정·지원 -->
       <div class="nav-section"><div class="nav-section-title">설정·지원</div></div>
-      <nav class="nav-rich-list">
-        <button class="nav-btn nav-btn-rich" data-page="hub-settings">
-          <span class="nav-icon">⚙️</span>
-          <span class="nav-copy"><span class="nav-main">설정</span></span>
-        </button>
-        <button class="nav-btn nav-btn-rich" data-page="hub-support">
-          <span class="nav-icon">💬</span>
-          <span class="nav-copy"><span class="nav-main">지원</span></span>
-        </button>
+      <nav class="nav-tree" id="nav-tree-config">
+        <div class="tree-node" data-tree-hub="hub-settings">
+          <button class="tree-parent" data-page="hub-settings">
+            <span class="tree-icon">⚙️</span>
+            <span class="tree-label">설정</span>
+            <span class="tree-arrow">▸</span>
+          </button>
+          <div class="tree-children">
+            <button class="tree-child nav-btn" data-page="settings"><span class="tree-dot"></span> 기본 설정</button>
+            <button class="tree-child nav-btn" data-page="team"><span class="tree-dot"></span> 팀 관리</button>
+            <button class="tree-child nav-btn" data-page="backup"><span class="tree-dot"></span> 백업/복원</button>
+            <button class="tree-child nav-btn" data-page="roles"><span class="tree-dot"></span> 권한 관리</button>
+            <button class="tree-child nav-btn" data-page="billing"><span class="tree-dot"></span> 구독 관리</button>
+          </div>
+        </div>
+        <div class="tree-node" data-tree-hub="hub-support">
+          <button class="tree-parent" data-page="hub-support">
+            <span class="tree-icon">💬</span>
+            <span class="tree-label">지원</span>
+            <span class="tree-arrow">▸</span>
+          </button>
+          <div class="tree-children">
+            <button class="tree-child nav-btn" data-page="mypage"><span class="tree-dot"></span> 마이페이지</button>
+            <button class="tree-child nav-btn" data-page="guide"><span class="tree-dot"></span> 사용 가이드</button>
+            <button class="tree-child nav-btn" data-page="support"><span class="tree-dot"></span> 고객 문의</button>
+            <button class="tree-child nav-btn" data-page="referral"><span class="tree-dot"></span> 친구 초대</button>
+          </div>
+        </div>
         <button class="nav-btn nav-btn-rich" data-page="admin" style="display:none;">
           <span class="nav-icon">👑</span>
           <span class="nav-copy"><span class="nav-main">관리자</span></span>

@@ -101,18 +101,29 @@ export function renderHubWarehouse(container, navigateTo) {
   bindHubNav(container, navigateTo);
 }
 
-/* ── 허브 4: 발주·예측 ── */
+/* ── 허브 4: 구매·판매·예측 ── */
 export function renderHubOrder(container, navigateTo) {
+  const state = getState();
+  const purchaseOrders = state.purchaseOrders || [];
+  const salesOrders    = state.salesOrders    || [];
+  const pendingPO = purchaseOrders.filter(o => o.status === 'confirmed' || o.status === 'partial').length;
+  const pendingSO = salesOrders.filter(o => o.status === 'confirmed' || o.status === 'partial').length;
+
   container.innerHTML = `
     <div class="page-header">
       <div>
-        <h1 class="page-title"><span class="title-icon">🤖</span> 발주·예측</h1>
-        <div class="page-desc">AI 기반 발주 추천, 발주 이력, 수요 예측을 통합 관리합니다</div>
+        <h1 class="page-title"><span class="title-icon">🔄</span> 구매·판매</h1>
+        <div class="page-desc">발주(구매), 수주(판매), 자동발주 추천, 수요 예측을 통합 관리합니다</div>
       </div>
     </div>
-    <div class="hub-grid">
+    <div style="margin-bottom:8px;font-size:12px;color:var(--text-muted);font-weight:600;">구매 플로우 (발주 → 입고 → 미지급금)</div>
+    <div class="hub-grid" style="margin-bottom:20px;">
       ${renderHubCard({ icon: '🤖', title: '자동 발주 추천', desc: '부족 예상 품목을 감지하고 발주량을 자동 제안합니다', nav: 'auto-order', color: '#0284c7' })}
-      ${renderHubCard({ icon: '📋', title: '발주 이력', desc: '발주 진행 내역과 상태를 추적합니다', nav: 'orders', color: '#2563eb' })}
+      ${renderHubCard({ icon: '📋', title: '발주 관리', desc: `발주 진행 내역과 상태를 추적합니다`, nav: 'orders', color: '#2563eb', meta: pendingPO > 0 ? `진행중 ${pendingPO}건` : undefined })}
+    </div>
+    <div style="margin-bottom:8px;font-size:12px;color:var(--text-muted);font-weight:600;">판매 플로우 (수주 → 출고 → 미수금)</div>
+    <div class="hub-grid" style="margin-bottom:20px;">
+      ${renderHubCard({ icon: '🛒', title: '수주 관리', desc: '견적→수주확정→출고→세금계산서→미수금 파이프라인', nav: 'sales', color: '#16a34a', meta: pendingSO > 0 ? `진행중 ${pendingSO}건` : undefined })}
       ${renderHubCard({ icon: '🔮', title: 'AI 수요 예측', desc: '과거 데이터 기반으로 미래 수요량을 분석합니다', nav: 'forecast', color: '#7c3aed' })}
     </div>
   `;
@@ -132,7 +143,7 @@ export function renderHubReport(container, navigateTo) {
       ${renderHubCard({ icon: '📊', title: '요약 보고', desc: '핵심 지표를 빠르게 확인합니다', nav: 'summary', color: '#2563eb' })}
       ${renderHubCard({ icon: '📬', title: '주간 보고서', desc: '주간 흐름과 이상 신호를 정리합니다', nav: 'weekly-report', color: '#0891b2' })}
       ${renderHubCard({ icon: '💹', title: '손익 분석', desc: '이익률과 손실 포인트를 분석합니다', nav: 'profit', color: '#16a34a' })}
-      ${renderHubCard({ icon: '💳', title: '매출/매입', desc: '매출과 매입 추이를 비교합니다', nav: 'accounts', color: '#d97706' })}
+      ${renderHubCard({ icon: '💰', title: '미수금/미지급 정산', desc: '채권·채무 현황과 에이징 분석, 정산 처리를 합니다', nav: 'accounts', color: '#d97706' })}
       ${renderHubCard({ icon: '💰', title: '원가 분석', desc: '원가 구조와 변동을 체크합니다', nav: 'costing', color: '#dc2626' })}
       ${renderHubCard({ icon: '📈', title: '고급 분석', desc: '세부 지표 심화 분석과 차트를 제공합니다', nav: 'dashboard', color: '#7c3aed' })}
     </div>
@@ -179,6 +190,29 @@ export function renderHubSettings(container, navigateTo) {
   bindHubNav(container, navigateTo);
 }
 
+/* ── 허브 9: 인사·급여 ── */
+export function renderHubHr(container, navigateTo) {
+  const state = getState();
+  const empCount = (state.employees || []).filter(e => e.status !== 'resigned').length;
+
+  container.innerHTML = `
+    <div class="page-header">
+      <div>
+        <h1 class="page-title"><span class="title-icon">👥</span> 인사·급여</h1>
+        <div class="page-desc">직원 마스터, 근태, 급여 계산, 휴가를 통합 관리합니다</div>
+      </div>
+    </div>
+    <div class="hub-grid">
+      ${renderHubCard({ icon: '📊', title: 'HR 대시보드', desc: '인원·이번달 급여·근태 이슈·연차 잔여를 한눈에', nav: 'hr-dashboard', color: '#2563eb' })}
+      ${renderHubCard({ icon: '👥', title: '직원 관리', desc: '직원 등록·조회·수정, 주민번호 암호화 저장', nav: 'employees', color: '#0284c7', meta: empCount > 0 ? `재직 ${empCount}명` : undefined })}
+      ${renderHubCard({ icon: '🕒', title: '근태 관리', desc: '출퇴근·연장·야간·휴일근무 기록과 월별 집계', nav: 'attendance', color: '#16a34a' })}
+      ${renderHubCard({ icon: '💰', title: '급여 계산', desc: '4대보험·원천징수 자동 계산, 급여명세서 PDF 발행', nav: 'payroll', color: '#d97706' })}
+      ${renderHubCard({ icon: '🏖️', title: '휴가·연차 관리', desc: '연차 자동 부여, 휴가 신청·승인 워크플로우', nav: 'leaves', color: '#7c3aed' })}
+    </div>
+  `;
+  bindHubNav(container, navigateTo);
+}
+
 /* ── 허브 8: 지원 ── */
 export function renderHubSupport(container, navigateTo) {
   container.innerHTML = `
@@ -203,12 +237,13 @@ export const HUB_MAP = {
   upload: 'hub-data', mapping: 'hub-data',
   inventory: 'hub-inventory', inout: 'hub-inventory', bulk: 'hub-inventory', stocktake: 'hub-inventory',
   warehouses: 'hub-warehouse', transfer: 'hub-warehouse', vendors: 'hub-warehouse',
-  'auto-order': 'hub-order', orders: 'hub-order', forecast: 'hub-order',
+  'auto-order': 'hub-order', orders: 'hub-order', sales: 'hub-order', forecast: 'hub-order',
   summary: 'hub-report', 'weekly-report': 'hub-report', profit: 'hub-report',
   accounts: 'hub-report', costing: 'hub-report', dashboard: 'hub-report',
   'tax-reports': 'hub-documents', documents: 'hub-documents', ledger: 'hub-documents', auditlog: 'hub-documents',
   settings: 'hub-settings', team: 'hub-settings', backup: 'hub-settings', roles: 'hub-settings', billing: 'hub-settings',
   mypage: 'hub-support', guide: 'hub-support', support: 'hub-support', referral: 'hub-support',
+  'hr-dashboard': 'hub-hr', employees: 'hub-hr', attendance: 'hub-hr', payroll: 'hub-hr', leaves: 'hub-hr',
 };
 
 /* ── 페이지 라벨 — 브레드크럼/빠른 이동 표시용 ── */
@@ -216,13 +251,14 @@ export const PAGE_LABELS = {
   home: '대시보드',
   'hub-data': '데이터 가져오기', 'hub-inventory': '재고 관리', 'hub-warehouse': '창고·거래처',
   'hub-order': '발주·예측', 'hub-report': '보고·분석', 'hub-documents': '문서·서류',
-  'hub-settings': '설정', 'hub-support': '지원',
+  'hub-settings': '설정', 'hub-support': '지원', 'hub-hr': '인사·급여',
+  'hr-dashboard': 'HR 대시보드', employees: '직원 관리', attendance: '근태 관리', payroll: '급여 계산', leaves: '휴가·연차 관리',
   upload: '파일 업로드', mapping: '데이터 확인',
   inventory: '재고 현황', inout: '입출고 관리', bulk: '일괄 처리', stocktake: '재고 실사',
   warehouses: '다중 창고 관리', transfer: '창고 이동', vendors: '거래처 관리',
-  'auto-order': '자동 발주 추천', orders: '발주 이력', forecast: 'AI 수요 예측',
+  'auto-order': '자동 발주 추천', orders: '발주 관리', sales: '수주 관리', forecast: 'AI 수요 예측',
   summary: '요약 보고', 'weekly-report': '주간 보고서', profit: '손익 분석',
-  accounts: '매출/매입', costing: '원가 분석', dashboard: '고급 분석',
+  accounts: '미수금/미지급 정산', costing: '원가 분석', dashboard: '고급 분석',
   'tax-reports': '세무/회계 서류', documents: '문서 생성', ledger: '수불부', auditlog: '감사 추적',
   settings: '기본 설정', team: '팀 관리', backup: '백업/복원', roles: '권한 관리', billing: '구독 관리',
   mypage: '마이페이지', guide: '사용 가이드', support: '고객 문의', referral: '친구 초대',

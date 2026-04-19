@@ -1,7 +1,7 @@
-﻿/**
- * page-dashboard.js - 고급 분석 대시보드 페이지
+/**
+ * page-dashboard.js - 怨좉툒 遺꾩꽍 ??쒕낫???섏씠吏
  * ??븷: ABC 遺꾩꽍, ?ш퀬 ?뚯쟾?? ?붾퀎 異붿씠, ?섎텋遺 ??寃쎌쁺 ?섏궗寃곗젙 吏??
- * 왜 필요? → 단순 재고 목록이 아니라 "어떤 품목이 중요한지" 알 수 있어야 진짜 ERP
+ * ???꾩슂? ???⑥닚 ?ш퀬 紐⑸줉???꾨땲??"?대뼡 ?덈ぉ??以묒슂?쒖?" ?????덉뼱??吏꾩쭨 ERP
  */
 
 import { getState } from './store.js';
@@ -9,7 +9,7 @@ import { showToast } from './toast.js';
 import { downloadExcel } from './excel.js';
 
 /**
- * 고급 분석 대시보드 렌더링
+ * 怨좉툒 遺꾩꽍 ??쒕낫???뚮뜑留?
  */
 export function renderDashboardPage(container, navigateTo) {
   const state = getState();
@@ -33,19 +33,14 @@ export function renderDashboardPage(container, navigateTo) {
     return;
   }
 
-  // === 분석 데이터 계산 ===
+  // === 遺꾩꽍 ?곗씠??怨꾩궛 ===
   const abcData = calcABCAnalysis(items);
   const turnoverData = calcTurnoverRate(items, transactions);
   const monthlyTrend = calcMonthlyTrend(transactions);
   const expiryAlerts = getExpiryAlerts(items);
 
-  // 핵심 KPI
-  // 공급가(VAT 제외) 기준 재고 자산 합계 — home 페이지와 동일 기준으로 통일
-  const totalValue = items.reduce((s, r) => {
-    const sv = parseFloat(r.supplyValue);
-    if (!isNaN(sv) && sv > 0) return s + sv;
-    return s + (parseFloat(r.quantity) || 0) * (parseFloat(r.unitPrice) || 0);
-  }, 0);
+  // ?듭떖 KPI
+  const totalValue = items.reduce((s, r) => s + (parseFloat(r.totalPrice) || 0), 0);
   const totalItems = items.length;
   const avgTurnover = turnoverData.length > 0
     ? (turnoverData.reduce((s, t) => s + t.turnover, 0) / turnoverData.length).toFixed(1)
@@ -66,7 +61,7 @@ export function renderDashboardPage(container, navigateTo) {
     <!-- KPI 移대뱶 -->
     <div class="stat-grid">
       <div class="stat-card">
-        <div class="stat-label">총 재고 가치 <span style="font-size:10px;color:var(--text-muted);font-weight:400;">(공급가)</span></div>
+        <div class="stat-label">총 재고 가치</div>
         <div class="stat-value text-accent">${totalValue > 0 ? '₩' + Math.round(totalValue).toLocaleString('ko-KR') : '-'}</div>
       </div>
       <div class="stat-card">
@@ -95,7 +90,7 @@ export function renderDashboardPage(container, navigateTo) {
         <span class="badge badge-default" style="padding:6px 14px;">C등급: 나머지</span>
       </div>
 
-      <!-- ABC 분석 -->
+      <!-- ABC ?쒓컖??諛?-->
       <div style="display:flex; height:30px; border-radius:6px; overflow:hidden; margin-bottom:16px;">
         ${(() => {
           const aCount = abcData.filter(d => d.grade === 'A').length;
@@ -137,7 +132,7 @@ export function renderDashboardPage(container, navigateTo) {
                 <td><strong>${d.itemName}</strong></td>
                 <td style="color:var(--text-muted);">${d.itemCode || '-'}</td>
                 <td class="text-right">${parseFloat(d.quantity || 0).toLocaleString('ko-KR')}</td>
-                <td class="text-right">${d._abcValue > 0 ? '₩' + Math.round(d._abcValue).toLocaleString('ko-KR') : '-'}</td>
+                <td class="text-right">${d.totalPrice > 0 ? '₩' + Math.round(d.totalPrice).toLocaleString('ko-KR') : '-'}</td>
                 <td class="text-right">
                   <div class="ratio-bar">
                     <div class="ratio-bar-track"><div class="ratio-bar-fill" style="width:${d.cumPercent}%;"></div></div>
@@ -151,7 +146,7 @@ export function renderDashboardPage(container, navigateTo) {
       </div>
     </div>
 
-    <!-- 재고 회전율 -->
+    <!-- ?ш퀬 ?뚯쟾??-->
     <div class="card">
       <div class="card-title">재고 회전율 <span class="card-subtitle">최근 30일 출고 기준</span></div>
 
@@ -190,7 +185,7 @@ export function renderDashboardPage(container, navigateTo) {
       </div>
     </div>
 
-    <!-- 재고 회전율 -->
+    <!-- ?붾퀎 異붿씠 -->
     ${monthlyTrend.length > 0 ? `
     <div class="card">
       <div class="card-title">월별 입출고 추이</div>
@@ -218,7 +213,7 @@ export function renderDashboardPage(container, navigateTo) {
     </div>
     ` : ''}
 
-    <!-- 재고 회전율 -->
+    <!-- ?좏넻湲고븳 寃쎄퀬 -->
     ${expiryAlerts.length > 0 ? `
     <div class="card" style="border-left: 3px solid var(--warning);">
       <div class="card-title" style="color:var(--warning);">유통기한 임박 품목 <span class="badge badge-warning">${expiryAlerts.length}건</span></div>
@@ -257,7 +252,7 @@ export function renderDashboardPage(container, navigateTo) {
     ` : ''}
   `;
 
-  // 분석 내보내기
+  // 遺꾩꽍 ?대낫?닿린
   container.querySelector('#btn-export-analysis')?.addEventListener('click', () => {
     try {
       const exportData = abcData.map(d => ({
@@ -265,7 +260,7 @@ export function renderDashboardPage(container, navigateTo) {
         '품목명': d.itemName,
         '품목코드': d.itemCode || '',
         '수량': d.quantity,
-        '금액(공급가)': d._abcValue,
+        '금액': d.totalPrice,
         '누적비중(%)': d.cumPercent,
       }));
       downloadExcel(exportData, 'ABC분석');
@@ -276,31 +271,31 @@ export function renderDashboardPage(container, navigateTo) {
   });
 }
 
-// === 분석 데이터 계산 ===
+// === 遺꾩꽍 ?좏떥 ?⑥닔 ===
 
 /**
  * ABC 遺꾩꽍 怨꾩궛
- * 왜 ABC? → 파레토 법칙(80/20)에 따라 핵심 품목 식별
- * A: 금액 상위 80%, B: 80~95%, C: 나머지
+ * ??ABC? ???뚮젅??踰뺤튃(80/20)???곕씪 ?듭떖 ?덈ぉ ?앸퀎
+ * A: 湲덉븸 ?곸쐞 80%, B: 80~95%, C: ?섎㉧吏
  */
 function calcABCAnalysis(items) {
-  // 공급가(VAT 제외) 기준으로 재고 자산 계산 — totalValue와 동일 기준
   const sorted = items
-    .map(item => {
-      const sv = parseFloat(item.supplyValue);
-      const supplyVal = (!isNaN(sv) && sv > 0)
-        ? sv
-        : (parseFloat(item.quantity) || 0) * (parseFloat(item.unitPrice) || 0);
-      return { ...item, _abcValue: supplyVal };
-    })
-    .sort((a, b) => b._abcValue - a._abcValue);
+    .map(item => ({
+      ...item,
+      // store.js addTransaction과 동일한 공식: supplyValue + VAT(10%)
+      // totalPrice가 이미 있으면 그대로 사용, 없으면 qty×unitPrice×1.1 (VAT 포함)
+      totalPrice: parseFloat(item.totalPrice) || (() => {
+        const supply = (parseFloat(item.quantity) || 0) * (parseFloat(item.unitPrice) || 0);
+        return supply + Math.floor(supply * 0.1);
+      })(),
+    }))
+    .sort((a, b) => b.totalPrice - a.totalPrice);
 
-  const grandTotal = sorted.reduce((s, r) => s + r._abcValue, 0) || 1;
+  const grandTotal = sorted.reduce((s, r) => s + r.totalPrice, 0) || 1;
   let cumulative = 0;
 
   return sorted.map(item => {
-    cumulative += item._abcValue;
-    // totalPrice 필드는 하위 호환성을 위해 유지
+    cumulative += item.totalPrice;
     const cumPercent = Math.round((cumulative / grandTotal) * 100);
     let grade = 'C';
     if (cumPercent <= 80) grade = 'A';
@@ -311,8 +306,8 @@ function calcABCAnalysis(items) {
 }
 
 /**
- * 고급 분석 대시보드 렌더링
- * 회전율 = 기간 출고량 / 현재 재고량
+ * ?ш퀬 ?뚯쟾??怨꾩궛
+ * ?뚯쟾??= 湲곌컙 異쒓퀬??/ ?꾩옱 ?ш퀬??
  * ?믪쓣?섎줉 ???붾━???덈ぉ, 0?대㈃ 鍮꾪솢??Dead stock)
  */
 function calcTurnoverRate(items, transactions) {
@@ -320,7 +315,7 @@ function calcTurnoverRate(items, transactions) {
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
   const cutoff = thirtyDaysAgo.toISOString().split('T')[0];
 
-  // 최근 30일 출고량 집계
+  // 理쒓렐 30??異쒓퀬??吏묎퀎
   const outMap = {};
   transactions
     .filter(tx => tx.type === 'out' && tx.date >= cutoff)
@@ -344,7 +339,7 @@ function calcTurnoverRate(items, transactions) {
 }
 
 /**
- * 고급 분석 대시보드 렌더링
+ * ?붾퀎 ?낆텧怨?異붿씠 怨꾩궛
  */
 function calcMonthlyTrend(transactions) {
   if (transactions.length === 0) return [];
@@ -363,8 +358,8 @@ function calcMonthlyTrend(transactions) {
 }
 
 /**
- * 고급 분석 대시보드 렌더링
- * 30일 이내 만료되는 품목 목록
+ * ?좏넻湲고븳 寃쎄퀬 異붿텧
+ * 30???대궡 留뚮즺?섎뒗 ?덈ぉ 紐⑸줉
  */
 function getExpiryAlerts(items) {
   const today = new Date();

@@ -321,6 +321,203 @@ CREATE POLICY "fields_all" ON custom_fields FOR ALL USING (auth.uid() = user_id)
 CREATE POLICY "settings_all" ON user_settings FOR ALL USING (auth.uid() = user_id);
 
 -- ============================================================
+-- 15. 인사·급여·근태 모듈 (HR)
+-- 왜 모듈 단위로 묶음? → 재고와 독립적으로 관리/권한/배포 가능
+-- ============================================================
+
+-- pgcrypto 확장 (주민번호 AES 암호화용)
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
+-- 15-1. 직원 마스터
+CREATE TABLE IF NOT EXISTS employees (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  emp_no TEXT NOT NULL,                           -- 사번
+  name TEXT NOT NULL,
+  dept TEXT,
+  position TEXT,
+  hire_date DATE NOT NULL,
+  resign_date DATE,
+  rrn_enc BYTEA,                                  -- 주민번호 AES 암호화
+  rrn_mask TEXT,                                  -- "900101-1******" 표시용
+  phone TEXT,
+  email TEXT,
+  address TEXT,
+  bank TEXT,
+  account_no TEXT,
+  base_salary NUMERIC(12,0) DEFAULT 0,            -- 월 기본급
+  hourly_wage NUMERIC(10,0) DEFAULT 0,            -- 시급 (시급제일 때)
+  employment_type TEXT DEFAULT '정규직',             -- 정규직/계약직/시급/일용
+  insurance_flags JSONB DEFAULT '{"np":true,"hi":true,"ei":true,"wc":true}',
+  dependents INTEGER DEFAULT 0,                   -- 부양가족수
+  children INTEGER DEFAULT 0,                     -- 20세 이하 자녀
+  annual_leave_total NUMERIC(4,1) DEFAULT 15,     -- 연차 부여수
+  annual_leave_used  NUMERIC(4,1) DEFAULT 0,      -- 연차 사용수
+  memo TEXT,
+  status TEXT DEFAULT 'active',                   -- active/resigned
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now(),
+  UNIQUE(user_id, emp_no)
+);
+
+CREATE INDEX IF NOT EXISTS idx_emp_user ON employees(user_id);
+CREATE INDEX IF NOT EXISTS idx_emp_dept ON employees(user_id, dept);
+CREATE INDEX IF NOT EXISTS idx_emp_status ON employees(user_id, status);
+
+-- 15-2. 일별 근태
+CREATE TABLE IF NOT EXISTS attendance (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  employee_id UUID REFERENCES employees(id) ON DELETE CASCADE,
+  work_date DATE NOT NULL,
+  check_in TIME,
+  check_out TIME,
+  break_min INTEGER DEFAULT 0,
+  work_min INTEGER DEFAULT 0,                     -- 총 근무시간(분)
+  overtime_min INTEGER DEFAULT 0,                 -- 연장(8시간 초과)
+  night_min INTEGER DEFAULT 0,                    -- 야간(22~06시)
+  holiday_min INTEGER DEFAULT 0,                  -- 휴일근무
+  status TEXT DEFAULT '정상',                       -- 정상/지각/결근/조퇴/휴가
+  note TEXT,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  UNIQUE(user_id, employee_id, work_date)
+);
+
+CREATE INDEX IF NOT EXISTS idx_att_user ON attendance(user_id);
+CREATE INDEX IF NOT EXISTS idx_att_month ON attendance(user_id, work_date);
+CREATE INDEX IF NOT EXISTS idx_att_emp ON attendance(employee_id, work_date DESC);
+
+-- 15-3. 월별 급여
+CREATE TABLE IF NOT EXISTS payrolls (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  employee_id UUID REFERENCES employees(id) ON DELETE CASCADE,
+  pay_year INTEGER NOT NULL,
+  pay_month INTEGER NOT NULL,
+  base NUMERIC(12,0) DEFAULT 0,
+  allowances JSONB DEFAULT '{}',                  -- {식대:100000, 차량:200000}
+  overtime_pay NUMERIC(12,0) DEFAULT 0,
+  night_pay NUMERIC(12,0) DEFAULT 0,
+  holiday_pay NUMERIC(12,0) DEFAULT 0,
+  gross NUMERIC(12,0) DEFAULT 0,                  -- 과세대상 총지급액
+  np NUMERIC(10,0) DEFAULT 0,                     -- 국민연금
+  hi NUMERIC(10,0) DEFAULT 0,                     -- 건강보험
+  ltc NUMERIC(10,0) DEFAULT 0,                    -- 장기요양
+  ei NUMERIC(10,0) DEFAULT 0,                     -- 고용보험
+  income_tax NUMERIC(10,0) DEFAULT 0,
+  local_tax NUMERIC(10,0) DEFAULT 0,
+  other_deduct JSONB DEFAULT '{}',
+  total_deduct NUMERIC(12,0) DEFAULT 0,
+  net NUMERIC(12,0) DEFAULT 0,                    -- 실지급액
+  status TEXT DEFAULT '초안',                       -- 초안/확정/지급
+  paid_at TIMESTAMPTZ,
+  confirmed_by UUID,
+  confirmed_at TIMESTAMPTZ,
+  issue_no TEXT,                                   -- 전자급여명세서 발급번호
+  memo TEXT,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now(),
+  UNIQUE(user_id, pay_year, pay_month, employee_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_payroll_user ON payrolls(user_id);
+CREATE INDEX IF NOT EXISTS idx_payroll_period ON payrolls(user_id, pay_year, pay_month);
+CREATE INDEX IF NOT EXISTS idx_payroll_emp ON payrolls(employee_id, pay_year, pay_month);
+
+-- 15-4. 휴가
+CREATE TABLE IF NOT EXISTS leaves (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  employee_id UUID REFERENCES employees(id) ON DELETE CASCADE,
+  leave_type TEXT,                                -- 연차/반차/병가/경조/무급
+  start_date DATE,
+  end_date DATE,
+  days NUMERIC(4,1) DEFAULT 1,
+  reason TEXT,
+  status TEXT DEFAULT '신청',                       -- 신청/승인/반려
+  approved_by UUID,
+  approved_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_leave_user ON leaves(user_id);
+CREATE INDEX IF NOT EXISTS idx_leave_emp ON leaves(employee_id, start_date DESC);
+
+-- 15-5. 수당·공제 마스터
+CREATE TABLE IF NOT EXISTS salary_items (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  code TEXT,
+  name TEXT NOT NULL,
+  kind TEXT DEFAULT '수당',                         -- 수당/공제
+  calc_type TEXT DEFAULT '정액',                    -- 정액/정률/시간
+  amount NUMERIC DEFAULT 0,
+  rate NUMERIC DEFAULT 0,                          -- 정률 계산용
+  taxable BOOLEAN DEFAULT true,
+  active BOOLEAN DEFAULT true,
+  sort_order INTEGER DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_salary_items_user ON salary_items(user_id);
+
+-- RLS 활성화
+ALTER TABLE employees    ENABLE ROW LEVEL SECURITY;
+ALTER TABLE attendance   ENABLE ROW LEVEL SECURITY;
+ALTER TABLE payrolls     ENABLE ROW LEVEL SECURITY;
+ALTER TABLE leaves       ENABLE ROW LEVEL SECURITY;
+ALTER TABLE salary_items ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "employees_all"    ON employees    FOR ALL USING (auth.uid() = user_id);
+CREATE POLICY "attendance_all"   ON attendance   FOR ALL USING (auth.uid() = user_id);
+CREATE POLICY "payrolls_all"     ON payrolls     FOR ALL USING (auth.uid() = user_id);
+CREATE POLICY "leaves_all"       ON leaves       FOR ALL USING (auth.uid() = user_id);
+CREATE POLICY "salary_items_all" ON salary_items FOR ALL USING (auth.uid() = user_id);
+
+-- 주민번호 암호화/복호화 RPC (서버 비밀키 사용 — Supabase Vault)
+-- 왜 RPC로? → 클라이언트에 AES 키 노출 방지 + 평문 조회 시 감사로그 기록 강제
+CREATE OR REPLACE FUNCTION encrypt_rrn(plain TEXT)
+RETURNS BYTEA AS $$
+BEGIN
+  -- 프로덕션에서는 Supabase Vault 시크릿 사용 권장
+  RETURN pgp_sym_encrypt(plain, current_setting('app.rrn_key', true));
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- 특정 직원의 주민번호 암호화 저장 (insert/update 이후 별도 호출)
+-- 왜 분리? → 클라이언트가 bytea를 직접 다루지 않도록
+CREATE OR REPLACE FUNCTION set_employee_rrn(emp_id UUID, plain TEXT)
+RETURNS VOID AS $$
+BEGIN
+  IF plain IS NULL OR length(plain) = 0 THEN
+    UPDATE employees SET rrn_enc = NULL
+     WHERE id = emp_id AND user_id = auth.uid();
+  ELSE
+    UPDATE employees
+       SET rrn_enc = pgp_sym_encrypt(plain, current_setting('app.rrn_key', true))
+     WHERE id = emp_id AND user_id = auth.uid();
+  END IF;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE OR REPLACE FUNCTION decrypt_rrn(emp_id UUID)
+RETURNS TEXT AS $$
+DECLARE
+  enc_data BYTEA;
+  plain_rrn TEXT;
+BEGIN
+  SELECT rrn_enc INTO enc_data FROM employees
+   WHERE id = emp_id AND user_id = auth.uid();
+  IF enc_data IS NULL THEN RETURN NULL; END IF;
+  plain_rrn := pgp_sym_decrypt(enc_data, current_setting('app.rrn_key', true));
+  -- 평문 조회는 감사로그 자동 기록
+  INSERT INTO audit_logs(user_id, action, target, detail)
+    VALUES (auth.uid(), 'employee.viewRRN', emp_id::text, '주민번호 평문 조회');
+  RETURN plain_rrn;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- ============================================================
 -- 14. updated_at 자동 갱신 트리거
 -- ============================================================
 CREATE OR REPLACE FUNCTION update_updated_at()
@@ -336,7 +533,7 @@ DO $$
 DECLARE
   tbl TEXT;
 BEGIN
-  FOREACH tbl IN ARRAY ARRAY['profiles', 'items', 'vendors', 'account_entries', 'purchase_orders']
+  FOREACH tbl IN ARRAY ARRAY['profiles', 'items', 'vendors', 'account_entries', 'purchase_orders', 'employees', 'payrolls']
   LOOP
     EXECUTE format(
       'DROP TRIGGER IF EXISTS set_updated_at ON %I; CREATE TRIGGER set_updated_at BEFORE UPDATE ON %I FOR EACH ROW EXECUTE FUNCTION update_updated_at();',

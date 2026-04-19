@@ -6,6 +6,7 @@
 import { getState, setState } from './store.js';
 import { downloadExcel } from './excel.js';
 import { showToast } from './toast.js';
+import { escapeHtml } from './ux-toolkit.js';
 
 const COSTING_TEXT_COLLATOR = new Intl.Collator('ko', { numeric: true, sensitivity: 'base' });
 const COSTING_SORT_FIELDS = [
@@ -17,10 +18,11 @@ const COSTING_SORT_FIELDS = [
   { key: 'sellPrice', label: '판매단가', numeric: true, align: 'text-right' },
   { key: 'marketValue', label: '시가환산', numeric: true, align: 'text-right' },
   { key: 'profit', label: '예상이익', numeric: true, align: 'text-right' },
-  { key: 'marginRate', label: '마진율', numeric: true, align: 'text-right' },
+  { key: 'marginRate', label: '매출이익률', numeric: true, align: 'text-right' },
 ];
 const COSTING_SORT_FIELD_MAP = Object.fromEntries(COSTING_SORT_FIELDS.map(field => [field.key, field]));
 let costingSortState = { key: 'totalCost', direction: 'desc' };
+const expandedCostGroups = new Set();
 
 export function renderCostingPage(container, navigateTo) {
   const state = getState();
@@ -51,7 +53,7 @@ export function renderCostingPage(container, navigateTo) {
         <label class="form-label" style="margin:0; font-weight:600;">원가 계산 방식:</label>
         <label style="display:flex; align-items:center; gap:4px; cursor:pointer; font-size:13px;">
           <input type="radio" name="cost-method" value="weighted-avg" ${costMethod === 'weighted-avg' ? 'checked' : ''} />
-          이동평균법 <span style="color:var(--text-muted); font-size:11px;">(권장)</span>
+          총평균법(가중평균) <span style="color:var(--text-muted); font-size:11px;">(권장)</span>
         </label>
         <label style="display:flex; align-items:center; gap:4px; cursor:pointer; font-size:13px;">
           <input type="radio" name="cost-method" value="fifo" ${costMethod === 'fifo' ? 'checked' : ''} />
@@ -78,7 +80,7 @@ export function renderCostingPage(container, navigateTo) {
         <div class="stat-value ${totalProfit >= 0 ? 'text-success' : 'text-danger'}">${formatSignedCostMoney(totalProfit)}</div>
       </div>
       <div class="stat-card">
-        <div class="stat-label">평균 마진율</div>
+        <div class="stat-label">평균 매출이익률</div>
         <div class="stat-value text-accent">${avgMargin === '-' ? '-' : `${avgMargin}%`}</div>
       </div>
     </div>
@@ -97,8 +99,43 @@ export function renderCostingPage(container, navigateTo) {
               ${COSTING_SORT_FIELDS.map(field => renderCostingHeader(field, costingSortState)).join('')}
             </tr>
           </thead>
-          <tbody>
-            ${sortedCostData.map((row, index) => renderCostingRow(row, index)).join('')}
+          <tbody id="costing-tbody">
+            ${(() => {
+              const groupOrder = [];
+              const groupMap = new Map();
+              sortedCostData.forEach(row => {
+                const key = row.itemCode ? String(row.itemCode).trim() : String(row.itemName || '').trim();
+                if (!groupMap.has(key)) { groupMap.set(key, []); groupOrder.push(key); }
+                groupMap.get(key).push(row);
+              });
+
+              let html = '';
+              let rowNum = 1;
+              groupOrder.forEach(key => {
+                const group = groupMap.get(key);
+                if (group.length === 1) {
+                  html += renderCostingRow(group[0], rowNum++ - 1);
+                } else {
+                  const isExpanded = expandedCostGroups.has(key);
+                  const totalQty = group.reduce((s, r) => s + (r.qty || 0), 0);
+                  const totalCostSum = group.reduce((s, r) => s + (r.totalCost || 0), 0);
+                  html += `
+                    <tr class="cost-group-header" data-cost-group-key="${escapeHtml(key)}"
+                        style="cursor:pointer; background:var(--bg-card); border-left:3px solid var(--accent);">
+                      <td class="col-num">${rowNum++}</td>
+                      <td colspan="9" style="padding-left:8px;">
+                        <span style="margin-right:6px; font-size:12px;">${isExpanded ? '▼' : '▶'}</span>
+                        <strong>${escapeHtml(group[0].itemName)}</strong>
+                        ${group[0].itemCode ? `<span style="color:var(--text-muted); font-size:11px; margin-left:6px;">${escapeHtml(group[0].itemCode)}</span>` : ''}
+                        <span style="font-size:11px; color:var(--text-muted); margin-left:8px;">${group.length}항목 · 총 ${totalQty.toLocaleString('ko-KR')}개 · ₩${Math.round(totalCostSum).toLocaleString('ko-KR')}</span>
+                      </td>
+                    </tr>
+                    ${isExpanded ? group.map((row, i) => renderCostingRow(row, rowNum + i - 2, true)).join('') : ''}
+                  `;
+                }
+              });
+              return html;
+            })()}
           </tbody>
         </table>
       </div>
@@ -119,6 +156,19 @@ export function renderCostingPage(container, navigateTo) {
       if (!nextKey) return;
 
       costingSortState = getNextCostSortState(costingSortState, nextKey);
+      renderCostingPage(container, navigateTo);
+    });
+  });
+
+  // 원가 분석 그룹 헤더 클릭 → 펼치기/접기
+  container.querySelectorAll('.cost-group-header').forEach(row => {
+    row.addEventListener('click', () => {
+      const key = row.dataset.costGroupKey;
+      if (expandedCostGroups.has(key)) {
+        expandedCostGroups.delete(key);
+      } else {
+        expandedCostGroups.add(key);
+      }
       renderCostingPage(container, navigateTo);
     });
   });
@@ -160,7 +210,7 @@ function renderCostingHeader(field, sortState) {
   `;
 }
 
-function renderCostingRow(row, index) {
+function renderCostingRow(row, index, isChild = false) {
   const marginRate = getCostMarginRate(row);
   const marginText = marginRate === null ? '-' : `${marginRate.toFixed(1)}%`;
   const rowClass = marginRate !== null && marginRate < 0
@@ -168,11 +218,12 @@ function renderCostingRow(row, index) {
     : marginRate !== null && marginRate < 10
       ? 'row-warning'
       : '';
+  const childStyle = isChild ? 'background:var(--bg-lighter);' : '';
 
   return `
-    <tr class="${rowClass}">
+    <tr class="${rowClass}" style="${childStyle}">
       <td class="col-num">${index + 1}</td>
-      <td><strong>${row.itemName}</strong></td>
+      <td style="${isChild ? 'padding-left:24px;' : ''}"><strong>${row.itemName}</strong></td>
       <td style="color:var(--text-muted); font-size:12px;">${row.itemCode || '-'}</td>
       <td class="text-right">${row.qty.toLocaleString('ko-KR')}</td>
       <td class="text-right">${formatCostMoney(row.unitCost)}</td>
@@ -262,9 +313,11 @@ function formatSignedCostMoney(value) {
 
 /**
  * 원가 계산 로직
- * weighted-avg: 입고 평균가
- * fifo: 가장 오래된 입고 단가
- * latest: 가장 최근 입고 단가
+ * weighted-avg : 총평균법 — 전체 입고 내역의 수량 가중평균 단가
+ *                (= 총매입금액 / 총매입수량). 매 입고 후 재산정하는 이동평균법과 다름.
+ *                한국 중소기업 회계에서 가장 널리 허용되는 방식(법인세법 시행령 §74).
+ * fifo         : 선입선출법 — 가장 오래된 입고 단가를 원가로 사용
+ * latest       : 최종매입원가법 — 가장 최근 입고 단가를 원가로 사용
  */
 function calculateCosts(items, transactions, method) {
   return items.map(item => {

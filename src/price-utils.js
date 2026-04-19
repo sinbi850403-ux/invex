@@ -4,9 +4,17 @@
 // 이 모듈은 손익 페이지와 기타 매출/매입 계산 로직에서 재사용됩니다.
 
 /**
- * 기본 마진 비율 (0.2 = 20%). 필요에 따라 조정 가능하도록 상수로 정의합니다.
+ * 기본 마크업 비율 (0.2 = 20%). 판매가 미입력 시 원가에 곱해 추정 판매가를 산출합니다.
+ *
+ * ※ 마크업(markup) vs 마진(margin) 구분:
+ *   - 마크업 20%: 판매가 = 원가 × 1.2  → 실매출이익률 = 16.67%
+ *   - 마진 20%  : 판매가 = 원가 ÷ 0.8  → 실매출이익률 = 20.00%
+ * 이 상수는 마크업 방식이므로, 표시되는 '마진율'과 실제 비율이 다를 수 있습니다.
+ * (영업 정책상 마진 기준으로 바꾸려면 getSalePrice 함수를 unitCost / (1 - DEFAULT_MARGIN) 로 변경)
  */
-export const DEFAULT_MARGIN = 0.2;
+export const DEFAULT_MARKUP = 0.2;
+/** @deprecated DEFAULT_MARGIN → DEFAULT_MARKUP 으로 명칭 변경. 호환성 유지를 위해 alias 제공. */
+export const DEFAULT_MARGIN = DEFAULT_MARKUP;
 
 /**
  * 판매가격을 반환합니다.
@@ -23,7 +31,7 @@ export function getSalePrice(tx) {
 
   // 2순위: 매입단가에 기본 마진을 적용해 추정
   const unitCost = parseFloat(tx.unitCost) || parseFloat(tx.unitPrice) || 0;
-  if (unitCost > 0) return Math.round(unitCost * (1 + DEFAULT_MARGIN));
+  if (unitCost > 0) return Math.round(unitCost * (1 + DEFAULT_MARKUP));
 
   // 둘 다 없으면 0 반환
   return 0;

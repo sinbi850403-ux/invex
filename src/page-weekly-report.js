@@ -7,6 +7,7 @@
 
 import { getState } from './store.js';
 import { showToast } from './toast.js';
+import { getSalePrice } from './price-utils.js';
 
 export function renderWeeklyReportPage(container, navigateTo) {
   const state = getState();
@@ -192,10 +193,17 @@ function filterByDateRange(txList, start, end) {
   });
 }
 
+// 매출(out)은 판매단가(getSalePrice) 기준, 매입(in)은 매입단가(unitPrice) 기준
 function calcTotal(txList, type) {
   return txList
     .filter(tx => tx.type === type)
-    .reduce((s, tx) => s + (parseFloat(tx.quantity) || 0) * (parseFloat(tx.unitPrice) || 0), 0);
+    .reduce((s, tx) => {
+      const qty = parseFloat(tx.quantity) || 0;
+      const price = type === 'out'
+        ? getSalePrice(tx)                          // 출고 = 판매단가 (손익분석과 동일 기준)
+        : (parseFloat(tx.unitPrice) || 0);           // 입고 = 매입단가
+      return s + qty * price;
+    }, 0);
 }
 
 function calcChange(current, previous) {

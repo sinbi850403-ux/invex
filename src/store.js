@@ -66,6 +66,10 @@ const DEFAULT_STATE = {
   accountEntries: [],   // [{id, type, vendorName, amount, currency, date, ...}]
   // 발주 이력
   purchaseOrders: [],   // [{id, orderNo, vendor, items, status, paymentDueDate, ...}]
+  // 수주 이력 (판매 플로우)
+  salesOrders: [],      // [{id, orderNo, customer, items, status, shippedItems, receivableEntryId, ...}]
+  // 세금계산서 (매입/매출 공용)
+  taxInvoices: [],      // [{id, invoiceNo, type, vendor/customer, items, supply, vat, total, ...}]
   // 통화 설정
   currency: { code: 'KRW', symbol: '₩', rate: 1 },
   // 사용자명
@@ -97,6 +101,14 @@ const DEFAULT_STATE = {
   notificationChannelPrefs: { webhook: true },
   // 수불부 기초재고 수동 입력
   ledgerOpeningOverrides: {},
+  // === HR 모듈 (Phase A) ===
+  employees: [],         // 직원 마스터 [{id, empNo, name, dept, position, hireDate, baseSalary, ...}]
+  attendance: [],        // 일별 근태   [{id, employeeId, workDate, checkIn, checkOut, workMin, overtimeMin, nightMin, holidayMin, status}]
+  payrolls: [],          // 월별 급여   [{id, employeeId, payYear, payMonth, base, gross, net, status}]
+  leaves: [],            // 휴가        [{id, employeeId, leaveType, startDate, endDate, days, status}]
+  salaryItems: [],       // 수당·공제 마스터
+  hrFilters: { dept: '', status: 'active' },
+  currentPayrollPeriod: null, // {year, month}
 };
 
 let state = { ...DEFAULT_STATE };
@@ -379,7 +391,7 @@ export async function restoreState() {
 
   // 3. localStorage 폴백 (최후 수단)
   try {
-    const fallback = localStorage.getItem('invex-fallback') || localStorage.getItem('erp-lite-fallback');
+    const fallback = localStorage.getItem('invex-fallback');
     if (fallback) {
       const parsed = JSON.parse(fallback);
       state = { ...DEFAULT_STATE, ...parsed };
@@ -507,6 +519,8 @@ export function addTransaction(tx) {
   }
 
   saveToDB();
+  // UI 즉시 갱신 (재고 현황 자동 반영)
+  if (_syncCallback) _syncCallback();
   // Supabase에 입출고 + 품목 수량 변경 동기화
   if (isSupabaseConfigured) {
     scheduleSyncToSupabase(['transactions', 'mappedData']);
@@ -520,6 +534,21 @@ export function addTransaction(tx) {
 /**
  * 입출고 기록 삭제
  */
+/**
+ * 트랜잭션 가격 필드(판매가/실판매가) 부분 업데이트
+ */
+export function updateTransactionPrices(id, fields) {
+  const tx = state.transactions.find(t => t.id === id);
+  if (!tx) return false;
+  const allowed = ['sellingPrice', 'actualSellingPrice'];
+  allowed.forEach(key => {
+    if (key in fields) tx[key] = fields[key];
+  });
+  saveToDB();
+  if (_syncCallback) _syncCallback();
+  return true;
+}
+
 export function deleteTransaction(id) {
   const index = state.transactions.findIndex(t => t.id === id);
   if (index === -1) return null;
