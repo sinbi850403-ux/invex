@@ -94,6 +94,8 @@ export const PAGE_LOADERS = {
   attendance:      () => import('./page-attendance.js').then(m => m.renderAttendancePage),
   payroll:         () => import('./page-payroll.js').then(m => m.renderPayrollPage),
   leaves:          () => import('./page-leaves.js').then(m => m.renderLeavesPage),
+  severance:       () => import('./page-severance.js').then(m => m.renderSeverancePage),
+  'yearend-settlement': () => import('./page-yearend-settlement.js').then(m => m.renderYearendSettlementPage),
   // 동기 렌더러 (이미 import된 모듈)
   auditlog:        async () => renderAuditLogPage,
   'hub-data':      async () => renderHubData,

@@ -796,6 +796,8 @@ export const PAGE_MIN_ROLE = {
   attendance:     'staff',
   payroll:        'admin',
   leaves:         'staff',
+  severance:      'manager',
+  'yearend-settlement': 'manager',
 };
 
 export const ACTION_MIN_ROLE = {
