@@ -11,7 +11,7 @@
 import { showToast } from './toast.js';
 import { escapeHtml } from './ux-toolkit.js';
 import { employees as employeesDb, attendance as attendanceDb } from './db.js';
-import { canAction } from './auth.js';
+import { canAction, getCurrentUser } from './auth.js';
 import { isAdminVerified } from './admin-auth.js';
 import { addAuditLog } from './audit-log.js';
 import { calcPayroll } from './payroll-calc.js';
@@ -163,6 +163,26 @@ export async function renderPayrollPage(container, navigateTo) {
     }
 
     const [year, month] = monthStr.split('-').map(Number);
+
+    // Phase 2: 재확정 방지 — 기존 확정 데이터 검사
+    try {
+      const existingPayrolls = await payrollsDb.list({
+        payYear: year,
+        payMonth: month,
+        status: 'confirmed'
+      });
+
+      if (existingPayrolls && existingPayrolls.length > 0) {
+        const existing = existingPayrolls[0];
+        const confirmedAtTime = new Date(existing.confirmedAt).toLocaleString('ko-KR');
+        const msg = `이미 확정된 급여입니다.\n\n확정일시: ${confirmedAtTime}\n\n변경 시 감사로그가 남습니다.\n계속하시겠습니까?`;
+        if (!confirm(msg)) return;
+      }
+    } catch (e) {
+      console.error('재확정 검사 실패:', e);
+      // 검사 실패해도 진행 (DB 연결 실패 등)
+    }
+
     if (!confirm(`${year}년 ${month}월 급여를 확정하시겠습니까?\n이후 수정이 불가능합니다.`)) return;
 
     const confirmBtn = container.querySelector('#payroll-confirm-btn');
@@ -170,6 +190,10 @@ export async function renderPayrollPage(container, navigateTo) {
     confirmBtn.textContent = '저장 중…';
 
     try {
+      // 확정자 정보 캡처
+      const currentUser = await getCurrentUser();
+      const confirmedAt = new Date().toISOString();
+
       // DB에 status='confirmed'로 저장
       const rows = currentPayrolls.map(p => ({
         employeeId: p.employeeId,
@@ -189,13 +213,14 @@ export async function renderPayrollPage(container, navigateTo) {
         totalDeduction: p.total_deduct || 0,
         netPay: p.net || 0,
         status: 'confirmed',
-        paidDate: new Date().toISOString().split('T')[0],
+        confirmedAt,
+        confirmedBy: currentUser?.id,
       }));
 
       await payrollsDb.bulkUpsert(rows);
 
       addAuditLog('payroll.confirm', `payroll:${year}-${month}`, {
-        year, month, targetCount: currentPayrolls.length,
+        year, month, targetCount: currentPayrolls.length, confirmedBy: currentUser?.id,
       });
 
       showToast(`${currentPayrolls.length}명의 급여가 확정되었습니다`, 'success');
