@@ -659,6 +659,19 @@ toggleBtn?.addEventListener('click', () => {
 
 overlay?.addEventListener('click', closeSidebar);
 
+// 사이드바 nav 버튼 클릭 — 이벤트 위임 (개별 리스너보다 안정적)
+document.getElementById("sidebar")?.addEventListener("click", e => {
+  const btn = e.target.closest("[data-page]");
+  if (btn) navigateTo(btn.dataset.page);
+});
+
+// 라우터에 콜백 주입 (사이드바 닫기 / 카드 접기 / 알림 배지)
+injectRouterCallbacks({
+  initCardCollapsibles,
+  closeSidebar,
+  updateNotifBadge,
+});
+
 // === ?곗씠??諛깆뾽 / 蹂듭썝 ===
 
 /**
