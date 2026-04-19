@@ -217,38 +217,50 @@ function getSkeletonHtml() {
  * - token: 연속 호출 시 이전 비동기 결과를 자동으로 무시
  */
 export async function navigateTo(pageName) {
-  if (!PAGE_LOADERS[pageName]) return;
-
-  // 요금제 권한 체크 — 미달 시 업그레이드 모달 표시 후 중단
-  if (!canAccessPage(pageName)) {
-    showUpgradeModal(pageName);
-    return;
-  }
-
-  currentPage = pageName;
-  localStorage.setItem(LAST_PAGE_KEY, pageName);
-  addRecentPage(pageName);
-  renderQuickAccess();
-
-  const token = ++_token;
-
-  // 사이드바 활성 하이라이트 (자식 페이지는 부모 허브를 활성화)
-  const activeId = HUB_MAP[pageName] || pageName;
-  document.querySelectorAll('.nav-btn').forEach(btn => {
-    btn.classList.toggle('active', btn.dataset.page === activeId);
-  });
-
-  updateBreadcrumb(pageName);
-
-  const main = document.getElementById('main-content');
-  main.dataset.page = pageName;
-  main.innerHTML    = getSkeletonHtml();
-  main.scrollTop    = 0;
-
   try {
+    if (!PAGE_LOADERS[pageName]) {
+      console.warn('[Router] 알 수 없는 페이지:', pageName);
+      return;
+    }
+
+    // 요금제 권한 체크 — 미달 시 업그레이드 모달 표시 후 중단
+    if (!canAccessPage(pageName)) {
+      showUpgradeModal(pageName);
+      return;
+    }
+
+    currentPage = pageName;
+    localStorage.setItem(LAST_PAGE_KEY, pageName);
+    addRecentPage(pageName);
+    renderQuickAccess();
+
+    const token = ++_token;
+
+    // 사이드바 활성 하이라이트 (자식 페이지는 부모 허브를 활성화)
+    const activeId = HUB_MAP[pageName] || pageName;
+    document.querySelectorAll('[data-page]').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.page === activeId);
+    });
+
+    updateBreadcrumb(pageName);
+
+    const main = document.getElementById('main-content');
+    if (!main) {
+      console.error('[Router] #main-content 요소를 찾을 수 없습니다.');
+      showToast('페이지 레이아웃 오류가 발생했습니다.', 'warning');
+      return;
+    }
+    main.dataset.page = pageName;
+    main.innerHTML    = getSkeletonHtml();
+    main.scrollTop    = 0;
+
     const renderPage = await resolveRenderer(pageName);
     // 다른 navigateTo가 먼저 완료됐으면 이 결과는 버림
     if (token !== _token || currentPage !== pageName) return;
+
+    if (typeof renderPage !== 'function') {
+      throw new Error(`렌더러가 함수가 아닙니다: ${pageName}`);
+    }
 
     main.innerHTML = '';
     renderPage(main, navigateTo);
@@ -261,21 +273,23 @@ export async function navigateTo(pageName) {
     // 카드 접기 초기화 (main.js에서 주입된 함수)
     _initCardCollapsibles(main, pageName);
     mountAutoTableSort(main);
+
+    _closeSidebar();
+    _updateNotifBadge();
+    syncExternalNotifications();
   } catch (err) {
     console.error('[Router] 페이지 로드 실패:', pageName, err);
-    main.innerHTML = `
-      <div class="card">
-        <div class="empty-state" style="padding:32px 20px;">
-          <div class="msg">페이지를 불러오지 못했습니다.</div>
-          <div class="sub">잠시 후 다시 시도해 주세요.</div>
+    const main = document.getElementById('main-content');
+    if (main) {
+      main.innerHTML = `
+        <div class="card">
+          <div class="empty-state" style="padding:32px 20px;">
+            <div class="msg">페이지를 불러오지 못했습니다.</div>
+            <div class="sub">${err?.message || '잠시 후 다시 시도해 주세요.'}</div>
+          </div>
         </div>
-      </div>
-    `;
-    showToast('페이지를 불러오지 못했습니다.', 'warning');
-    return;
+      `;
+    }
+    showToast('페이지를 불러오지 못했습니다: ' + (err?.message || pageName), 'warning');
   }
-
-  _closeSidebar();
-  _updateNotifBadge();
-  syncExternalNotifications();
 }

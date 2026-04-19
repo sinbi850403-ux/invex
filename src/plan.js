@@ -155,6 +155,11 @@ export function setPlan(planId) {
 const SUPER_ADMINS = ['sinbi0214@naver.com', 'sinbi850403@gmail.com', 'admin@invex.io.kr'];
 
 export function canAccessPage(pageId) {
+  // 허브 페이지는 요금제·기간 무관 무조건 접근 가능 (네비게이션 전용)
+  if (pageId && pageId.startsWith('hub-')) return true;
+  // 홈도 항상 접근 가능
+  if (pageId === 'home') return true;
+
   // 총관리자는 모든 페이지 무제한 접근
   const user = _getCurrentUser?.();
   if (user && SUPER_ADMINS.includes(user.email)) return true;
