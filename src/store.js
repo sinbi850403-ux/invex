@@ -196,6 +196,9 @@ async function syncToSupabase() {
   const keysToSync = new Set(_dirtyKeys);
   _dirtyKeys.clear();
 
+  // 실패한 키를 추적해 재시도 보장
+  const failedKeys = new Set();
+
   try {
     const promises = [];
 
@@ -203,17 +206,14 @@ async function syncToSupabase() {
     if (keysToSync.has('mappedData')) {
       const items = (state.mappedData || []).map(item => storeItemToDb(item));
       promises.push(
-        // managedQuery로 래핑 — 레이트 리밋 + 재시도 자동 적용
         managedQuery(() => db.items.bulkUpsert(items))
           .then(result => console.log(`[Sync] 품목 ${result.length}건 동기화`))
-          .catch(err => console.warn('[Sync] 품목 동기화 실패:', err.message))
+          .catch(err => { console.warn('[Sync] 품목 동기화 실패:', err.message); failedKeys.add('mappedData'); })
       );
     }
 
-    // 입출고 동기화 — 새로 추가된 건만 (기존 건은 이미 서버에 있음)
+    // 입출고 동기화 — 새로 추가된 건만
     if (keysToSync.has('transactions')) {
-      // Supabase에 없는 새 트랜잭션만 식별
-      // _id가 없으면 아직 서버에 안 올라간 것
       const newTxs = (state.transactions || [])
         .filter(tx => !tx._synced)
         .map(tx => ({
@@ -232,10 +232,9 @@ async function syncToSupabase() {
           managedQuery(() => db.transactions.bulkCreate(newTxs))
             .then(result => {
               console.log(`[Sync] 입출고 ${result.length}건 동기화`);
-              // 동기화 완료 표시
               state.transactions.forEach(tx => { tx._synced = true; });
             })
-            .catch(err => console.warn('[Sync] 입출고 동기화 실패:', err.message))
+            .catch(err => { console.warn('[Sync] 입출고 동기화 실패:', err.message); failedKeys.add('transactions'); })
         );
       }
     }
@@ -253,7 +252,6 @@ async function syncToSupabase() {
         address: v.address,
         memo: v.memo,
       }));
-      // 거래처는 upsert 미지원이라 개별 생성 시도 (중복은 무시)
       for (const vendor of vendors) {
         promises.push(
           managedQuery(() => db.vendors.create(vendor)).catch(() => { /* 중복 무시 */ })
@@ -261,7 +259,7 @@ async function syncToSupabase() {
       }
     }
 
-    // 설정값 동기화 (key-value 형태)
+    // 설정값 동기화
     const settingKeys = [
       'safetyStock', 'beginnerMode', 'dashboardMode', 'visibleColumns',
       'inventoryViewPrefs', 'inoutViewPrefs', 'tableSortPrefs',
@@ -271,14 +269,26 @@ async function syncToSupabase() {
       if (keysToSync.has(key) && state[key] !== undefined) {
         promises.push(
           managedQuery(() => db.settings.set(key, state[key]))
-            .catch(err => console.warn(`[Sync] 설정 ${key} 동기화 실패:`, err.message))
+            .catch(err => { console.warn(`[Sync] 설정 ${key} 동기화 실패:`, err.message); failedKeys.add(key); })
         );
       }
     }
 
     await Promise.allSettled(promises);
+
+    // 실패한 키는 다시 dirty로 등록해 재시도 보장
+    if (failedKeys.size > 0) {
+      failedKeys.forEach(k => _dirtyKeys.add(k));
+      window.dispatchEvent(new CustomEvent('invex:sync-failed', { detail: { keys: [...failedKeys] } }));
+      console.warn('[Sync] 실패 항목 재시도 예약:', [...failedKeys]);
+      // 10초 후 재시도 (즉시 재시도는 루프 위험)
+      setTimeout(() => syncToSupabase(), 10_000);
+    }
   } catch (err) {
-    console.warn('[Sync] Supabase 동기화 오류:', err.message);
+    // 전체 실패 시 모든 키 복원
+    keysToSync.forEach(k => _dirtyKeys.add(k));
+    console.warn('[Sync] Supabase 동기화 전체 오류, 재시도 예약:', err.message);
+    setTimeout(() => syncToSupabase(), 10_000);
   }
 }
 

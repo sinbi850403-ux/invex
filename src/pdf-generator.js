@@ -12,6 +12,7 @@ import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
 import { getState } from './store.js';
 import { showToast } from './toast.js';
+import { applyKoreanFont, getKoreanFontStyle } from './pdf-font.js';
 
 /**
  * 발주서 PDF 생성
@@ -270,4 +271,176 @@ function formatCurrency(amount) {
 /** 거래 금액 */
 function calcAmount(tx) {
   return (parseFloat(tx.quantity) || 0) * (parseFloat(tx.unitPrice) || 0);
+}
+
+
+// ============================================================
+// 급여명세서 PDF
+// ============================================================
+
+/**
+ * 개별 급여명세서 PDF 생성 (한글 폰트 지원)
+ * @param {Object} payroll - calcPayroll() 결과 + {name, empNo, dept}
+ * @param {number} year
+ * @param {number} month
+ * @param {Object} [options] - { companyName, payDate }
+ */
+export async function generatePayslipPDF(payroll, year, month, options = {}) {
+  const { companyName = 'INVEX', payDate = '' } = options;
+
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  await applyKoreanFont(doc);
+  const kf = getKoreanFontStyle();
+
+  const W = 210;
+  const BLUE = [37, 99, 235];
+  const LIGHT = [245, 247, 255];
+
+  // ── 헤더 배경 ──
+  doc.setFillColor(...BLUE);
+  doc.rect(0, 0, W, 32, 'F');
+
+  doc.setTextColor(255);
+  doc.setFontSize(18);
+  doc.setFont(kf.font, 'bold');
+  doc.text('급 여 명 세 서', 14, 16);
+
+  doc.setFontSize(9);
+  doc.setFont(kf.font, 'normal');
+  doc.text(`${year}년 ${month}월분`, 14, 25);
+  doc.text(companyName, W - 14, 16, { align: 'right' });
+  doc.text('invex.io.kr', W - 14, 22, { align: 'right' });
+
+  // ── 직원 정보 박스 ──
+  doc.setTextColor(0);
+  doc.setFillColor(...LIGHT);
+  doc.roundedRect(12, 36, W - 24, 22, 2, 2, 'F');
+
+  doc.setFontSize(9);
+  doc.setFont(kf.font, 'bold');
+  const infoY = 44;
+  const col2 = 80;
+  const col3 = 150;
+
+  doc.text('성   명', 18, infoY);
+  doc.text('사   번', 18, infoY + 8);
+  doc.setFont(kf.font, 'normal');
+  doc.text(`: ${payroll.name || '-'}`, 38, infoY);
+  doc.text(`: ${payroll.empNo || '-'}`, 38, infoY + 8);
+
+  doc.setFont(kf.font, 'bold');
+  doc.text('부   서', col2, infoY);
+  doc.text('지급일', col2, infoY + 8);
+  doc.setFont(kf.font, 'normal');
+  doc.text(`: ${payroll.dept || '-'}`, col2 + 18, infoY);
+  doc.text(`: ${payDate || `${year}-${String(month).padStart(2, '0')}-25`}`, col2 + 18, infoY + 8);
+
+  // ── 지급항목 / 공제항목 테이블 ──
+  const allowances = payroll.allowances || {};
+  const payItems = [
+    ['기 본 급', payroll.base || 0],
+    ...Object.entries(allowances).map(([k, v]) => [k, v]),
+  ];
+  if ((payroll.overtime_pay || 0) > 0) payItems.push(['초과근무수당', payroll.overtime_pay]);
+  if ((payroll.night_pay || 0)    > 0) payItems.push(['야간근무수당', payroll.night_pay]);
+  if ((payroll.holiday_pay || 0)  > 0) payItems.push(['휴일근무수당', payroll.holiday_pay]);
+
+  const deductItems = [];
+  if ((payroll.np  || 0) > 0) deductItems.push(['국 민 연 금', payroll.np]);
+  if ((payroll.hi  || 0) > 0) deductItems.push(['건 강 보 험', payroll.hi]);
+  if ((payroll.ltc || 0) > 0) deductItems.push(['장기요양보험', payroll.ltc]);
+  if ((payroll.ei  || 0) > 0) deductItems.push(['고 용 보 험', payroll.ei]);
+  if ((payroll.income_tax || 0) > 0) deductItems.push(['소  득  세', payroll.income_tax]);
+  if ((payroll.local_tax  || 0) > 0) deductItems.push(['지방소득세', payroll.local_tax]);
+
+  const maxRows = Math.max(payItems.length, deductItems.length);
+  const tableBody = Array.from({ length: maxRows }, (_, i) => {
+    const [pLabel = '', pVal = ''] = payItems[i] || [];
+    const [dLabel = '', dVal = ''] = deductItems[i] || [];
+    return [
+      pLabel,
+      pVal !== '' ? `₩${Math.round(pVal).toLocaleString('ko-KR')}` : '',
+      dLabel,
+      dVal !== '' ? `₩${Math.round(dVal).toLocaleString('ko-KR')}` : '',
+    ];
+  });
+
+  doc.autoTable({
+    startY: 63,
+    head: [['지급 항목', '금    액', '공제 항목', '금    액']],
+    body: tableBody,
+    styles: { ...kf, fontSize: 9, cellPadding: 4 },
+    headStyles: { ...kf, fillColor: BLUE, textColor: 255, fontStyle: 'bold', halign: 'center' },
+    columnStyles: {
+      0: { cellWidth: 45, font: kf.font },
+      1: { cellWidth: 50, halign: 'right', font: kf.font },
+      2: { cellWidth: 45, font: kf.font },
+      3: { cellWidth: 50, halign: 'right', font: kf.font },
+    },
+    margin: { left: 12, right: 12 },
+    tableWidth: W - 24,
+  });
+
+  // ── 합계 / 실지급액 박스 ──
+  const afterY = doc.lastAutoTable.finalY + 6;
+
+  doc.setFontSize(9);
+  doc.setFont(kf.font, 'normal');
+
+  // 합계 행
+  doc.setFillColor(245, 245, 245);
+  doc.rect(12, afterY, W - 24, 10, 'F');
+  doc.setTextColor(80);
+  doc.text('지급 합계', 16, afterY + 7);
+  doc.text(`₩${Math.round(payroll.gross || 0).toLocaleString('ko-KR')}`, 66, afterY + 7, { align: 'right' });
+  doc.text('공제 합계', 111, afterY + 7);
+  doc.text(`₩${Math.round(payroll.total_deduct || 0).toLocaleString('ko-KR')}`, W - 14, afterY + 7, { align: 'right' });
+
+  // 실지급액 강조 박스
+  const netY = afterY + 14;
+  doc.setFillColor(...BLUE);
+  doc.roundedRect(12, netY, W - 24, 16, 3, 3, 'F');
+  doc.setTextColor(255);
+  doc.setFontSize(11);
+  doc.setFont(kf.font, 'bold');
+  doc.text('실  지  급  액', 20, netY + 11);
+  doc.setFontSize(16);
+  doc.text(`₩${Math.round(payroll.net || 0).toLocaleString('ko-KR')}`, W - 16, netY + 11, { align: 'right' });
+
+  // ── 근태 요약 (있는 경우) ──
+  if (payroll.workDays !== undefined || payroll.absenceDays !== undefined) {
+    const attY = netY + 22;
+    doc.setTextColor(100);
+    doc.setFontSize(8);
+    doc.setFont(kf.font, 'normal');
+    doc.text(
+      `근무일수: ${payroll.workDays ?? '-'}일  |  결근: ${payroll.absenceDays ?? 0}일  |  초과근무: ${payroll.overtimeHours ?? 0}시간`,
+      14, attY
+    );
+  }
+
+  // ── 푸터 ──
+  addFooter(doc);
+
+  doc.save(`급여명세서_${payroll.name}_${year}${String(month).padStart(2, '0')}.pdf`);
+  showToast(`${payroll.name} 급여명세서 다운로드 완료`, 'success');
+}
+
+/**
+ * 전체 급여명세서 일괄 다운로드 (직원별 개별 PDF)
+ * @param {Array} payrolls - renderPayrollTable에서 만든 payroll 배열
+ * @param {number} year
+ * @param {number} month
+ * @param {Object} [options]
+ */
+export async function generatePayslipBulkPDF(payrolls, year, month, options = {}) {
+  if (!payrolls || payrolls.length === 0) {
+    showToast('다운로드할 급여 데이터가 없습니다', 'warning');
+    return;
+  }
+  showToast(`${payrolls.length}명 명세서 생성 중…`, 'info');
+  for (const p of payrolls) {
+    await generatePayslipPDF(p, year, month, options);
+  }
+  showToast('일괄 다운로드 완료', 'success');
 }

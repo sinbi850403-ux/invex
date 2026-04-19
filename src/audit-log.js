@@ -5,6 +5,7 @@
  */
 
 import { getState, setState } from './store.js';
+import { auditLogs as auditLogsDb } from './db.js';
 
 /**
  * 감사 로그 추가
@@ -12,27 +13,41 @@ import { getState, setState } from './store.js';
  * @param {string} target - 대상 (예: 'A4용지')
  * @param {object} detail - 상세 정보 (before/after 등)
  */
+// 민감 필드 — 감사 로그에 평문 저장 금지
+const SENSITIVE_KEYS = ['rrn', 'password', 'accountNo', 'bankAccount', 'token', 'secret'];
+
+function sanitizeDetail(detail) {
+  if (!detail || typeof detail !== 'object') return detail;
+  const result = {};
+  for (const [k, v] of Object.entries(detail)) {
+    result[k] = SENSITIVE_KEYS.some(s => k.toLowerCase().includes(s)) ? '[REDACTED]' : v;
+  }
+  return result;
+}
+
 export function addAuditLog(action, target, detail = {}) {
   const state = getState();
   const logs = state.auditLogs || [];
+  const safeDetail = sanitizeDetail(detail);
 
   const entry = {
     id: Date.now(),
     timestamp: new Date().toISOString(),
     action,
     target,
-    detail,
-    // 사용자 식별 (현재는 단일 사용자이므로 로컬 저장)
+    detail: safeDetail,
     user: state.userName || '관리자',
   };
 
-  // 최대 5000건 유지 (오래된 것부터 제거)
+  // 로컬 store 갱신
   const updated = [...logs, entry];
-  if (updated.length > 5000) {
-    updated.splice(0, updated.length - 5000);
-  }
-
+  if (updated.length > 5000) updated.splice(0, updated.length - 5000);
   setState({ auditLogs: updated });
+
+  // Supabase 즉시 저장 (동기화 디바운스와 무관하게 즉시 기록)
+  auditLogsDb.create({ action, target, detail: safeDetail }).catch(err => {
+    console.warn('[AuditLog] Supabase 저장 실패:', err.message);
+  });
 }
 
 /**

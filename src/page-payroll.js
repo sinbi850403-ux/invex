@@ -12,9 +12,12 @@ import { showToast } from './toast.js';
 import { escapeHtml } from './ux-toolkit.js';
 import { employees as employeesDb, attendance as attendanceDb } from './db.js';
 import { canAction } from './auth.js';
+import { isAdminVerified } from './admin-auth.js';
 import { addAuditLog } from './audit-log.js';
 import { calcPayroll } from './payroll-calc.js';
 import { summarizeMonthAttendance } from './attendance-calc.js';
+import { generatePayslipPDF, generatePayslipBulkPDF } from './pdf-generator.js';
+import { payrolls as payrollsDb } from './db.js';
 
 function fmtWon(n) {
   const v = parseFloat(n) || 0;
@@ -73,6 +76,10 @@ export async function renderPayrollPage(container, navigateTo) {
   const defaultMonth = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
   container.querySelector('#payroll-month').value = defaultMonth;
 
+  let currentPayrolls = [];
+  let currentYear = now.getFullYear();
+  let currentMonth = now.getMonth() + 1;
+
   const emps = await employeesDb.list({ status: 'active' });
   const deptSet = new Set(emps.filter(e => e.dept).map(e => e.dept));
   const deptSelect = container.querySelector('#payroll-dept');
@@ -83,12 +90,18 @@ export async function renderPayrollPage(container, navigateTo) {
     deptSelect.appendChild(opt);
   });
 
-  container.querySelector('#payroll-calc-btn').addEventListener('click', async () => {
+  container.querySelector('#payroll-calc-btn').addEventListener('click', async (e) => {
+    const calcBtn = e.currentTarget;
+    if (calcBtn.disabled) return;
+
     const monthStr = container.querySelector('#payroll-month').value;
     if (!monthStr) {
       showToast('월을 선택하세요', 'warning');
       return;
     }
+
+    calcBtn.disabled = true;
+    calcBtn.textContent = '계산 중…';
 
     const [year, month] = monthStr.split('-').map(Number);
     const dept = container.querySelector('#payroll-dept').value;
@@ -118,15 +131,22 @@ export async function renderPayrollPage(container, navigateTo) {
         });
       }
 
+      currentPayrolls = payrolls;
+      currentYear = year;
+      currentMonth = month;
       renderPayrollTable(container, payrolls, year, month);
     } catch (e) {
       console.error(e);
       showToast('계산 실패: ' + e.message, 'error');
+    } finally {
+      calcBtn.disabled = false;
+      calcBtn.textContent = '계산';
     }
   });
 
   container.querySelector('#payroll-confirm-btn')?.addEventListener('click', async () => {
-    if (!canAction('payroll:confirm')) {
+    const adminOk = await isAdminVerified();
+    if (!adminOk || !canAction('payroll:confirm')) {
       showToast('급여 확정은 admin만 가능합니다', 'error');
       return;
     }
@@ -136,31 +156,62 @@ export async function renderPayrollPage(container, navigateTo) {
       showToast('월을 선택하세요', 'warning');
       return;
     }
+    if (currentPayrolls.length === 0) {
+      showToast('먼저 급여를 계산하세요', 'warning');
+      return;
+    }
 
     const [year, month] = monthStr.split('-').map(Number);
-
     if (!confirm(`${year}년 ${month}월 급여를 확정하시겠습니까?\n이후 수정이 불가능합니다.`)) return;
 
+    const confirmBtn = container.querySelector('#payroll-confirm-btn');
+    confirmBtn.disabled = true;
+    confirmBtn.textContent = '저장 중…';
+
     try {
-      const rows = container.querySelectorAll('#payroll-table-wrap tbody tr');
-      const confirmCount = rows.length - 1;
+      // DB에 status='confirmed'로 저장
+      const rows = currentPayrolls.map(p => ({
+        employeeId: p.employeeId,
+        payYear: year,
+        payMonth: month,
+        baseSalary: p.base || 0,
+        allowances: p.allowances || {},
+        deductions: {
+          np: p.np || 0,
+          hi: p.hi || 0,
+          ltc: p.ltc || 0,
+          ei: p.ei || 0,
+          income_tax: p.income_tax || 0,
+          local_tax: p.local_tax || 0,
+        },
+        grossPay: p.gross || 0,
+        totalDeduction: p.total_deduct || 0,
+        netPay: p.net || 0,
+        status: 'confirmed',
+        paidDate: new Date().toISOString().split('T')[0],
+      }));
 
-      addAuditLog(
-        'payroll.confirm',
-        `payroll:${year}-${month}`,
-        { year, month, targetCount: confirmCount, timestamp: new Date().toISOString() }
-      );
+      await payrollsDb.bulkUpsert(rows);
 
-      showToast(`${confirmCount}명의 급여가 확정되었습니다`, 'success');
-      container.querySelector('#payroll-confirm-btn').disabled = true;
-      container.querySelector('#payroll-confirm-btn').textContent = '✓ 확정 완료';
+      addAuditLog('payroll.confirm', `payroll:${year}-${month}`, {
+        year, month, targetCount: currentPayrolls.length,
+      });
+
+      showToast(`${currentPayrolls.length}명의 급여가 확정되었습니다`, 'success');
+      confirmBtn.textContent = '✓ 확정 완료';
     } catch (e) {
       showToast('확정 실패: ' + e.message, 'error');
+      confirmBtn.disabled = false;
+      confirmBtn.textContent = '✓ 급여 확정';
     }
   });
 
-  container.querySelector('#payroll-export-btn')?.addEventListener('click', () => {
-    showToast('📋 명세서 다운로드는 Phase B-5에서 구현됩니다', 'info');
+  container.querySelector('#payroll-export-btn')?.addEventListener('click', async () => {
+    if (currentPayrolls.length === 0) {
+      showToast('먼저 급여를 계산하세요', 'warning');
+      return;
+    }
+    await generatePayslipBulkPDF(currentPayrolls, currentYear, currentMonth);
   });
 }
 
@@ -298,7 +349,8 @@ function showPayrollDetailModal(payroll, year, month) {
           </tr>
         </table>
       </div>
-      <div class="modal-footer">
+      <div class="modal-footer" style="display:flex; gap:8px; justify-content:flex-end;">
+        <button class="btn btn-ghost btn-pdf-slip">📄 PDF 출력</button>
         <button class="btn btn-primary btn-close">닫기</button>
       </div>
     </div>
@@ -306,5 +358,8 @@ function showPayrollDetailModal(payroll, year, month) {
 
   document.body.appendChild(overlay);
   overlay.querySelector('.btn-close').addEventListener('click', () => overlay.remove());
-  overlay.querySelector('.btn-primary').addEventListener('click', () => overlay.remove());
+  overlay.querySelector('.modal-header .btn-close').addEventListener('click', () => overlay.remove());
+  overlay.querySelector('.btn-pdf-slip').addEventListener('click', async () => {
+    await generatePayslipPDF(payroll, year, month);
+  });
 }

@@ -6,13 +6,13 @@
 import './style.css';
 import { initErrorMonitor, setMonitorUser, clearMonitorUser } from './error-monitor.js';
 import { initAuth, getCurrentUser, getUserProfileData, loginWithGoogle, loginWithEmail, signupWithEmail, resetPassword } from './auth.js';
-import { initTheme } from './theme.js';
+import { initTheme, toggleTheme } from './theme.js';
 import { injectGetCurrentUser, injectGetUserProfile, getPageBadge, getCurrentPlan, PLANS, setPlan } from './plan.js';
-import { getNotificationCount } from './notifications.js';
+import { getNotificationCount, renderNotificationPanel } from './notifications.js';
 import { showToast } from './toast.js';
 import { isAdmin } from './admin-auth.js';
 import { navigateTo, injectRouterCallbacks, PAGE_LOADERS, LAST_PAGE_KEY, renderQuickAccess } from './router.js';
-import { initGlobalSearch } from './global-search.js';
+import { initGlobalSearch, toggleGlobalSearch } from './global-search.js';
 import { restoreState } from './store.js';
 import { checkAndShowOnboarding } from './onboarding.js';
 // framework.js: html, on, createPage 유틸 (page-*.js에서 사용)
@@ -198,6 +198,10 @@ function updateNotifBadge() {
 window.addEventListener('notifications-updated', () => {
   updateNotifBadge();
   syncExternalNotifications();
+});
+
+window.addEventListener('invex:sync-failed', (e) => {
+  showToast('일부 데이터가 클라우드에 저장되지 않았습니다. 잠시 후 재시도합니다.', 'warning');
 });
 
 const CARD_STATE_KEY = 'invex_card_state_v1';

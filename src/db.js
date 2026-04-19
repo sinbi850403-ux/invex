@@ -72,10 +72,12 @@ export const items = {
    * 품목 1건 조회
    */
   async get(itemId) {
+    const userId = await getUserId();
     const { data, error } = await supabase
       .from('items')
       .select('*')
       .eq('id', itemId)
+      .eq('user_id', userId)
       .single();
     handleError(error, '품목 상세 조회');
     return data;
@@ -128,10 +130,12 @@ export const items = {
    * 품목 수정
    */
   async update(itemId, updates) {
+    const userId = await getUserId();
     const { data, error } = await supabase
       .from('items')
       .update(updates)
       .eq('id', itemId)
+      .eq('user_id', userId)
       .select()
       .single();
     handleError(error, '품목 수정');
@@ -142,10 +146,12 @@ export const items = {
    * 품목 삭제
    */
   async remove(itemId) {
+    const userId = await getUserId();
     const { error } = await supabase
       .from('items')
       .delete()
-      .eq('id', itemId);
+      .eq('id', itemId)
+      .eq('user_id', userId);
     handleError(error, '품목 삭제');
   },
 
@@ -572,7 +578,8 @@ export const employees = {
     return (data || []).map(dbEmployeeToStore);
   },
   async get(id) {
-    const { data, error } = await supabase.from('employees').select('*').eq('id', id).single();
+    const userId = await getUserId();
+    const { data, error } = await supabase.from('employees').select('*').eq('id', id).eq('user_id', userId).single();
     handleError(error, '직원 상세');
     return dbEmployeeToStore(data);
   },
@@ -600,7 +607,14 @@ export const employees = {
     return dbEmployeeToStore(data);
   },
   async remove(id) {
-    const { error } = await supabase.from('employees').delete().eq('id', id);
+    const userId = await getUserId();
+    // 소유권 확인
+    const { data: emp } = await supabase.from('employees').select('id').eq('id', id).eq('user_id', userId).single();
+    if (!emp) throw new Error('삭제 권한이 없거나 존재하지 않는 직원입니다.');
+    // 관련 데이터 cascade 삭제 (FK CASCADE가 없는 경우 대비)
+    await supabase.from('attendance').delete().eq('employee_id', id).eq('user_id', userId);
+    await supabase.from('payrolls').delete().eq('employee_id', id).eq('user_id', userId);
+    const { error } = await supabase.from('employees').delete().eq('id', id).eq('user_id', userId);
     handleError(error, '직원 삭제');
   },
   async bulkUpsert(arr) {
@@ -611,8 +625,12 @@ export const employees = {
     handleError(error, '직원 일괄 저장');
     return (data || []).map(dbEmployeeToStore);
   },
-  /** 주민번호 평문 조회 (admin 전용, 감사로그 자동 기록) */
+  /** 주민번호 평문 조회 (admin 전용, 소유권 검증 후 RPC 호출) */
   async getRRN(id) {
+    const userId = await getUserId();
+    // 이 직원이 현재 사용자 소유인지 먼저 확인
+    const { data: emp } = await supabase.from('employees').select('id').eq('id', id).eq('user_id', userId).single();
+    if (!emp) throw new Error('조회 권한이 없습니다.');
     const { data, error } = await supabase.rpc('decrypt_rrn', { emp_id: id });
     handleError(error, '주민번호 조회');
     return data;
