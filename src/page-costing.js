@@ -53,7 +53,7 @@ export function renderCostingPage(container, navigateTo) {
         <label class="form-label" style="margin:0; font-weight:600;">원가 계산 방식:</label>
         <label style="display:flex; align-items:center; gap:4px; cursor:pointer; font-size:13px;">
           <input type="radio" name="cost-method" value="weighted-avg" ${costMethod === 'weighted-avg' ? 'checked' : ''} />
-          이동평균법 <span style="color:var(--text-muted); font-size:11px;">(권장)</span>
+          총평균법(가중평균) <span style="color:var(--text-muted); font-size:11px;">(권장)</span>
         </label>
         <label style="display:flex; align-items:center; gap:4px; cursor:pointer; font-size:13px;">
           <input type="radio" name="cost-method" value="fifo" ${costMethod === 'fifo' ? 'checked' : ''} />
@@ -313,9 +313,11 @@ function formatSignedCostMoney(value) {
 
 /**
  * 원가 계산 로직
- * weighted-avg: 입고 평균가
- * fifo: 가장 오래된 입고 단가
- * latest: 가장 최근 입고 단가
+ * weighted-avg : 총평균법 — 전체 입고 내역의 수량 가중평균 단가
+ *                (= 총매입금액 / 총매입수량). 매 입고 후 재산정하는 이동평균법과 다름.
+ *                한국 중소기업 회계에서 가장 널리 허용되는 방식(법인세법 시행령 §74).
+ * fifo         : 선입선출법 — 가장 오래된 입고 단가를 원가로 사용
+ * latest       : 최종매입원가법 — 가장 최근 입고 단가를 원가로 사용
  */
 function calculateCosts(items, transactions, method) {
   return items.map(item => {

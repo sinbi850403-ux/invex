@@ -23,6 +23,7 @@ import { HUB_MAP, PAGE_LABELS } from './page-hubs.js';
 import {
   renderHubData, renderHubInventory, renderHubWarehouse, renderHubOrder,
   renderHubReport, renderHubDocuments, renderHubSettings, renderHubSupport,
+  renderHubHr,
 } from './page-hubs.js';
 import { renderAuditLogPage } from './audit-log.js';
 
@@ -87,6 +88,12 @@ export const PAGE_LOADERS = {
   referral:        () => import('./page-referral.js').then(m => m.renderReferralPage),
   'weekly-report': () => import('./page-weekly-report.js').then(m => m.renderWeeklyReportPage),
   pos:             () => import('./page-pos.js').then(m => m.renderPosPage),
+  // HR 모듈 (Phase A)
+  'hr-dashboard':  () => import('./page-hr-dashboard.js').then(m => m.renderHrDashboardPage),
+  employees:       () => import('./page-employees.js').then(m => m.renderEmployeesPage),
+  attendance:      () => import('./page-attendance.js').then(m => m.renderAttendancePage),
+  payroll:         () => import('./page-payroll.js').then(m => m.renderPayrollPage),
+  leaves:          () => import('./page-leaves.js').then(m => m.renderLeavesPage),
   // 동기 렌더러 (이미 import된 모듈)
   auditlog:        async () => renderAuditLogPage,
   'hub-data':      async () => renderHubData,
@@ -97,6 +104,7 @@ export const PAGE_LOADERS = {
   'hub-documents': async () => renderHubDocuments,
   'hub-settings':  async () => renderHubSettings,
   'hub-support':   async () => renderHubSupport,
+  'hub-hr':        async () => renderHubHr,
 };
 
 // ── 최근 방문 페이지 ────────────────────────────────────────────────────

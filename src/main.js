@@ -11,7 +11,7 @@ import { injectGetCurrentUser, injectGetUserProfile } from './plan.js';
 import { getNotificationCount } from './notifications.js';
 import { showToast } from './toast.js';
 import { isAdmin } from './admin-auth.js';
-import { navigateTo, injectRouterCallbacks } from './router.js';
+import { navigateTo, injectRouterCallbacks, PAGE_LOADERS, LAST_PAGE_KEY, renderQuickAccess } from './router.js';
 // framework.js: html, on, createPage 유틸 (page-*.js에서 사용)
 // 여기서는 직접 사용하지 않으므로 import 불필요
 
@@ -147,112 +147,8 @@ initAuth((user, profile) => {
     isAuthReady = false;
   }
 });
+// pageLoaders는 router.js의 PAGE_LOADERS로 이전됨
 
-  summary: () => import('./page-summary.js').then(m => m.renderSummaryPage),
-  scanner: () => import('./page-scanner.js').then(m => m.renderScannerPage),
-  documents: () => import('./page-documents.js').then(m => m.renderDocumentsPage),
-  dashboard: () => import('./page-dashboard.js').then(m => m.renderDashboardPage),
-  transfer: () => import('./page-transfer.js').then(m => m.renderTransferPage),
-  ledger: () => import('./page-ledger.js').then(m => m.renderLedgerPage),
-  settings: () => import('./page-settings.js').then(m => m.renderSettingsPage),
-  vendors: () => import('./page-vendors.js').then(m => m.renderVendorsPage),
-  stocktake: () => import('./page-stocktake.js').then(m => m.renderStocktakePage),
-  bulk: () => import('./page-bulk.js').then(m => m.renderBulkPage),
-  auditlog: async () => renderAuditLogPage,
-  costing: () => import('./page-costing.js').then(m => m.renderCostingPage),
-  labels: () => import('./page-labels.js').then(m => m.renderLabelsPage),
-  accounts: () => import('./page-accounts.js').then(m => m.renderAccountsPage),
-  warehouses: () => import('./page-warehouses.js').then(m => m.renderWarehousesPage),
-  roles: () => import('./page-roles.js').then(m => m.renderRolesPage),
-  api: () => import('./page-api.js').then(m => m.renderApiPage),
-  billing: () => import('./page-billing.js').then(m => m.renderBillingPage),
-  admin: () => import('./page-admin.js').then(m => m.renderAdminPage),
-  mypage: () => import('./page-mypage.js').then(m => m.renderMyPage),
-  guide: () => import('./page-guide.js').then(m => m.renderGuidePage),
-  support: () => import('./page-support.js').then(m => m.renderSupportPage),
-  team: () => import('./page-team.js').then(m => m.renderTeamPage),
-  'tax-reports': () => import('./page-tax-reports.js').then(m => m.renderTaxReportsPage),
-  'auto-order': () => import('./page-auto-order.js').then(m => m.renderAutoOrderPage),
-  profit: () => import('./page-profit.js').then(m => m.renderProfitPage),
-  backup: () => import('./page-backup.js').then(m => m.renderBackupPage),
-  orders: () => import('./page-orders.js').then(m => m.renderOrdersPage),
-  forecast: () => import('./page-forecast.js').then(m => m.renderForecastPage),
-  referral: () => import('./page-referral.js').then(m => m.renderReferralPage),
-  'weekly-report': () => import('./page-weekly-report.js').then(m => m.renderWeeklyReportPage),
-  pos: () => import('./page-pos.js').then(m => m.renderPosPage),
-  // 허브 페이지 — 하위 기능을 타일 그리드로 묶은 인덱스 페이지
-  'hub-data': async () => renderHubData,
-  'hub-inventory': async () => renderHubInventory,
-  'hub-warehouse': async () => renderHubWarehouse,
-  'hub-order': async () => renderHubOrder,
-  'hub-report': async () => renderHubReport,
-  'hub-documents': async () => renderHubDocuments,
-  'hub-settings': async () => renderHubSettings,
-  'hub-support': async () => renderHubSupport,
-};
-
-const pageRendererCache = {};
-
-function getPageLabel(pageId) {
-  // 허브 기반 네비게이션 — PAGE_LABELS 맵 우선 사용
-  if (PAGE_LABELS[pageId]) return PAGE_LABELS[pageId];
-  const btn = document.querySelector(`.nav-btn[data-page="${pageId}"]`);
-  if (!btn) return pageId;
-  const mainLabel = btn.querySelector('.nav-main');
-  if (mainLabel) return mainLabel.textContent.replace(/\s+/g, ' ').trim();
-  return btn.textContent.replace(/\s+/g, ' ').trim();
-}
-
-function readRecentPages() {
-  try {
-    const raw = localStorage.getItem(RECENT_PAGES_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [];
-    return parsed.filter(pageId => typeof pageId === 'string' && !!pageLoaders[pageId] && pageId !== 'home');
-  } catch {
-    return [];
-  }
-}
-
-function writeRecentPages(pages) {
-  localStorage.setItem(RECENT_PAGES_KEY, JSON.stringify(pages.slice(0, MAX_RECENT_PAGES)));
-}
-
-function updateRecentPages(pageId) {
-  if (!pageId || pageId === 'home') return;
-  const current = readRecentPages();
-  const next = [pageId, ...current.filter(p => p !== pageId)].slice(0, MAX_RECENT_PAGES);
-  writeRecentPages(next);
-}
-
-function renderQuickAccess() {
-  const section = document.getElementById('quick-access-section');
-  const divider = document.getElementById('quick-access-divider');
-  const nav = document.getElementById('quick-access-nav');
-  if (!section || !divider || !nav) return;
-
-  const recentPages = readRecentPages();
-  if (!recentPages.length) {
-    section.style.display = 'none';
-    divider.style.display = 'none';
-    nav.innerHTML = '';
-    return;
-  }
-
-  nav.innerHTML = recentPages.map(pageId => `
-    <button class="nav-btn nav-btn-quick" data-quick-page="${pageId}" title="${getPageLabel(pageId)}">
-      <span class="nav-icon">🕘</span> ${getPageLabel(pageId)}
-    </button>
-  `).join('');
-
-  nav.querySelectorAll('[data-quick-page]').forEach(btn => {
-    btn.addEventListener('click', () => navigateTo(btn.dataset.quickPage));
-  });
-
-  section.style.display = '';
-  divider.style.display = '';
-}
 
 function initNavigationShortcuts() {
   document.addEventListener('keydown', (e) => {
@@ -277,143 +173,6 @@ function initSmartDetailsToggles() {
     event.preventDefault();
     details.open = !details.open;
   }, true);
-}
-
-/**
- * ?섏씠吏 ?꾪솚
- * ?붽툑??泥댄겕 ???묎렐 遺덇? ???낃렇?덉씠??紐⑤떖 ?쒖떆
- */
-async function navigateTo(pageName) {
-  if (!pageLoaders[pageName]) return;
-
-  // ?붽툑???묎렐 ?쒖뼱
-  if (!canAccessPage(pageName)) {
-    showUpgradeModal(pageName);
-    return;
-  }
-
-  currentPage = pageName;
-  localStorage.setItem(LAST_PAGE_KEY, pageName);
-  updateRecentPages(pageName);
-  renderQuickAccess();
-  const token = ++navigationToken;
-
-  // 紐⑤뱺 nav ?곸뿭??踰꾪듉 ?쒖꽦 ?곹깭 ?낅뜲?댄듃
-  // 사이드바 하이라이트 — 자식 페이지는 부모 허브를 활성화
-  const activeSidebarPage = HUB_MAP[pageName] || pageName;
-  document.querySelectorAll('.nav-btn').forEach(btn => {
-    btn.classList.toggle('active', btn.dataset.page === activeSidebarPage);
-  });
-
-  // 브레드크럼 업데이트
-  updateBreadcrumb(pageName);
-
-  const mainContent = document.getElementById('main-content');
-  mainContent.dataset.page = pageName;
-  // 스켈레톤 로딩 UI 표시
-  mainContent.innerHTML = getSkeletonHtml();
-  mainContent.scrollTop = 0;
-
-  try {
-    const renderPage = await resolvePageRenderer(pageName);
-    if (token !== navigationToken || currentPage !== pageName) return;
-    mainContent.innerHTML = '';
-    renderPage(mainContent, navigateTo);
-    // 페이지 전환 애니메이션 트리거
-    mainContent.classList.remove('page-enter');
-    void mainContent.offsetWidth;
-    mainContent.classList.add('page-enter');
-    initCardCollapsibles(mainContent, pageName);
-    mountAutoTableSort(mainContent);
-  } catch (error) {
-    console.error('Failed to load page:', pageName, error);
-    mainContent.innerHTML = `
-      <div class="card">
-        <div class="empty-state" style="padding:32px 20px;">
-          <div class="msg">페이지를 불러오지 못했습니다.</div>
-          <div class="sub">잠시 후 다시 시도해 주세요.</div>
-        </div>
-      </div>
-    `;
-    showToast('페이지를 불러오지 못했습니다.', 'warning');
-    return;
-  }
-
-  // 紐⑤컮?쇱뿉???ъ씠?쒕컮 ?リ린
-  closeSidebar();
-
-  // 알림 뱃지 업데이트
-  updateNotifBadge();
-  syncExternalNotifications();
-}
-
-async function resolvePageRenderer(pageName) {
-  if (!pageRendererCache[pageName]) {
-    pageRendererCache[pageName] = pageLoaders[pageName]();
-  }
-  return pageRendererCache[pageName];
-}
-
-/** 스켈레톤 로딩 HTML — 페이지 모듈 로딩 중에 표시하여 체감 속도 개선 */
-function getSkeletonHtml() {
-  return `
-    <div class="skeleton-page">
-      <div class="skeleton-header">
-        <div class="skeleton-line skeleton-lg skeleton-w60"></div>
-        <div class="skeleton-line skeleton-sm skeleton-w40"></div>
-      </div>
-      <div class="skeleton-stats">
-        <div class="skeleton-stat"></div>
-        <div class="skeleton-stat"></div>
-        <div class="skeleton-stat"></div>
-        <div class="skeleton-stat"></div>
-      </div>
-      <div class="skeleton-card">
-        <div class="skeleton-line skeleton-w40"></div>
-        <div class="skeleton-line skeleton-w90"></div>
-        <div class="skeleton-line skeleton-w70"></div>
-        <div class="skeleton-line skeleton-w80"></div>
-      </div>
-      <div class="skeleton-card">
-        <div class="skeleton-line skeleton-w50"></div>
-        <div class="skeleton-line skeleton-w80"></div>
-        <div class="skeleton-line skeleton-w60"></div>
-      </div>
-    </div>
-  `;
-}
-
-/** 브레드크럼 업데이트 — 현재 페이지 위치를 허브 계층으로 표시 */
-function updateBreadcrumb(pageName) {
-  const breadcrumb = document.getElementById('breadcrumb');
-  if (!breadcrumb) return;
-
-  const label = PAGE_LABELS[pageName] || pageName;
-  const parentHub = HUB_MAP[pageName];
-
-  if (pageName === 'home') {
-    breadcrumb.innerHTML = `<span class="breadcrumb-current">🏠 대시보드</span>`;
-  } else if (parentHub) {
-    const hubLabel = PAGE_LABELS[parentHub] || parentHub;
-    breadcrumb.innerHTML = `
-      <span class="breadcrumb-item" data-bc-nav="home">🏠</span>
-      <span class="breadcrumb-sep">›</span>
-      <span class="breadcrumb-item" data-bc-nav="${parentHub}">${hubLabel}</span>
-      <span class="breadcrumb-sep">›</span>
-      <span class="breadcrumb-current">${label}</span>
-    `;
-  } else {
-    breadcrumb.innerHTML = `
-      <span class="breadcrumb-item" data-bc-nav="home">🏠</span>
-      <span class="breadcrumb-sep">›</span>
-      <span class="breadcrumb-current">${label}</span>
-    `;
-  }
-
-  // 브레드크럼 클릭 이벤트 바인딩
-  breadcrumb.querySelectorAll('[data-bc-nav]').forEach(el => {
-    el.addEventListener('click', () => navigateTo(el.dataset.bcNav));
-  });
 }
 
 /**
@@ -914,14 +673,11 @@ overlay?.addEventListener('click', closeSidebar);
 async function initAppAfterAuth() {
   await restoreState();
   const lastPage = localStorage.getItem(LAST_PAGE_KEY);
-  if (lastPage && pageLoaders[lastPage]) {
-    currentPage = lastPage;
-  }
-  // ?붽툑??諛곗? & ?쒖떆 理쒖떊??
+  const startPage = (lastPage && PAGE_LOADERS[lastPage]) ? lastPage : 'home';
   updateSidebarBadges();
   renderQuickAccess();
   updatePlanDisplay();
-  await navigateTo(currentPage);
+  await navigateTo(startPage);
   // 泥?濡쒓렇???ъ슜?먯뿉寃??⑤낫??留덈쾿???쒖떆
   checkAndShowOnboarding(navigateTo);
 }

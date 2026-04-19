@@ -324,11 +324,13 @@ function calcReorderRecommendations(items, transactions, safetyStock) {
     // 안전재고 기준
     const safetyQty = safetyStock[item.itemName] || 0;
 
-    // 발주 추천 조건: 14일 이내 소진 예상 또는 안전재고 이하
-    const needReorder = daysLeft <= 14 || (safetyQty > 0 && currentQty <= safetyQty);
+    // 발주 추천 조건: 14일 이내 소진 예상 또는 안전재고 미만
+    // ※ currentQty < safetyQty (strict): 정확히 안전재고와 같으면 충족 상태로 간주
+    const needReorder = daysLeft <= 14 || (safetyQty > 0 && currentQty < safetyQty);
     if (!needReorder) return;
 
     // 추천 발주량: 30일치 + 안전재고 - 현재재고
+    // avgDailyOut=0(출고 없음) 이면 순수 안전재고 부족분만 채움
     const recommendedQty = Math.max(
       1,
       Math.ceil(avgDailyOut * 30 + safetyQty - currentQty)
