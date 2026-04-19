@@ -1,7 +1,7 @@
 /**
  * page-leaves.js — 휴가·연차 관리 (Phase A: 신청/승인 CRUD, Phase C: 자동 부여 확장)
  */
-import { employees as employeesDb, leaves as leavesDb } from './db.js';
+import { employees as employeesDb, leaves as leavesDb, attendance as attendanceDb } from './db.js';
 import { showToast } from './toast.js';
 import { escapeHtml } from './ux-toolkit.js';
 import { canAction } from './auth.js';
@@ -12,6 +12,26 @@ function daysBetween(s, e) {
   if (!s || !e) return 1;
   const d1 = new Date(s), d2 = new Date(e);
   return Math.max(1, Math.round((d2 - d1) / (1000*60*60*24)) + 1);
+}
+
+// 휴가 기간 동안 attendance 기록 생성
+async function syncLeaveToAttendance(employeeId, startDate, endDate) {
+  const records = [];
+  const d1 = new Date(startDate);
+  const d2 = new Date(endDate);
+
+  for (let d = new Date(d1); d <= d2; d.setDate(d.getDate() + 1)) {
+    const dateStr = d.toISOString().split('T')[0];
+    records.push({
+      employeeId,
+      workDate: dateStr,
+      status: '휴가',
+    });
+  }
+
+  if (records.length > 0) {
+    await attendanceDb.bulkUpsert(records);
+  }
 }
 
 export async function renderLeavesPage(container, navigateTo) {
@@ -70,9 +90,29 @@ export async function renderLeavesPage(container, navigateTo) {
   container.querySelectorAll('.lv-approve').forEach(b => b.addEventListener('click', async () => {
     if (!canAction('leave:approve')) { showToast('권한 없음', 'error'); return; }
     const id = b.closest('tr').dataset.id;
-    await leavesDb.update(id, { status: '승인', approvedAt: new Date().toISOString() });
-    showToast('승인되었습니다', 'success');
-    renderLeavesPage(container, navigateTo);
+    const leave = list.find(l => l.id === id);
+    if (!leave) { showToast('휴가 정보를 찾을 수 없습니다', 'error'); return; }
+
+    try {
+      // 1. 휴가 승인
+      await leavesDb.update(id, { status: '승인', approvedAt: new Date().toISOString() });
+
+      // 2. 직원의 annual_leave_used 차감
+      const emp = empMap[leave.employeeId];
+      if (emp) {
+        const newUsed = (emp.annualLeaveUsed || 0) + leave.days;
+        await employeesDb.update(emp.id, { annualLeaveUsed: newUsed });
+      }
+
+      // 3. attendance 테이블에 휴가 기록 동기화
+      await syncLeaveToAttendance(leave.employeeId, leave.startDate, leave.endDate);
+
+      showToast('승인되었습니다', 'success');
+      renderLeavesPage(container, navigateTo);
+    } catch (e) {
+      console.error(e);
+      showToast('승인 실패: ' + e.message, 'error');
+    }
   }));
   container.querySelectorAll('.lv-reject').forEach(b => b.addEventListener('click', async () => {
     if (!canAction('leave:approve')) { showToast('권한 없음', 'error'); return; }

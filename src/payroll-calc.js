@@ -232,6 +232,17 @@ export function calcPayroll(
     // (별도 정책에 따라 추가 로직 가능)
   }
 
+  // 무급휴가 차감 (병가, 경조, 무급 등)
+  // 출석 데이터에서 휴가 일수만 파악 가능하므로
+  // 현재는 모든 휴가를 무급으로 처리
+  const leaveDays = attendance.leave_days || 0;
+  if (leaveDays > 0 && result.base > 0) {
+    const workDaysInMonth = Math.max(1, (attendance.work_days || 22)); // 기본값 22일
+    const dailyWage = result.base / workDaysInMonth;
+    const leaveDeduction = Math.round(leaveDays * dailyWage);
+    result.base = Math.max(0, result.base - leaveDeduction);
+  }
+
   // 2. 총지급액 계산
   const allowanceSum = Object.values(allowances).reduce((a, b) => a + b, 0);
   result.gross =
