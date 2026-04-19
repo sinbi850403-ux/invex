@@ -22,7 +22,9 @@ const ALL_NAV_ITEMS = [
 
 function getHidden() {
   try {
-    return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+    const validPages = new Set(ALL_NAV_ITEMS.map(item => item.page));
+    return saved.filter(page => validPages.has(page));
   } catch {
     return [];
   }
