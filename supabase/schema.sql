@@ -285,6 +285,7 @@ ALTER TABLE user_settings ENABLE ROW LEVEL SECURITY;
 -- 모든 테이블에 동일한 RLS 정책: 자기 데이터만 접근
 -- profiles
 CREATE POLICY "profiles_select" ON profiles FOR SELECT USING (auth.uid() = id);
+CREATE POLICY "profiles_select_admin" ON profiles FOR SELECT USING (auth.jwt()->>'email' IN ('sinbi0214@naver.com', 'sinbi850403@gmail.com', 'admin@invex.io.kr'));
 CREATE POLICY "profiles_update" ON profiles FOR UPDATE USING (auth.uid() = id);
 
 -- items
