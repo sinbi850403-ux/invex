@@ -5,7 +5,7 @@
 
 import './style.css';
 import { initErrorMonitor, setMonitorUser, clearMonitorUser } from './error-monitor.js';
-import { initAuth, getCurrentUser, getUserProfileData, loginWithGoogle, loginWithEmail, signupWithEmail, resetPassword } from './auth.js';
+import { initAuth, getCurrentUser, getUserProfileData, loginWithGoogle, loginWithEmail, signupWithEmail, resetPassword, logout } from './auth.js';
 import { initTheme, toggleTheme } from './theme.js';
 import { injectGetCurrentUser, injectGetUserProfile, getPageBadge, getCurrentPlan, PLANS, setPlan } from './plan.js';
 import { getNotificationCount, renderNotificationPanel } from './notifications.js';
@@ -15,6 +15,7 @@ import { navigateTo, injectRouterCallbacks, PAGE_LOADERS, LAST_PAGE_KEY, renderQ
 import { initGlobalSearch, toggleGlobalSearch } from './global-search.js';
 import { restoreState } from './store.js';
 import { checkAndShowOnboarding } from './onboarding.js';
+import { initSidebarCustomize } from './sidebar-customize.js';
 // framework.js: html, on, createPage 유틸 (page-*.js에서 사용)
 // 여기서는 직접 사용하지 않으므로 import 불필요
 
@@ -722,6 +723,7 @@ async function initAppAfterAuth() {
   updateSidebarBadges();
   renderQuickAccess();
   updatePlanDisplay();
+  initSidebarCustomize();
   await navigateTo(startPage);
   // 泥?濡쒓렇???ъ슜?먯뿉寃??⑤낫??留덈쾿???쒖떆
   checkAndShowOnboarding(navigateTo);
