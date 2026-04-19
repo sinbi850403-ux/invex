@@ -7,11 +7,14 @@ import './style.css';
 import { initErrorMonitor, setMonitorUser, clearMonitorUser } from './error-monitor.js';
 import { initAuth, getCurrentUser, getUserProfileData, loginWithGoogle, loginWithEmail, signupWithEmail, resetPassword } from './auth.js';
 import { initTheme } from './theme.js';
-import { injectGetCurrentUser, injectGetUserProfile } from './plan.js';
+import { injectGetCurrentUser, injectGetUserProfile, getPageBadge, getCurrentPlan, PLANS, setPlan } from './plan.js';
 import { getNotificationCount } from './notifications.js';
 import { showToast } from './toast.js';
 import { isAdmin } from './admin-auth.js';
 import { navigateTo, injectRouterCallbacks, PAGE_LOADERS, LAST_PAGE_KEY, renderQuickAccess } from './router.js';
+import { initGlobalSearch } from './global-search.js';
+import { restoreState } from './store.js';
+import { checkAndShowOnboarding } from './onboarding.js';
 // framework.js: html, on, createPage 유틸 (page-*.js에서 사용)
 // 여기서는 직접 사용하지 않으므로 import 불필요
 
