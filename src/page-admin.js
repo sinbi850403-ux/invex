@@ -9,8 +9,7 @@ import { getState, setState } from './store.js';
 import { showToast } from './toast.js';
 import { getCurrentUser } from './auth.js';
 import { PLANS } from './plan.js';
-import { db, isConfigured } from './backend-config.js';
-import { collection, getDocs, doc, updateDoc, deleteDoc, query, orderBy } from './backend-store.js';
+import { supabase } from './supabase-client.js';
 
 // ═══════════════════════════════════════════
 // 총관리자(사이트 소유자) 이메일 목록
@@ -31,14 +30,21 @@ export function isAdmin() {
 }
 
 /**
- * 백엔드 사용자 목록 가져오기
+ * 백엔드 사용자 목록 가져오기 (Supabase profiles 테이블)
  * 관리자 권한 체크
  */
 async function fetchAllUsers() {
-  if (!isConfigured || !db) return [];
   try {
-    const snap = await getDocs(collection(db, 'users'));
-    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.warn('사용자 목록 조회 실패:', error);
+      return [];
+    }
+    return Array.isArray(data) ? data : [];
   } catch (e) {
     console.warn('사용자 목록 조회 실패:', e);
     return [];
