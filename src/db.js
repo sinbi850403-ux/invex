@@ -11,6 +11,20 @@
 
 import { supabase, isSupabaseConfigured } from './supabase-client.js';
 
+const DB_TIMEOUT_MS = 15_000;
+
+/**
+ * Supabase 쿼리에 타임아웃을 적용하는 래퍼
+ * 왜 필요? → 네트워크 지연 시 무한 대기 → UI 스피너 갇힘 방지
+ */
+function withDbTimeout(queryPromise, label = 'DB query') {
+  let timer;
+  const timeout = new Promise((_, reject) => {
+    timer = setTimeout(() => reject(new Error(`${label} timeout (${DB_TIMEOUT_MS}ms)`)), DB_TIMEOUT_MS);
+  });
+  return Promise.race([queryPromise, timeout]).finally(() => clearTimeout(timer));
+}
+
 /**
  * 에러 핸들링 유틸 — Supabase 에러를 통일된 형태로 변환
  */
@@ -25,7 +39,7 @@ function handleError(error, context) {
  * 현재 로그인한 사용자 ID를 안전하게 가져오기
  */
 async function getUserId() {
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { user } } = await withDbTimeout(supabase.auth.getUser(), 'getUser');
   if (!user) throw new Error('로그인이 필요합니다.');
   return user.id;
 }
@@ -73,12 +87,10 @@ export const items = {
    */
   async get(itemId) {
     const userId = await getUserId();
-    const { data, error } = await supabase
-      .from('items')
-      .select('*')
-      .eq('id', itemId)
-      .eq('user_id', userId)
-      .single();
+    const { data, error } = await withDbTimeout(
+      supabase.from('items').select('*').eq('id', itemId).eq('user_id', userId).single(),
+      '품목 상세 조회'
+    );
     handleError(error, '품목 상세 조회');
     return data;
   },
@@ -89,11 +101,10 @@ export const items = {
    */
   async create(item) {
     const userId = await getUserId();
-    const { data, error } = await supabase
-      .from('items')
-      .insert({ ...item, user_id: userId })
-      .select()
-      .single();
+    const { data, error } = await withDbTimeout(
+      supabase.from('items').insert({ ...item, user_id: userId }).select().single(),
+      '품목 생성'
+    );
     handleError(error, '품목 생성');
     return data;
   },
@@ -579,7 +590,10 @@ export const employees = {
   },
   async get(id) {
     const userId = await getUserId();
-    const { data, error } = await supabase.from('employees').select('*').eq('id', id).eq('user_id', userId).single();
+    const { data, error } = await withDbTimeout(
+      supabase.from('employees').select('*').eq('id', id).eq('user_id', userId).single(),
+      '직원 상세'
+    );
     handleError(error, '직원 상세');
     return dbEmployeeToStore(data);
   },
@@ -587,7 +601,10 @@ export const employees = {
     const userId = await getUserId();
     const rrnPlain = emp._rrnPlain;
     const row = storeEmployeeToDb(emp);
-    const { data, error } = await supabase.from('employees').insert({ ...row, user_id: userId }).select().single();
+    const { data, error } = await withDbTimeout(
+      supabase.from('employees').insert({ ...row, user_id: userId }).select().single(),
+      '직원 등록'
+    );
     handleError(error, '직원 등록');
     if (rrnPlain && data?.id) {
       const { error: e2 } = await supabase.rpc('set_employee_rrn', { emp_id: data.id, plain: rrnPlain });

@@ -1456,12 +1456,15 @@ export function renderInventoryPage(container, navigateTo) {
     colPanel.classList.remove('open');
   });
 
-  // 페이지당 행 수
-  document.addEventListener('click', (e) => {
+  const colPanelClickOutside = (e) => {
     if (!colPanel.contains(e.target) && e.target !== colBtn) {
       colPanel.classList.remove('open');
     }
-  });
+  };
+  document.addEventListener('click', colPanelClickOutside);
+  container.addEventListener('invex:page-unload', () => {
+    document.removeEventListener('click', colPanelClickOutside);
+  }, { once: true });
 
   // 페이지당 행 수
   container.querySelector('#col-select-all').addEventListener('click', () => {

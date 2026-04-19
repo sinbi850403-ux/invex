@@ -9,8 +9,8 @@ import { getState, setState } from './store.js';
 import { showToast } from './toast.js';
 import { PLANS, getCurrentPlan, setPlan } from './plan.js';
 
-// 토스페이먼츠 클라이언트 키 (테스트 키 → 실서비스 시 교체)
-const TOSS_CLIENT_KEY = 'test_ck_D5GePWvyJnrK0W0k6q8gLzN97Eoq';
+// 토스페이먼츠 클라이언트 키 (.env의 VITE_TOSS_CLIENT_KEY 우선, 폴백으로 테스트 키)
+const TOSS_CLIENT_KEY = import.meta.env.VITE_TOSS_CLIENT_KEY || 'test_ck_D5GePWvyJnrK0W0k6q8gLzN97Eoq';
 
 /**
  * 날짜 포맷
@@ -225,7 +225,14 @@ export function renderBillingPage(container, navigateTo) {
 
       // 토스페이먼츠 결제 실행
       try {
-        const TossPayments = await loadTossSDK();
+        let TossPayments;
+        try {
+          TossPayments = await loadTossSDK();
+        } catch (sdkErr) {
+          console.error('Toss SDK 로드 실패:', sdkErr.message);
+          showToast('결제 모듈을 불러올 수 없습니다. 잠시 후 다시 시도해 주세요.', 'error');
+          return;
+        }
         const tossPayments = TossPayments(TOSS_CLIENT_KEY);
 
         const orderId = 'invex_' + Date.now().toString(36);

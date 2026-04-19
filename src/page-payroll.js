@@ -74,7 +74,8 @@ export async function renderPayrollPage(container, navigateTo) {
 
   const now = new Date();
   const defaultMonth = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
-  container.querySelector('#payroll-month').value = defaultMonth;
+  const monthInput = container.querySelector('#payroll-month');
+  if (monthInput) monthInput.value = defaultMonth;
 
   let currentPayrolls = [];
   let currentYear = now.getFullYear();

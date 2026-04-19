@@ -158,9 +158,15 @@ async function loadProfile(user) {
         created_at: new Date().toISOString(),
       };
 
-      const { error: insertError } = await supabase.from('profiles').insert(newProfile);
+      let { error: insertError } = await supabase.from('profiles').insert(newProfile);
+      if (insertError) {
+        // 1회 재시도 (네트워크 순간 실패 대비)
+        await new Promise(r => setTimeout(r, 1500));
+        ({ error: insertError } = await supabase.from('profiles').insert(newProfile));
+      }
       if (insertError) {
         console.warn('[Auth] profile bootstrap failed:', insertError.message);
+        window.dispatchEvent(new CustomEvent('invex:profile-load-failed'));
         return fallback;
       }
 

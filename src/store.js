@@ -161,6 +161,8 @@ async function saveToDB() {
       };
       localStorage.setItem('invex-fallback', JSON.stringify(slim));
     } catch (_) { /* 무시 */ }
+    // 사용자에게 오프라인 저장 실패 알림
+    window.dispatchEvent(new CustomEvent('invex:idb-failed', { detail: { reason: e.message } }));
   }
 }
 
@@ -326,8 +328,11 @@ export function setState(partial) {
   const changedKeys = Object.keys(partial);
 
   state = { ...state, ...partial };
-  // 비동기로 로컬 저장 (UI 블로킹 방지)
-  saveToDB();
+  // 비동기로 로컬 저장 — 실패 시 invex:idb-failed 이벤트 dispatch
+  saveToDB().catch(e => {
+    console.warn('[Store] setState → saveToDB 실패:', e.message);
+    window.dispatchEvent(new CustomEvent('invex:idb-failed', { detail: { reason: e.message } }));
+  });
   // 클라우드 동기화 트리거
   if (_syncCallback) _syncCallback();
   // Supabase 부분 동기화 (디바운스)

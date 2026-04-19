@@ -200,8 +200,16 @@ window.addEventListener('notifications-updated', () => {
   syncExternalNotifications();
 });
 
-window.addEventListener('invex:sync-failed', (e) => {
+window.addEventListener('invex:sync-failed', () => {
   showToast('일부 데이터가 클라우드에 저장되지 않았습니다. 잠시 후 재시도합니다.', 'warning');
+});
+
+window.addEventListener('invex:idb-failed', () => {
+  showToast('로컬 저장에 실패했습니다. 브라우저 저장공간을 확인하세요.', 'warning');
+});
+
+window.addEventListener('invex:profile-load-failed', () => {
+  showToast('프로필 로드에 실패했습니다. 페이지를 새로고침하세요.', 'error');
 });
 
 const CARD_STATE_KEY = 'invex_card_state_v1';
@@ -694,6 +702,20 @@ window.invexNav = navigateTo;
 // ??珥덇린??(濡쒓렇???꾨즺 ???몄텧)
 // ??遺꾨━? ???몄쬆 ?뺤씤 ?꾩뿉 IndexedDB 蹂듭썝?섎㈃ 鍮??곗씠?곌? 濡쒕뱶?????덉쓬
 async function initAppAfterAuth() {
+  // Supabase health check
+  if (isSupabaseConfigured) {
+    try {
+      const { error } = await Promise.race([
+        supabase.from('profiles').select('id').limit(1),
+        new Promise((_, rej) => setTimeout(() => rej(new Error('health check timeout')), 8000)),
+      ]);
+      if (error) throw error;
+    } catch (e) {
+      console.warn('[Health] Supabase 연결 불안정:', e.message);
+      showToast('서버 연결이 불안정합니다. 일부 기능이 제한될 수 있습니다.', 'warning');
+    }
+  }
+
   await restoreState();
   const lastPage = localStorage.getItem(LAST_PAGE_KEY);
   const startPage = (lastPage && PAGE_LOADERS[lastPage]) ? lastPage : 'home';
@@ -706,7 +728,7 @@ async function initAppAfterAuth() {
 }
 
 // Supabase 미설정(로컬 개발) 시에는 게이트 자동 제거
-import { isSupabaseConfigured } from './supabase-client.js';
+import { isSupabaseConfigured, supabase } from './supabase-client.js';
 if (!isSupabaseConfigured) {
   const gate = document.getElementById('auth-gate');
   if (gate) gate.style.display = 'none';

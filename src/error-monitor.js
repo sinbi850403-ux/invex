@@ -38,12 +38,28 @@ export function initErrorMonitor() {
       environment: window.location.hostname === 'invex.io.kr' ? 'production' : 'development',
       // 왜 0.5? → 무료 플랜은 월 5,000건 제한이므로 50%만 샘플링
       tracesSampleRate: 0.5,
-      // 민감한 사용자 정보는 수집하지 않음
       beforeSend(event) {
-        // 이메일, 비밀번호 등 민감 정보 필터링
-        if (event.request && event.request.data) {
+        // request body 제거
+        if (event.request) {
           delete event.request.data;
+          delete event.request.cookies;
         }
+        // user 정보는 id만 유지 (이메일 제거)
+        if (event.user) {
+          event.user = { id: event.user.id };
+        }
+        // extra/contexts에서 민감 키 제거
+        const SENSITIVE = ['password', 'token', 'secret', 'accountNo', 'rrn', 'email'];
+        const scrub = (obj) => {
+          if (!obj || typeof obj !== 'object') return obj;
+          for (const key of Object.keys(obj)) {
+            if (SENSITIVE.some(s => key.toLowerCase().includes(s))) obj[key] = '[Filtered]';
+            else if (typeof obj[key] === 'object') scrub(obj[key]);
+          }
+          return obj;
+        };
+        scrub(event.extra);
+        scrub(event.contexts);
         return event;
       },
     });
@@ -59,12 +75,13 @@ export function initErrorMonitor() {
  * 왜 필요? → 사용자가 겪는 오류를 실시간으로 감지해야
  * 주의: 이메일은 보내되 비밀번호 등 민감 정보는 절대 보내지 않음
  */
-export function setMonitorUser(userId, email) {
+export function setMonitorUser(userId) {
   if (!SENTRY_DSN) return;
   try {
-    Sentry.setUser({ id: userId, email });
+    // id만 전송 — 이메일 등 개인정보는 Sentry에 보내지 않음
+    Sentry.setUser({ id: userId });
   } catch (err) {
-    // 무시 - 모니터링 실패가 앱 동작에 영향을 주면 안 됨
+    // 무시
   }
 }
 

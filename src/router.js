@@ -264,6 +264,7 @@ export async function navigateTo(pageName) {
       throw new Error(`렌더러가 함수가 아닙니다: ${pageName}`);
     }
 
+    main.dispatchEvent(new CustomEvent('invex:page-unload', { bubbles: false }));
     main.innerHTML = '';
     renderPage(main, navigateTo);
 
