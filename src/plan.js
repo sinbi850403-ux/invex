@@ -21,7 +21,10 @@ export const PLANS = {
     // Free에서 접근 가능한 페이지
     pages: [
       'home', 'upload', 'mapping', 'inventory', 'inout', 'settings', 'billing', 'admin',
-      'mypage', 'guide', 'support',
+      'mypage', 'guide', 'support', 'team', 'backup', 'referral',
+      // 허브 페이지 — 요금제와 무관하게 항상 접근 가능 (네비게이션 역할)
+      'hub-data', 'hub-inventory', 'hub-warehouse', 'hub-order',
+      'hub-report', 'hub-documents', 'hub-settings', 'hub-support', 'hub-hr',
     ],
   },
   pro: {
@@ -38,8 +41,13 @@ export const PLANS = {
     pages: [
       'home', 'upload', 'mapping', 'inventory', 'inout', 'settings',
       'bulk', 'scanner', 'labels', 'transfer', 'stocktake', 'vendors',
-      'summary', 'dashboard', 'costing', 'accounts', 'ledger', 'documents', 'auditlog', 'billing', 'admin',
-      'mypage', 'guide', 'support',
+      'summary', 'dashboard', 'costing', 'accounts', 'ledger', 'documents', 'auditlog',
+      'billing', 'admin', 'mypage', 'guide', 'support', 'team', 'backup', 'referral',
+      'tax-reports', 'auto-order', 'orders', 'profit', 'forecast', 'weekly-report',
+      'pos', 'scanner', 'labels',
+      // 허브 페이지 — 요금제와 무관하게 항상 접근 가능
+      'hub-data', 'hub-inventory', 'hub-warehouse', 'hub-order',
+      'hub-report', 'hub-documents', 'hub-settings', 'hub-support', 'hub-hr',
     ],
   },
   enterprise: {
@@ -59,6 +67,10 @@ export const PLANS = {
 
 // 각 페이지가 어느 요금제부터 사용 가능한지 매핑
 const PAGE_MIN_PLAN = {
+  // 허브 페이지 — 항상 무료 (네비게이션 전용)
+  'hub-data': 'free', 'hub-inventory': 'free', 'hub-warehouse': 'free',
+  'hub-order': 'free', 'hub-report': 'free', 'hub-documents': 'free',
+  'hub-settings': 'free', 'hub-support': 'free', 'hub-hr': 'free',
   // Free 기능
   home: 'free', upload: 'free', mapping: 'free',
   inventory: 'free', inout: 'free', settings: 'free', billing: 'free', admin: 'free',
