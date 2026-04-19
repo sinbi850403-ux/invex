@@ -22,8 +22,8 @@ export const INSURANCE_RATES = {
   // 건강보험 (Health Insurance)
   hi: 0.03545,
 
-  // 장기요양 (Long-term Care Insurance) = 건강보험료 × 12.81%
-  ltc_rate: 0.1281,
+  // 장기요양 (Long-term Care Insurance) = 건강보험료 × 12.95%
+  ltc_rate: 0.1295,
 
   // 고용보험 (Employment Insurance)
   ei: 0.009,
