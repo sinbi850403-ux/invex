@@ -120,9 +120,12 @@ export const items = {
       user_id: userId,
     }));
     const dedupedMap = new Map();
+    const normalizeItemName = (value) => String(value ?? '').trim().toLowerCase();
     rows.forEach((row) => {
-      const key = String(row.item_name ?? '');
-      dedupedMap.set(key, row);
+      const normalizedName = normalizeItemName(row.item_name);
+      if (!normalizedName) return;
+      const key = `${userId}::${normalizedName}`;
+      dedupedMap.set(key, { ...row, item_name: String(row.item_name ?? '').trim() });
     });
     const dedupedRows = [...dedupedMap.values()];
 

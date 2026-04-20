@@ -187,6 +187,44 @@ async function loadFromDB() {
 let _supabaseSyncTimer = null;
 // 어떤 데이터가 변경됐는지 추적
 let _dirtyKeys = new Set();
+let _waitingAuthResume = false;
+let _authResumeSubscription = null;
+
+function getErrorMessage(error) {
+  if (!error) return '';
+  if (typeof error === 'string') return error;
+  if (typeof error.message === 'string') return error.message;
+  if (typeof error.error_description === 'string') return error.error_description;
+  return String(error);
+}
+
+function isAuthLikeSyncError(error) {
+  const message = getErrorMessage(error).toLowerCase();
+  return (
+    message.includes('로그인이 필요') ||
+    message.includes('login required') ||
+    message.includes('jwt') ||
+    message.includes('401') ||
+    message.includes('row-level security') ||
+    message.includes('permission denied') ||
+    message.includes('not authenticated') ||
+    message.includes('invalid claim')
+  );
+}
+
+function waitForAuthThenSync() {
+  if (_waitingAuthResume || !isSupabaseConfigured) return;
+  _waitingAuthResume = true;
+  const { data } = supabase.auth.onAuthStateChange((_event, session) => {
+    if (session?.user) {
+      _waitingAuthResume = false;
+      _authResumeSubscription?.unsubscribe?.();
+      _authResumeSubscription = null;
+      syncToSupabase();
+    }
+  });
+  _authResumeSubscription = data?.subscription || null;
+}
 
 /**
  * 변경된 데이터만 Supabase에 동기화
@@ -195,13 +233,17 @@ let _dirtyKeys = new Set();
 async function syncToSupabase() {
   if (!isSupabaseConfigured || _dirtyKeys.size === 0) return;
   const { data: { session } } = await supabase.auth.getSession();
-  if (!session?.user) return;
+  if (!session?.user) {
+    waitForAuthThenSync();
+    return;
+  }
 
   const keysToSync = new Set(_dirtyKeys);
   _dirtyKeys.clear();
 
   // 실패한 키를 추적해 재시도 보장
   const failedKeys = new Set();
+  let authBlocked = false;
 
   try {
     const promises = [];
@@ -212,7 +254,11 @@ async function syncToSupabase() {
       promises.push(
         managedQuery(() => db.items.bulkUpsert(items))
           .then(result => console.log(`[Sync] 품목 ${result.length}건 동기화`))
-          .catch(err => { console.warn('[Sync] 품목 동기화 실패:', err.message); failedKeys.add('mappedData'); })
+          .catch(err => {
+            console.warn('[Sync] 품목 동기화 실패:', getErrorMessage(err));
+            if (isAuthLikeSyncError(err)) authBlocked = true;
+            failedKeys.add('mappedData');
+          })
       );
     }
 
@@ -238,7 +284,11 @@ async function syncToSupabase() {
               console.log(`[Sync] 입출고 ${result.length}건 동기화`);
               state.transactions.forEach(tx => { tx._synced = true; });
             })
-            .catch(err => { console.warn('[Sync] 입출고 동기화 실패:', err.message); failedKeys.add('transactions'); })
+            .catch(err => {
+              console.warn('[Sync] 입출고 동기화 실패:', getErrorMessage(err));
+              if (isAuthLikeSyncError(err)) authBlocked = true;
+              failedKeys.add('transactions');
+            })
         );
       }
     }
@@ -283,6 +333,10 @@ async function syncToSupabase() {
     // 실패한 키는 다시 dirty로 등록해 재시도 보장
     if (failedKeys.size > 0) {
       failedKeys.forEach(k => _dirtyKeys.add(k));
+      if (authBlocked) {
+        waitForAuthThenSync();
+        return;
+      }
       window.dispatchEvent(new CustomEvent('invex:sync-failed', { detail: { keys: [...failedKeys] } }));
       console.warn('[Sync] 실패 항목 재시도 예약:', [...failedKeys]);
       // 10초 후 재시도 (즉시 재시도는 루프 위험)
@@ -291,7 +345,11 @@ async function syncToSupabase() {
   } catch (err) {
     // 전체 실패 시 모든 키 복원
     keysToSync.forEach(k => _dirtyKeys.add(k));
-    console.warn('[Sync] Supabase 동기화 전체 오류, 재시도 예약:', err.message);
+    if (isAuthLikeSyncError(err)) {
+      waitForAuthThenSync();
+      return;
+    }
+    console.warn('[Sync] Supabase 동기화 전체 오류, 재시도 예약:', getErrorMessage(err));
     setTimeout(() => syncToSupabase(), 10_000);
   }
 }

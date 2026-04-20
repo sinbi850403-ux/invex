@@ -1447,18 +1447,19 @@ export function renderInventoryPage(container, navigateTo) {
   const colBtn = container.querySelector('#btn-col-settings');
 
   // 패널 열기/닫기
-  colBtn.addEventListener('click', (e) => {
+  colBtn?.addEventListener('click', (e) => {
     e.stopPropagation();
-    colPanel.classList.toggle('open');
+    colPanel?.classList.toggle('open');
   });
 
-  container.querySelector('#col-settings-close').addEventListener('click', () => {
-    colPanel.classList.remove('open');
+  container.querySelector('#col-settings-close')?.addEventListener('click', () => {
+    colPanel?.classList.remove('open');
   });
 
   const colPanelClickOutside = (e) => {
+    if (!colPanel || !colBtn) return;
     if (!colPanel.contains(e.target) && e.target !== colBtn) {
-      colPanel.classList.remove('open');
+      colPanel?.classList.remove('open');
     }
   };
   document.addEventListener('click', colPanelClickOutside);
@@ -1467,12 +1468,12 @@ export function renderInventoryPage(container, navigateTo) {
   }, { once: true });
 
   // 페이지당 행 수
-  container.querySelector('#col-select-all').addEventListener('click', () => {
+  container.querySelector('#col-select-all')?.addEventListener('click', () => {
     container.querySelectorAll('.col-check').forEach(cb => { cb.checked = true; });
   });
 
   // 페이지당 행 수
-  container.querySelector('#col-apply').addEventListener('click', () => {
+  container.querySelector('#col-apply')?.addEventListener('click', () => {
     const checked = [];
     container.querySelectorAll('.col-check:checked').forEach(cb => {
       checked.push(cb.dataset.key);
@@ -1493,7 +1494,7 @@ export function renderInventoryPage(container, navigateTo) {
     // 테이블 헤더+바디 다시 그리기
     renderTableHeader();
     renderTable();
-    colPanel.classList.remove('open');
+    colPanel?.classList.remove('open');
     showToast(`${checked.length}개 항목을 표시하도록 적용했습니다.`, 'success');
   });
 
@@ -1563,38 +1564,38 @@ export function renderInventoryPage(container, navigateTo) {
     });
   });
 
-  container.querySelector('#search-input').addEventListener('input', (e) => {
+  container.querySelector('#search-input')?.addEventListener('input', (e) => {
     applyKeywordFilter(e.target.value);
   });
-  container.querySelector('#filter-item-code').addEventListener('change', (e) => {
+  container.querySelector('#filter-item-code')?.addEventListener('change', (e) => {
     currentFilter.itemCode = e.target.value;
     currentPageNum = 1;
     renderTable();
     highlightActiveFilters();
     persistInventoryPrefs();
   });
-  container.querySelector('#filter-vendor').addEventListener('change', (e) => {
+  container.querySelector('#filter-vendor')?.addEventListener('change', (e) => {
     currentFilter.vendor = e.target.value;
     currentPageNum = 1;
     renderTable();
     highlightActiveFilters();
     persistInventoryPrefs();
   });
-  container.querySelector('#filter-category').addEventListener('change', (e) => {
+  container.querySelector('#filter-category')?.addEventListener('change', (e) => {
     currentFilter.category = e.target.value;
     currentPageNum = 1;
     renderTable();
     highlightActiveFilters();
     persistInventoryPrefs();
   });
-  container.querySelector('#filter-warehouse').addEventListener('change', (e) => {
+  container.querySelector('#filter-warehouse')?.addEventListener('change', (e) => {
     currentFilter.warehouse = e.target.value;
     currentPageNum = 1;
     renderTable();
     highlightActiveFilters();
     persistInventoryPrefs();
   });
-  container.querySelector('#filter-stock').addEventListener('change', (e) => {
+  container.querySelector('#filter-stock')?.addEventListener('change', (e) => {
     currentFilter.stock = e.target.value;
     if (e.target.value === 'low') currentFilter.focus = 'low';
     else if (currentFilter.focus === 'low') currentFilter.focus = 'all';
@@ -1604,7 +1605,7 @@ export function renderInventoryPage(container, navigateTo) {
     syncFocusChips();
     persistInventoryPrefs();
   });
-  container.querySelector('#sort-preset').addEventListener('change', (e) => {
+  container.querySelector('#sort-preset')?.addEventListener('change', (e) => {
     currentSort = sanitizeInventorySort(parseSortPreset(e.target.value));
     currentPageNum = 1;
     renderTableHeader();
@@ -1613,16 +1614,23 @@ export function renderInventoryPage(container, navigateTo) {
   });
 
   // 패널 열기/닫기
-  container.querySelector('#btn-filter-reset').addEventListener('click', () => {
+  container.querySelector('#btn-filter-reset')?.addEventListener('click', () => {
     currentFilter = { ...defaultFilter };
     currentSort = { ...defaultSort };
-    container.querySelector('#search-input').value = '';
-    container.querySelector('#filter-item-code').value = '';
-    container.querySelector('#filter-vendor').value = '';
-    container.querySelector('#filter-category').value = '';
-    container.querySelector('#filter-warehouse').value = '';
-    container.querySelector('#filter-stock').value = '';
-    container.querySelector('#sort-preset').value = 'default';
+    const resetSearchInputEl = container.querySelector('#search-input');
+    if (resetSearchInputEl) resetSearchInputEl.value = '';
+    const resetFilterItemCodeEl = container.querySelector('#filter-item-code');
+    if (resetFilterItemCodeEl) resetFilterItemCodeEl.value = '';
+    const resetFilterVendorEl = container.querySelector('#filter-vendor');
+    if (resetFilterVendorEl) resetFilterVendorEl.value = '';
+    const resetFilterCategoryEl = container.querySelector('#filter-category');
+    if (resetFilterCategoryEl) resetFilterCategoryEl.value = '';
+    const resetFilterWarehouseEl = container.querySelector('#filter-warehouse');
+    if (resetFilterWarehouseEl) resetFilterWarehouseEl.value = '';
+    const resetFilterStockEl = container.querySelector('#filter-stock');
+    if (resetFilterStockEl) resetFilterStockEl.value = '';
+    const resetSortPresetEl = container.querySelector('#sort-preset');
+    if (resetSortPresetEl) resetSortPresetEl.value = 'default';
     currentPageNum = 1;
     renderTableHeader();
     renderTable();
@@ -1668,7 +1676,7 @@ export function renderInventoryPage(container, navigateTo) {
   });
 
   // 페이지당 행 수
-  container.querySelector('#btn-export').addEventListener('click', () => {
+  container.querySelector('#btn-export')?.addEventListener('click', () => {
     try {
       const exportData = data.map(row => {
         const obj = {};
@@ -1694,13 +1702,20 @@ export function renderInventoryPage(container, navigateTo) {
   });
 
   // === 상태 변수 ===
-  container.querySelector('#search-input').value = currentFilter.keyword;
-  container.querySelector('#filter-item-code').value = currentFilter.itemCode;
-  container.querySelector('#filter-vendor').value = currentFilter.vendor;
-  container.querySelector('#filter-category').value = currentFilter.category;
-  container.querySelector('#filter-warehouse').value = currentFilter.warehouse;
-  container.querySelector('#filter-stock').value = currentFilter.stock;
-  container.querySelector('#sort-preset').value = getSortPresetValue(currentSort);
+  const searchInputEl = container.querySelector('#search-input');
+  if (searchInputEl) searchInputEl.value = currentFilter.keyword;
+  const filterItemCodeEl = container.querySelector('#filter-item-code');
+  if (filterItemCodeEl) filterItemCodeEl.value = currentFilter.itemCode;
+  const filterVendorEl = container.querySelector('#filter-vendor');
+  if (filterVendorEl) filterVendorEl.value = currentFilter.vendor;
+  const filterCategoryEl = container.querySelector('#filter-category');
+  if (filterCategoryEl) filterCategoryEl.value = currentFilter.category;
+  const filterWarehouseEl = container.querySelector('#filter-warehouse');
+  if (filterWarehouseEl) filterWarehouseEl.value = currentFilter.warehouse;
+  const filterStockEl = container.querySelector('#filter-stock');
+  if (filterStockEl) filterStockEl.value = currentFilter.stock;
+  const sortPresetEl = container.querySelector('#sort-preset');
+  if (sortPresetEl) sortPresetEl.value = getSortPresetValue(currentSort);
   renderTableHeader();
   renderTable();
   highlightActiveFilters();

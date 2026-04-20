@@ -7,6 +7,42 @@ export function escapeHtml(value) {
     .replace(/'/g, '&#39;');
 }
 
+export function setInputValue(inputEl, value) {
+  if (!inputEl) return;
+  inputEl.value = value == null ? '' : String(value);
+}
+
+export function fillSelectOptions(selectEl, options = [], { placeholder = null } = {}) {
+  if (!selectEl) return;
+  selectEl.textContent = '';
+
+  if (placeholder !== null) {
+    const first = document.createElement('option');
+    first.value = '';
+    first.textContent = String(placeholder);
+    selectEl.appendChild(first);
+  }
+
+  options.forEach((entry) => {
+    const option = document.createElement('option');
+    if (typeof entry === 'string' || typeof entry === 'number') {
+      option.value = String(entry);
+      option.textContent = String(entry);
+    } else {
+      option.value = String(entry?.value ?? '');
+      option.textContent = String(entry?.label ?? entry?.value ?? '');
+      if (entry?.disabled) option.disabled = true;
+      if (entry?.selected) option.selected = true;
+      if (entry?.dataset && typeof entry.dataset === 'object') {
+        Object.entries(entry.dataset).forEach(([key, val]) => {
+          if (val != null) option.dataset[key] = String(val);
+        });
+      }
+    }
+    selectEl.appendChild(option);
+  });
+}
+
 // ─── 폼 유효성 검증 헬퍼 ──────────────────────────────────────────────────────
 
 /**
