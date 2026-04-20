@@ -196,15 +196,14 @@ export async function renderAdminPage(container, navigateTo) {
             </select>
           </div>
         </div>
-        <div style="max-height:460px; overflow-y:auto;">
-          <table class="data-table" id="admin-users-table" style="margin:0;">
+        <div style="max-height:460px; overflow-y:auto; overflow-x:auto;">
+          <table class="data-table" id="admin-users-table" style="margin:0; min-width:600px;">
             <thead style="position:sticky; top:0; z-index:1;"><tr>
               <th style="padding-left:20px;">사용자</th>
               <th>요금제</th>
-              <th>가입일</th>
               <th>최근 접속</th>
               <th>상태</th>
-              <th style="text-align:center; width:120px;">관리</th>
+              <th style="text-align:center; width:130px;">관리</th>
             </tr></thead>
             <tbody>
               ${allUsers.length > 0 ? allUsers.map(u => renderUserRow(u)).join('') : `
@@ -489,7 +488,6 @@ function renderUserRow(u) {
           ${planInfo.icon} ${planId.toUpperCase()}
         </span>
       </td>
-      <td style="font-size:11px; color:var(--text-muted);">${fmt(u.createdAt)}</td>
       <td>
         <div style="font-size:11px; ${isOnline ? 'color:#22c55e; font-weight:600;' : 'color:var(--text-muted);'}">
           ${isOnline ? '🟢 온라인' : timeAgo(u.lastLogin)}
