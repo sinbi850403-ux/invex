@@ -81,7 +81,7 @@ async function fetchAllUsers(attempt = 1) {
 
     const queryPromise = supabase
       .from('profiles')
-      .select('id, email, name, photo_url, role, plan, status, created_at, last_login_at')
+      .select('*')
       .order('created_at', { ascending: false });
 
     const { data, error } = await Promise.race([queryPromise, timeoutPromise]);
