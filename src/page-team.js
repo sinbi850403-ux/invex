@@ -15,6 +15,16 @@ import {
   removeMember,
   getFreePeriodInfo,
 } from './workspace.js';
+import { escapeHtml } from './ux-toolkit.js';
+
+function safeAttr(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
 
 export async function renderTeamPage(container, navigateTo) {
   const user = getCurrentUser();
@@ -110,7 +120,7 @@ export async function renderTeamPage(container, navigateTo) {
     <div class="stat-grid" style="grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));">
       <div class="stat-card">
         <div class="stat-label">워크스페이스</div>
-        <div class="stat-value" style="font-size:16px;">${meta?.name || '-'}</div>
+        <div class="stat-value" style="font-size:16px;">${escapeHtml(meta?.name || '-')}</div>
       </div>
       <div class="stat-card">
         <div class="stat-label">총 팀원</div>
@@ -150,10 +160,10 @@ export async function renderTeamPage(container, navigateTo) {
                 <tr>
                   <td style="font-size:20px; text-align:center;">${rl.icon}</td>
                   <td>
-                    <strong>${m.name || '사용자'}</strong>
+                    <strong>${escapeHtml(m.name || '사용자')}</strong>
                     ${isMe ? '<span class="badge badge-info" style="margin-left:6px; font-size:10px;">나</span>' : ''}
                   </td>
-                  <td style="font-size:12px; color:var(--text-muted);">${m.email || '-'}</td>
+                  <td style="font-size:12px; color:var(--text-muted);">${escapeHtml(m.email || '-')}</td>
                   <td>
                     <span class="badge" style="background:${rl.color}20; color:${rl.color}; border:1px solid ${rl.color}40;">
                       ${rl.text}
@@ -163,7 +173,7 @@ export async function renderTeamPage(container, navigateTo) {
                   ${isOwner ? `
                     <td>
                       ${!isMe && m.role !== 'owner' ? `
-                        <button class="btn-icon btn-icon-danger btn-remove-member" data-uid="${m.uid}" data-name="${m.name}" title="제거">🗑️</button>
+                        <button class="btn-icon btn-icon-danger btn-remove-member" data-uid="${safeAttr(m.uid)}" data-name="${safeAttr(m.name)}" title="제거">🗑️</button>
                       ` : ''}
                     </td>
                   ` : ''}

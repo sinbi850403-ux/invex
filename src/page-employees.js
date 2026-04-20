@@ -12,6 +12,15 @@ import { addAuditLog } from './audit-log.js';
 
 const EMP_TYPES = ['정규직', '계약직', '시급직', '일용직'];
 
+function safeAttr(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
 function fmtWon(n) {
   const v = parseFloat(n) || 0;
   return v ? '₩' + v.toLocaleString('ko-KR') : '-';
@@ -106,7 +115,7 @@ function renderTable(container, all) {
         </thead>
         <tbody>
           ${rows.map(e => `
-            <tr data-id="${e.id}">
+            <tr data-id="${safeAttr(e.id)}">
               <td><strong>${escapeHtml(e.empNo || '')}</strong></td>
               <td>${escapeHtml(e.name || '')}</td>
               <td>${escapeHtml(e.dept || '-')} / ${escapeHtml(e.position || '-')}</td>
@@ -115,11 +124,11 @@ function renderTable(container, all) {
               <td class="text-right">${fmtWon(e.baseSalary)}</td>
               <td style="font-family:monospace; font-size:12px;">
                 ${e.rrnMask || '-'}
-                ${e.rrnMask ? `<button class="btn-icon emp-view-rrn" data-id="${e.id}" title="평문 조회(admin)">🔓</button>` : ''}
+                ${e.rrnMask ? `<button class="btn-icon emp-view-rrn" data-id="${safeAttr(e.id)}" title="평문 조회(admin)">🔓</button>` : ''}
               </td>
               <td>
-                <button class="btn-icon emp-edit" data-id="${e.id}">✏️</button>
-                <button class="btn-icon btn-icon-danger emp-del" data-id="${e.id}">✕</button>
+                <button class="btn-icon emp-edit" data-id="${safeAttr(e.id)}">✏️</button>
+                <button class="btn-icon btn-icon-danger emp-del" data-id="${safeAttr(e.id)}">✕</button>
               </td>
             </tr>
           `).join('')}
@@ -171,36 +180,36 @@ function openModal(container, emp) {
       </div>
       <div class="modal-body">
         <div class="form-row">
-          <div class="form-group"><label>사번 *</label><input id="f-empNo" class="form-input" value="${escapeHtml(emp?.empNo || '')}" /></div>
-          <div class="form-group"><label>이름 *</label><input id="f-name" class="form-input" value="${escapeHtml(emp?.name || '')}" /></div>
+          <div class="form-group"><label>사번 *</label><input id="f-empNo" class="form-input" value="${safeAttr(emp?.empNo || '')}" /></div>
+          <div class="form-group"><label>이름 *</label><input id="f-name" class="form-input" value="${safeAttr(emp?.name || '')}" /></div>
         </div>
         <div class="form-row">
-          <div class="form-group"><label>부서</label><input id="f-dept" class="form-input" value="${escapeHtml(emp?.dept || '')}" /></div>
-          <div class="form-group"><label>직급</label><input id="f-position" class="form-input" value="${escapeHtml(emp?.position || '')}" /></div>
+          <div class="form-group"><label>부서</label><input id="f-dept" class="form-input" value="${safeAttr(emp?.dept || '')}" /></div>
+          <div class="form-group"><label>직급</label><input id="f-position" class="form-input" value="${safeAttr(emp?.position || '')}" /></div>
         </div>
         <div class="form-row">
-          <div class="form-group"><label>입사일 *</label><input id="f-hireDate" type="date" class="form-input" value="${emp?.hireDate || ''}" /></div>
+          <div class="form-group"><label>입사일 *</label><input id="f-hireDate" type="date" class="form-input" value="${safeAttr(emp?.hireDate || '')}" /></div>
           <div class="form-group"><label>고용형태</label>
             <select id="f-employmentType" class="form-select">
-              ${EMP_TYPES.map(t => `<option ${emp?.employmentType === t ? 'selected' : ''}>${t}</option>`).join('')}
+              ${EMP_TYPES.map(t => `<option value="${safeAttr(t)}" ${emp?.employmentType === t ? 'selected' : ''}>${escapeHtml(t)}</option>`).join('')}
             </select>
           </div>
         </div>
         <div class="form-row">
-          <div class="form-group"><label>기본급(월)</label><input id="f-baseSalary" type="number" class="form-input" value="${emp?.baseSalary || 0}" /></div>
-          <div class="form-group"><label>시급</label><input id="f-hourlyWage" type="number" class="form-input" value="${emp?.hourlyWage || 0}" /></div>
+          <div class="form-group"><label>기본급(월)</label><input id="f-baseSalary" type="number" class="form-input" value="${safeAttr(emp?.baseSalary || 0)}" /></div>
+          <div class="form-group"><label>시급</label><input id="f-hourlyWage" type="number" class="form-input" value="${safeAttr(emp?.hourlyWage || 0)}" /></div>
         </div>
         <div class="form-row">
-          <div class="form-group"><label>연락처</label><input id="f-phone" class="form-input" value="${escapeHtml(emp?.phone || '')}" /></div>
-          <div class="form-group"><label>이메일</label><input id="f-email" type="email" class="form-input" value="${escapeHtml(emp?.email || '')}" /></div>
+          <div class="form-group"><label>연락처</label><input id="f-phone" class="form-input" value="${safeAttr(emp?.phone || '')}" /></div>
+          <div class="form-group"><label>이메일</label><input id="f-email" type="email" class="form-input" value="${safeAttr(emp?.email || '')}" /></div>
         </div>
         <div class="form-row">
-          <div class="form-group"><label>은행</label><input id="f-bank" class="form-input" value="${escapeHtml(emp?.bank || '')}" /></div>
-          <div class="form-group"><label>계좌번호</label><input id="f-accountNo" class="form-input" value="${escapeHtml(emp?.accountNo || '')}" /></div>
+          <div class="form-group"><label>은행</label><input id="f-bank" class="form-input" value="${safeAttr(emp?.bank || '')}" /></div>
+          <div class="form-group"><label>계좌번호</label><input id="f-accountNo" class="form-input" value="${safeAttr(emp?.accountNo || '')}" /></div>
         </div>
         <div class="form-row">
-          <div class="form-group"><label>부양가족수</label><input id="f-dependents" type="number" class="form-input" value="${emp?.dependents || 0}" min="0" /></div>
-          <div class="form-group"><label>20세 이하 자녀수</label><input id="f-children" type="number" class="form-input" value="${emp?.children || 0}" min="0" /></div>
+          <div class="form-group"><label>부양가족수</label><input id="f-dependents" type="number" class="form-input" value="${safeAttr(emp?.dependents || 0)}" min="0" /></div>
+          <div class="form-group"><label>20세 이하 자녀수</label><input id="f-children" type="number" class="form-input" value="${safeAttr(emp?.children || 0)}" min="0" /></div>
         </div>
         <div class="form-group">
           <label>주민등록번호 ${isEdit ? '(변경 시에만 입력)' : ''}</label>
@@ -224,7 +233,7 @@ function openModal(container, emp) {
             <option value="resigned" ${emp.status === 'resigned' ? 'selected' : ''}>퇴사</option>
           </select>
         </div>
-        <div class="form-group"><label>퇴사일</label><input id="f-resignDate" type="date" class="form-input" value="${emp?.resignDate || ''}" /></div>
+        <div class="form-group"><label>퇴사일</label><input id="f-resignDate" type="date" class="form-input" value="${safeAttr(emp?.resignDate || '')}" /></div>
         ` : ''}
       </div>
       <div class="modal-footer">

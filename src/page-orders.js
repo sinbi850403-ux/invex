@@ -10,6 +10,15 @@ import { addAuditLog } from './audit-log.js';
 import { generatePurchaseOrderPDF } from './pdf-generator.js';
 import { escapeHtml } from './ux-toolkit.js';
 
+function safeAttr(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
 /* ── 상수 ──────────────────────────────────────────────── */
 const STATUS = {
   draft:     { text: '작성중',   icon: '📝', color: 'var(--text-muted)',  bg: 'rgba(139,148,158,.15)' },
@@ -211,7 +220,7 @@ function renderOrderTable(orders) {
             return `
               <tr>
                 <td>
-                  <button class="btn-order-detail" data-id="${order.id}"
+                  <button class="btn-order-detail" data-id="${safeAttr(order.id)}"
                     style="background:none; border:none; color:var(--accent); cursor:pointer; font-weight:700; padding:0;">
                     ${escapeHtml(order.orderNo || '-')}
                   </button>
@@ -239,18 +248,18 @@ function renderOrderTable(orders) {
                 <td>
                   <div style="display:flex; gap:4px; flex-wrap:wrap;">
                     ${(order.status === 'draft' || order.status === 'pending') ? `
-                      <button class="btn btn-xs btn-primary btn-confirm-order" data-id="${order.id}">확정</button>
-                      <button class="btn btn-xs btn-outline btn-edit-order" data-id="${order.id}">수정</button>
+                      <button class="btn btn-xs btn-primary btn-confirm-order" data-id="${safeAttr(order.id)}">확정</button>
+                      <button class="btn btn-xs btn-outline btn-edit-order" data-id="${safeAttr(order.id)}">수정</button>
                     ` : ''}
                     ${(order.status === 'confirmed' || order.status === 'sent' || order.status === 'partial') ? `
-                      <button class="btn btn-xs btn-success btn-receive-order" data-id="${order.id}">입고처리</button>
+                      <button class="btn btn-xs btn-success btn-receive-order" data-id="${safeAttr(order.id)}">입고처리</button>
                     ` : ''}
                     ${order.status === 'complete' && !order.taxInvoiceId ? `
-                      <button class="btn btn-xs btn-outline btn-gen-tax" data-id="${order.id}" title="세금계산서 발행">세금계산서</button>
+                      <button class="btn btn-xs btn-outline btn-gen-tax" data-id="${safeAttr(order.id)}" title="세금계산서 발행">세금계산서</button>
                     ` : ''}
-                    <button class="btn btn-xs btn-outline btn-pdf-order" data-id="${order.id}" title="PDF">PDF</button>
+                    <button class="btn btn-xs btn-outline btn-pdf-order" data-id="${safeAttr(order.id)}" title="PDF">PDF</button>
                     ${order.status === 'draft' || order.status === 'pending' ? `
-                      <button class="btn btn-xs btn-icon-danger btn-cancel-order" data-id="${order.id}">취소</button>
+                      <button class="btn btn-xs btn-icon-danger btn-cancel-order" data-id="${safeAttr(order.id)}">취소</button>
                     ` : ''}
                   </div>
                 </td>
@@ -357,7 +366,7 @@ function openOrderModal(container, editOrder, navigateTo) {
 
   body.innerHTML = `
     <datalist id="om-item-list">
-      ${items.map(it => `<option value="${escapeHtml(it.itemName)}" data-code="${escapeHtml(it.itemCode || '')}" data-price="${it.unitPrice || 0}" data-spec="${escapeHtml(it.spec || '')}">`).join('')}
+      ${items.map(it => `<option value="${safeAttr(it.itemName)}" data-code="${safeAttr(it.itemCode || '')}" data-price="${safeAttr(it.unitPrice || 0)}" data-spec="${safeAttr(it.spec || '')}">`).join('')}
     </datalist>
 
     <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px;">
@@ -365,28 +374,28 @@ function openOrderModal(container, editOrder, navigateTo) {
         <label class="form-label">거래처 <span class="required">*</span></label>
         <select class="form-select" id="om-vendor">
           <option value="">-- 선택 --</option>
-          ${vendors.map(v => `<option value="${escapeHtml(v.name)}" data-terms="${v.paymentTerm || ''}" ${e.vendor === v.name ? 'selected' : ''}>${escapeHtml(v.name)}</option>`).join('')}
-          ${e.vendor && !vendors.find(v => v.name === e.vendor) ? `<option value="${escapeHtml(e.vendor)}" selected>${escapeHtml(e.vendor)}</option>` : ''}
+          ${vendors.map(v => `<option value="${safeAttr(v.name)}" data-terms="${safeAttr(v.paymentTerm || '')}" ${e.vendor === v.name ? 'selected' : ''}>${escapeHtml(v.name)}</option>`).join('')}
+          ${e.vendor && !vendors.find(v => v.name === e.vendor) ? `<option value="${safeAttr(e.vendor)}" selected>${escapeHtml(e.vendor)}</option>` : ''}
         </select>
       </div>
       <div class="form-group" style="margin:0;">
         <label class="form-label">발주일 <span class="required">*</span></label>
-        <input class="form-input" type="date" id="om-date" value="${e.orderDate || new Date().toISOString().split('T')[0]}" />
+        <input class="form-input" type="date" id="om-date" value="${safeAttr(e.orderDate || new Date().toISOString().split('T')[0])}" />
       </div>
     </div>
     <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px;">
       <div class="form-group" style="margin:0;">
         <label class="form-label">납기 예정일</label>
-        <input class="form-input" type="date" id="om-delivery" value="${e.deliveryDate || dueDate(e.orderDate, 7)}" />
+        <input class="form-input" type="date" id="om-delivery" value="${safeAttr(e.deliveryDate || dueDate(e.orderDate, 7))}" />
       </div>
       <div class="form-group" style="margin:0;">
         <label class="form-label">결제 예정일</label>
-        <input class="form-input" type="date" id="om-payment" value="${e.paymentDueDate || dueDate(e.orderDate, 30)}" />
+        <input class="form-input" type="date" id="om-payment" value="${safeAttr(e.paymentDueDate || dueDate(e.orderDate, 30))}" />
       </div>
     </div>
     <div class="form-group" style="margin-bottom:16px;">
       <label class="form-label">비고</label>
-      <input class="form-input" id="om-note" value="${escapeHtml(e.note || '')}" placeholder="메모 (선택)" />
+      <input class="form-input" id="om-note" value="${safeAttr(e.note || '')}" placeholder="메모 (선택)" />
     </div>
 
     <!-- 품목 테이블 -->
@@ -478,7 +487,10 @@ function openOrderModal(container, editOrder, navigateTo) {
   body.querySelector('#om-add-item').addEventListener('click', () => {
     const tbody = body.querySelector('#om-items-tbody');
     const idx = tbody.querySelectorAll('.om-item-row').length;
-    tbody.insertAdjacentHTML('beforeend', renderOrderItemRow({}, idx));
+    const temp = document.createElement('tbody');
+    temp.innerHTML = renderOrderItemRow({}, idx);
+    const nextRow = temp.firstElementChild;
+    if (nextRow) tbody.appendChild(nextRow);
     bindItemRowEvents(body, recalcTotal, items);
     recalcTotal();
   });
@@ -535,16 +547,16 @@ function renderOrderItemRow(it, idx) {
   return `
     <tr class="om-item-row" style="border-top:1px solid var(--border);">
       <td style="padding:6px 8px;">
-        <input class="form-input om-name" list="om-item-list" value="${escapeHtml(it.name || '')}" placeholder="품목명" style="min-width:140px;" />
+        <input class="form-input om-name" list="om-item-list" value="${safeAttr(it.name || '')}" placeholder="품목명" style="min-width:140px;" />
       </td>
       <td style="padding:6px 8px;">
-        <input class="form-input om-code" value="${escapeHtml(it.itemCode || '')}" placeholder="코드" style="width:80px; font-size:11px;" />
+        <input class="form-input om-code" value="${safeAttr(it.itemCode || '')}" placeholder="코드" style="width:80px; font-size:11px;" />
       </td>
       <td style="padding:6px 8px;">
-        <input class="form-input om-qty" type="number" min="1" value="${it.qty || ''}" placeholder="0" style="width:70px; text-align:right;" />
+        <input class="form-input om-qty" type="number" min="1" value="${safeAttr(it.qty || '')}" placeholder="0" style="width:70px; text-align:right;" />
       </td>
       <td style="padding:6px 8px;">
-        <input class="form-input om-price" type="number" min="0" value="${it.price || ''}" placeholder="0" style="width:100px; text-align:right;" />
+        <input class="form-input om-price" type="number" min="0" value="${safeAttr(it.price || '')}" placeholder="0" style="width:100px; text-align:right;" />
       </td>
       <td style="padding:6px 8px; text-align:right; font-weight:600;" class="om-amt">-</td>
       <td style="padding:6px 4px; text-align:center;">
@@ -705,8 +717,8 @@ function openReceiveModal(container, order, navigateTo) {
               <td style="padding:8px 10px; text-align:right;">${ordered.toLocaleString('ko-KR')}</td>
               <td style="padding:8px 10px; text-align:right; color:var(--text-muted);">${already.toLocaleString('ko-KR')}</td>
               <td style="padding:8px 10px; text-align:right;">
-                <input type="number" class="form-input receive-qty" data-idx="${i}" data-max="${remaining}"
-                  value="${remaining}" min="0" max="${remaining}"
+                <input type="number" class="form-input receive-qty" data-idx="${safeAttr(i)}" data-max="${safeAttr(remaining)}"
+                  value="${safeAttr(remaining)}" min="0" max="${safeAttr(remaining)}"
                   style="width:80px; text-align:right; ${remaining <= 0 ? 'opacity:.5;' : ''}"
                   ${remaining <= 0 ? 'disabled' : ''} />
               </td>

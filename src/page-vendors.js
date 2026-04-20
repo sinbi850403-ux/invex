@@ -9,6 +9,15 @@ import { showToast } from './toast.js';
 import { downloadExcel } from './excel.js';
 import { escapeHtml } from './ux-toolkit.js';
 
+function safeAttr(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
 /* ── 자동 거래처 코드 생성 ──────────────────────────────── */
 function genVendorCode(vendors, type) {
   const prefix = type === 'customer' ? 'C' : type === 'both' ? 'B' : 'S';
@@ -140,7 +149,7 @@ export function renderVendorsPage(container, navigateTo) {
           `).join('')}
         </div>
         <input class="form-input" id="vendor-search" placeholder="🔍 거래처명·코드·담당자·사업자번호 검색..."
-          value="${escapeHtml(currentKeyword)}" style="flex:1; min-width:200px;" />
+          value="${safeAttr(currentKeyword)}" style="flex:1; min-width:200px;" />
       </div>
     </div>
 
@@ -285,7 +294,7 @@ function renderVendorTable(vendors, txs, statsMap) {
                   <td style="font-size:11px; color:var(--text-muted); font-family:monospace;">${escapeHtml(v.code || '-')}</td>
                   <td><span class="badge ${TYPE_BADGE[v.type] || 'badge-default'}">${TYPE_LABEL[v.type] || '-'}</span></td>
                   <td>
-                    <button class="vendor-detail-btn" data-idx="${realIdx}"
+                    <button class="vendor-detail-btn" data-idx="${safeAttr(realIdx)}"
                       style="background:none; border:none; color:var(--accent); cursor:pointer; font-weight:700; font-size:14px; padding:0; text-align:left;">
                       ${escapeHtml(v.name)}
                     </button>
@@ -302,9 +311,9 @@ function renderVendorTable(vendors, txs, statsMap) {
                   <td style="font-size:12px; color:var(--text-muted);">${s.lastDate ? s.lastDate.slice(0,10) : '-'}</td>
                   <td>
                     <div style="display:flex; gap:4px;">
-                      <button class="btn btn-xs btn-outline vendor-detail-btn" data-idx="${realIdx}" title="상세보기">상세</button>
-                      <button class="btn btn-xs btn-outline vendor-edit" data-idx="${realIdx}" title="수정">수정</button>
-                      <button class="btn btn-xs btn-icon-danger vendor-delete" data-idx="${realIdx}" title="삭제">삭제</button>
+                      <button class="btn btn-xs btn-outline vendor-detail-btn" data-idx="${safeAttr(realIdx)}" title="상세보기">상세</button>
+                      <button class="btn btn-xs btn-outline vendor-edit" data-idx="${safeAttr(realIdx)}" title="수정">수정</button>
+                      <button class="btn btn-xs btn-icon-danger vendor-delete" data-idx="${safeAttr(realIdx)}" title="삭제">삭제</button>
                     </div>
                   </td>
                 </tr>`;
@@ -492,36 +501,36 @@ function openVendorModal(container, editVendor, vendors, navigateTo) {
           </div>
           <div class="form-group" style="margin:0;">
             <label class="form-label">거래처 코드</label>
-            <input class="form-input" id="vm-code" value="${escapeHtml(d.code || suggestedCode)}" placeholder="자동생성" />
+            <input class="form-input" id="vm-code" value="${safeAttr(d.code || suggestedCode)}" placeholder="자동생성" />
           </div>
         </div>
         <div class="form-group" style="margin-bottom:12px;">
           <label class="form-label">거래처명 <span class="required">*</span></label>
-          <input class="form-input" id="vm-name" value="${escapeHtml(d.name || '')}" placeholder="예: (주)삼성전자" />
+          <input class="form-input" id="vm-name" value="${safeAttr(d.name || '')}" placeholder="예: (주)삼성전자" />
         </div>
         <div class="form-row" style="margin-bottom:12px;">
           <div class="form-group" style="margin:0;">
             <label class="form-label">사업자번호</label>
-            <input class="form-input" id="vm-biz" value="${escapeHtml(d.bizNumber || '')}" placeholder="000-00-00000" />
+            <input class="form-input" id="vm-biz" value="${safeAttr(d.bizNumber || '')}" placeholder="000-00-00000" />
           </div>
           <div class="form-group" style="margin:0;">
             <label class="form-label">대표자명</label>
-            <input class="form-input" id="vm-ceo" value="${escapeHtml(d.ceoName || '')}" />
+            <input class="form-input" id="vm-ceo" value="${safeAttr(d.ceoName || '')}" />
           </div>
         </div>
         <div class="form-row" style="margin-bottom:12px;">
           <div class="form-group" style="margin:0;">
             <label class="form-label">업태</label>
-            <input class="form-input" id="vm-biztype" value="${escapeHtml(d.bizType || '')}" placeholder="예: 제조업" />
+            <input class="form-input" id="vm-biztype" value="${safeAttr(d.bizType || '')}" placeholder="예: 제조업" />
           </div>
           <div class="form-group" style="margin:0;">
             <label class="form-label">종목</label>
-            <input class="form-input" id="vm-bizitem" value="${escapeHtml(d.bizItem || '')}" placeholder="예: 전자부품" />
+            <input class="form-input" id="vm-bizitem" value="${safeAttr(d.bizItem || '')}" placeholder="예: 전자부품" />
           </div>
         </div>
         <div class="form-group" style="margin-bottom:12px;">
           <label class="form-label">주소</label>
-          <input class="form-input" id="vm-address" value="${escapeHtml(d.address || '')}" />
+          <input class="form-input" id="vm-address" value="${safeAttr(d.address || '')}" />
         </div>
       </div>
 
@@ -531,21 +540,21 @@ function openVendorModal(container, editVendor, vendors, navigateTo) {
         <div class="form-row" style="margin-bottom:12px;">
           <div class="form-group" style="margin:0;">
             <label class="form-label">담당자명</label>
-            <input class="form-input" id="vm-contact" value="${escapeHtml(d.contactName || '')}" />
+            <input class="form-input" id="vm-contact" value="${safeAttr(d.contactName || '')}" />
           </div>
           <div class="form-group" style="margin:0;">
             <label class="form-label">연락처</label>
-            <input class="form-input" id="vm-phone" value="${escapeHtml(d.phone || '')}" placeholder="010-0000-0000" />
+            <input class="form-input" id="vm-phone" value="${safeAttr(d.phone || '')}" placeholder="010-0000-0000" />
           </div>
         </div>
         <div class="form-row" style="margin-bottom:12px;">
           <div class="form-group" style="margin:0;">
             <label class="form-label">이메일</label>
-            <input class="form-input" id="vm-email" value="${escapeHtml(d.email || '')}" type="email" />
+            <input class="form-input" id="vm-email" value="${safeAttr(d.email || '')}" type="email" />
           </div>
           <div class="form-group" style="margin:0;">
             <label class="form-label">팩스</label>
-            <input class="form-input" id="vm-fax" value="${escapeHtml(d.fax || '')}" />
+            <input class="form-input" id="vm-fax" value="${safeAttr(d.fax || '')}" />
           </div>
         </div>
 
@@ -554,12 +563,12 @@ function openVendorModal(container, editVendor, vendors, navigateTo) {
           <div class="form-group" style="margin:0;">
             <label class="form-label">결제조건</label>
             <select class="form-select" id="vm-payterm">
-              ${PAYMENT_TERMS.map(p => `<option value="${p.value}" ${d.paymentTerm === p.value ? 'selected' : ''}>${p.label}</option>`).join('')}
+              ${PAYMENT_TERMS.map(p => `<option value="${safeAttr(p.value)}" ${d.paymentTerm === p.value ? 'selected' : ''}>${escapeHtml(p.label)}</option>`).join('')}
             </select>
           </div>
           <div class="form-group" style="margin:0;">
             <label class="form-label">신용한도 (₩)</label>
-            <input class="form-input" id="vm-credit" type="number" value="${d.creditLimit || ''}" placeholder="0" />
+            <input class="form-input" id="vm-credit" type="number" value="${safeAttr(d.creditLimit || '')}" placeholder="0" />
           </div>
         </div>
 
@@ -567,23 +576,23 @@ function openVendorModal(container, editVendor, vendors, navigateTo) {
         <div class="form-row" style="margin-bottom:12px;">
           <div class="form-group" style="margin:0;">
             <label class="form-label">은행명</label>
-            <input class="form-input" id="vm-bank-name" value="${escapeHtml(d.bankName || '')}" placeholder="국민은행" />
+            <input class="form-input" id="vm-bank-name" value="${safeAttr(d.bankName || '')}" placeholder="국민은행" />
           </div>
           <div class="form-group" style="margin:0;">
             <label class="form-label">예금주</label>
-            <input class="form-input" id="vm-bank-holder" value="${escapeHtml(d.bankHolder || '')}" />
+            <input class="form-input" id="vm-bank-holder" value="${safeAttr(d.bankHolder || '')}" />
           </div>
         </div>
         <div class="form-group" style="margin-bottom:12px;">
           <label class="form-label">계좌번호</label>
-          <input class="form-input" id="vm-bank-account" value="${escapeHtml(d.bankAccount || '')}" placeholder="000-000-000000" />
+          <input class="form-input" id="vm-bank-account" value="${safeAttr(d.bankAccount || '')}" placeholder="000-000-000000" />
         </div>
       </div>
     </div>
 
     <div class="form-group" style="margin-bottom:16px;">
       <label class="form-label">비고</label>
-      <input class="form-input" id="vm-note" value="${escapeHtml(d.note || '')}" placeholder="특이사항, 메모 등" />
+      <input class="form-input" id="vm-note" value="${safeAttr(d.note || '')}" placeholder="특이사항, 메모 등" />
     </div>
 
     <div style="display:flex; gap:8px; justify-content:flex-end; padding-top:12px; border-top:1px solid var(--border);">
