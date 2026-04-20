@@ -41,7 +41,14 @@ function showAuthGate() {
   if (gate) { gate.style.display = 'flex'; gate.style.opacity = '1'; }
 }
 
-['landing-goto-login', 'landing-cta-signup', 'landing-cta-bottom'].forEach(id => {
+[
+  'landing-goto-login',
+  'landing-cta-signup',
+  'landing-cta-bottom',
+  'landing-pricing-free',
+  'landing-pricing-pro',
+  'landing-pricing-enterprise',
+].forEach(id => {
   document.getElementById(id)?.addEventListener('click', showAuthGate);
 });
 
@@ -675,10 +682,11 @@ toggleBtn?.addEventListener('click', () => {
 
 overlay?.addEventListener('click', closeSidebar);
 
-// 사이드바 nav 클릭 — document 레벨 이벤트 위임 (sidebar null 방어)
-document.addEventListener("click", e => {
-  const btn = e.target.closest(".nav-btn[data-page], .nav-btn-rich[data-page], [data-page].nav-btn");
-  if (btn && btn.closest("#sidebar")) navigateTo(btn.dataset.page);
+// 사이드바 nav 클릭 — #sidebar 범위에서만 이벤트 위임
+sidebar?.addEventListener('click', (e) => {
+  const btn = e.target.closest('.nav-btn[data-page]');
+  if (!btn || !sidebar.contains(btn)) return;
+  navigateTo(btn.dataset.page);
 });
 
 // 라우터에 콜백 주입 (사이드바 닫기 / 카드 접기 / 알림 배지)
@@ -687,9 +695,6 @@ injectRouterCallbacks({
   closeSidebar,
   updateNotifBadge,
 });
-
-// 전역 네비게이션 (HTML onclick 속성 및 콘솔 디버깅용)
-window.invexNav = navigateTo;
 
 // === ?곗씠??諛깆뾽 / 蹂듭썝 ===
 
