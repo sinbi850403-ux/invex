@@ -145,7 +145,7 @@ export function renderForecastPage(container, navigateTo) {
             <thead>
               <tr>
                 <th>품목명</th>
-                <th>최근 6개월 추이</th>
+                <th data-auto-sort-ignore="true">최근 6개월 추이</th>
                 <th>월평균</th>
                 <th>추세</th>
                 <th class="text-right" style="color:var(--accent); font-weight:700;">예측 수량</th>

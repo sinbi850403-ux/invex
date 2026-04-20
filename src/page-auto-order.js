@@ -7,21 +7,7 @@
 
 import { getState, setState } from './store.js';
 import { showToast } from './toast.js';
-import { addAuditLog } from './audit-log.js';
-
-// ─── 발주번호 생성 (page-orders.js 와 동일 로직) ───────────────────────────
-function genOrderNo(orders, date) {
-  const d = (date || new Date().toISOString().slice(0, 10)).replace(/-/g, '');
-  const today = orders.filter(o => (o.orderNo || '').includes(d));
-  const seq = String(today.length + 1).padStart(3, '0');
-  return `PO-${d}-${seq}`;
-}
-
-function dueDate(base, days) {
-  const d = new Date(base || Date.now());
-  d.setDate(d.getDate() + days);
-  return d.toISOString().slice(0, 10);
-}
+import { openPurchaseOrderDraft } from './purchase-order-draft.js';
 
 export function renderAutoOrderPage(container, navigateTo) {
   const state   = getState();
@@ -263,65 +249,38 @@ export function renderAutoOrderPage(container, navigateTo) {
     cb.addEventListener('change', updateSelectionUI);
   });
 
-  // 발주서 생성 공통 함수
-  const createOrders = (indices) => {
-    if (!indices.length) { showToast('발주서를 생성할 항목이 없습니다.', 'warning'); return; }
+  const openDraftForIndices = (indices) => {
+    if (!indices.length) {
+      showToast('발주서를 만들 항목이 없습니다.', 'warning');
+      return;
+    }
 
-    const selected = indices.map(i => recommendations[i]);
-    const state2   = getState();
-    const orders   = state2.purchaseOrders || [];
-    const today    = new Date().toISOString().slice(0, 10);
-
-    // 거래처별로 묶어서 발주서 생성
-    const byVendor = {};
-    selected.forEach(r => {
-      const v = r.bestVendor || '(미지정)';
-      if (!byVendor[v]) byVendor[v] = { vendorCode: r.bestVendorCode || '', items: [] };
-      byVendor[v].items.push({
-        name:     r.itemName,
-        itemCode: r.itemCode,
-        qty:      r.recommendQty,
-        price:    r.bestPrice,
-      });
+    const selectedItems = indices.map(index => recommendations[index]).filter(Boolean);
+    const ok = openPurchaseOrderDraft({
+      setState,
+      navigateTo,
+      source: 'auto-order',
+      items: selectedItems,
+      note: '자동 발주 추천에서 선택한 품목입니다.',
     });
 
-    const newOrders = Object.entries(byVendor).map(([vendor, info]) => ({
-      id:            Date.now() + '_' + Math.random().toString(36).slice(2, 6),
-      orderNo:       genOrderNo([...orders], today),
-      orderDate:     today,
-      deliveryDate:  dueDate(today, 7),
-      paymentDueDate: dueDate(today, 30),
-      vendor,
-      vendorCode:    info.vendorCode,
-      note:          '자동 발주 추천에서 생성',
-      items:         info.items,
-      status:        'draft',
-      createdAt:     new Date().toISOString(),
-      updatedAt:     new Date().toISOString(),
-      payableEntryId: '',
-      taxInvoiceId:  '',
-    }));
+    if (!ok) {
+      showToast('발주서 초안을 만들 수 없습니다.', 'warning');
+      return;
+    }
 
-    setState({ purchaseOrders: [...orders, ...newOrders] });
-    newOrders.forEach(o => {
-      addAuditLog('자동발주생성', o.orderNo, { vendor: o.vendor, items: o.items.length });
-    });
-
-    showToast(`발주서 ${newOrders.length}건 생성 완료! 발주 관리에서 확인하세요.`, 'success');
-    navigateTo('orders');
+    showToast(`${selectedItems.length}개 품목을 발주서 초안에 담았습니다.`, 'success');
   };
 
   // 전체 발주서 생성
-  container.querySelector('#btn-create-all').addEventListener('click', () => {
-    if (!confirm(`추천 품목 ${recommendations.length}건으로 발주서를 생성하시겠습니까?\n거래처별로 묶어서 draft 상태로 저장됩니다.`)) return;
-    createOrders(recommendations.map((_, i) => i));
+  container.querySelector('#btn-create-all')?.addEventListener('click', () => {
+    openDraftForIndices(recommendations.map((_, i) => i));
   });
 
   // 선택 항목 발주서 생성
-  container.querySelector('#btn-create-selected').addEventListener('click', () => {
+  container.querySelector('#btn-create-selected')?.addEventListener('click', () => {
     const indices = [...container.querySelectorAll('.order-check:checked')].map(cb => parseInt(cb.dataset.idx, 10));
-    if (!confirm(`선택한 ${indices.length}건으로 발주서를 생성하시겠습니까?`)) return;
-    createOrders(indices);
+    openDraftForIndices(indices);
   });
 }
 

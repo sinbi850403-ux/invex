@@ -4,8 +4,9 @@
  * 왜 필수? → 대량 입고/출고를 품목 하나씩 하면 시간 낭비. 자동 발주는 기회 손실 방지.
  */
 
-import { getState, addTransaction } from './store.js';
+import { getState, addTransaction, setState } from './store.js';
 import { showToast } from './toast.js';
+import { openPurchaseOrderDraft } from './purchase-order-draft.js';
 
 export function renderBulkPage(container, navigateTo) {
   const state = getState();
@@ -174,7 +175,20 @@ export function renderBulkPage(container, navigateTo) {
 
   // === 자동 발주 추천 이벤트 ===
   container.querySelector('#btn-reorder-all')?.addEventListener('click', () => {
-    navigateTo('documents');
+    const ok = openPurchaseOrderDraft({
+      setState,
+      navigateTo,
+      source: 'bulk-reorder',
+      items: reorderItems,
+      note: '일괄 처리의 자동 발주 추천 품목입니다.',
+    });
+
+    if (!ok) {
+      showToast('발주서로 넘길 추천 품목이 없습니다.', 'warning');
+      return;
+    }
+
+    showToast(`${reorderItems.length}개 추천 품목을 발주서 초안에 담았습니다.`, 'success');
   });
 }
 

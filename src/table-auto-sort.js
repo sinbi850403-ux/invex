@@ -61,7 +61,10 @@ function shouldSkipTable(table) {
   const tbody = table.tBodies[0];
   if (!thead || !tbody || !tbody.rows.length) return true;
 
-  return Array.from(thead.querySelectorAll('th')).some(th => {
+  const headerCells = Array.from(thead.querySelectorAll('th'));
+  if (headerCells.some(th => hasInteractiveHeader(th))) return true;
+
+  return headerCells.some(th => {
     const isCustomSortable = th.dataset.sortKey || (th.classList.contains('sortable-header') && !th.dataset.autoSortKey);
     return Boolean(isCustomSortable);
   });
@@ -115,7 +118,7 @@ function decorateHeaders(table) {
     cell.dataset.autoSortDisplayLabel = displayLabel;
     cell.dataset.autoSortNormalizedLabel = normalizedLabel;
 
-    if (!isSortableColumn(normalizedLabel, index)) {
+    if (cell.dataset.autoSortIgnore === 'true' || !isSortableColumn(normalizedLabel, index)) {
       cell.removeAttribute('data-auto-sort-key');
       cell.classList.remove('sortable-header', 'is-active');
       cell.removeAttribute('aria-sort');
@@ -270,10 +273,16 @@ function getHeaderRow(table) {
 }
 
 function isSortableColumn(label, index) {
+  if (!label) return false;
   if (index === 0 && ['#', 'no', '번호', '순위'].includes(label)) {
     return false;
   }
   return !NON_SORTABLE_HEADERS.has(label);
+}
+
+function hasInteractiveHeader(cell) {
+  if (!cell) return false;
+  return Boolean(cell.querySelector('input, select, textarea, button, label, [role="button"]'));
 }
 
 function compareRows(a, b, columnIndex, direction, type) {

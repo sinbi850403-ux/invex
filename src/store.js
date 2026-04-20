@@ -70,6 +70,8 @@ const DEFAULT_STATE = {
   salesOrders: [],      // [{id, orderNo, customer, items, status, shippedItems, receivableEntryId, ...}]
   // 세금계산서 (매입/매출 공용)
   taxInvoices: [],      // [{id, invoiceNo, type, vendor/customer, items, supply, vat, total, ...}]
+  // 문서 작성용 임시 draft
+  documentDraft: null,
   // 통화 설정
   currency: { code: 'KRW', symbol: '₩', rate: 1 },
   // 사용자명
@@ -151,6 +153,7 @@ async function saveToDB() {
         mappedData: state.mappedData,
         transactions: state.transactions,
         safetyStock: state.safetyStock,
+        documentDraft: state.documentDraft,
         fileName: state.fileName,
         currentStep: state.currentStep,
         beginnerMode: state.beginnerMode,

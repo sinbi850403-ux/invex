@@ -9,7 +9,7 @@ import { applyPlugin } from 'jspdf-autotable';
 
 // jsPDF에 autoTable 플러그인 연결 (ESM 환경에서 필수)
 applyPlugin(jsPDF);
-import { getState } from './store.js';
+import { getState, setState } from './store.js';
 import { showToast } from './toast.js';
 import { applyKoreanFont, getKoreanFontStyle } from './pdf-font.js';
 import { renderGuidedPanel, renderInsightHero } from './ux-toolkit.js';
@@ -21,6 +21,7 @@ export function renderDocumentsPage(container, navigateTo) {
   const state = getState();
   const items = state.mappedData || [];
   const safetyStock = state.safetyStock || {};
+  const documentDraft = state.documentDraft || null;
 
   // 안전재고 부족 품목 (발주 추천)
   const lowStockItems = items.filter(d => {
@@ -126,6 +127,9 @@ export function renderDocumentsPage(container, navigateTo) {
 
   // 초기 렌더링
   renderDocEditor('purchase');
+  if (documentDraft) {
+    setState({ documentDraft: null });
+  }
 
   /**
    * 문서 편집기 렌더링
@@ -134,7 +138,7 @@ export function renderDocumentsPage(container, navigateTo) {
     const docContent = container.querySelector('#doc-content');
 
     if (type === 'purchase') {
-      renderPurchaseOrder(docContent, items, lowStockItems, vendors, safetyStock);
+      renderPurchaseOrder(docContent, items, lowStockItems, vendors, safetyStock, documentDraft);
     } else if (type === 'quote') {
       renderQuote(docContent, items);
     } else if (type === 'statement') {
@@ -147,13 +151,22 @@ export function renderDocumentsPage(container, navigateTo) {
  * 발주서 작성 UI
  * 왜: 안전재고 부족 품목을 자동으로 추천 + 거래처별 그룹화
  */
-function renderPurchaseOrder(el, items, lowStockItems, vendors, safetyStock) {
+function renderPurchaseOrder(el, items, lowStockItems, vendors, safetyStock, documentDraft) {
   const today = new Date().toISOString().split('T')[0];
+  const draftItems = documentDraft?.type === 'purchase' ? (documentDraft.items || []) : [];
+  const sourceItems = draftItems.length > 0 ? draftItems : (lowStockItems.length > 0 ? lowStockItems : items.slice(0, 10));
+  const draftVendor = documentDraft?.type === 'purchase' ? (documentDraft.vendor || '') : '';
+  const draftNote = documentDraft?.type === 'purchase' ? (documentDraft.note || '') : '';
+  const purchaseVendors = [...new Set([...vendors, draftVendor].filter(Boolean))];
 
   el.innerHTML = `
     <div class="card-title">📋 발주서 작성</div>
 
-    ${lowStockItems.length > 0 ? `
+    ${draftItems.length > 0 ? `
+      <div class="alert alert-info" style="margin-bottom:16px;">
+        선택한 발주 추천 품목 <strong>${draftItems.length}건</strong>을 문서 작성 화면으로 가져왔습니다.
+      </div>
+    ` : lowStockItems.length > 0 ? `
       <div class="alert alert-warning" style="margin-bottom:16px;">
         ⚠️ 안전재고 부족 품목이 <strong>${lowStockItems.length}건</strong> 있습니다. 자동으로 추천합니다.
       </div>
@@ -168,7 +181,7 @@ function renderPurchaseOrder(el, items, lowStockItems, vendors, safetyStock) {
         <label class="form-label">거래처 선택</label>
         <select class="form-select" id="po-vendor">
           <option value="">전체 거래처</option>
-          ${vendors.map(v => `<option value="${v}">${v}</option>`).join('')}
+          ${purchaseVendors.map(v => `<option value="${v}" ${draftVendor === v ? 'selected' : ''}>${v}</option>`).join('')}
         </select>
       </div>
     </div>
@@ -200,11 +213,11 @@ function renderPurchaseOrder(el, items, lowStockItems, vendors, safetyStock) {
           </tr>
         </thead>
         <tbody id="po-items-body">
-          ${(lowStockItems.length > 0 ? lowStockItems : items.slice(0, 10)).map((item, i) => {
+          ${sourceItems.map((item, i) => {
             const currentQty = parseFloat(item.quantity) || 0;
-            const minQty = safetyStock[item.itemName] || 0;
+            const minQty = item.minQty ?? (safetyStock[item.itemName] || 0);
             // 부족분 + 여유분(안전재고의 50%)으로 발주 수량 추천
-            const orderQty = Math.max(1, Math.ceil((minQty - currentQty) + (minQty * 0.5)));
+            const orderQty = item.orderQty || Math.max(1, Math.ceil((minQty - currentQty) + (minQty * 0.5)));
             return `
               <tr>
                 <td><input type="checkbox" class="po-item-check" data-idx="${i}" checked /></td>
@@ -224,7 +237,7 @@ function renderPurchaseOrder(el, items, lowStockItems, vendors, safetyStock) {
 
     <div class="form-group" style="margin-bottom:16px;">
       <label class="form-label">비고</label>
-      <input class="form-input" id="po-note" placeholder="추가 메모 (선택)" />
+      <input class="form-input" id="po-note" placeholder="추가 메모 (선택)" value="${escapeAttribute(draftNote)}" />
     </div>
 
     <div style="display:flex; gap:8px; justify-content:flex-end;">
@@ -239,7 +252,6 @@ function renderPurchaseOrder(el, items, lowStockItems, vendors, safetyStock) {
 
   // PDF 생성
   el.querySelector('#btn-generate-po').addEventListener('click', () => {
-    const sourceItems = lowStockItems.length > 0 ? lowStockItems : items.slice(0, 10);
     const selectedItems = [];
     el.querySelectorAll('.po-item-check:checked').forEach(cb => {
       const idx = parseInt(cb.dataset.idx);
@@ -263,6 +275,14 @@ function renderPurchaseOrder(el, items, lowStockItems, vendors, safetyStock) {
 
     generatePurchaseOrderPDF(selectedItems, info);
   });
+}
+
+function escapeAttribute(value) {
+  return String(value || '')
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
 }
 
 /**
