@@ -8,6 +8,7 @@ import { showToast } from './toast.js';
 import { downloadExcel } from './excel.js';
 import { canAction } from './auth.js';
 import { handlePageError } from './error-monitor.js';
+import { escapeHtml, safeAttr } from './ux-toolkit.js';
 
 function toNumber(value) {
   const num = Number.parseFloat(value);
@@ -70,7 +71,7 @@ export function renderStocktakePage(container, navigateTo) {
               <label class="form-label">창고 필터</label>
               <select class="form-select" id="st-warehouse">
                 <option value="">전체 창고</option>
-                ${warehouseOptions.map((warehouse) => `<option value="${warehouse}">${warehouse}</option>`).join('')}
+                ${warehouseOptions.map((warehouse) => `<option value="${safeAttr(warehouse)}">${escapeHtml(warehouse)}</option>`).join('')}
               </select>
             </div>
           </div>
@@ -195,11 +196,11 @@ export function renderStocktakePage(container, navigateTo) {
         const first = items[group.indices[0]] || {};
         const expanded = expandedGroupKeys.has(group.key);
         html += `
-          <tr class="st-group-header" data-group-key="${group.key}" style="background:var(--bg-lighter); border-left:3px solid var(--accent); cursor:pointer;">
+          <tr class="st-group-header" data-group-key="${safeAttr(group.key)}" style="background:var(--bg-lighter); border-left:3px solid var(--accent); cursor:pointer;">
             <td style="text-align:center;">${rowNo++}</td>
             <td colspan="8">
-              <button type="button" class="btn btn-ghost btn-sm" data-group-toggle="${group.key}" style="padding:2px 8px;">
-                ${expanded ? '▼' : '▶'} ${String(first.itemName || '-')} ${first.itemCode ? `(${String(first.itemCode)})` : ''} - 중복 ${group.indices.length}건
+              <button type="button" class="btn btn-ghost btn-sm" data-group-toggle="${safeAttr(group.key)}" style="padding:2px 8px;">
+                ${expanded ? '▼' : '▶'} ${escapeHtml(String(first.itemName || '-'))} ${first.itemCode ? `(${escapeHtml(String(first.itemCode))})` : ''} - 중복 ${group.indices.length}건
               </button>
             </td>
           </tr>
@@ -216,23 +217,26 @@ export function renderStocktakePage(container, navigateTo) {
         const diffColor = meta ? `color:${meta.color};` : '';
         const actualValue = actualValues.get(idx);
         const noteValue = noteValues.get(idx);
-        const inputValueAttr = actualValue === undefined ? '' : `value="${String(actualValue)}"`;
-        const noteValueAttr = noteValue === undefined ? '' : `value="${String(noteValue).replace(/"/g, '&quot;')}"`;
+        const inputValueAttr = actualValue === undefined ? '' : `value="${safeAttr(String(actualValue))}"`;
+        const noteValueAttr = noteValue === undefined ? '' : `value="${safeAttr(String(noteValue))}"`;
+        const safeItemName = escapeHtml(String(item.itemName || '-'));
+        const safeItemCode = escapeHtml(String(item.itemCode || '-'));
+        const safeWarehouse = escapeHtml(String(item.warehouse || '-'));
 
         html += `
-          <tr data-idx="${idx}">
+          <tr data-idx="${safeAttr(idx)}">
             <td class="col-num">${rowNo++}</td>
-            <td><strong>${String(item.itemName || '-')}</strong></td>
-            <td style="color:var(--text-muted); font-size:12px;">${String(item.itemCode || '-')}</td>
-            <td style="font-size:12px;">${String(item.warehouse || '-')}</td>
+            <td><strong>${safeItemName}</strong></td>
+            <td style="color:var(--text-muted); font-size:12px;">${safeItemCode}</td>
+            <td style="font-size:12px;">${safeWarehouse}</td>
             <td class="text-right">${sysQty.toLocaleString('ko-KR')}</td>
             <td class="text-right">
-              <input type="number" class="form-input st-actual" data-idx="${idx}" ${inputValueAttr} placeholder="${sysQty}" style="width:80px; padding:3px 6px; text-align:right; font-weight:600;" />
+              <input type="number" class="form-input st-actual" data-idx="${safeAttr(idx)}" ${inputValueAttr} placeholder="${safeAttr(sysQty)}" style="width:80px; padding:3px 6px; text-align:right; font-weight:600;" />
             </td>
-            <td class="text-right st-diff" data-idx="${idx}" style="font-weight:600; ${diffColor}">${diffText}</td>
-            <td class="st-status" data-idx="${idx}">${statusHtml}</td>
+            <td class="text-right st-diff" data-idx="${safeAttr(idx)}" style="font-weight:600; ${diffColor}">${diffText}</td>
+            <td class="st-status" data-idx="${safeAttr(idx)}">${statusHtml}</td>
             <td>
-              <input class="form-input st-note" data-idx="${idx}" ${noteValueAttr} placeholder="메모" style="width:100px; padding:3px 6px; font-size:11px;" />
+              <input class="form-input st-note" data-idx="${safeAttr(idx)}" ${noteValueAttr} placeholder="메모" style="width:100px; padding:3px 6px; font-size:11px;" />
             </td>
           </tr>
         `;

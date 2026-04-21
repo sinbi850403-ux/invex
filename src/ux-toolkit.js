@@ -7,6 +7,10 @@ export function escapeHtml(value) {
     .replace(/'/g, '&#39;');
 }
 
+export function safeAttr(value) {
+  return escapeHtml(value);
+}
+
 export function setInputValue(inputEl, value) {
   if (!inputEl) return;
   inputEl.value = value == null ? '' : String(value);
