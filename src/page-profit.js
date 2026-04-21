@@ -40,6 +40,11 @@ export function renderProfitPage(container, navigateTo) {
   const plannerPrefs = readProfitMonthlyPlannerPrefs();
   const currentYear = new Date().getFullYear();
   const plannerYear = Number(plannerPrefs.year) || currentYear;
+  const currentMonth = new Date().getMonth() + 1;
+  const plannerMonthRaw = Number(plannerPrefs.month);
+  const plannerMonth = PROFIT_MONTHS.includes(plannerMonthRaw)
+    ? plannerMonthRaw
+    : (plannerYear === currentYear ? currentMonth : 1);
   const salesPlan = normalizeMonthlyMap(plannerPrefs.salesPlan);
   const costPlan = normalizeMonthlyMap(plannerPrefs.costPlan);
   const sgnaPlan = normalizeMonthlyMap(plannerPrefs.sgnaPlan);
@@ -50,6 +55,7 @@ export function renderProfitPage(container, navigateTo) {
     sgnaPlan,
     sgnaActual,
   });
+  const plannerSnapshot = getMonthlyPlannerSnapshot(monthlyPlanner, plannerMonth);
 
   const rawRows = items
     .map((item) => {
@@ -338,44 +344,93 @@ export function renderProfitPage(container, navigateTo) {
       </div>
     </details>
 
-    <div class="card" style="margin-top:12px;">
+    <div class="card card-compact" style="margin-top:12px;">
       <div class="card-title" style="display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:8px;">
         <span>월별 계획/실적/차이 (영업이익 자동 계산)</span>
-        <div style="display:flex; align-items:center; gap:6px;">
+        <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
           <span style="font-size:12px; color:var(--text-muted);">기준연도</span>
           <select class="filter-select" id="profit-planner-year">
             ${[plannerYear - 1, plannerYear, plannerYear + 1].map((y) => `<option value="${y}" ${y === plannerYear ? 'selected' : ''}>${y}년</option>`).join('')}
+          </select>
+          <select class="filter-select" id="profit-planner-month">
+            ${PROFIT_MONTHS.map((month) => `<option value="${month}" ${month === plannerMonth ? 'selected' : ''}>${month}월</option>`).join('')}
           </select>
         </div>
       </div>
       <div class="chart-help-text" style="margin-bottom:8px;">
         입력: 매출금액/매출원가/판관비(계획), 판관비(실적) · 자동계산: 매출총이익/영업이익/영업이익율
       </div>
+      <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:10px; margin-bottom:10px;">
+        <div style="border:1px solid var(--border); border-radius:10px; padding:10px 12px;">
+          <div style="font-size:12px; color:var(--text-muted); margin-bottom:6px;">매출총이익 (${plannerMonth}월)</div>
+          <div style="display:flex; align-items:baseline; justify-content:space-between; gap:8px;">
+            <span style="font-size:14px;">실적 ${formatMoney(plannerSnapshot.actual.grossProfit)}</span>
+            <span style="font-size:12px; color:${plannerSnapshot.diff.grossProfit >= 0 ? 'var(--success)' : 'var(--danger)'};">${formatSignedMoney(plannerSnapshot.diff.grossProfit)}</span>
+          </div>
+        </div>
+        <div style="border:1px solid var(--border); border-radius:10px; padding:10px 12px;">
+          <div style="font-size:12px; color:var(--text-muted); margin-bottom:6px;">영업이익 (${plannerMonth}월)</div>
+          <div style="display:flex; align-items:baseline; justify-content:space-between; gap:8px;">
+            <span style="font-size:14px;">실적 ${formatMoney(plannerSnapshot.actual.operatingProfit)}</span>
+            <span style="font-size:12px; color:${plannerSnapshot.diff.operatingProfit >= 0 ? 'var(--success)' : 'var(--danger)'};">${formatSignedMoney(plannerSnapshot.diff.operatingProfit)}</span>
+          </div>
+        </div>
+        <div style="border:1px solid var(--border); border-radius:10px; padding:10px 12px;">
+          <div style="font-size:12px; color:var(--text-muted); margin-bottom:6px;">영업이익율 (${plannerMonth}월)</div>
+          <div style="display:flex; align-items:baseline; justify-content:space-between; gap:8px;">
+            <span style="font-size:14px;">실적 ${formatPercent(plannerSnapshot.actual.operatingProfitRate)}</span>
+            <span style="font-size:12px; color:${plannerSnapshot.diff.operatingProfitRate >= 0 ? 'var(--success)' : 'var(--danger)'};">${formatSignedPercent(plannerSnapshot.diff.operatingProfitRate)}</span>
+          </div>
+        </div>
+      </div>
       <div class="table-wrapper" style="border:none; overflow:auto;">
-        <table class="data-table" style="min-width:1700px;">
+        <table class="data-table" style="min-width:720px;">
           <thead>
             <tr>
-              <th rowspan="2">구분</th>
-              ${PROFIT_MONTHS.map((month) => `<th colspan="3" class="text-center">${month}월</th>`).join('')}
-            </tr>
-            <tr>
-              ${PROFIT_MONTHS.map(() => `
-                <th class="text-right">계획</th>
-                <th class="text-right">실적</th>
-                <th class="text-right">차이</th>
-              `).join('')}
+              <th>구분</th>
+              <th class="text-right">계획</th>
+              <th class="text-right">실적</th>
+              <th class="text-right">차이</th>
             </tr>
           </thead>
           <tbody>
-            ${renderMonthlyPlannerRow('매출금액', monthlyPlanner, 'sales', { editablePlan: true, planKey: 'salesPlan' })}
-            ${renderMonthlyPlannerRow('매출원가', monthlyPlanner, 'cost', { editablePlan: true, planKey: 'costPlan' })}
-            ${renderMonthlyPlannerRow('매출총이익', monthlyPlanner, 'grossProfit')}
-            ${renderMonthlyPlannerRow('판관비', monthlyPlanner, 'sgna', { editablePlan: true, editableActual: true, planKey: 'sgnaPlan', actualKey: 'sgnaActual' })}
-            ${renderMonthlyPlannerRow('영업이익', monthlyPlanner, 'operatingProfit')}
-            ${renderMonthlyPlannerRow('영업이익율', monthlyPlanner, 'operatingProfitRate', { percent: true })}
+            ${renderMonthlyPlannerCompactRow('매출금액', plannerSnapshot, 'sales', { editablePlan: true, planKey: 'salesPlan' })}
+            ${renderMonthlyPlannerCompactRow('매출원가', plannerSnapshot, 'cost', { editablePlan: true, planKey: 'costPlan' })}
+            ${renderMonthlyPlannerCompactRow('매출총이익', plannerSnapshot, 'grossProfit')}
+            ${renderMonthlyPlannerCompactRow('판관비', plannerSnapshot, 'sgna', { editablePlan: true, editableActual: true, planKey: 'sgnaPlan', actualKey: 'sgnaActual' })}
+            ${renderMonthlyPlannerCompactRow('영업이익', plannerSnapshot, 'operatingProfit')}
+            ${renderMonthlyPlannerCompactRow('영업이익율', plannerSnapshot, 'operatingProfitRate', { percent: true })}
           </tbody>
         </table>
       </div>
+      <details style="margin-top:10px;">
+        <summary style="cursor:pointer; color:var(--text-secondary); font-size:12px;">전체 12개월 표 펼치기</summary>
+        <div class="table-wrapper" style="border:none; overflow:auto; margin-top:8px;">
+          <table class="data-table" style="min-width:1500px;">
+            <thead>
+              <tr>
+                <th rowspan="2">구분</th>
+                ${PROFIT_MONTHS.map((month) => `<th colspan="3" class="text-center">${month}월</th>`).join('')}
+              </tr>
+              <tr>
+                ${PROFIT_MONTHS.map(() => `
+                  <th class="text-right">계획</th>
+                  <th class="text-right">실적</th>
+                  <th class="text-right">차이</th>
+                `).join('')}
+              </tr>
+            </thead>
+            <tbody>
+              ${renderMonthlyPlannerRow('매출금액', monthlyPlanner, 'sales', { editablePlan: true, planKey: 'salesPlan' })}
+              ${renderMonthlyPlannerRow('매출원가', monthlyPlanner, 'cost', { editablePlan: true, planKey: 'costPlan' })}
+              ${renderMonthlyPlannerRow('매출총이익', monthlyPlanner, 'grossProfit')}
+              ${renderMonthlyPlannerRow('판관비', monthlyPlanner, 'sgna', { editablePlan: true, editableActual: true, planKey: 'sgnaPlan', actualKey: 'sgnaActual' })}
+              ${renderMonthlyPlannerRow('영업이익', monthlyPlanner, 'operatingProfit')}
+              ${renderMonthlyPlannerRow('영업이익율', monthlyPlanner, 'operatingProfitRate', { percent: true })}
+            </tbody>
+          </table>
+        </div>
+      </details>
     </div>
 
     <div class="tabs">
@@ -693,6 +748,11 @@ export function renderProfitPage(container, navigateTo) {
 
   container.querySelector('#profit-planner-year')?.addEventListener('change', (event) => {
     saveProfitMonthlyPlannerPrefs({ year: Number(event.target.value) || currentYear });
+    renderProfitPage(container, navigateTo);
+  });
+  container.querySelector('#profit-planner-month')?.addEventListener('change', (event) => {
+    const month = Number(event.target.value);
+    saveProfitMonthlyPlannerPrefs({ month: PROFIT_MONTHS.includes(month) ? month : 1 });
     renderProfitPage(container, navigateTo);
   });
 
@@ -1189,6 +1249,48 @@ function renderMonthlyPlannerRow(label, planner, metric, options = {}) {
   }).join('');
 
   return `<tr><td style="font-weight:700;">${label}</td>${cells}</tr>`;
+}
+
+function getMonthlyPlannerSnapshot(planner, month) {
+  const safeMonth = PROFIT_MONTHS.includes(Number(month)) ? Number(month) : 1;
+  const plan = {};
+  const actual = {};
+  const diff = {};
+  ['sales', 'cost', 'sgna', 'grossProfit', 'operatingProfit', 'operatingProfitRate'].forEach((metric) => {
+    const planValue = toNumber(planner.plan[metric]?.[safeMonth]);
+    const actualValue = toNumber(planner.actual[metric]?.[safeMonth]);
+    plan[metric] = planValue;
+    actual[metric] = actualValue;
+    diff[metric] = actualValue - planValue;
+  });
+  return { month: safeMonth, plan, actual, diff };
+}
+
+function renderMonthlyPlannerCompactRow(label, snapshot, metric, options = {}) {
+  const { editablePlan = false, editableActual = false, percent = false, planKey = '', actualKey = '' } = options;
+  const planValue = toNumber(snapshot.plan[metric]);
+  const actualValue = toNumber(snapshot.actual[metric]);
+  const diffValue = toNumber(snapshot.diff[metric]);
+  const month = snapshot.month;
+
+  const planCell = editablePlan
+    ? `<input type="number" class="form-input" style="width:120px; min-width:120px; padding:4px 8px; height:32px; text-align:right;" data-plan-metric="${planKey}" data-month="${month}" value="${Math.round(planValue)}" />`
+    : `<span>${percent ? formatPercent(planValue) : formatMoney(planValue)}</span>`;
+
+  const actualCell = editableActual
+    ? `<input type="number" class="form-input" style="width:120px; min-width:120px; padding:4px 8px; height:32px; text-align:right;" data-actual-metric="${actualKey}" data-month="${month}" value="${Math.round(actualValue)}" />`
+    : `<span>${percent ? formatPercent(actualValue) : formatMoney(actualValue)}</span>`;
+
+  const diffText = percent ? formatSignedPercent(diffValue) : formatSignedMoney(diffValue);
+  const diffColor = diffValue > 0 ? 'var(--success)' : diffValue < 0 ? 'var(--danger)' : 'var(--text-primary)';
+  return `
+    <tr>
+      <td style="font-weight:700;">${label}</td>
+      <td class="text-right">${planCell}</td>
+      <td class="text-right">${actualCell}</td>
+      <td class="text-right" style="font-weight:700; color:${diffColor};">${diffText}</td>
+    </tr>
+  `;
 }
 
 function addDays(baseDate, delta) {
