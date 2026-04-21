@@ -22,8 +22,14 @@ function renderHubCard({ icon, title, desc, nav, color = '#2563eb', meta = '' })
 }
 
 function bindHubNav(container, navigateTo) {
-  container.querySelectorAll('[data-nav]').forEach((element) => {
-    element.addEventListener('click', () => navigateTo(element.dataset.nav));
+  container.querySelectorAll('.hub-card[data-nav]').forEach((element) => {
+    element.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      const targetPage = element.dataset.nav;
+      if (!targetPage) return;
+      navigateTo(targetPage);
+    });
   });
 }
 
