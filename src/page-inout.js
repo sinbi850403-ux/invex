@@ -6,13 +6,14 @@
 
 import { getState, setState, addTransaction, deleteTransaction, restoreTransaction, updateTransactionPrices } from './store.js';
 import { showToast } from './toast.js';
-import { downloadExcel, readExcelFile } from './excel.js';
+import { downloadExcel, downloadExcelSheets, readExcelFile } from './excel.js';
 import { escapeHtml, renderGuidedPanel, renderInsightHero, renderQuickFilterRow } from './ux-toolkit.js';
 import { canAction } from './auth.js';
 import { handlePageError } from './error-monitor.js';
 import { showFieldError, clearAllFieldErrors, setSavingState } from './ux-toolkit.js';
 
 const PAGE_SIZE = 15;
+const BULK_INOUT_TEMPLATE_HEADERS = ['구분', '거래처', '품목명', '품목코드', '수량', '단가', '날짜', '비고'];
 
 function safeAttr(value) {
   return String(value ?? '')
@@ -1042,30 +1043,14 @@ function openBulkUploadModal(container, navigateTo, items) {
   });
 
   overlay.querySelector('#bulk-download-template').addEventListener('click', () => {
-    const template = [
-      {
-        구분: '입고',
-        거래처: '(주)삼성전자',
-        품목명: '갤럭시 S25',
-        품목코드: 'SM-S925',
-        수량: 100,
-        단가: 1200000,
-        날짜: new Date().toISOString().split('T')[0],
-        비고: '1차 입고',
-      },
-      {
-        구분: '출고',
-        거래처: '쿠팡',
-        품목명: '갤럭시 S25',
-        품목코드: 'SM-S925',
-        수량: 30,
-        단가: 1200000,
-        날짜: new Date().toISOString().split('T')[0],
-        비고: '쿠팡 출고',
-      },
+    const today = new Date().toISOString().split('T')[0];
+    const templateRows = [
+      BULK_INOUT_TEMPLATE_HEADERS,
+      ['입고', '(주)삼성전자', '갤럭시 S25', 'SM-S925', 100, 1200000, today, '1차 입고'],
+      ['출고', '쿠팡', '갤럭시 S25', 'SM-S925', 30, 1200000, today, '쿠팡 출고'],
     ];
 
-    downloadExcel(template, '입출고_일괄등록_양식');
+    downloadExcelSheets([{ name: '입출고_양식', rows: templateRows }], '입출고_일괄등록_양식');
     showToast('입출고 일괄등록 양식을 내려받았습니다. 내용을 입력한 뒤 다시 업로드해 주세요.', 'success');
   });
 
