@@ -384,6 +384,7 @@ export function renderInoutPage(container, navigateTo) {
       header.setAttribute('role', 'button');
       header.addEventListener('click', (event) => {
         event.preventDefault();
+        event.stopImmediatePropagation();
         event.stopPropagation();
         const key = header.dataset.sortKey;
         if (!key) return;
@@ -404,6 +405,7 @@ export function renderInoutPage(container, navigateTo) {
       header.addEventListener('keydown', event => {
         if (event.key !== 'Enter' && event.key !== ' ') return;
         event.preventDefault();
+        event.stopImmediatePropagation();
         header.click();
       });
     });
@@ -806,9 +808,10 @@ export function renderInoutPage(container, navigateTo) {
     if (!canCreate) { showToast('출고 등록 권한이 없습니다. 직원 이상만 가능합니다.', 'warning'); return; }
     openTxModal(container, navigateTo, 'out', items);
   });
-  container.querySelectorAll('[data-nav]').forEach(button => {
+  container.querySelectorAll('.mission-actions [data-nav], .quick-start-actions [data-nav]').forEach(button => {
     button.addEventListener('click', (event) => {
       event.preventDefault();
+      event.stopImmediatePropagation();
       event.stopPropagation();
       navigateTo(button.dataset.nav);
     });
@@ -1515,7 +1518,8 @@ function openTxModal(container, navigateTo, type, items) {
       { done: !!inputs.vendor.value, text: '거래처가 연결되었습니다.' },
       { done: type !== 'out' || !selectedItem || nextQty >= 0, text: type === 'out' ? '출고 후 재고가 음수가 아닙니다.' : '입고 반영 후 재고가 계산되었습니다.' },
     ];
-    overlay.querySelector('#tx-status-list').innerHTML = statusItems.map(entry => `
+    const statusListEl = overlay.querySelector('#tx-status-list');
+    if (statusListEl) statusListEl.innerHTML = statusItems.map(entry => `
       <div class="form-status-item ${entry.done ? 'is-complete' : ''}">${entry.text}</div>
     `).join('');
   };

@@ -50,6 +50,17 @@ function toNullableString(value) {
   return normalized ? normalized : null;
 }
 
+function generateClientUuid() {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  const bytes = Array.from({ length: 16 }, () => Math.floor(Math.random() * 256));
+  bytes[6] = (bytes[6] & 0x0f) | 0x40;
+  bytes[8] = (bytes[8] & 0x3f) | 0x80;
+  const hex = bytes.map((b) => b.toString(16).padStart(2, '0')).join('');
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+}
+
 /**
  * 현재 로그인한 사용자 ID를 안전하게 가져오기
  */
@@ -168,6 +179,31 @@ export const items = {
       dedupedMap.set(key, { ...row, item_name: String(row.item_name ?? '').trim() });
     });
     const dedupedRows = [...dedupedMap.values()];
+
+    const existingIdByName = new Map();
+    const names = dedupedRows.map((row) => row.item_name).filter(Boolean);
+    const QUERY_BATCH = 500;
+    for (let i = 0; i < names.length; i += QUERY_BATCH) {
+      const nameBatch = names.slice(i, i + QUERY_BATCH);
+      if (!nameBatch.length) continue;
+      const { data, error } = await supabase
+        .from('items')
+        .select('id,item_name')
+        .eq('user_id', userId)
+        .in('item_name', nameBatch);
+      handleError(error, `기존 품목 ID 조회(${i}~${i + nameBatch.length})`);
+      (data || []).forEach((row) => {
+        const key = normalizeItemName(row.item_name);
+        if (key && row.id) existingIdByName.set(key, row.id);
+      });
+    }
+
+    dedupedRows.forEach((row) => {
+      const hasId = row.id !== null && row.id !== undefined && String(row.id).trim() !== '';
+      if (hasId) return;
+      const existingId = existingIdByName.get(normalizeItemName(row.item_name));
+      row.id = existingId || generateClientUuid();
+    });
 
     // 500개씩 배치 처리 — Supabase 요청 크기 제한 대응
     const BATCH_SIZE = 500;
