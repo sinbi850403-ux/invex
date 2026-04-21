@@ -6,6 +6,7 @@
 import { getState, setState } from './store.js';
 import { showToast } from './toast.js';
 import { indexToCol } from './excel.js';
+import { escapeHtml } from './ux-toolkit.js';
 
 // ERP 필드 정의
 const ERP_FIELDS = [
@@ -31,6 +32,63 @@ export function renderMappingPage(container, navigateTo) {
   const state = getState();
 
   if (!state.rawData || state.rawData.length === 0) {
+    if (Array.isArray(state.mappedData) && state.mappedData.length > 0) {
+      const previewRows = state.mappedData.slice(0, 100);
+      container.innerHTML = `
+        <div class="page-header">
+          <h1 class="page-title"><span class="title-icon">📋</span> 데이터 확인</h1>
+        </div>
+        <div class="alert alert-info">
+          업로드 원본(rawData)이 없어 저장된 데이터 기준으로 표시합니다.
+          총 ${state.mappedData.length}건
+        </div>
+        <div class="card">
+          <div class="card-title">저장 데이터 미리보기 <span class="card-subtitle">처음 ${previewRows.length}건</span></div>
+          <div class="table-wrapper">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th style="width:36px;">#</th>
+                  <th>품목명</th>
+                  <th>품목코드</th>
+                  <th>분류</th>
+                  <th>거래처</th>
+                  <th>수량</th>
+                  <th>단위</th>
+                  <th>매입가</th>
+                  <th>판매가</th>
+                  <th>창고/위치</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${previewRows.map((row, idx) => `
+                  <tr>
+                    <td class="col-num">${idx + 1}</td>
+                    <td>${escapeHtml(row?.itemName ?? '')}</td>
+                    <td>${escapeHtml(row?.itemCode ?? '')}</td>
+                    <td>${escapeHtml(row?.category ?? '')}</td>
+                    <td>${escapeHtml(row?.vendor ?? '')}</td>
+                    <td>${escapeHtml(row?.quantity ?? '')}</td>
+                    <td>${escapeHtml(row?.unit ?? '')}</td>
+                    <td>${escapeHtml(row?.unitPrice ?? '')}</td>
+                    <td>${escapeHtml(row?.salePrice ?? '')}</td>
+                    <td>${escapeHtml(row?.warehouse ?? '')}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:16px;">
+          <button class="btn btn-outline" id="btn-go-upload">파일 다시 업로드</button>
+          <button class="btn btn-primary" id="btn-go-inventory">재고 현황 보기</button>
+        </div>
+      `;
+      container.querySelector('#btn-go-upload')?.addEventListener('click', () => navigateTo('upload'));
+      container.querySelector('#btn-go-inventory')?.addEventListener('click', () => navigateTo('inventory'));
+      return;
+    }
+
     container.innerHTML = `
       <div class="page-header">
         <h1 class="page-title"><span class="title-icon">📋</span> 데이터 확인</h1>
