@@ -268,6 +268,22 @@ export function renderProfitPage(container, navigateTo) {
       </div>
     </div>
 
+    <details class="card card-compact" style="margin-top:12px;">
+      <summary style="cursor:pointer; font-weight:700; list-style:none;">
+        📘 계산식 보기 (이익률/원가율 기준)
+      </summary>
+      <div style="margin-top:10px; font-size:13px; color:var(--text-secondary); line-height:1.8;">
+        <div>총 예상 이익 = 총 예상 매출 - 총 원가</div>
+        <div>매출총이익률 = (총 예상 이익 / 총 예상 매출) × 100</div>
+        <div>매출원가율 = (총 원가 / 총 예상 매출) × 100</div>
+        <div>수익률(마진) = (총 예상 이익 / 총 원가) × 100</div>
+        <div>판매가 입력률 = (판매가 입력 품목 수 / 전체 품목 수) × 100</div>
+        <div style="margin-top:8px; color:var(--text-muted);">
+          판매가가 없는 품목은 손익 정확도가 낮아질 수 있어 보수적으로 해석하는 것을 권장합니다.
+        </div>
+      </div>
+    </details>
+
     <div class="tabs">
       <button class="tab-btn ${activeTab === 'items' ? 'active' : ''}" data-profit-tab="items">품목 손익</button>
       <button class="tab-btn ${activeTab === 'vendors' ? 'active' : ''}" data-profit-tab="vendors">거래처 손익</button>
@@ -532,10 +548,8 @@ export function renderProfitPage(container, navigateTo) {
         <div>
           <div style="font-size:12px; color:var(--text-muted);">해석 기준</div>
           <div style="margin-top:6px; font-size:12px; color:var(--text-secondary); line-height:1.7;">
-            <div>매출총이익률 = (판매가 - 원가) / 판매가</div>
-            <div>매출원가율 = 원가 / 판매가 &nbsp;(낮을수록 좋음)</div>
-            <div>수익률(마진) = (판매가 - 원가) / 원가</div>
-            <div>판매가 미입력 품목은 기본 마진 규칙으로 추정됩니다.</div>
+            <div>상단의 <strong>계산식 보기</strong>에서 산식과 해석 기준을 확인할 수 있습니다.</div>
+            <div>기간 손익은 거래 내역 기준, 품목 손익은 현재 재고 기준으로 계산됩니다.</div>
           </div>
         </div>
       </div>

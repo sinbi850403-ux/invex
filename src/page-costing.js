@@ -85,6 +85,22 @@ export function renderCostingPage(container, navigateTo) {
       </div>
     </div>
 
+    <details class="card card-compact" style="margin-top:12px;">
+      <summary style="cursor:pointer; font-weight:700; list-style:none;">
+        📘 계산식 보기 (이익률/원가 계산 기준)
+      </summary>
+      <div style="margin-top:10px; font-size:13px; color:var(--text-secondary); line-height:1.8;">
+        <div>총 매입원가 = Σ(현재수량 × 단위원가)</div>
+        <div>시가 환산액 = Σ(현재수량 × 판매가)</div>
+        <div>예상 마진 = 시가 환산액 - 총 매입원가</div>
+        <div>평균 매출이익률 = (예상 마진 / 시가 환산액) × 100</div>
+        <div style="margin-top:8px; color:var(--text-muted);">원가 계산 방식</div>
+        <div>총평균법(가중평균): 입고 단가를 평균내어 원가를 계산</div>
+        <div>선입선출(FIFO): 먼저 들어온 재고부터 원가를 적용</div>
+        <div>최종매입원가법: 마지막 입고 단가를 기준으로 계산</div>
+      </div>
+    </details>
+
     <div class="card card-flush">
       <div style="padding:12px 16px; border-bottom:1px solid var(--border); background:var(--bg-card);">
         <strong>🧮 품목별 원가 분석</strong>
