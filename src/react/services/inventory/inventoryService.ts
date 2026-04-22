@@ -1,5 +1,9 @@
-import { addItem, deleteItem, recalcItemAmounts, updateItem } from '../../../store.js';
-import { notifyStoreUpdated } from '../store/storeClient';
+import {
+  createInventoryRecord,
+  deleteInventoryRecord,
+  recalcInventoryAmounts,
+  updateInventoryRecord,
+} from '../store/storeClient';
 
 export type InventoryInput = {
   itemName: string;
@@ -29,26 +33,23 @@ function toInventoryRecord(input: InventoryInput) {
     note: '',
   };
 
-  recalcItemAmounts(record);
+  recalcInventoryAmounts(record);
   return record;
 }
 
 export function createInventoryItem(input: InventoryInput) {
   const record = toInventoryRecord(input);
-  addItem(record);
-  notifyStoreUpdated(['mappedData']);
+  createInventoryRecord(record);
   return record;
 }
 
 export function editInventoryItem(target: number | string, input: InventoryInput) {
   const record = toInventoryRecord(input);
-  updateItem(target, record);
-  notifyStoreUpdated(['mappedData']);
+  updateInventoryRecord(target, record);
   return record;
 }
 
 export function removeInventoryItem(target: number | string) {
-  const result = deleteItem(target);
-  notifyStoreUpdated(['mappedData']);
+  const result = deleteInventoryRecord(target);
   return result;
 }

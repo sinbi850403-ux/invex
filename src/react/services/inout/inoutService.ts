@@ -1,5 +1,4 @@
-import { addTransaction, deleteTransaction } from '../../../store.js';
-import { notifyStoreUpdated } from '../store/storeClient';
+import { createInoutRecord, deleteInoutRecord } from '../store/storeClient';
 
 export type InoutInput = {
   type: 'in' | 'out';
@@ -14,7 +13,7 @@ export type InoutInput = {
 };
 
 export function createTransaction(input: InoutInput) {
-  const record = addTransaction({
+  const record = createInoutRecord({
     ...input,
     itemName: input.itemName.trim(),
     itemCode: input.itemCode.trim(),
@@ -24,13 +23,10 @@ export function createTransaction(input: InoutInput) {
     quantity: Number(input.quantity || 0),
     unitPrice: Number(input.unitPrice || 0),
   });
-
-  notifyStoreUpdated(['transactions', 'mappedData']);
   return record;
 }
 
 export function removeTransaction(id: string) {
-  const result = deleteTransaction(id);
-  notifyStoreUpdated(['transactions', 'mappedData']);
+  const result = deleteInoutRecord(id);
   return result;
 }
