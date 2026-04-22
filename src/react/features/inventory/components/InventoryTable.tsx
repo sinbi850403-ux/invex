@@ -48,7 +48,7 @@ function SortableHeader({
   onSortChange: InventoryTableProps['onSortChange'];
 }) {
   const isActive = sort.key === sortKey;
-  const indicator = isActive ? (sort.direction === 'asc' ? '↑' : '↓') : '↕';
+  const indicator = isActive ? (sort.direction === 'asc' ? '▲' : '▼') : '↕';
 
   return (
     <button
@@ -124,3 +124,4 @@ export function InventoryTable({ rows, sort, onSortChange, onDelete, onEdit }: I
     </article>
   );
 }
+

@@ -100,7 +100,8 @@ export function InventoryEditor({
               const key = `${item.id}::${item.itemCode}::${item.itemName}`;
               return (
                 <option key={key} value={key}>
-                  {item.itemName}{item.itemCode ? ` (${item.itemCode})` : ''}
+                  {item.itemName}
+                  {item.itemCode ? ` (${item.itemCode})` : ''}
                 </option>
               );
             })}
@@ -153,7 +154,7 @@ export function InventoryEditor({
           type="number"
           value={form.unitPrice}
           onChange={(e) => update('unitPrice', Number(e.target.value))}
-          placeholder="단가"
+          placeholder="원가"
         />
 
         <div className="react-form-actions">
@@ -170,3 +171,4 @@ export function InventoryEditor({
     </article>
   );
 }
+

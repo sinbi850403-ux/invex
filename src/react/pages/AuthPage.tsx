@@ -110,10 +110,10 @@ export function AuthPage() {
     <section className="react-page">
       <article className="react-card">
         <span className="react-chip">인증</span>
-        <h2>워크스페이스 로그인과 계정 인증을 이 화면에서 관리합니다.</h2>
+        <h2>로그인과 계정 인증을 한 화면에서 관리합니다.</h2>
         <p>
           이메일 로그인, Google OAuth, 회원가입, 비밀번호 재설정, 로그아웃까지
-          모두 공통 인증 계층으로 연결되어 일관되게 동작합니다.
+          모두 공통 인증 계층으로 연결되어 안정적으로 동작합니다.
         </p>
       </article>
 
@@ -128,7 +128,12 @@ export function AuthPage() {
             </button>
           </div>
 
-          <button type="button" className="react-auth-google" onClick={() => void loginWithGoogleAccount()} disabled={isPending}>
+          <button
+            type="button"
+            className="react-auth-google"
+            onClick={() => void loginWithGoogleAccount()}
+            disabled={isPending}
+          >
             Google 계정으로 계속하기
           </button>
 
@@ -142,7 +147,11 @@ export function AuthPage() {
               </label>
               <label className="react-field">
                 <span>비밀번호</span>
-                <input type="password" value={form.password} onChange={(event) => updateField('password', event.target.value)} />
+                <input
+                  type="password"
+                  value={form.password}
+                  onChange={(event) => updateField('password', event.target.value)}
+                />
               </label>
               <button type="submit" className="react-auth-submit" disabled={isPending}>
                 로그인
@@ -163,7 +172,11 @@ export function AuthPage() {
               </label>
               <label className="react-field">
                 <span>비밀번호</span>
-                <input type="password" value={form.password} onChange={(event) => updateField('password', event.target.value)} />
+                <input
+                  type="password"
+                  value={form.password}
+                  onChange={(event) => updateField('password', event.target.value)}
+                />
               </label>
               <label className="react-field">
                 <span>비밀번호 확인</span>
@@ -213,3 +226,4 @@ export function AuthPage() {
     </section>
   );
 }
+

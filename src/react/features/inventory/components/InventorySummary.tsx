@@ -19,7 +19,7 @@ export function InventorySummary({ summary }: InventorySummaryProps) {
     { label: '창고 수', value: formatNumber(summary.warehouses), tone: 'neutral' },
     { label: '카테고리', value: formatNumber(summary.categories), tone: 'neutral' },
     { label: '재고 수량', value: formatNumber(summary.totalQuantity), tone: 'neutral' },
-    { label: '재고 가치', value: `₩ ${formatNumber(summary.totalValue)}`, tone: 'neutral' },
+    { label: '재고 가치', value: `₩${formatNumber(summary.totalValue)}`, tone: 'neutral' },
     { label: '부족 재고', value: formatNumber(summary.lowStock), tone: summary.lowStock ? 'warn' : 'good' },
   ];
 
@@ -34,3 +34,4 @@ export function InventorySummary({ summary }: InventorySummaryProps) {
     </div>
   );
 }
+

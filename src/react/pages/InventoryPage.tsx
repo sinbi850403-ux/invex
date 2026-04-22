@@ -40,10 +40,10 @@ export function InventoryPage() {
     <section className="react-page">
       <article className="react-card">
         <span className="react-chip">재고 현황</span>
-        <h2>품목 등록·수정·삭제를 이 화면에서 바로 처리합니다.</h2>
+        <h2>품목 등록, 수정, 삭제를 현재 화면에서 바로 처리합니다.</h2>
         <p>
-          편집기에서 저장하면 목록이 즉시 반영됩니다.
-          기존 품목을 템플릿으로 불러와 빠르게 추가할 수도 있습니다.
+          편집기에 입력하면 목록이 즉시 반영됩니다.
+          기존 품목 템플릿을 불러와 더 빠르게 등록할 수 있습니다.
         </p>
       </article>
 
@@ -66,7 +66,7 @@ export function InventoryPage() {
         open={!!pendingDeleteRow}
         danger
         title="품목 삭제"
-        description={`"${pendingDeleteRow?.itemName || '선택 품목'}" 품목을 삭제할까요? 삭제 후에는 되돌리기 전까지 목록에서 사라집니다.`}
+        description={`"${pendingDeleteRow?.itemName || '선택 품목'}" 품목을 삭제할까요? 삭제 전에는 되돌리기 전까지 목록에서 사라집니다.`}
         confirmLabel="삭제"
         cancelLabel="취소"
         onConfirm={confirmDelete}
@@ -77,3 +77,4 @@ export function InventoryPage() {
 }
 
 export default InventoryPage;
+

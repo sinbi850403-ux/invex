@@ -93,7 +93,8 @@ export function InoutComposer({ items, vendors, onSubmit }: InoutComposerProps) 
             const key = `${itemCode}::${itemName}`;
             return (
               <option key={key} value={key}>
-                {itemName}{itemCode ? ` (${itemCode})` : ''}
+                {itemName}
+                {itemCode ? ` (${itemCode})` : ''}
               </option>
             );
           })}
@@ -104,7 +105,7 @@ export function InoutComposer({ items, vendors, onSubmit }: InoutComposerProps) 
           className="react-input"
           value={selectedItem?.category || ''}
           readOnly
-          placeholder="선택한 품목 기준 카테고리 자동표시"
+          placeholder="선택한 품목의 카테고리가 자동 표시됩니다"
         />
         <select className="react-select" value={form.vendor} onChange={(e) => update('vendor', e.target.value)}>
           <option value="">거래처 선택</option>
@@ -123,7 +124,7 @@ export function InoutComposer({ items, vendors, onSubmit }: InoutComposerProps) 
           onChange={(e) => update('quantity', Number(e.target.value))}
           placeholder={`수량${selectedItem?.unit ? ` (${selectedItem.unit})` : ''}`}
         />
-        <input className="react-input" type="number" value={form.unitPrice} onChange={(e) => update('unitPrice', Number(e.target.value))} placeholder="단가" />
+        <input className="react-input" type="number" value={form.unitPrice} onChange={(e) => update('unitPrice', Number(e.target.value))} placeholder="원가" />
         <input className="react-input react-input--wide" value={form.note} onChange={(e) => update('note', e.target.value)} placeholder="비고" />
 
         <div className="react-form-actions">
@@ -135,3 +136,4 @@ export function InoutComposer({ items, vendors, onSubmit }: InoutComposerProps) 
     </article>
   );
 }
+

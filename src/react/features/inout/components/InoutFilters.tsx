@@ -70,3 +70,4 @@ export function InoutFilters({ filter, options, onChange }: InoutFiltersProps) {
     </article>
   );
 }
+

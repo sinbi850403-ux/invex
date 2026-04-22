@@ -25,7 +25,7 @@ export function InventoryFilters({ filter, options, onChange }: InventoryFilters
           className="react-input"
           value={filter.keyword}
           onChange={(event) => onChange({ ...filter, keyword: event.target.value })}
-          placeholder="품목명·코드·거래처 검색"
+          placeholder="품목명, 코드, 거래처 검색"
         />
         <select
           className="react-select"
@@ -72,3 +72,4 @@ export function InventoryFilters({ filter, options, onChange }: InventoryFilters
     </article>
   );
 }
+

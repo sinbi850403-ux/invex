@@ -26,3 +26,4 @@ export function InoutSummary({ summary }: InoutSummaryProps) {
     </div>
   );
 }
+
