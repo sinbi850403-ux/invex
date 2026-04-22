@@ -19,10 +19,10 @@ import { canAccessPage, showUpgradeModal } from './plan.js';
 import { mountAutoTableSort } from './table-auto-sort.js';
 import { showToast } from './toast.js';
 import { syncExternalNotifications } from './notifications.js';
-import { unmountCurrentReactPage, reactLoader } from './lib/mountReactPage.jsx';
+import { unmountCurrentReactPage, reactLoader, vanillaLoader } from './lib/mountReactPage.jsx';
 
-// reactLoader를 re-export — PAGE_LOADERS에 React 페이지 등록 시 사용
-export { reactLoader };
+// 헬퍼 re-export — 외부에서 PAGE_LOADERS 확장 시 사용 가능
+export { reactLoader, vanillaLoader };
 import { HUB_MAP, PAGE_LABELS } from './page-hubs.js';
 import {
   renderHubData, renderHubInventory, renderHubWarehouse, renderHubOrder,
@@ -60,49 +60,51 @@ export const PAGE_LOADERS = {
   home:            reactLoader(() => import('./react/pages/HomePage')),
   inventory:       reactLoader(() => import('./react/pages/InventoryPage')),
   inout:           reactLoader(() => import('./react/pages/InoutPage')),
-  // ── Vanilla JS 페이지 (순차적으로 React 전환 예정) ──────────────────────
-  upload:          () => import('./page-upload.js').then(m => m.renderUploadPage),
-  mapping:         () => import('./page-mapping.js').then(m => m.renderMappingPage),
-  summary:         () => import('./page-summary.js').then(m => m.renderSummaryPage),
-  scanner:         () => import('./page-scanner.js').then(m => m.renderScannerPage),
-  documents:       () => import('./page-documents.js').then(m => m.renderDocumentsPage),
-  dashboard:       () => import('./page-dashboard.js').then(m => m.renderDashboardPage),
-  transfer:        () => import('./page-transfer.js').then(m => m.renderTransferPage),
-  ledger:          () => import('./page-ledger.js').then(m => m.renderLedgerPage),
-  settings:        () => import('./page-settings.js').then(m => m.renderSettingsPage),
-  vendors:         () => import('./page-vendors.js').then(m => m.renderVendorsPage),
-  stocktake:       () => import('./page-stocktake.js').then(m => m.renderStocktakePage),
-  bulk:            () => import('./page-bulk.js').then(m => m.renderBulkPage),
-  costing:         () => import('./page-costing.js').then(m => m.renderCostingPage),
-  labels:          () => import('./page-labels.js').then(m => m.renderLabelsPage),
-  accounts:        () => import('./page-accounts.js').then(m => m.renderAccountsPage),
-  warehouses:      () => import('./page-warehouses.js').then(m => m.renderWarehousesPage),
-  roles:           () => import('./page-roles.js').then(m => m.renderRolesPage),
-  api:             () => import('./page-api.js').then(m => m.renderApiPage),
-  billing:         () => import('./page-billing.js').then(m => m.renderBillingPage),
-  admin:           () => import('./page-admin.js').then(m => m.renderAdminPage),
-  mypage:          () => import('./page-mypage.js').then(m => m.renderMyPage),
-  guide:           () => import('./page-guide.js').then(m => m.renderGuidePage),
-  support:         () => import('./page-support.js').then(m => m.renderSupportPage),
-  team:            () => import('./page-team.js').then(m => m.renderTeamPage),
-  'tax-reports':   () => import('./page-tax-reports.js').then(m => m.renderTaxReportsPage),
-  'auto-order':    () => import('./page-auto-order.js').then(m => m.renderAutoOrderPage),
-  profit:          () => import('./page-profit.js').then(m => m.renderProfitPage),
-  backup:          () => import('./page-backup.js').then(m => m.renderBackupPage),
-  orders:          () => import('./page-orders.js').then(m => m.renderOrdersPage),
-  forecast:        () => import('./page-forecast.js').then(m => m.renderForecastPage),
-  referral:        () => import('./page-referral.js').then(m => m.renderReferralPage),
-  'weekly-report': () => import('./page-weekly-report.js').then(m => m.renderWeeklyReportPage),
-  pos:             () => import('./page-pos.js').then(m => m.renderPosPage),
-  // HR 모듈 (Phase A)
-  'hr-dashboard':  () => import('./page-hr-dashboard.js').then(m => m.renderHrDashboardPage),
-  employees:       () => import('./page-employees.js').then(m => m.renderEmployeesPage),
-  attendance:      () => import('./page-attendance.js').then(m => m.renderAttendancePage),
-  payroll:         () => import('./page-payroll.js').then(m => m.renderPayrollPage),
-  leaves:          () => import('./page-leaves.js').then(m => m.renderLeavesPage),
-  severance:       () => import('./page-severance.js').then(m => m.renderSeverancePage),
-  'yearend-settlement': () => import('./page-yearend-settlement.js').then(m => m.renderYearendSettlementPage),
-  // 동기 렌더러 (이미 import된 모듈)
+  // ── VanillaBridge 래핑 (Vanilla 유지 + React 컨텍스트 주입) ─────────────
+  // vanillaLoader: Vanilla renderXxxPage를 VanillaBridge로 감싸 App(Auth+Store) 제공
+  // 나중에 reactLoader로 교체하면 완전한 React 전환 완료
+  upload:          vanillaLoader(() => import('./page-upload.js'),          'renderUploadPage'),
+  mapping:         vanillaLoader(() => import('./page-mapping.js'),         'renderMappingPage'),
+  summary:         vanillaLoader(() => import('./page-summary.js'),         'renderSummaryPage'),
+  scanner:         vanillaLoader(() => import('./page-scanner.js'),         'renderScannerPage'),
+  documents:       vanillaLoader(() => import('./page-documents.js'),       'renderDocumentsPage'),
+  dashboard:       vanillaLoader(() => import('./page-dashboard.js'),       'renderDashboardPage'),
+  transfer:        vanillaLoader(() => import('./page-transfer.js'),        'renderTransferPage'),
+  ledger:          vanillaLoader(() => import('./page-ledger.js'),          'renderLedgerPage'),
+  settings:        vanillaLoader(() => import('./page-settings.js'),        'renderSettingsPage'),
+  vendors:         vanillaLoader(() => import('./page-vendors.js'),         'renderVendorsPage'),
+  stocktake:       vanillaLoader(() => import('./page-stocktake.js'),       'renderStocktakePage'),
+  bulk:            vanillaLoader(() => import('./page-bulk.js'),            'renderBulkPage'),
+  costing:         vanillaLoader(() => import('./page-costing.js'),         'renderCostingPage'),
+  labels:          vanillaLoader(() => import('./page-labels.js'),          'renderLabelsPage'),
+  accounts:        vanillaLoader(() => import('./page-accounts.js'),        'renderAccountsPage'),
+  warehouses:      vanillaLoader(() => import('./page-warehouses.js'),      'renderWarehousesPage'),
+  roles:           vanillaLoader(() => import('./page-roles.js'),           'renderRolesPage'),
+  api:             vanillaLoader(() => import('./page-api.js'),             'renderApiPage'),
+  billing:         vanillaLoader(() => import('./page-billing.js'),         'renderBillingPage'),
+  admin:           vanillaLoader(() => import('./page-admin.js'),           'renderAdminPage'),
+  mypage:          vanillaLoader(() => import('./page-mypage.js'),          'renderMyPage'),
+  guide:           vanillaLoader(() => import('./page-guide.js'),           'renderGuidePage'),
+  support:         vanillaLoader(() => import('./page-support.js'),         'renderSupportPage'),
+  team:            vanillaLoader(() => import('./page-team.js'),            'renderTeamPage'),
+  'tax-reports':   vanillaLoader(() => import('./page-tax-reports.js'),     'renderTaxReportsPage'),
+  'auto-order':    vanillaLoader(() => import('./page-auto-order.js'),      'renderAutoOrderPage'),
+  profit:          vanillaLoader(() => import('./page-profit.js'),          'renderProfitPage'),
+  backup:          vanillaLoader(() => import('./page-backup.js'),          'renderBackupPage'),
+  orders:          vanillaLoader(() => import('./page-orders.js'),          'renderOrdersPage'),
+  forecast:        vanillaLoader(() => import('./page-forecast.js'),        'renderForecastPage'),
+  referral:        vanillaLoader(() => import('./page-referral.js'),        'renderReferralPage'),
+  'weekly-report': vanillaLoader(() => import('./page-weekly-report.js'),   'renderWeeklyReportPage'),
+  pos:             vanillaLoader(() => import('./page-pos.js'),             'renderPosPage'),
+  // HR 모듈
+  'hr-dashboard':  vanillaLoader(() => import('./page-hr-dashboard.js'),    'renderHrDashboardPage'),
+  employees:       vanillaLoader(() => import('./page-employees.js'),       'renderEmployeesPage'),
+  attendance:      vanillaLoader(() => import('./page-attendance.js'),      'renderAttendancePage'),
+  payroll:         vanillaLoader(() => import('./page-payroll.js'),         'renderPayrollPage'),
+  leaves:          vanillaLoader(() => import('./page-leaves.js'),          'renderLeavesPage'),
+  severance:       vanillaLoader(() => import('./page-severance.js'),       'renderSeverancePage'),
+  'yearend-settlement': vanillaLoader(() => import('./page-yearend-settlement.js'), 'renderYearendSettlementPage'),
+  // ── 허브·감사로그 (동기 렌더러 — vanillaLoader 불필요) ────────────────────
   auditlog:        async () => renderAuditLogPage,
   'hub-data':      async () => renderHubData,
   'hub-inventory': async () => renderHubInventory,

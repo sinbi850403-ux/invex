@@ -61,11 +61,10 @@ export function unmountCurrentReactPage() {
 }
 
 /**
- * pageLoaders 등록용 React 래퍼.
- * Vanilla renderXxxPage와 동일한 (container, navigateTo) => void 시그니처를 반환.
+ * reactLoader - 완전히 React로 재작성된 페이지 등록용 래퍼.
+ * default export가 React 컴포넌트인 모듈을 pageLoaders에 등록.
  *
  * 사용 예:
- *   // main.js pageLoaders에서 페이지 변환 시:
  *   inventory: reactLoader(() => import('./react/pages/InventoryPage')),
  *
  * @param {() => Promise<{default: React.ComponentType}>} importFn
@@ -74,5 +73,30 @@ export function reactLoader(importFn) {
   return async () => {
     const { default: Component } = await importFn();
     return (container, navFn) => mountReactPage(container, Component, navFn);
+  };
+}
+
+/**
+ * vanillaLoader - Vanilla renderXxxPage 함수를 VanillaBridge로 감싸 React 아래 등록.
+ *
+ * Vanilla 페이지를 그대로 유지하면서 React 컨텍스트(Auth, Store)를 주입.
+ * 점진적 마이그레이션 중간 단계 — 나중에 reactLoader로 교체 가능.
+ *
+ * 사용 예:
+ *   summary: vanillaLoader(() => import('./page-summary.js'), 'renderSummaryPage'),
+ *
+ * @param {() => Promise<object>} pageImportFn - page-xxx.js 동적 import
+ * @param {string} renderFnName - 모듈에서 가져올 함수 이름
+ */
+export function vanillaLoader(pageImportFn, renderFnName) {
+  return async () => {
+    const [pageMod, { VanillaBridge }] = await Promise.all([
+      pageImportFn(),
+      import('../react/components/VanillaBridge.jsx'),
+    ]);
+    const renderFn = pageMod[renderFnName];
+    const Wrapped = ({ navigateTo: navFn }) =>
+      React.createElement(VanillaBridge, { renderFn, navigateTo: navFn });
+    return (container, navFn) => mountReactPage(container, Wrapped, navFn);
   };
 }
