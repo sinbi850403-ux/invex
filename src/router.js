@@ -19,6 +19,10 @@ import { canAccessPage, showUpgradeModal } from './plan.js';
 import { mountAutoTableSort } from './table-auto-sort.js';
 import { showToast } from './toast.js';
 import { syncExternalNotifications } from './notifications.js';
+import { unmountCurrentReactPage, reactLoader } from './lib/mountReactPage.jsx';
+
+// reactLoader를 re-export — PAGE_LOADERS에 React 페이지 등록 시 사용
+export { reactLoader };
 import { HUB_MAP, PAGE_LABELS } from './page-hubs.js';
 import {
   renderHubData, renderHubInventory, renderHubWarehouse, renderHubOrder,
@@ -253,6 +257,7 @@ export async function navigateTo(pageName) {
       return;
     }
     main.dataset.page = pageName;
+    unmountCurrentReactPage(); // React 페이지 이탈 시 정상 언마운트 (메모리 누수 방지)
     main.innerHTML    = getSkeletonHtml();
     main.scrollTop    = 0;
 

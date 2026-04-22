@@ -11,13 +11,13 @@
     "preview:local": "vite preview --host 127.0.0.1 --port 4173"
   },
   "devDependencies": {
+    "@vitejs/plugin-react": "^6.0.1",
     "vite": "^8.0.1"
   },
   "dependencies": {
     "@fontsource/noto-sans-kr": "^5.2.9",
     "@sentry/browser": "^10.47.0",
     "@supabase/supabase-js": "^2.103.0",
-    "@vitejs/plugin-react": "^6.0.1",
     "chart.js": "^4.5.1",
     "exceljs": "^4.4.0",
     "html5-qrcode": "^2.3.8",
@@ -26,6 +26,6 @@
     "papaparse": "^5.5.3",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
-    "react-router-dom": "^7.14.1"
+    "react-router-dom": "^7.14.2"
   }
 }
