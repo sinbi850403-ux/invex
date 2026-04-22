@@ -4,6 +4,8 @@ import type { InventoryInput } from '../../../services/inventory/inventoryServic
 type InventoryEditorProps = {
   initialValue: InventoryInput;
   isEditing: boolean;
+  vendors: string[];
+  warehouses: string[];
   onCancelEdit: () => void;
   onSubmit: (value: InventoryInput) => void;
 };
@@ -19,7 +21,14 @@ const emptyForm: InventoryInput = {
   unitPrice: 0,
 };
 
-export function InventoryEditor({ initialValue, isEditing, onCancelEdit, onSubmit }: InventoryEditorProps) {
+export function InventoryEditor({
+  initialValue,
+  isEditing,
+  vendors,
+  warehouses,
+  onCancelEdit,
+  onSubmit,
+}: InventoryEditorProps) {
   const [form, setForm] = useState<InventoryInput>(initialValue);
 
   useEffect(() => {
@@ -52,8 +61,22 @@ export function InventoryEditor({ initialValue, isEditing, onCancelEdit, onSubmi
         <input className="react-input" value={form.itemName} onChange={(e) => update('itemName', e.target.value)} placeholder="Item name" />
         <input className="react-input" value={form.itemCode} onChange={(e) => update('itemCode', e.target.value)} placeholder="Item code" />
         <input className="react-input" value={form.category} onChange={(e) => update('category', e.target.value)} placeholder="Category" />
-        <input className="react-input" value={form.vendor} onChange={(e) => update('vendor', e.target.value)} placeholder="Vendor" />
-        <input className="react-input" value={form.warehouse} onChange={(e) => update('warehouse', e.target.value)} placeholder="Warehouse" />
+        <select className="react-select" value={form.vendor} onChange={(e) => update('vendor', e.target.value)}>
+          <option value="">Select vendor</option>
+          {vendors.map((vendor) => (
+            <option key={vendor} value={vendor}>
+              {vendor}
+            </option>
+          ))}
+        </select>
+        <select className="react-select" value={form.warehouse} onChange={(e) => update('warehouse', e.target.value)}>
+          <option value="">Select warehouse</option>
+          {warehouses.map((warehouse) => (
+            <option key={warehouse} value={warehouse}>
+              {warehouse}
+            </option>
+          ))}
+        </select>
         <input
           className="react-input"
           type="number"

@@ -508,6 +508,10 @@ a {
   background: linear-gradient(135deg, #0f766e, #0f172a);
 }
 
+.react-auth-submit.is-danger {
+  background: linear-gradient(135deg, #b91c1c, #7f1d1d);
+}
+
 .react-auth-logout {
   margin-top: 18px;
   color: #0f172a;
@@ -601,6 +605,42 @@ a {
 .react-card--loading {
   min-height: 220px;
   place-content: center;
+}
+
+.react-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(2px);
+}
+
+.react-modal-card {
+  width: min(100%, 460px);
+  padding: 24px;
+  border-radius: 20px;
+  background: #ffffff;
+  border: 1px solid rgba(148, 163, 184, 0.26);
+  box-shadow: 0 20px 50px rgba(15, 23, 42, 0.2);
+}
+
+.react-modal-card h3 {
+  margin: 0 0 10px;
+}
+
+.react-modal-card p {
+  margin: 0;
+  color: #475569;
+}
+
+.react-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 18px;
 }
 
 @media (max-width: 1280px) {

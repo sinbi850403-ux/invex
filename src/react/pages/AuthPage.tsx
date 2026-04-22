@@ -44,13 +44,13 @@ export function AuthPage() {
     setError(null);
 
     if (!form.email || !form.password) {
-      setError('Enter your email and password.');
+      setError('이메일과 비밀번호를 입력해 주세요.');
       return;
     }
 
     const result = await loginWithEmailPassword(form.email, form.password);
     if (!result) {
-      setError('Login failed. Check your credentials and try again.');
+      setError('로그인에 실패했습니다. 입력한 계정을 다시 확인해 주세요.');
     }
   }
 
@@ -60,27 +60,27 @@ export function AuthPage() {
     setError(null);
 
     if (!form.name || !form.email || !form.password) {
-      setError('Enter name, email, and password.');
+      setError('이름, 이메일, 비밀번호를 모두 입력해 주세요.');
       return;
     }
 
     if (form.password.length < 6) {
-      setError('Password must be at least 6 characters.');
+      setError('비밀번호는 6자 이상이어야 합니다.');
       return;
     }
 
     if (form.password !== form.confirmPassword) {
-      setError('Password confirmation does not match.');
+      setError('비밀번호 확인이 일치하지 않습니다.');
       return;
     }
 
     const result = await registerWithEmail(form.email, form.password, form.name);
     if (!result) {
-      setError('Signup could not be completed.');
+      setError('회원가입을 완료하지 못했습니다. 잠시 후 다시 시도해 주세요.');
       return;
     }
 
-    setMessage('Signup request sent. Please verify your email.');
+    setMessage('가입 요청을 보냈습니다. 이메일 인증을 완료해 주세요.');
     setMode('login');
   }
 
@@ -89,17 +89,17 @@ export function AuthPage() {
     setError(null);
 
     if (!form.email) {
-      setError('Enter your email first to receive a reset link.');
+      setError('비밀번호 재설정 메일을 받으려면 이메일을 먼저 입력해 주세요.');
       return;
     }
 
     const success = await sendPasswordReset(form.email);
     if (success) {
-      setMessage('Password reset email sent.');
+      setMessage('비밀번호 재설정 메일을 보냈습니다.');
       return;
     }
 
-    setError('Could not send password reset email.');
+    setError('비밀번호 재설정 메일을 보내지 못했습니다.');
   }
 
   async function handleLogout() {
@@ -109,11 +109,11 @@ export function AuthPage() {
   return (
     <section className="react-page">
       <article className="react-card">
-        <span className="react-chip">Auth page</span>
-        <h2>React auth now owns the login entry for the new workspace.</h2>
+        <span className="react-chip">인증</span>
+        <h2>워크스페이스 로그인과 계정 인증을 이 화면에서 관리합니다.</h2>
         <p>
-          Email login, Google OAuth redirect, signup, reset password, and sign out are all routed
-          through the shared auth facade.
+          이메일 로그인, Google OAuth, 회원가입, 비밀번호 재설정, 로그아웃까지
+          모두 공통 인증 계층으로 연결되어 일관되게 동작합니다.
         </p>
       </article>
 
@@ -121,18 +121,18 @@ export function AuthPage() {
         <article className="react-card">
           <div className="react-segmented">
             <button type="button" className={mode === 'login' ? 'is-active' : ''} onClick={() => setMode('login')}>
-              Login
+              로그인
             </button>
             <button type="button" className={mode === 'signup' ? 'is-active' : ''} onClick={() => setMode('signup')}>
-              Signup
+              회원가입
             </button>
           </div>
 
           <button type="button" className="react-auth-google" onClick={() => void loginWithGoogleAccount()} disabled={isPending}>
-            Continue with Google
+            Google 계정으로 계속하기
           </button>
 
-          <div className="react-auth-divider">or continue with email</div>
+          <div className="react-auth-divider">또는 이메일로 진행</div>
 
           {mode === 'login' ? (
             <form className="react-auth-form" onSubmit={handleEmailLogin}>
@@ -141,20 +141,20 @@ export function AuthPage() {
                 <input type="email" value={form.email} onChange={(event) => updateField('email', event.target.value)} />
               </label>
               <label className="react-field">
-                <span>Password</span>
+                <span>비밀번호</span>
                 <input type="password" value={form.password} onChange={(event) => updateField('password', event.target.value)} />
               </label>
               <button type="submit" className="react-auth-submit" disabled={isPending}>
-                Sign in
+                로그인
               </button>
               <button type="button" className="react-auth-text-button" onClick={handlePasswordReset} disabled={isPending}>
-                Send password reset
+                비밀번호 재설정 메일 보내기
               </button>
             </form>
           ) : (
             <form className="react-auth-form" onSubmit={handleSignup}>
               <label className="react-field">
-                <span>Name</span>
+                <span>이름</span>
                 <input type="text" value={form.name} onChange={(event) => updateField('name', event.target.value)} />
               </label>
               <label className="react-field">
@@ -162,11 +162,11 @@ export function AuthPage() {
                 <input type="email" value={form.email} onChange={(event) => updateField('email', event.target.value)} />
               </label>
               <label className="react-field">
-                <span>Password</span>
+                <span>비밀번호</span>
                 <input type="password" value={form.password} onChange={(event) => updateField('password', event.target.value)} />
               </label>
               <label className="react-field">
-                <span>Confirm password</span>
+                <span>비밀번호 확인</span>
                 <input
                   type="password"
                   value={form.confirmPassword}
@@ -174,7 +174,7 @@ export function AuthPage() {
                 />
               </label>
               <button type="submit" className="react-auth-submit" disabled={isPending}>
-                Create account
+                계정 만들기
               </button>
             </form>
           )}
@@ -184,29 +184,29 @@ export function AuthPage() {
         </article>
 
         <article className="react-card">
-          <span className="react-card__eyebrow">Session</span>
-          <h3>Current auth snapshot</h3>
+          <span className="react-card__eyebrow">세션</span>
+          <h3>현재 인증 상태</h3>
           <div className="react-session-card">
             <div>
-              <strong>Status</strong>
-              <p>{isReady ? 'Ready' : 'Checking'}</p>
+              <strong>상태</strong>
+              <p>{isReady ? '준비됨' : '확인 중'}</p>
             </div>
             <div>
-              <strong>User</strong>
-              <p>{user?.email || 'Signed out'}</p>
+              <strong>사용자</strong>
+              <p>{user?.email || '로그아웃 상태'}</p>
             </div>
             <div>
-              <strong>Role</strong>
+              <strong>권한</strong>
               <p>{profile?.role || '-'}</p>
             </div>
             <div>
-              <strong>Plan</strong>
+              <strong>플랜</strong>
               <p>{profile?.plan || '-'}</p>
             </div>
           </div>
 
           <button type="button" className="react-auth-logout" onClick={handleLogout} disabled={!user || isPending}>
-            Sign out
+            로그아웃
           </button>
         </article>
       </div>

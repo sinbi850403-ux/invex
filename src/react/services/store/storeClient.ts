@@ -1,6 +1,7 @@
 import { getState, restoreState, setState } from '../../../store.js';
 
 export type AppStoreState = ReturnType<typeof getState>;
+export type StoreChangedKey = keyof AppStoreState | 'mappedData' | 'transactions' | '*';
 
 export async function restoreAppStore() {
   await restoreState();
@@ -13,6 +14,12 @@ export function getStoreSnapshot() {
 
 export function updateStore(partial: Partial<AppStoreState>) {
   setState(partial);
+}
+
+export function notifyStoreUpdated(changedKeys: StoreChangedKey[]) {
+  window.dispatchEvent(
+    new CustomEvent('invex:store-updated', { detail: { changedKeys } }),
+  );
 }
 
 export function subscribeStore(listener: () => void) {

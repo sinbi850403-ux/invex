@@ -1,4 +1,5 @@
 type InventoryRow = {
+  id?: string;
   _index?: number;
   itemName?: string;
   itemCode?: string;
@@ -49,7 +50,7 @@ export function InventoryTable({ rows, onDelete, onEdit }: InventoryTableProps) 
           <tbody>
             {rows.length ? (
               rows.slice(0, 16).map((row, index) => (
-                <tr key={`${row.itemCode || row.itemName || 'item'}-${index}`}>
+                <tr key={row.id || `${row.itemCode || row.itemName || 'item'}-${index}`}>
                   <td>{row.itemName || '-'}</td>
                   <td>{row.itemCode || '-'}</td>
                   <td>{row.category || '-'}</td>

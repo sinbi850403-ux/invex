@@ -1,8 +1,5 @@
 import { addTransaction, deleteTransaction } from '../../../store.js';
-
-function notifyStoreUpdated(changedKeys: string[]) {
-  window.dispatchEvent(new CustomEvent('invex:store-updated', { detail: { changedKeys } }));
-}
+import { notifyStoreUpdated } from '../store/storeClient';
 
 export type InoutInput = {
   type: 'in' | 'out';

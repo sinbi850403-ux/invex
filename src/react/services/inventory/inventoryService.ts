@@ -1,8 +1,5 @@
 import { addItem, deleteItem, recalcItemAmounts, updateItem } from '../../../store.js';
-
-function notifyStoreUpdated(changedKeys: string[]) {
-  window.dispatchEvent(new CustomEvent('invex:store-updated', { detail: { changedKeys } }));
-}
+import { notifyStoreUpdated } from '../store/storeClient';
 
 export type InventoryInput = {
   itemName: string;
@@ -43,15 +40,15 @@ export function createInventoryItem(input: InventoryInput) {
   return record;
 }
 
-export function editInventoryItem(index: number, input: InventoryInput) {
+export function editInventoryItem(target: number | string, input: InventoryInput) {
   const record = toInventoryRecord(input);
-  updateItem(index, record);
+  updateItem(target, record);
   notifyStoreUpdated(['mappedData']);
   return record;
 }
 
-export function removeInventoryItem(index: number) {
-  const result = deleteItem(index);
+export function removeInventoryItem(target: number | string) {
+  const result = deleteItem(target);
   notifyStoreUpdated(['mappedData']);
   return result;
 }

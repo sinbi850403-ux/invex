@@ -28,10 +28,14 @@ export function getInventorySummary(state: AppStoreState) {
 
 export function getInventoryOptions(state: AppStoreState) {
   const items = state.mappedData || [];
+  const vendorMasterNames = (state.vendorMaster || []).map((vendor) => String(vendor.name || '').trim()).filter(Boolean);
+  const itemVendorNames = items.map((item) => String(item.vendor || '').trim()).filter(Boolean);
+  const vendors = [...new Set([...vendorMasterNames, ...itemVendorNames])].sort();
 
   return {
     categories: [...new Set(items.map((item) => item.category).filter(Boolean))].sort(),
     warehouses: [...new Set(items.map((item) => item.warehouse).filter(Boolean))].sort(),
+    vendors,
   };
 }
 

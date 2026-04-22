@@ -21,6 +21,13 @@ export function useInoutPage() {
   const summary = useMemo(() => getInoutSummary(state), [state]);
   const options = useMemo(() => getInoutOptions(state), [state]);
   const rows = useMemo(() => getFilteredTransactions(state, effectiveFilter), [effectiveFilter, state]);
+  const composerOptions = useMemo(
+    () => ({
+      items: state.mappedData || [],
+      vendors: options.vendors,
+    }),
+    [options.vendors, state.mappedData],
+  );
 
   function saveTransaction(value: InoutInput) {
     createTransaction(value);
@@ -31,5 +38,5 @@ export function useInoutPage() {
     removeTransaction(row.id);
   }
 
-  return { filter, options, rows, summary, setFilter, saveTransaction, deleteTransaction };
+  return { filter, options, rows, summary, composerOptions, setFilter, saveTransaction, deleteTransaction };
 }

@@ -27,7 +27,7 @@ export function useInventoryPage() {
     warehouse: '',
     focus: 'all',
   });
-  const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  const [editingTarget, setEditingTarget] = useState<number | string | null>(null);
   const [draft, setDraft] = useState<InventoryInput>(emptyDraft);
   const deferredKeyword = useDeferredValue(filter.keyword);
 
@@ -41,8 +41,11 @@ export function useInventoryPage() {
   const rows = useMemo(() => getFilteredInventoryRows(state, effectiveFilter), [effectiveFilter, state]);
 
   useEffect(() => {
-    if (editingIndex === null) return;
-    const target = state.mappedData?.[editingIndex];
+    if (editingTarget === null) return;
+    const target =
+      typeof editingTarget === 'number'
+        ? state.mappedData?.[editingTarget]
+        : (state.mappedData || []).find((item) => String(item.id || item._id || '') === String(editingTarget));
     if (!target) return;
 
     setDraft({
@@ -55,16 +58,17 @@ export function useInventoryPage() {
       unit: target.unit || 'EA',
       unitPrice: Number(target.unitPrice || 0),
     });
-  }, [editingIndex, state.mappedData]);
+  }, [editingTarget, state.mappedData]);
 
   function startCreate() {
-    setEditingIndex(null);
+    setEditingTarget(null);
     setDraft(emptyDraft);
   }
 
-  function startEdit(row: { _index?: number; itemName?: string; itemCode?: string; category?: string; vendor?: string; warehouse?: string; quantity?: string | number; unit?: string; unitPrice?: string | number; }) {
-    if (typeof row._index !== 'number') return;
-    setEditingIndex(row._index);
+  function startEdit(row: { id?: string; _index?: number; itemName?: string; itemCode?: string; category?: string; vendor?: string; warehouse?: string; quantity?: string | number; unit?: string; unitPrice?: string | number; }) {
+    const nextTarget = row.id || row._index;
+    if (typeof nextTarget !== 'number' && typeof nextTarget !== 'string') return;
+    setEditingTarget(nextTarget);
     setDraft({
       itemName: row.itemName || '',
       itemCode: row.itemCode || '',
@@ -78,30 +82,37 @@ export function useInventoryPage() {
   }
 
   function saveItem(value: InventoryInput) {
-    if (editingIndex === null) {
+    if (editingTarget === null) {
       createInventoryItem(value);
       setDraft(emptyDraft);
       return;
     }
 
-    editInventoryItem(editingIndex, value);
-    setEditingIndex(null);
+    editInventoryItem(editingTarget, value);
+    setEditingTarget(null);
     setDraft(emptyDraft);
   }
 
-  function deleteItem(row: { _index?: number }) {
-    if (typeof row._index !== 'number') return;
-    removeInventoryItem(row._index);
-    if (editingIndex === row._index) {
-      setEditingIndex(null);
+  function deleteItem(row: { id?: string; _index?: number }) {
+    const target = row.id || row._index;
+    if (typeof target !== 'number' && typeof target !== 'string') return;
+    removeInventoryItem(target);
+    if (editingTarget === target) {
+      setEditingTarget(null);
       setDraft(emptyDraft);
     }
   }
 
+  const editorOptions = useMemo(() => ({
+    vendors: options.vendors,
+    warehouses: options.warehouses,
+  }), [options.vendors, options.warehouses]);
+
   return {
     draft,
-    editingIndex,
+    editingIndex: editingTarget,
     filter,
+    editorOptions,
     options,
     rows,
     summary,

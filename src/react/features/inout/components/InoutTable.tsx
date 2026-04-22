@@ -38,7 +38,7 @@ export function InoutTable({ rows, onDelete }: { rows: InoutRow[]; onDelete: (ro
           <tbody>
             {rows.length ? (
               rows.slice(0, 16).map((row, index) => (
-                <tr key={`${row.itemCode || row.itemName || 'tx'}-${index}`}>
+                <tr key={row.id || `${row.itemCode || row.itemName || 'tx'}-${index}`}>
                   <td>
                     <span className={row.type === 'in' ? 'react-badge is-good' : 'react-badge is-warn'}>
                       {row.type === 'in' ? 'Inbound' : 'Outbound'}
