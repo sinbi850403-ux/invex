@@ -13,13 +13,17 @@ export function renderInlineLoginError({
   errorContainer.style.cssText = 'margin-top:10px; animation: fadeSlideIn 0.3s ease;';
 
   const msgEl = document.createElement('div');
-  msgEl.style.cssText = 'color:#ef4444; font-size:13px; text-align:center; padding:10px 14px; background:rgba(239,68,68,0.1); border-radius:8px;';
+  msgEl.style.cssText =
+    'color:#ef4444; font-size:13px; text-align:center; padding:10px 14px; background:rgba(239,68,68,0.1); border-radius:8px;';
   msgEl.textContent = errorMsg;
   errorContainer.appendChild(msgEl);
 
-  if (errorMsg.includes('지연') || errorMsg.includes('불안정') || errorMsg.includes('오프라인') || errorMsg.includes('다시 시도')) {
+  const retryHints = ['네트워크', '불안정', '오프라인', '다시 시도', 'timeout', 'network', 'failed'];
+  const normalizedMessage = String(errorMsg || '').toLowerCase();
+  if (retryHints.some((hint) => normalizedMessage.includes(hint.toLowerCase()))) {
     const retryBtn = document.createElement('button');
-    retryBtn.style.cssText = 'width:100%; margin-top:8px; padding:10px 16px; background:linear-gradient(135deg, #3b82f6, #6366f1); color:white; border:none; border-radius:8px; cursor:pointer; font-size:13px; font-weight:600;';
+    retryBtn.style.cssText =
+      'width:100%; margin-top:8px; padding:10px 16px; background:linear-gradient(135deg, #3b82f6, #6366f1); color:white; border:none; border-radius:8px; cursor:pointer; font-size:13px; font-weight:600;';
     retryBtn.textContent = '다시 시도';
     retryBtn.addEventListener('click', async () => {
       document.getElementById('login-error-msg')?.remove();
@@ -38,7 +42,8 @@ export function renderInlineLoginError({
     helpBox.appendChild(helpText);
 
     const resetBtn = document.createElement('button');
-    resetBtn.style.cssText = 'width:100%; padding:10px 16px; background:linear-gradient(135deg, #6366f1, #8b5cf6); color:white; border:none; border-radius:8px; cursor:pointer; font-size:13px; font-weight:600; transition:all 0.2s;';
+    resetBtn.style.cssText =
+      'width:100%; padding:10px 16px; background:linear-gradient(135deg, #6366f1, #8b5cf6); color:white; border:none; border-radius:8px; cursor:pointer; font-size:13px; font-weight:600; transition:all 0.2s;';
     resetBtn.textContent = '비밀번호 재설정 메일 받기';
     resetBtn.addEventListener('click', async () => {
       resetBtn.disabled = true;
@@ -52,8 +57,9 @@ export function renderInlineLoginError({
 
       errorContainer.innerHTML = '';
       const successEl = document.createElement('div');
-      successEl.style.cssText = 'color:#22c55e; font-size:13px; text-align:center; padding:14px; background:rgba(34,197,94,0.1); border-radius:8px; line-height:1.6;';
-      successEl.innerHTML = `<strong>메일을 전송했습니다.</strong><br><span style="font-size:12px; color:var(--text-muted);">${email} 메일함에서 비밀번호를 다시 설정해 주세요.</span>`;
+      successEl.style.cssText =
+        'color:#22c55e; font-size:13px; text-align:center; padding:14px; background:rgba(34,197,94,0.1); border-radius:8px; line-height:1.6;';
+      successEl.innerHTML = `<strong>메일이 전송되었습니다.</strong><br><span style="font-size:12px; color:var(--text-muted);">${email} 메일함에서 비밀번호를 다시 설정해 주세요.</span>`;
       errorContainer.appendChild(successEl);
     });
 
