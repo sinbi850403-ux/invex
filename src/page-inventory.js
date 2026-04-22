@@ -1,4 +1,4 @@
-﻿/**
+/**
  * page-inventory.js - 재고 현황 페이지
  * 핵심 기능: 수기 품목 추가/수정, 안전재고 경고, 검색/필터, 페이지네이션, 상세 보기
  * **컬럼 표시 설정**: 사용자가 보고 싶은 컬럼만 선택해서 볼 수 있음
@@ -864,7 +864,7 @@ export function renderInventoryPage(container, navigateTo) {
     });
   }
 
-  // === ?뚯씠釉??ㅻ뜑 ?뚮뜑留?(而щ읆 蹂寃????ы샇異? ===
+  // === 테이블 헤더 렌더링 (컬럼 변경 시 번호 반영) ===
   function renderTableHeader() {
     const thead = container.querySelector('#inventory-thead');
     thead.innerHTML = `
@@ -1676,7 +1676,7 @@ export function renderInventoryPage(container, navigateTo) {
     if (panel) panel.classList.toggle('is-open');
   });
 
-  // ?꾪꽣 ?쒖꽦 ?곹깭 ?쒓컖???쒖떆
+  // 현재 필터 활성 상태 표시
   function highlightActiveFilters() {
     const filterIds = ['filter-item-code', 'filter-vendor', 'filter-category', 'filter-warehouse', 'filter-stock', 'sort-preset'];
     filterIds.forEach(id => {
