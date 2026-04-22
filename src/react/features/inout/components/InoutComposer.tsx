@@ -5,6 +5,8 @@ type InoutComposerProps = {
   items: Array<{
     itemName?: string;
     itemCode?: string;
+    category?: string;
+    unit?: string;
     vendor?: string;
     warehouse?: string;
     unitPrice?: number | string;
@@ -33,6 +35,13 @@ export function InoutComposer({ items, vendors, onSubmit }: InoutComposerProps) 
     () => items.filter((item) => String(item.itemName || '').trim()),
     [items],
   );
+  const selectedItem = useMemo(
+    () =>
+      itemOptions.find(
+        (item) => `${String(item.itemCode || '').trim()}::${String(item.itemName || '').trim()}` === selectedItemKey,
+      ) || null,
+    [itemOptions, selectedItemKey],
+  );
 
   function update<K extends keyof InoutInput>(key: K, value: InoutInput[K]) {
     setForm((current) => ({ ...current, [key]: value }));
@@ -43,13 +52,12 @@ export function InoutComposer({ items, vendors, onSubmit }: InoutComposerProps) 
     if (!form.itemName.trim() || !form.date) return;
     onSubmit(form);
     setForm(defaultForm);
+    setSelectedItemKey('');
   }
 
   function handleSelectItem(nextKey: string) {
     setSelectedItemKey(nextKey);
-    const selected = itemOptions.find(
-      (item) => `${String(item.itemCode || '').trim()}::${String(item.itemName || '').trim()}` === nextKey,
-    );
+    const selected = itemOptions.find((item) => `${String(item.itemCode || '').trim()}::${String(item.itemName || '').trim()}` === nextKey);
     if (!selected) return;
 
     const unitPrice = Number(selected.unitPrice || 0);
@@ -92,6 +100,12 @@ export function InoutComposer({ items, vendors, onSubmit }: InoutComposerProps) 
         </select>
         <input className="react-input" value={form.itemName} onChange={(e) => update('itemName', e.target.value)} placeholder="Item name" />
         <input className="react-input" value={form.itemCode} onChange={(e) => update('itemCode', e.target.value)} placeholder="Item code" />
+        <input
+          className="react-input"
+          value={selectedItem?.category || ''}
+          readOnly
+          placeholder="Category auto-filled from item"
+        />
         <select className="react-select" value={form.vendor} onChange={(e) => update('vendor', e.target.value)}>
           <option value="">Select vendor</option>
           {vendors.map((vendor) => (
@@ -102,7 +116,13 @@ export function InoutComposer({ items, vendors, onSubmit }: InoutComposerProps) 
         </select>
         <input className="react-input" value={form.warehouse} onChange={(e) => update('warehouse', e.target.value)} placeholder="Warehouse" />
         <input className="react-input" type="date" value={form.date} onChange={(e) => update('date', e.target.value)} />
-        <input className="react-input" type="number" value={form.quantity} onChange={(e) => update('quantity', Number(e.target.value))} placeholder="Quantity" />
+        <input
+          className="react-input"
+          type="number"
+          value={form.quantity}
+          onChange={(e) => update('quantity', Number(e.target.value))}
+          placeholder={`Quantity${selectedItem?.unit ? ` (${selectedItem.unit})` : ''}`}
+        />
         <input className="react-input" type="number" value={form.unitPrice} onChange={(e) => update('unitPrice', Number(e.target.value))} placeholder="Unit price" />
         <input className="react-input react-input--wide" value={form.note} onChange={(e) => update('note', e.target.value)} placeholder="Note" />
 

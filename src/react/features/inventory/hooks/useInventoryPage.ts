@@ -104,9 +104,21 @@ export function useInventoryPage() {
   }
 
   const editorOptions = useMemo(() => ({
+    categories: options.categories,
+    units: [...new Set((state.mappedData || []).map((item) => String(item.unit || '').trim()).filter(Boolean))].sort(),
     vendors: options.vendors,
     warehouses: options.warehouses,
-  }), [options.vendors, options.warehouses]);
+    itemTemplates: (state.mappedData || []).map((item) => ({
+      id: String(item.id || item._id || ''),
+      itemName: String(item.itemName || ''),
+      itemCode: String(item.itemCode || ''),
+      category: String(item.category || ''),
+      unit: String(item.unit || 'EA'),
+      vendor: String(item.vendor || ''),
+      warehouse: String(item.warehouse || ''),
+      unitPrice: Number(item.unitPrice || 0),
+    })),
+  }), [options.categories, options.vendors, options.warehouses, state.mappedData]);
 
   return {
     draft,

@@ -26,8 +26,10 @@ export function getInoutSummary(state: AppStoreState) {
 }
 
 export function getInoutOptions(state: AppStoreState) {
+  const vendorMasterNames = (state.vendorMaster || []).map((vendor) => String(vendor.name || '').trim()).filter(Boolean);
+  const txVendors = (state.transactions || []).map((tx) => String(tx.vendor || '').trim()).filter(Boolean);
   return {
-    vendors: [...new Set((state.transactions || []).map((tx) => tx.vendor).filter(Boolean))].sort(),
+    vendors: [...new Set([...vendorMasterNames, ...txVendors])].sort(),
   };
 }
 

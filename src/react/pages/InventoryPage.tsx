@@ -49,8 +49,11 @@ export function InventoryPage() {
       <InventoryEditor
         initialValue={draft}
         isEditing={editingIndex !== null}
+        categories={editorOptions.categories}
+        units={editorOptions.units}
         vendors={editorOptions.vendors}
         warehouses={editorOptions.warehouses}
+        itemTemplates={editorOptions.itemTemplates}
         onCancelEdit={startCreate}
         onSubmit={saveItem}
       />

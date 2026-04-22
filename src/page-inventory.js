@@ -1,6 +1,6 @@
 ﻿/**
  * page-inventory.js - 재고 현황 페이지
- * ?ㅻТ 湲곕뒫: ?섎룞 ?덈ぉ 異붽?/?몄쭛, ?덉쟾?ш퀬 寃쎄퀬, 寃???꾪꽣, ?섏씠吏?ㅼ씠?? ?묒? ?대낫?닿린
+ * 핵심 기능: 수기 품목 추가/수정, 안전재고 경고, 검색/필터, 페이지네이션, 상세 보기
  * **컬럼 표시 설정**: 사용자가 보고 싶은 컬럼만 선택해서 볼 수 있음
  */
 
@@ -34,7 +34,7 @@ function buildDatalistOptionTags(values) {
 // 페이지당 행 수
 const PAGE_SIZE = 20;
 
-// ?꾩껜 ?꾨뱶 ?뺤쓽 (?쒖꽌 ?좎?)
+// 전체 필드 정의 (순서 유지)
 const ALL_FIELDS = [
   { key: 'itemName', label: '품목명', numeric: false },
   { key: 'itemCode', label: '품목코드', numeric: false },
@@ -54,20 +54,20 @@ const ALL_FIELDS = [
   { key: 'note', label: '비고', numeric: false },
 ];
 
-// 페이지당 행 수
+// 필드 라벨 맵
 const FIELD_LABELS = {};
 ALL_FIELDS.forEach(f => { FIELD_LABELS[f.key] = f.label; });
 
 /**
  * 현재 표시할 컬럼 목록 결정
- * ????濡쒖쭅? ??visibleColumns ?ㅼ젙???덉쑝硫?洹멸구 ?곕Ⅴ怨?
- * 현재 표시할 컬럼 목록 결정
+ * visibleColumns 설정이 있으면 해당 설정을 우선 적용하고,
+ * 없으면 데이터가 있는 컬럼 + 핵심 금액 컬럼을 기본 노출한다.
  */
 function getVisibleFields(data) {
   const state = getState();
   const visibleColumns = state.visibleColumns;
 
-  // 페이지당 행 수
+  // 실제 데이터가 존재하는 컬럼 추출
   const hasData = new Set(
     ALL_FIELDS.map(f => f.key).filter(key =>
       data.some(row => row[key] !== '' && row[key] !== undefined && row[key] !== null)
@@ -75,7 +75,7 @@ function getVisibleFields(data) {
   );
 
   if (visibleColumns && Array.isArray(visibleColumns)) {
-    // [VAT ?⑥튂] 湲곗〈 ?ㅼ젙???덈뜑?쇰룄 ?덈∼寃?異붽???怨듦툒媛?? 遺媛?몃뒗 ?곗꽑 蹂댁씠寃?蹂댁젙
+    // 기존 설정에도 공급가액/VAT는 보이도록 보정
     const updatedVisible = [...visibleColumns];
     if (!updatedVisible.includes('supplyValue')) updatedVisible.push('supplyValue');
     if (!updatedVisible.includes('vat')) updatedVisible.push('vat');
@@ -84,13 +84,13 @@ function getVisibleFields(data) {
     return ALL_FIELDS.filter(f => updatedVisible.includes(f.key)).map(f => f.key);
   }
 
-  // 페이지당 행 수
-  // 전체 필드 정의 (순서 유지)
+  // 설정이 없으면 데이터 존재 컬럼 + 핵심 금액 컬럼을 기본 표시
+
   return ALL_FIELDS.filter(f => hasData.has(f.key) || f.key === 'supplyValue' || f.key === 'vat').map(f => f.key);
 }
 
 /**
- * 현재 표시할 컬럼 목록 결정
+ * 재고 페이지 렌더링
  */
 export function renderInventoryPage(container, navigateTo) {
   // ── 권한 플래그 ──────────────────────────────────────────
@@ -124,7 +124,7 @@ export function renderInventoryPage(container, navigateTo) {
     container.innerHTML = `
       <div class="page-header">
         <div>
-          <h1 class="page-title"><span class="title-icon">📦</span> 재고 현황</h1>
+          <h1 class="page-title"><span class="title-icon">??</span> 재고 현황</h1>
           <div class="page-desc">품목별 재고 수량과 금액을 관리합니다.</div>
         </div>
         <div class="page-actions">
@@ -133,14 +133,14 @@ export function renderInventoryPage(container, navigateTo) {
       </div>
       <div class="card">
         <div class="empty-state">
-          <div class="icon">📦</div>
+          <div class="icon">??</div>
           <div class="msg">아직 등록된 품목이 없습니다</div>
           <div class="sub">엑셀 파일을 업로드하거나 품목을 직접 등록해 주세요.</div>
           <div class="empty-state-actions">
-            <button class="btn btn-primary" id="btn-go-upload">📂 엑셀 업로드</button>
-            <button class="btn btn-outline" id="btn-add-item-empty">✏️ 직접 입력</button>
+            <button class="btn btn-primary" id="btn-go-upload">?? 엑셀 업로드</button>
+            <button class="btn btn-outline" id="btn-add-item-empty">?? 직접 입력</button>
           </div>
-          <div class="empty-state-tip">💡 TIP: 기존 엑셀 파일(.xlsx)을 그대로 드래그하면 자동으로 인식합니다</div>
+          <div class="empty-state-tip">?? TIP: 기존 엑셀 파일(.xlsx)을 그대로 드래그하면 자동으로 인식합니다</div>
         </div>
       </div>
     `;
@@ -215,13 +215,13 @@ export function renderInventoryPage(container, navigateTo) {
   container.innerHTML = `
     <div class="page-header">
       <div>
-        <h1 class="page-title"><span class="title-icon">📦</span> 재고 현황</h1>
-        <div class="page-desc">${state.fileName ? `📄 ${state.fileName}` : ''} 총 ${data.length}개 품목</div>
+        <h1 class="page-title"><span class="title-icon">??</span> 재고 현황</h1>
+        <div class="page-desc">${state.fileName ? `?? ${state.fileName}` : ''} 총 ${data.length}개 품목</div>
       </div>
       <div class="page-actions">
-        ${canBulk ? `<button class="btn btn-outline" id="btn-rebuild-inventory" title="입출고 이력 기준으로 재고 수량 재계산">🔄 재고 재계산</button>` : ''}
-        <button class="btn btn-outline" id="btn-export">📥 엑셀</button>
-        <button class="btn btn-outline" id="btn-export-pdf">📄 PDF</button>
+        ${canBulk ? `<button class="btn btn-outline" id="btn-rebuild-inventory" title="입출고 이력 기준으로 재고 수량 재계산">?? 재고 재계산</button>` : ''}
+        <button class="btn btn-outline" id="btn-export">?? 엑셀</button>
+        <button class="btn btn-outline" id="btn-export-pdf">?? PDF</button>
         ${canCreate ? `<button class="btn btn-primary" id="btn-add-item">+ 품목 추가</button>` : ''}
       </div>
     </div>
@@ -302,11 +302,11 @@ export function renderInventoryPage(container, navigateTo) {
         chips: inventoryFocusChips.map(chip => ({ ...chip, active: chip.value === 'all' })),
       })}
 
-    <!-- 검색 + 필터 — 기본은 검색만, 상세 필터는 토글로 열림 -->
+    <!-- 검색 + 필터 ? 기본은 검색만, 상세 필터는 토글로 열림 -->
     <div class="toolbar">
       <input type="text" class="search-input" id="search-input"
         placeholder="스마트 검색: 품목명, 분류:식품, 창고:본사, 재고>=10, 부족, 품절" />
-      <button class="filter-toggle-btn" id="btn-filter-toggle">🔍 상세 필터</button>
+      <button class="filter-toggle-btn" id="btn-filter-toggle">?? 상세 필터</button>
       <button class="btn btn-ghost btn-sm" id="btn-filter-reset" title="필터 초기화">초기화</button>
       <div class="col-settings-wrap" style="position:relative;">
         <button class="btn btn-outline btn-sm" id="btn-col-settings" title="표시 열 선택">
@@ -333,7 +333,7 @@ export function renderInventoryPage(container, navigateTo) {
         </div>
       </div>
     </div>
-    <!-- 상세 필터 패널 — 기본 숨김, 토글 버튼으로 열림 -->
+    <!-- 상세 필터 패널 ? 기본 숨김, 토글 버튼으로 열림 -->
     <div class="filter-detail-panel" id="filter-detail-panel">
       <select class="filter-select" id="filter-item-code">
         <option value="">전체 품목코드</option>
@@ -991,7 +991,7 @@ export function renderInventoryPage(container, navigateTo) {
               <td class="editable-cell ${ALL_FIELDS.find(f => f.key === key)?.numeric ? 'text-right' : ''}"
                   data-label="${FIELD_LABELS[key] || key}"
                   data-field="${key}" data-item-id="${safeAttr(itemId)}">
-                ${key === 'itemName' && isLocked ? '<span title="잠금 품목 (수정 제한)" style="margin-right:4px;">🔒</span>' : ''}
+                ${key === 'itemName' && isLocked ? '<span title="잠금 품목 (수정 제한)" style="margin-right:4px;">??</span>' : ''}
                 ${formatCell(key, row[key])}
                 ${key === 'quantity' && isLow ? ' <span class="badge badge-danger" style="font-size:10px;">부족</span>' : ''}
               </td>
@@ -1670,7 +1670,7 @@ export function renderInventoryPage(container, navigateTo) {
     showToast('필터와 정렬을 초기화했습니다.', 'info');
   });
 
-  // 상세 필터 토글 — 기본 숨김, 클릭 시 패널 열기/닫기
+  // 상세 필터 토글 ? 기본 숨김, 클릭 시 패널 열기/닫기
   container.querySelector('#btn-filter-toggle')?.addEventListener('click', () => {
     const panel = container.querySelector('#filter-detail-panel');
     if (panel) panel.classList.toggle('is-open');
@@ -1792,7 +1792,7 @@ function openItemModal(container, navigateTo, editItemId = null) {
     <div class="modal" style="max-width:980px;">
       <div class="modal-header">
         <h3 class="modal-title">${isEdit ? '품목 수정' : '새 품목 추가'}</h3>
-        <button class="modal-close" id="modal-close">✕</button>
+        <button class="modal-close" id="modal-close">?</button>
       </div>
       <div class="modal-body">
         <div class="form-shell">
@@ -1885,12 +1885,12 @@ function openItemModal(container, navigateTo, editItemId = null) {
                 </div>
                 <div class="form-row">
                   <div class="form-group">
-                    <label class="form-label">🔒 품목 잠금 해제일</label>
+                    <label class="form-label">?? 품목 잠금 해제일</label>
                     <input class="form-input" type="date" id="f-lockedUntil" value="${safeAttr(item.lockedUntil || '')}" />
                   </div>
                   <div class="form-group">
                     <div style="font-size:12px; color:var(--text-muted); margin-top:28px; line-height:1.6;">
-                      잠금 해제일까지 🔒 표시됩니다.<br>해당 날짜가 지나면 자동으로 잠금이 해제됩니다.
+                      잠금 해제일까지 ?? 표시됩니다.<br>해당 날짜가 지나면 자동으로 잠금이 해제됩니다.
                     </div>
                   </div>
                 </div>
@@ -1907,7 +1907,7 @@ function openItemModal(container, navigateTo, editItemId = null) {
             <div class="smart-summary-grid">
               <div class="smart-summary-item">
                 <div class="smart-summary-label">현재 재고 가치</div>
-                <div class="smart-summary-value" id="f-totalPriceLabel">₩0</div>
+                <div class="smart-summary-value" id="f-totalPriceLabel">\0</div>
                 <div class="smart-summary-note" id="item-price-note">수량과 원가를 입력하면 공급가액, 부가세, 합계가 자동 계산됩니다.</div>
                 <input type="hidden" id="f-supplyValue" value="${safeAttr(item.supplyValue ?? '')}" />
                 <input type="hidden" id="f-vat" value="${safeAttr(item.vat ?? '')}" />
@@ -1961,7 +1961,7 @@ function openItemModal(container, navigateTo, editItemId = null) {
     inputs.code.value = genItemCode();
   });
 
-  const formatMoney = (value) => `₩${Math.round(value || 0).toLocaleString('ko-KR')}`;
+  const formatMoney = (value) => `\${Math.round(value || 0).toLocaleString('ko-KR')}`;
 
   const refreshItemSummary = () => {
     const qty = parseFloat(inputs.quantity.value) || 0;
@@ -1974,7 +1974,7 @@ function openItemModal(container, navigateTo, editItemId = null) {
     overlay.querySelector('#f-supplyValue').value = supply;
     overlay.querySelector('#f-vat').value = vat;
     overlay.querySelector('#f-totalPrice').value = total;
-    overlay.querySelector('#f-totalPriceLabel').textContent = total > 0 ? formatMoney(total) : '₩0';
+    overlay.querySelector('#f-totalPriceLabel').textContent = total > 0 ? formatMoney(total) : '\0';
     overlay.querySelector('#item-price-note').textContent =
       total > 0
         ? `공급가액 ${formatMoney(supply)} / 부가세 ${formatMoney(vat)} / 합계 ${formatMoney(total)}`
@@ -2037,7 +2037,7 @@ function openItemModal(container, navigateTo, editItemId = null) {
       }
     }
 
-    // 2. 수량 — 숫자, 0 이상
+    // 2. 수량 ? 숫자, 0 이상
     let qty = 0;
     if (qtyRaw !== '') {
       qty = parseFloat(qtyRaw);
@@ -2050,7 +2050,7 @@ function openItemModal(container, navigateTo, editItemId = null) {
       }
     }
 
-    // 3. 원가 — 숫자, 음수 불가
+    // 3. 원가 ? 숫자, 음수 불가
     let unitPrice = 0;
     if (upRaw !== '') {
       unitPrice = parseFloat(upRaw);
@@ -2063,7 +2063,7 @@ function openItemModal(container, navigateTo, editItemId = null) {
       }
     }
 
-    // 4. 판매가 — 숫자, 음수 불가
+    // 4. 판매가 ? 숫자, 음수 불가
     let salePrice = 0;
     if (spRaw !== '') {
       salePrice = parseFloat(spRaw);
@@ -2074,7 +2074,7 @@ function openItemModal(container, navigateTo, editItemId = null) {
         showFieldError(inputs.salePrice, '판매가는 0 이상이어야 합니다.');
         hasError = true;
       } else if (salePrice > 0 && unitPrice > 0 && salePrice < unitPrice) {
-        // 경고 (에러는 아님 — 저장은 가능)
+        // 경고 (에러는 아님 ? 저장은 가능)
         const warnEl = document.createElement('div');
         warnEl.className = 'form-warn-msg';
         warnEl.textContent = '판매가가 원가보다 낮습니다. 손실이 발생할 수 있습니다.';
@@ -2207,4 +2207,5 @@ function getItemCodes(data) {
 function getVendors(data) {
   return [...new Set(data.map(r => r.vendor).filter(Boolean))].sort();
 }
+
 
