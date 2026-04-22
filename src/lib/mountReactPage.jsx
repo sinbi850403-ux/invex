@@ -17,6 +17,7 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { AppProviders } from '../react/app/AppProviders';
+import '../react/styles.css'; // React 페이지 전용 CSS (vanilla app에 마운트 시 필요)
 
 // 현재 마운트된 React 루트 (페이지 간 단일 인스턴스 유지)
 let _root = null;
