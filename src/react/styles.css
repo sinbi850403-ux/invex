@@ -1,10 +1,11 @@
+/*
+ * `:root` background/color 제거 — react.html 전용이었으나 현재는 메인 앱(index.html)
+ * 내부에 styles.css가 주입되므로, 전역 background를 지정하면 다크모드·스크롤 시
+ * 메인 앱의 배경을 덮어쓰는 문제가 발생.
+ * font/line-height만 유지하고 배경·색상은 메인 앱 style.css에 위임.
+ */
 :root {
   font-family: "Noto Sans KR", sans-serif;
-  color: #0f172a;
-  background:
-    radial-gradient(circle at top left, rgba(14, 116, 144, 0.18), transparent 28%),
-    radial-gradient(circle at bottom right, rgba(249, 115, 22, 0.18), transparent 26%),
-    linear-gradient(180deg, #f8fbfd 0%, #eef4f8 100%);
   line-height: 1.5;
   font-weight: 400;
 }
@@ -13,15 +14,9 @@
   box-sizing: border-box;
 }
 
-html,
-body,
+/* react.html 전용 루트 컨테이너 — 메인 앱에서는 존재하지 않으므로 무해 */
 #react-root {
   min-height: 100%;
-  margin: 0;
-}
-
-body {
-  min-height: 100vh;
 }
 
 a {
