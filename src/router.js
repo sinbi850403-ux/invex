@@ -56,11 +56,13 @@ export function injectRouterCallbacks({ initCardCollapsibles, closeSidebar, upda
 // ── 페이지 로더 맵 ────────────────────────────────────────────────────────
 // lazy import: 방문한 페이지만 번들에서 로드됨 → 초기 로딩 최소화
 export const PAGE_LOADERS = {
-  home:            () => import('./page-home.js').then(m => m.renderHomePage),
+  // ── React 전환 완료 페이지 ──────────────────────────────────────────────
+  home:            reactLoader(() => import('./react/pages/HomePage')),
+  inventory:       reactLoader(() => import('./react/pages/InventoryPage')),
+  inout:           reactLoader(() => import('./react/pages/InoutPage')),
+  // ── Vanilla JS 페이지 (순차적으로 React 전환 예정) ──────────────────────
   upload:          () => import('./page-upload.js').then(m => m.renderUploadPage),
   mapping:         () => import('./page-mapping.js').then(m => m.renderMappingPage),
-  inventory:       () => import('./page-inventory.js').then(m => m.renderInventoryPage),
-  inout:           () => import('./page-inout.js').then(m => m.renderInoutPage),
   summary:         () => import('./page-summary.js').then(m => m.renderSummaryPage),
   scanner:         () => import('./page-scanner.js').then(m => m.renderScannerPage),
   documents:       () => import('./page-documents.js').then(m => m.renderDocumentsPage),
