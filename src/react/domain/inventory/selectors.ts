@@ -31,7 +31,13 @@ export function getInventorySummary(state: AppStoreState) {
   const warehouses = new Set(items.map((item) => item.warehouse).filter(Boolean)).size;
   const categories = new Set(items.map((item) => item.category).filter(Boolean)).size;
   const totalQuantity = items.reduce((sum, item) => sum + toNumber(item.quantity), 0);
-  const totalValue = items.reduce((sum, item) => sum + toNumber(item.totalPrice || item.supplyValue), 0);
+  const totalValue = items.reduce((sum, item) => {
+    const total = toNumber(item.totalPrice);
+    if (total > 0) return sum + total;
+    const supply = toNumber(item.supplyValue);
+    if (supply > 0) return sum + supply;
+    return sum + Math.round(toNumber(item.quantity) * toNumber(item.unitPrice));
+  }, 0);
   const lowStock = items.filter((item) => {
     const minimum = Number(state.safetyStock?.[item.itemName] || 0);
     return minimum > 0 && toNumber(item.quantity) <= minimum;

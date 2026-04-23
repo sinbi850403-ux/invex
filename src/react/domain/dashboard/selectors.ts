@@ -12,7 +12,13 @@ export function getDashboardMetrics(state: AppStoreState) {
     const minimum = Number(state.safetyStock?.[item.itemName] || 0);
     return minimum > 0 && toNumber(item.quantity) <= minimum;
   }).length;
-  const inventoryValue = items.reduce((sum, item) => sum + toNumber(item.totalPrice || item.supplyValue), 0);
+  const inventoryValue = items.reduce((sum, item) => {
+    const total = toNumber(item.totalPrice);
+    if (total > 0) return sum + total;
+    const supply = toNumber(item.supplyValue);
+    if (supply > 0) return sum + supply;
+    return sum + Math.round(toNumber(item.quantity) * toNumber(item.unitPrice));
+  }, 0);
   const today = new Date().toISOString().slice(0, 10);
   const todayTransactions = transactions.filter((tx) => String(tx.date || '').slice(0, 10) === today).length;
   const vendorCount = new Set(
