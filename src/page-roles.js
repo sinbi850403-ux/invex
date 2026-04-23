@@ -123,8 +123,30 @@ function buildPermissionGroups() {
   }, {});
 }
 
+function mergeSystemRole(savedRole, defaultRole) {
+  const basePermissions = defaultRole.permissions.includes('*')
+    ? ['*']
+    : [...new Set([...(savedRole.permissions || []), ...defaultRole.permissions])];
+
+  return {
+    ...savedRole,
+    ...defaultRole,
+    permissions: savedRole.permissions?.includes('*') ? ['*'] : basePermissions,
+    isSystem: true,
+  };
+}
+
 function getRolesFromState(state) {
-  return state.roles && state.roles.length > 0 ? state.roles : [...DEFAULT_ROLES];
+  const savedRoles = Array.isArray(state.roles) ? state.roles : [];
+  if (savedRoles.length === 0) return [...DEFAULT_ROLES];
+
+  const merged = DEFAULT_ROLES.map((defaultRole) => {
+    const savedRole = savedRoles.find((role) => role.id === defaultRole.id);
+    return savedRole ? mergeSystemRole(savedRole, defaultRole) : { ...defaultRole };
+  });
+
+  const customRoles = savedRoles.filter((role) => !DEFAULT_ROLES.some((defaultRole) => defaultRole.id === role.id));
+  return [...merged, ...customRoles];
 }
 
 function closeModal(modal) {
@@ -141,7 +163,7 @@ export function renderRolesPage(container) {
   const members = state.members || [];
   const permissionGroups = buildPermissionGroups();
 
-  if (!state.roles || state.roles.length === 0) {
+  if (!state.roles || JSON.stringify(state.roles) !== JSON.stringify(roles)) {
     setState({ roles });
   }
 
@@ -351,6 +373,10 @@ export function renderRolesPage(container) {
 
       const isAll = role.permissions.includes('*');
       body.innerHTML = `
+        <div style="margin-bottom:16px; padding:12px; background:rgba(96, 165, 250, 0.08); border:1px solid rgba(96, 165, 250, 0.2); border-radius:10px;">
+          <div style="font-size:12px; font-weight:700; color:var(--accent); margin-bottom:6px;">빠른 확인</div>
+          <div style="font-size:13px; color:var(--text-muted);">인사·급여 권한은 아래 목록의 <strong style="color:var(--text-primary);">인사·급여</strong> 그룹에서 설정합니다.</div>
+        </div>
         <div style="margin-bottom:16px;">
           <label style="display:flex; align-items:center; gap:8px; cursor:pointer; padding:8px; background:var(--bg-secondary); border-radius:8px;">
             <input type="checkbox" id="perm-all" ${isAll ? 'checked' : ''} />
@@ -358,12 +384,13 @@ export function renderRolesPage(container) {
           </label>
         </div>
         <div id="perm-list" style="${isAll ? 'opacity:0.45; pointer-events:none;' : ''}">
-          ${Object.entries(permissionGroups)
+          ${['인사·급여', ...Object.keys(permissionGroups).filter((group) => group !== '인사·급여')]
+            .filter((group) => permissionGroups[group])
             .map(
-              ([group, permissions]) => `
+              (group) => `
                 <div style="margin-bottom:14px;">
                   <div style="font-size:12px; font-weight:700; color:var(--text-muted); margin-bottom:8px;">${group}</div>
-                  ${permissions
+                  ${permissionGroups[group]
                     .map(
                       (permission) => `
                         <label style="display:flex; align-items:center; gap:8px; padding:4px 0; cursor:pointer;">
