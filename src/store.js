@@ -155,6 +155,32 @@ function normalizeTxType(value, tx = null) {
   return 'in';
 }
 
+function buildBootstrapTransactionsFromItems(items = []) {
+  const today = toLocalDateKey(new Date()) || normalizeDateString(new Date().toISOString());
+  return (items || [])
+    .map((item) => {
+      const quantity = toNum(item?.quantity);
+      if (!Number.isFinite(quantity) || quantity <= 0) return null;
+      return {
+        id: createStableId('tx'),
+        type: 'in',
+        itemName: normalizeText(item?.itemName),
+        itemCode: normalizeText(item?.itemCode),
+        vendor: normalizeText(item?.vendor),
+        warehouse: normalizeText(item?.warehouse),
+        quantity,
+        unitPrice: toNum(item?.unitPrice),
+        sellingPrice: toNum(item?.salePrice),
+        actualSellingPrice: 0,
+        date: today,
+        note: '초기재고 자동생성',
+        createdAt: new Date().toISOString(),
+        _synced: false,
+      };
+    })
+    .filter(Boolean);
+}
+
 function ensureStableIds() {
   let changed = false;
 
@@ -633,16 +659,30 @@ async function _doRestoreState() {
         // 로그인 후 복원 과정에서 DEFAULT_STATE로 날아가지 않는다.
         const localData = await loadFromDB();
 
-        // Supabase 데이터에 입출고는 _synced 표시
-        if (cloudData.transactions) {
-          cloudData.transactions.forEach(tx => { tx._synced = true; });
+        // Supabase 거래내역이 비어 있으면 로컬 캐시 거래내역을 우선 보존한다.
+        // (네트워크/권한 이슈로 cloud transactions가 0건일 때 이력이 사라지는 문제 방지)
+        const localTransactions = Array.isArray(localData?.transactions) ? localData.transactions : [];
+        const cloudTransactions = Array.isArray(cloudData?.transactions) ? cloudData.transactions : [];
+        const mergedTransactions = cloudTransactions.length > 0 ? cloudTransactions : localTransactions;
+
+        // Supabase에서 온 거래내역에는 _synced 표시
+        if (cloudTransactions.length > 0) {
+          mergedTransactions.forEach(tx => { tx._synced = true; });
         }
 
-        state = { ...DEFAULT_STATE, ...(localData || {}), ...cloudData };
+        state = { ...DEFAULT_STATE, ...(localData || {}), ...cloudData, transactions: mergedTransactions };
+        let bootstrappedTransactions = false;
+        if ((!state.transactions || state.transactions.length === 0) && (state.mappedData || []).length > 0) {
+          state.transactions = buildBootstrapTransactionsFromItems(state.mappedData);
+          bootstrappedTransactions = state.transactions.length > 0;
+        }
         ensureStableIds();
         window.dispatchEvent(new CustomEvent('invex:store-updated', { detail: { changedKeys: ['*'] } }));
         // 로컬 캐시도 업데이트
         saveToDB();
+        if (bootstrappedTransactions && isSupabaseConfigured) {
+          scheduleSyncToSupabase(['transactions']);
+        }
         console.log(`[Store] Supabase 로딩 완료: 품목 ${(cloudData.mappedData || []).length}건, 입출고 ${(cloudData.transactions || []).length}건`);
         return;
       } catch (err) {
@@ -657,6 +697,12 @@ async function _doRestoreState() {
   const saved = await loadFromDB();
   if (saved) {
     state = { ...DEFAULT_STATE, ...saved };
+    if ((!state.transactions || state.transactions.length === 0) && (state.mappedData || []).length > 0) {
+      state.transactions = buildBootstrapTransactionsFromItems(state.mappedData);
+      if (isSupabaseConfigured && state.transactions.length > 0) {
+        scheduleSyncToSupabase(['transactions']);
+      }
+    }
     ensureStableIds();
     window.dispatchEvent(new CustomEvent('invex:store-updated', { detail: { changedKeys: ['*'] } }));
     return;
@@ -668,6 +714,12 @@ async function _doRestoreState() {
     if (fallback) {
       const parsed = JSON.parse(fallback);
       state = { ...DEFAULT_STATE, ...parsed };
+      if ((!state.transactions || state.transactions.length === 0) && (state.mappedData || []).length > 0) {
+        state.transactions = buildBootstrapTransactionsFromItems(state.mappedData);
+        if (isSupabaseConfigured && state.transactions.length > 0) {
+          scheduleSyncToSupabase(['transactions']);
+        }
+      }
       ensureStableIds();
       window.dispatchEvent(new CustomEvent('invex:store-updated', { detail: { changedKeys: ['*'] } }));
     }
