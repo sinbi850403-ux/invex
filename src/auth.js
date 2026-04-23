@@ -6,7 +6,7 @@ import {
   hasRequiredPlan,
   hasRequiredRole,
 } from './auth/rules.js';
-import { createBootstrapProfile, getFallbackProfile as createFallbackProfile, mapProfileData } from './auth/profile.js';
+import { getFallbackProfile as createFallbackProfile, mapProfileData } from './auth/profile.js';
 import { renderInlineLoginError as renderVanillaLoginError, renderLoginScreen as renderVanillaLoginScreen } from './auth/ui.js';
 import { purgeLegacyAuthStorage as purgeAuthStorage, sanitizeSupabaseStorage as sanitizeAuthStorage } from './auth/storage.js';
 import { withTimeout, TimeoutError } from './auth/async.js';
@@ -19,7 +19,6 @@ let authSubscription = null;
 let authInitialized = false;
 let authHydrationStarted = false;
 let authHydrationComplete = false;
-let hasNotifiedProfileLoadFailure = false;
 
 // ─── 이중 클릭 / 중복 요청 방지 플래그 ─────────────────────────────────────
 // isLoggingIn: 이메일 로그인 진행 중 이중 클릭 방지 (Google OAuth 에는 사용 X)
@@ -159,30 +158,7 @@ async function loadProfile(user, session = null) {
       throw error;
     }
 
-    if (!data) {
-      // 프로필 미존재 → 신규 생성
-      const newProfile = createBootstrapProfile(user);
-
-      let { error: insertError } = await supabase.from('profiles').insert(newProfile);
-      if (insertError) {
-        const message = String(insertError?.message || '').toLowerCase();
-        const isRlsOrPermission =
-          message.includes('row-level security') ||
-          message.includes('permission') ||
-          message.includes('forbidden') ||
-          message.includes('not allowed') ||
-          message.includes('401');
-
-        console.warn('[Auth] profile bootstrap failed:', insertError.message);
-        if (!isRlsOrPermission && !hasNotifiedProfileLoadFailure) {
-          hasNotifiedProfileLoadFailure = true;
-          window.dispatchEvent(new CustomEvent('invex:profile-load-failed'));
-        }
-        return fallback;
-      }
-
-      return { ...fallback, createdAt: newProfile.created_at };
-    }
+    if (!data) return fallback;
 
     return mapProfileData(data, fallback);
   } catch (error) {

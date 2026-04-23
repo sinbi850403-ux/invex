@@ -41,9 +41,15 @@ function runAuthGuardRegressionTests() {
     },
     {
       id: 'AUTH-003',
-      name: 'valid access_token + uid => allow profile bootstrap',
-      actual: shouldAttemptProfileLoad({ uid: 'u-1' }, { access_token: 'token-123' }),
+      name: 'valid access_token + matching session user id => allow profile load',
+      actual: shouldAttemptProfileLoad({ uid: 'u-1' }, { access_token: 'token-123', user: { id: 'u-1' } }),
       expected: true,
+    },
+    {
+      id: 'AUTH-002',
+      name: 'uid/session user id mismatch => skip profile load',
+      actual: shouldAttemptProfileLoad({ uid: 'u-1' }, { access_token: 'token-123', user: { id: 'u-2' } }),
+      expected: false,
     },
     {
       id: 'AUTH-002',

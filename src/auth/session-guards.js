@@ -7,6 +7,10 @@ export function hasSessionAccessToken(session) {
 }
 
 export function shouldAttemptProfileLoad(user, session) {
-  return Boolean(user?.uid) && hasSessionAccessToken(session);
+  const uid = String(user?.uid || '').trim();
+  const sessionUserId = String(session?.user?.id || '').trim();
+  if (!uid || !sessionUserId) return false;
+  if (uid !== sessionUserId) return false;
+  return hasSessionAccessToken(session);
 }
 
