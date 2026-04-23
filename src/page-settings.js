@@ -2,7 +2,7 @@
  * page-settings.js - 설정 페이지
  */
 
-import { getState, setState } from './store.js';
+import { getState, setState, clearAllData } from './store.js';
 import { showToast } from './toast.js';
 
 const INDUSTRY_TEMPLATES = [
@@ -118,32 +118,20 @@ export function renderSettingsPage(container, navigateTo) {
     showToast('이동 이력을 초기화했습니다.', 'info');
   });
 
-  container.querySelector('#btn-clear-all')?.addEventListener('click', () => {
+  container.querySelector('#btn-clear-all')?.addEventListener('click', async () => {
     if (!confirm('전체 데이터를 초기화하시겠습니까?\n이 작업은 되돌릴 수 없습니다.')) return;
     if (!confirm('정말로 전체 초기화를 진행하시겠습니까? (최종 확인)')) return;
-    setState({
-      rawData: [],
-      mappedData: [],
-      transactions: [],
-      transfers: [],
-      safetyStock: {},
-      customFields: [],
-      columnMapping: {},
-      visibleColumns: null,
-      beginnerMode: true,
-      inventoryViewPrefs: {
-        filter: { keyword: '', category: '', warehouse: '', stock: '', itemCode: '', vendor: '', focus: 'all' },
-        sort: { key: '', direction: '' },
-      },
-      inoutViewPrefs: {
-        filter: { keyword: '', type: '', date: '', vendor: '', itemCode: '', quick: 'all' },
-        sort: { key: 'date', direction: 'desc' },
-      },
-      fileName: '',
-      currentStep: 1,
-      _onboardingDone: false,
-    });
-    showToast('전체 데이터를 초기화했습니다.', 'info');
-    navigateTo('home');
+
+    const btn = container.querySelector('#btn-clear-all');
+    if (btn) { btn.disabled = true; btn.textContent = '초기화 중...'; }
+
+    try {
+      await clearAllData(); // Supabase + IndexedDB + 메모리 모두 삭제
+      showToast('전체 데이터를 초기화했습니다.', 'info');
+      navigateTo('home');
+    } catch (err) {
+      showToast('초기화 중 오류가 발생했습니다: ' + (err?.message || ''), 'error');
+      if (btn) { btn.disabled = false; btn.textContent = '전체 데이터 초기화'; }
+    }
   });
 }

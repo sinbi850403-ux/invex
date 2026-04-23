@@ -966,6 +966,37 @@ export const salaryItems = {
 };
 
 // ============================================================
+// 사용자 전체 데이터 삭제 (설정 > 전체 초기화)
+// setState({})만 하면 Supabase는 안 지워져서 재로그인 시 복원됨
+// → Supabase에서 직접 DELETE 필요
+// ============================================================
+export async function deleteAllUserData() {
+  const userId = await getUserId();
+
+  // 병렬 삭제 — RLS(user_id=auth.uid()) 이중 보호
+  const results = await Promise.allSettled([
+    supabase.from('items').delete().eq('user_id', userId),
+    supabase.from('transactions').delete().eq('user_id', userId),
+    supabase.from('vendors').delete().eq('user_id', userId),
+    supabase.from('transfers').delete().eq('user_id', userId),
+    supabase.from('stocktakes').delete().eq('user_id', userId),
+    supabase.from('account_entries').delete().eq('user_id', userId),
+    supabase.from('purchase_orders').delete().eq('user_id', userId),
+    supabase.from('custom_fields').delete().eq('user_id', userId),
+    supabase.from('user_settings').delete().eq('user_id', userId),
+    supabase.from('audit_logs').delete().eq('user_id', userId),
+  ]);
+
+  const errors = results
+    .filter(r => r.status === 'rejected' || r.value?.error)
+    .map(r => r.status === 'rejected' ? r.reason?.message : r.value?.error?.message);
+
+  if (errors.length > 0) {
+    console.warn('[DB] deleteAllUserData 일부 실패:', errors);
+  }
+}
+
+// ============================================================
 // 전체 데이터 로드 (초기화용) — store.js 호환
 // 왜? → 기존 getState()가 전체 데이터를 메모리에 갖고 있는 구조라서
 // → 점진적 전환을 위해 한번에 전체 로딩 후 캐시하는 함수 제공

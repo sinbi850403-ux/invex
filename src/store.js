@@ -632,14 +632,40 @@ export function setState(partial) {
 }
 
 /**
- * 상태 초기화
+ * 상태 초기화 (메모리 + IndexedDB만)
  */
 export function resetState() {
   state = { ...DEFAULT_STATE };
   _restorePromise = null; // 로그아웃 후 재로그인 시 재복원 허용
+  _dirtyKeys.clear();     // 대기 중인 sync 취소 (초기화 후 빈 데이터가 sync되지 않도록)
+  if (_supabaseSyncTimer) { clearTimeout(_supabaseSyncTimer); _supabaseSyncTimer = null; }
   ensureStableIds();
   window.dispatchEvent(new CustomEvent('invex:store-updated', { detail: { changedKeys: ['*'] } }));
   saveToDB();
+  // localStorage fallback도 삭제
+  try { localStorage.removeItem('invex-fallback'); } catch (_) {}
+}
+
+/**
+ * 전체 데이터 초기화 (메모리 + IndexedDB + Supabase 모두 삭제)
+ * setState({})만 하면 Supabase는 안 지워져서 재로그인 시 복원됨 — 이 함수로 해결
+ */
+export async function clearAllData() {
+  // 1. Supabase에서 먼저 삭제
+  if (isSupabaseConfigured) {
+    const session = await getActiveSessionSafe();
+    if (session?.user) {
+      try {
+        await db.deleteAllUserData();
+        console.log('[Store] Supabase 전체 데이터 삭제 완료');
+      } catch (err) {
+        console.warn('[Store] Supabase 삭제 실패:', getErrorMessage(err));
+        // DB 삭제 실패해도 로컬은 초기화 진행
+      }
+    }
+  }
+  // 2. 메모리 + IndexedDB 초기화
+  resetState();
 }
 
 /**
