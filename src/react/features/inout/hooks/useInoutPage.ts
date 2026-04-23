@@ -116,6 +116,31 @@ export function useInoutPage() {
     }
   }
 
+  function bulkSaveTransactions(inputs: InoutInput[]): MutationResult & { count?: number } {
+    if (!inputs.length) return { ok: false, message: '등록할 데이터가 없습니다.' };
+    let count = 0;
+    const failMessages: string[] = [];
+    for (const input of inputs) {
+      const validationError = validateInoutInput(input, {
+        inventoryItems: state.mappedData || [],
+        vendors: options.vendors,
+        warehouses: composerOptions.warehouses,
+      });
+      if (validationError) { failMessages.push(validationError); continue; }
+      try {
+        createTransaction(input, { inventoryItems: state.mappedData || [] });
+        count++;
+      } catch (error) {
+        failMessages.push(error instanceof Error ? error.message : '저장 오류');
+      }
+    }
+    if (count === 0) return { ok: false, message: failMessages[0] || '저장 실패' };
+    const msg = failMessages.length > 0
+      ? `${count}건 등록 완료 (${failMessages.length}건 실패: ${failMessages[0]})`
+      : `${count}건을 성공적으로 등록했습니다.`;
+    return { ok: true, message: msg, count };
+  }
+
   return {
     filter,
     options,
@@ -126,6 +151,7 @@ export function useInoutPage() {
     setFilter,
     changeSort,
     saveTransaction,
+    bulkSaveTransactions,
     deleteTransaction,
     undoDeleteTransaction,
   };

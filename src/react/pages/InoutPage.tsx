@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { showToast } from '../../toast.js';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { InoutComposer } from '../features/inout/components/InoutComposer';
+import { InoutExcelPanel, type ExcelRow } from '../features/inout/components/InoutExcelPanel';
 import { InoutFilters } from '../features/inout/components/InoutFilters';
 import { InoutSummary } from '../features/inout/components/InoutSummary';
 import { InoutTable } from '../features/inout/components/InoutTable';
@@ -23,6 +24,7 @@ export function InoutPage() {
     setFilter,
     changeSort,
     saveTransaction,
+    bulkSaveTransactions,
     deleteTransaction,
     undoDeleteTransaction,
   } = useInoutPage();
@@ -51,18 +53,26 @@ export function InoutPage() {
     setPendingDeleteRow(null);
   }
 
+  function handleExcelImport(excelRows: ExcelRow[]) {
+    const result = bulkSaveTransactions(excelRows);
+    if (result.ok) showToast(result.message ?? '등록 완료', 'success');
+    else showToast(result.message ?? '등록 실패', 'warning');
+    return result;
+  }
+
   return (
     <section className="react-page">
       <article className="react-card">
         <span className="react-chip">입출고 관리</span>
-        <h2>입고/출고 등록과 삭제를 React 화면에서 바로 처리합니다.</h2>
+        <h2>입고/출고 이력을 등록하고 재고에 즉시 반영합니다.</h2>
         <p>
-          입력한 거래는 공용 스토어에 즉시 반영되고 재고 수량도 함께 갱신됩니다.
-          등록 결과를 표에서 바로 확인하고 필요하면 즉시 취소할 수 있습니다.
+          건별로 직접 입력하거나 엑셀로 대량 업로드할 수 있습니다.
+          등록 즉시 재고 수량이 갱신되며, 실수로 등록했을 때 즉시 취소도 가능합니다.
         </p>
       </article>
 
       <InoutSummary summary={summary} />
+      <InoutExcelPanel rows={rows} onImport={handleExcelImport} />
       <InoutComposer
         items={composerOptions.items}
         vendors={composerOptions.vendors}
