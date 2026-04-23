@@ -6,6 +6,11 @@ import { InventoryFilters } from '../features/inventory/components/InventoryFilt
 import { InventorySummary } from '../features/inventory/components/InventorySummary';
 import { InventoryTable } from '../features/inventory/components/InventoryTable';
 import { useInventoryPage } from '../features/inventory/hooks/useInventoryPage';
+import {
+  DELETE_UNDO_LABEL,
+  DELETE_UNDO_WINDOW_MS,
+  getDeleteUndoGuide,
+} from '../features/shared/deletePolicy';
 
 export function InventoryPage() {
   const {
@@ -40,8 +45,8 @@ export function InventoryPage() {
       return;
     }
 
-    showToast(result.message || '품목을 삭제했습니다.', 'success', {
-      actionLabel: '실행 취소',
+    showToast(result.message || '품목을 삭제했습니다.', 'success', DELETE_UNDO_WINDOW_MS, {
+      actionLabel: DELETE_UNDO_LABEL,
       onAction: () => {
         const undoResult = undoDeleteItem(result.deleted || {}, result.index || 0);
         showToast(undoResult.message || '삭제 취소를 완료했습니다.', undoResult.ok ? 'success' : 'warning');
@@ -80,7 +85,7 @@ export function InventoryPage() {
         open={!!pendingDeleteRow}
         danger
         title="품목 삭제"
-        description={`"${pendingDeleteRow?.itemName || '선택 항목'}"을 삭제하면 목록에서 즉시 사라지고 재고 집계에도 반영됩니다.`}
+        description={`"${pendingDeleteRow?.itemName || '선택 항목'}"을 삭제합니다. ${getDeleteUndoGuide('품목')}`}
         confirmLabel="삭제"
         cancelLabel="취소"
         onConfirm={confirmDelete}

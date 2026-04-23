@@ -33,29 +33,71 @@ const defaultForm: InoutInput = {
   note: '',
 };
 
+function normalizeText(value: unknown) {
+  return String(value || '').trim();
+}
+
+function buildItemKey(item: { itemName?: string; itemCode?: string }) {
+  return `${normalizeText(item.itemCode)}::${normalizeText(item.itemName)}`;
+}
+
 export function InoutComposer({ items, vendors, warehouses, onSubmit }: InoutComposerProps) {
   const [form, setForm] = useState<InoutInput>(defaultForm);
   const [selectedItemKey, setSelectedItemKey] = useState('');
   const [formMessage, setFormMessage] = useState<{ type: 'error' | 'success'; text: string } | null>(null);
 
-  const itemOptions = useMemo(() => items.filter((item) => String(item.itemName || '').trim()), [items]);
+  const itemOptions = useMemo(() => items.filter((item) => normalizeText(item.itemName)), [items]);
   const selectedItem = useMemo(
-    () =>
-      itemOptions.find(
-        (item) => `${String(item.itemCode || '').trim()}::${String(item.itemName || '').trim()}` === selectedItemKey,
-      ) || null,
+    () => itemOptions.find((item) => buildItemKey(item) === selectedItemKey) || null,
     [itemOptions, selectedItemKey],
   );
 
   const mergedWarehouseOptions = useMemo(
     () =>
-      [...new Set([...warehouses, ...itemOptions.map((item) => String(item.warehouse || '').trim()).filter(Boolean)])].sort(),
+      [...new Set([...warehouses, ...itemOptions.map((item) => normalizeText(item.warehouse)).filter(Boolean)])].sort(),
     [itemOptions, warehouses],
   );
 
   function update<K extends keyof InoutInput>(key: K, value: InoutInput[K]) {
     setForm((current) => ({ ...current, [key]: value }));
     if (formMessage) setFormMessage(null);
+  }
+
+  function applySelectedItem(selected: (typeof itemOptions)[number]) {
+    const unitPrice = Number(selected.unitPrice || 0);
+    const nextKey = buildItemKey(selected);
+    setSelectedItemKey(nextKey);
+    setForm((current) => ({
+      ...current,
+      itemName: normalizeText(selected.itemName),
+      itemCode: normalizeText(selected.itemCode),
+      vendor: normalizeText(selected.vendor) || current.vendor,
+      warehouse: normalizeText(selected.warehouse) || current.warehouse,
+      unitPrice: Number.isFinite(unitPrice) && unitPrice > 0 ? unitPrice : current.unitPrice,
+    }));
+  }
+
+  function findItemFromInputs() {
+    const code = normalizeText(form.itemCode);
+    const name = normalizeText(form.itemName);
+
+    if (code) {
+      const byCode = itemOptions.find((item) => normalizeText(item.itemCode) === code);
+      if (byCode) return byCode;
+    }
+
+    if (name) {
+      const byName = itemOptions.find((item) => normalizeText(item.itemName) === name);
+      if (byName) return byName;
+    }
+
+    return null;
+  }
+
+  function bindMasterFieldsFromInput() {
+    const matched = findItemFromInputs();
+    if (!matched) return;
+    applySelectedItem(matched);
   }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -65,27 +107,21 @@ export function InoutComposer({ items, vendors, warehouses, onSubmit }: InoutCom
       setFormMessage({ type: 'error', text: result.message || '입력값을 확인해 주세요.' });
       return;
     }
+
     setFormMessage({ type: 'success', text: result.message || '입출고를 등록했습니다.' });
-    setForm(defaultForm);
+    setForm((current) => ({
+      ...defaultForm,
+      type: current.type,
+      date: new Date().toISOString().slice(0, 10),
+    }));
     setSelectedItemKey('');
   }
 
   function handleSelectItem(nextKey: string) {
     setSelectedItemKey(nextKey);
-    const selected = itemOptions.find(
-      (item) => `${String(item.itemCode || '').trim()}::${String(item.itemName || '').trim()}` === nextKey,
-    );
+    const selected = itemOptions.find((item) => buildItemKey(item) === nextKey);
     if (!selected) return;
-
-    const unitPrice = Number(selected.unitPrice || 0);
-    setForm((current) => ({
-      ...current,
-      itemName: String(selected.itemName || '').trim(),
-      itemCode: String(selected.itemCode || '').trim(),
-      vendor: String(selected.vendor || '').trim(),
-      warehouse: String(selected.warehouse || '').trim(),
-      unitPrice: Number.isFinite(unitPrice) ? unitPrice : 0,
-    }));
+    applySelectedItem(selected);
   }
 
   return (
@@ -109,11 +145,11 @@ export function InoutComposer({ items, vendors, warehouses, onSubmit }: InoutCom
         <div className="react-field react-field--wide">
           <span>품목 선택</span>
           <select className="react-select" value={selectedItemKey} onChange={(e) => handleSelectItem(e.target.value)}>
-            <option value="">선택하면 거래처/창고/단가가 자동 채워집니다</option>
+            <option value="">선택하면 거래처/창고/단가가 자동 채워집니다.</option>
             {itemOptions.map((item) => {
-              const itemName = String(item.itemName || '').trim();
-              const itemCode = String(item.itemCode || '').trim();
-              const key = `${itemCode}::${itemName}`;
+              const itemName = normalizeText(item.itemName);
+              const itemCode = normalizeText(item.itemCode);
+              const key = buildItemKey(item);
               return (
                 <option key={key} value={key}>
                   {itemName}
@@ -130,6 +166,7 @@ export function InoutComposer({ items, vendors, warehouses, onSubmit }: InoutCom
             className="react-input"
             value={form.itemName}
             onChange={(e) => update('itemName', e.target.value)}
+            onBlur={bindMasterFieldsFromInput}
             placeholder="예: 아메리카노 원두 1kg"
             required
           />
@@ -137,7 +174,14 @@ export function InoutComposer({ items, vendors, warehouses, onSubmit }: InoutCom
 
         <div className="react-field">
           <span>품목코드</span>
-          <input className="react-input" value={form.itemCode} onChange={(e) => update('itemCode', e.target.value)} placeholder="예: BEAN-1KG" />
+          <input
+            className="react-input"
+            value={form.itemCode}
+            onChange={(e) => update('itemCode', e.target.value)}
+            onBlur={bindMasterFieldsFromInput}
+            placeholder="예: BEAN-1KG"
+          />
+          <small className="react-field-help">품목코드/품목명이 등록값과 같으면 마스터 정보를 자동 반영합니다.</small>
         </div>
 
         <div className="react-field">

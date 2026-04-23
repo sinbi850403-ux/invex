@@ -51,11 +51,15 @@ export function useInoutPage() {
   );
 
   function saveTransaction(value: InoutInput): MutationResult {
-    const validationError = validateInoutInput(value);
+    const validationError = validateInoutInput(value, {
+      inventoryItems: state.mappedData || [],
+      vendors: options.vendors,
+      warehouses: composerOptions.warehouses,
+    });
     if (validationError) return { ok: false, message: validationError };
 
     try {
-      createTransaction(value);
+      createTransaction(value, { inventoryItems: state.mappedData || [] });
       return { ok: true, message: '입출고를 등록했습니다.' };
     } catch (error) {
       return { ok: false, message: error instanceof Error ? error.message : '저장 중 오류가 발생했습니다.' };
@@ -66,7 +70,7 @@ export function useInoutPage() {
     if (!row.id) return { ok: false, message: '삭제 대상 ID를 찾을 수 없습니다.' };
     try {
       const result = removeTransaction(row.id);
-      if (!result?.deleted) return { ok: false, message: '이미 삭제되었거나 삭제할 수 없는 기록입니다.' };
+      if (!result?.deleted) return { ok: false, message: '이미 삭제했거나 삭제할 수 없는 기록입니다.' };
       return {
         ok: true,
         message: '입출고 기록을 삭제했습니다.',

@@ -34,6 +34,10 @@ const emptyForm: InventoryInput = {
   unitPrice: 0,
 };
 
+function normalizeText(value: unknown) {
+  return String(value || '').trim();
+}
+
 export function InventoryEditor({
   initialValue,
   isEditing,
@@ -53,8 +57,8 @@ export function InventoryEditor({
     () =>
       itemTemplates.map((item) => ({
         ...item,
-        itemName: String(item.itemName || '').trim(),
-        itemCode: String(item.itemCode || '').trim(),
+        itemName: normalizeText(item.itemName),
+        itemCode: normalizeText(item.itemCode),
       })),
     [itemTemplates],
   );
@@ -92,7 +96,7 @@ export function InventoryEditor({
       return;
     }
 
-    setFormMessage({ type: 'success', text: result.message || (isEditing ? '품목이 수정되었습니다.' : '품목이 등록되었습니다.') });
+    setFormMessage({ type: 'success', text: result.message || (isEditing ? '품목을 수정했습니다.' : '품목을 등록했습니다.') });
     if (!isEditing) {
       setForm(emptyForm);
       setSelectedTemplateKey('');
@@ -107,12 +111,22 @@ export function InventoryEditor({
   }
 
   function handleItemCodeBlur() {
-    if (!form.itemCode.trim()) return;
-    const matched = normalizedTemplates.find((item) => item.itemCode && item.itemCode === form.itemCode.trim());
+    if (!normalizeText(form.itemCode)) return;
+    const matched = normalizedTemplates.find((item) => item.itemCode && item.itemCode === normalizeText(form.itemCode));
     if (!matched) return;
     applyTemplateFields(matched);
-    if (!form.itemName.trim() && matched.itemName) {
+    if (!normalizeText(form.itemName) && matched.itemName) {
       update('itemName', matched.itemName);
+    }
+  }
+
+  function handleItemNameBlur() {
+    if (!normalizeText(form.itemName)) return;
+    const matched = normalizedTemplates.find((item) => item.itemName && item.itemName === normalizeText(form.itemName));
+    if (!matched) return;
+    applyTemplateFields(matched);
+    if (!normalizeText(form.itemCode) && matched.itemCode) {
+      update('itemCode', matched.itemCode);
     }
   }
 
@@ -130,7 +144,7 @@ export function InventoryEditor({
           <div className="react-field react-field--wide">
             <span>기존 품목 불러오기</span>
             <select className="react-select" value={selectedTemplateKey} onChange={(e) => applyTemplate(e.target.value)}>
-              <option value="">선택하면 카테고리/단위/거래처/창고가 자동 채워집니다</option>
+              <option value="">선택하면 카테고리/단위/거래처/창고가 자동 채워집니다.</option>
               {normalizedTemplates.map((item) => {
                 const key = `${item.id}::${item.itemCode}::${item.itemName}`;
                 return (
@@ -150,6 +164,7 @@ export function InventoryEditor({
             className="react-input"
             value={form.itemName}
             onChange={(e) => update('itemName', e.target.value)}
+            onBlur={handleItemNameBlur}
             placeholder="예: 아메리카노 원두 1kg"
             required
           />
@@ -164,7 +179,7 @@ export function InventoryEditor({
             onBlur={handleItemCodeBlur}
             placeholder="예: BEAN-1KG"
           />
-          <small className="react-field-help">기존 코드와 같으면 마스터 정보를 자동 반영합니다.</small>
+          <small className="react-field-help">코드/품목명이 기존 값과 같으면 마스터 정보를 자동 반영합니다.</small>
         </div>
 
         <div className="react-field">

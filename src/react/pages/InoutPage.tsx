@@ -6,6 +6,11 @@ import { InoutFilters } from '../features/inout/components/InoutFilters';
 import { InoutSummary } from '../features/inout/components/InoutSummary';
 import { InoutTable } from '../features/inout/components/InoutTable';
 import { useInoutPage } from '../features/inout/hooks/useInoutPage';
+import {
+  DELETE_UNDO_LABEL,
+  DELETE_UNDO_WINDOW_MS,
+  getDeleteUndoGuide,
+} from '../features/shared/deletePolicy';
 
 export function InoutPage() {
   const {
@@ -34,8 +39,8 @@ export function InoutPage() {
       return;
     }
 
-    showToast(result.message || '입출고 기록을 삭제했습니다.', 'success', {
-      actionLabel: '실행 취소',
+    showToast(result.message || '입출고 기록을 삭제했습니다.', 'success', DELETE_UNDO_WINDOW_MS, {
+      actionLabel: DELETE_UNDO_LABEL,
       onAction: () => {
         const undoResult = undoDeleteTransaction(result.deleted || {}, result.index || 0);
         showToast(undoResult.message || '삭제 취소를 완료했습니다.', undoResult.ok ? 'success' : 'warning');
@@ -51,7 +56,7 @@ export function InoutPage() {
         <h2>입고/출고 등록과 삭제를 React 화면에서 바로 처리합니다.</h2>
         <p>
           입력한 거래는 공용 스토어에 즉시 반영되고 재고 수량도 함께 갱신됩니다.
-          작업 결과를 표에서 바로 확인할 수 있습니다.
+          등록 결과를 표에서 바로 확인하고 필요하면 즉시 취소할 수 있습니다.
         </p>
       </article>
 
@@ -69,7 +74,7 @@ export function InoutPage() {
         open={!!pendingDeleteRow}
         danger
         title="입출고 기록 삭제"
-        description={`"${pendingDeleteRow?.itemName || '선택 기록'}"을 삭제하면 재고 수량이 즉시 다시 계산됩니다.`}
+        description={`"${pendingDeleteRow?.itemName || '선택 기록'}"을 삭제합니다. ${getDeleteUndoGuide('입출고 기록')}`}
         confirmLabel="삭제"
         cancelLabel="취소"
         onConfirm={confirmDelete}

@@ -56,6 +56,10 @@ export function useInventoryPage() {
 
   const summary = useMemo(() => getInventorySummary(state), [state]);
   const options = useMemo(() => getInventoryOptions(state), [state]);
+  const unitOptions = useMemo(
+    () => [...new Set((state.mappedData || []).map((item) => String(item.unit || '').trim()).filter(Boolean))].sort(),
+    [state.mappedData],
+  );
   const rows = useMemo(() => getFilteredInventoryRows(state, effectiveFilter, sort), [effectiveFilter, sort, state]);
 
   function changeSort(nextKey: InventorySortKey) {
@@ -127,7 +131,13 @@ export function useInventoryPage() {
   }
 
   function saveItem(value: InventoryInput): MutationResult {
-    const validationError = validateInventoryInput(value);
+    const validationError = validateInventoryInput(value, {
+      categories: options.categories,
+      units: unitOptions,
+      vendors: options.vendors,
+      warehouses: options.warehouses,
+      existingItems: state.mappedData || [],
+    });
     if (validationError) return { ok: false, message: validationError };
 
     try {
@@ -185,7 +195,7 @@ export function useInventoryPage() {
   const editorOptions = useMemo(
     () => ({
       categories: options.categories,
-      units: [...new Set((state.mappedData || []).map((item) => String(item.unit || '').trim()).filter(Boolean))].sort(),
+      units: unitOptions,
       vendors: options.vendors,
       warehouses: options.warehouses,
       itemTemplates: (state.mappedData || []).map((item) => ({
@@ -199,7 +209,7 @@ export function useInventoryPage() {
         unitPrice: Number(item.unitPrice || 0),
       })),
     }),
-    [options.categories, options.vendors, options.warehouses, state.mappedData],
+    [options.categories, options.vendors, options.warehouses, state.mappedData, unitOptions],
   );
 
   return {
