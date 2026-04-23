@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import type { InoutSortKey } from '../../../domain/inout/selectors';
 import { formatLocalDateLabel, normalizeYyyyMmDd } from '../../../utils/date';
@@ -59,11 +59,15 @@ function getTypeMeta(rawType?: string) {
   const type = String(rawType || '').toLowerCase();
   if (type === 'in') return { label: '입고', className: 'react-badge is-good' };
   if (type === 'out') return { label: '출고', className: 'react-badge is-warn' };
-  return { label: '미지정', className: 'react-badge' };
+  return { label: '미분류', className: 'react-badge' };
 }
 
 export function InoutTable({ rows, sort, onSortChange, onDelete }: InoutTableProps) {
   const [displayCount, setDisplayCount] = useState(PAGE_SIZE);
+
+  useEffect(() => {
+    setDisplayCount(PAGE_SIZE);
+  }, [rows.length, sort.key, sort.direction]);
 
   const visibleRows = rows.slice(0, displayCount);
   const hasMore = rows.length > displayCount;
@@ -73,9 +77,11 @@ export function InoutTable({ rows, sort, onSortChange, onDelete }: InoutTablePro
       <div className="react-section-head">
         <div>
           <span className="react-card__eyebrow">입출고 이력</span>
-          <h3>입고/출고 기록</h3>
+          <h3>최근 거래 기록</h3>
         </div>
-        <strong>{rows.length}건</strong>
+        <strong>
+          {visibleRows.length} / {rows.length}건
+        </strong>
       </div>
 
       <div className="react-data-table">
@@ -135,7 +141,7 @@ export function InoutTable({ rows, sort, onSortChange, onDelete }: InoutTablePro
             ) : (
               <tr>
                 <td colSpan={8} className="react-empty-cell">
-                  현재 필터 조건에 맞는 입출고 기록이 없습니다.
+                  현재 조건에 맞는 입출고 기록이 없습니다.
                 </td>
               </tr>
             )}
@@ -150,7 +156,7 @@ export function InoutTable({ rows, sort, onSortChange, onDelete }: InoutTablePro
             className="react-secondary-button"
             onClick={() => setDisplayCount((prev) => prev + PAGE_SIZE)}
           >
-            더보기 ({rows.length - displayCount}건 남음)
+            더 보기 ({rows.length - displayCount}건 남음)
           </button>
         </div>
       ) : null}

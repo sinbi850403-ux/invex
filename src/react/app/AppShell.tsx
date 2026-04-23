@@ -9,17 +9,19 @@ export function AppShell() {
   const { isReady: isStoreReady, state } = useStore();
   const location = useLocation();
   const currentMeta = getNavigationMeta(location.pathname);
+  const inventoryCount = state.mappedData?.length || 0;
+  const transactionCount = state.transactions?.length || 0;
 
   return (
     <div className="react-shell">
       <aside className="react-sidebar">
         <div className="react-brand">
-          <span className="react-brand__eyebrow">React Workspace</span>
+          <span className="react-brand__eyebrow">Smart Workspace</span>
           <strong>INVEX</strong>
-          <p>The React shell now carries auth, overview, inventory, and inout pages in a stable app structure.</p>
+          <p>자주 쓰는 재고, 입출고, 계정 화면을 더 빠르게 쓰기 위한 작업 공간입니다.</p>
         </div>
 
-        <nav className="react-nav" aria-label="React workspace navigation">
+        <nav className="react-nav" aria-label="주요 화면 이동">
           {navigationItems.map((item) => (
             <NavLink
               key={item.to}
@@ -34,19 +36,19 @@ export function AppShell() {
         </nav>
 
         <div className="react-sidebar__footer">
-          <p>Workspace state</p>
+          <p>현재 작업 현황</p>
           <div className="react-sidebar__stats">
             <div>
-              <span>Plan</span>
+              <span>플랜</span>
               <strong>{profile?.plan || 'free'}</strong>
             </div>
             <div>
-              <span>Items</span>
-              <strong>{state.mappedData?.length || 0}</strong>
+              <span>재고 품목</span>
+              <strong>{inventoryCount}</strong>
             </div>
             <div>
-              <span>Flows</span>
-              <strong>{state.transactions?.length || 0}</strong>
+              <span>입출고 기록</span>
+              <strong>{transactionCount}</strong>
             </div>
           </div>
         </div>
@@ -63,15 +65,17 @@ export function AppShell() {
             <div className="react-session-pill">
               {isReady
                 ? user
-                  ? `${profile?.name || user.email || 'Signed in'} / ${(profile?.plan || 'free').toUpperCase()}`
-                  : 'Signed out'
-                : 'Checking auth'}
+                  ? `${profile?.name || user.email || '사용자'} / ${(profile?.plan || 'free').toUpperCase()}`
+                  : '로그아웃 상태'
+                : '인증 확인 중'}
             </div>
             <div className="react-session-pill">
-              {isStoreReady ? `Store ready / ${state.fileName || 'local snapshot'}` : 'Restoring store'}
+              {isStoreReady
+                ? `데이터 준비 완료 / ${state.fileName || `재고 ${inventoryCount}건 · 입출고 ${transactionCount}건`}`
+                : '저장된 데이터를 불러오는 중'}
             </div>
             <a className="react-topbar__link" href="/index.html">
-              Open legacy app
+              기존 전체 기능 열기
             </a>
           </div>
         </header>

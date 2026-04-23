@@ -44,13 +44,13 @@ export function AuthPage() {
     setError(null);
 
     if (!form.email || !form.password) {
-      setError('이메일과 비밀번호를 입력해 주세요.');
+      setError('이메일과 비밀번호를 입력해주세요.');
       return;
     }
 
     const result = await loginWithEmailPassword(form.email, form.password);
     if (!result) {
-      setError('로그인에 실패했습니다. 입력한 계정을 다시 확인해 주세요.');
+      setError('로그인에 실패했습니다. 계정 정보를 다시 확인해주세요.');
     }
   }
 
@@ -60,7 +60,7 @@ export function AuthPage() {
     setError(null);
 
     if (!form.name || !form.email || !form.password) {
-      setError('이름, 이메일, 비밀번호를 모두 입력해 주세요.');
+      setError('이름, 이메일, 비밀번호를 모두 입력해주세요.');
       return;
     }
 
@@ -76,11 +76,11 @@ export function AuthPage() {
 
     const result = await registerWithEmail(form.email, form.password, form.name);
     if (!result) {
-      setError('회원가입을 완료하지 못했습니다. 잠시 후 다시 시도해 주세요.');
+      setError('회원가입을 완료하지 못했습니다. 잠시 후 다시 시도해주세요.');
       return;
     }
 
-    setMessage('가입 요청을 보냈습니다. 이메일 인증을 완료해 주세요.');
+    setMessage('가입 요청을 보냈습니다. 이메일 인증을 완료한 뒤 로그인해주세요.');
     setMode('login');
   }
 
@@ -89,7 +89,7 @@ export function AuthPage() {
     setError(null);
 
     if (!form.email) {
-      setError('비밀번호 재설정 메일을 받으려면 이메일을 먼저 입력해 주세요.');
+      setError('비밀번호 재설정 메일을 받으려면 이메일을 먼저 입력해주세요.');
       return;
     }
 
@@ -110,10 +110,9 @@ export function AuthPage() {
     <section className="react-page">
       <article className="react-card">
         <span className="react-chip">인증</span>
-        <h2>로그인과 계정 인증을 한 화면에서 관리합니다.</h2>
+        <h2>로그인, 회원가입, 비밀번호 재설정을 한 곳에서 관리합니다.</h2>
         <p>
-          이메일 로그인, Google OAuth, 회원가입, 비밀번호 재설정, 로그아웃까지
-          모두 공통 인증 계층으로 연결되어 안정적으로 동작합니다.
+          이메일 로그인과 Google 로그인을 모두 지원하고, 현재 계정의 권한과 플랜 상태도 바로 확인할 수 있습니다.
         </p>
       </article>
 
@@ -226,4 +225,3 @@ export function AuthPage() {
     </section>
   );
 }
-

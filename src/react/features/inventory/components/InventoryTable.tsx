@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 type InventoryRow = {
   id?: string;
@@ -12,6 +12,7 @@ type InventoryRow = {
   unitPrice?: string | number;
   totalPrice?: string | number;
   supplyValue?: string | number;
+  unit?: string;
 };
 
 type InventorySortKey = 'itemName' | 'itemCode' | 'category' | 'vendor' | 'warehouse' | 'quantity' | 'amount';
@@ -32,13 +33,11 @@ function toNum(v: unknown) {
   return Number.isFinite(n) ? n : 0;
 }
 
-/** totalPrice → supplyValue → quantity×unitPrice 순으로 폴백 */
 function getRowAmount(row: InventoryRow) {
   const total = toNum(row.totalPrice);
   if (total > 0) return total;
   const supply = toNum(row.supplyValue);
   if (supply > 0) return supply;
-  // totalPrice/supplyValue가 없으면 수량×단가로 계산
   return Math.round(toNum(row.quantity) * toNum(row.unitPrice));
 }
 
@@ -78,6 +77,10 @@ const PAGE_SIZE = 20;
 export function InventoryTable({ rows, sort, onSortChange, onDelete, onEdit }: InventoryTableProps) {
   const [displayCount, setDisplayCount] = useState(PAGE_SIZE);
 
+  useEffect(() => {
+    setDisplayCount(PAGE_SIZE);
+  }, [rows.length, sort.key, sort.direction]);
+
   const visibleRows = rows.slice(0, displayCount);
   const hasMore = rows.length > displayCount;
 
@@ -88,7 +91,9 @@ export function InventoryTable({ rows, sort, onSortChange, onDelete, onEdit }: I
           <span className="react-card__eyebrow">재고 목록</span>
           <h3>현재 재고 현황</h3>
         </div>
-        <strong>{rows.length}건</strong>
+        <strong>
+          {visibleRows.length} / {rows.length}건
+        </strong>
       </div>
 
       <div className="react-data-table">
@@ -123,7 +128,10 @@ export function InventoryTable({ rows, sort, onSortChange, onDelete, onEdit }: I
             {visibleRows.length ? (
               visibleRows.map((row, index) => (
                 <tr key={row.id ?? `${String(row.itemCode || row.itemName || '')}-${index}`}>
-                  <td>{row.itemName || '-'}</td>
+                  <td>
+                    <strong>{row.itemName || '-'}</strong>
+                    <div className="react-table-subtext">{row.unit || ''}</div>
+                  </td>
                   <td>{row.itemCode || '-'}</td>
                   <td>{row.category || '-'}</td>
                   <td>{row.vendor || '-'}</td>
@@ -145,7 +153,7 @@ export function InventoryTable({ rows, sort, onSortChange, onDelete, onEdit }: I
             ) : (
               <tr>
                 <td colSpan={8} className="react-empty-cell">
-                  조건에 맞는 품목이 없습니다.
+                  현재 조건에 맞는 품목이 없습니다.
                 </td>
               </tr>
             )}
@@ -160,7 +168,7 @@ export function InventoryTable({ rows, sort, onSortChange, onDelete, onEdit }: I
             className="react-secondary-button"
             onClick={() => setDisplayCount((prev) => prev + PAGE_SIZE)}
           >
-            더보기 ({rows.length - displayCount}건 남음)
+            더 보기 ({rows.length - displayCount}건 남음)
           </button>
         </div>
       ) : null}

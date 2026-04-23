@@ -82,7 +82,9 @@ export function getFilteredInventoryRows(
         if (!(minimum > 0 && toNumber(item.quantity) <= minimum)) return false;
       }
 
+      if (filter.focus === 'outOfStock' && toNumber(item.quantity) > 0) return false;
       if (filter.focus === 'missingVendor' && item.vendor) return false;
+      if (filter.focus === 'missingWarehouse' && item.warehouse) return false;
       return true;
     })
     .sort((a, b) => compareInventoryRows(a, b, sort));

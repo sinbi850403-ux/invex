@@ -22,6 +22,8 @@ type InoutComposerProps = {
   onSubmit: (value: InoutInput) => SubmitResult;
 };
 
+const STORAGE_KEY = 'invex.react.inout.defaults';
+
 const defaultForm: InoutInput = {
   type: 'in',
   itemName: '',
@@ -42,8 +44,27 @@ function buildItemKey(item: { itemName?: string; itemCode?: string }) {
   return `${normalizeText(item.itemCode)}::${normalizeText(item.itemName)}`;
 }
 
+function getStoredDefaults() {
+  if (typeof window === 'undefined') return {};
+  try {
+    const raw = window.localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+}
+
+function saveDefaults(next: Partial<InoutInput>) {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+  } catch {
+    // Ignore storage failures and keep the form usable.
+  }
+}
+
 export function InoutComposer({ items, vendors, warehouses, onSubmit }: InoutComposerProps) {
-  const [form, setForm] = useState<InoutInput>(defaultForm);
+  const [form, setForm] = useState<InoutInput>({ ...defaultForm, ...getStoredDefaults() });
   const [selectedItemKey, setSelectedItemKey] = useState('');
   const [formMessage, setFormMessage] = useState<{ type: 'error' | 'success'; text: string } | null>(null);
 
@@ -58,6 +79,8 @@ export function InoutComposer({ items, vendors, warehouses, onSubmit }: InoutCom
       [...new Set([...warehouses, ...itemOptions.map((item) => normalizeText(item.warehouse)).filter(Boolean)])].sort(),
     [itemOptions, warehouses],
   );
+
+  const estimatedAmount = Math.max(0, Number(form.quantity || 0) * Number(form.unitPrice || 0));
 
   function update<K extends keyof InoutInput>(key: K, value: InoutInput[K]) {
     setForm((current) => ({ ...current, [key]: value }));
@@ -105,14 +128,23 @@ export function InoutComposer({ items, vendors, warehouses, onSubmit }: InoutCom
     event.preventDefault();
     const result = onSubmit(form);
     if (!result.ok) {
-      setFormMessage({ type: 'error', text: result.message || '입력값을 확인해 주세요.' });
+      setFormMessage({ type: 'error', text: result.message || '입력값을 확인해주세요.' });
       return;
     }
 
-    setFormMessage({ type: 'success', text: result.message || '입출고를 등록했습니다.' });
+    saveDefaults({
+      type: form.type,
+      vendor: form.vendor,
+      warehouse: form.warehouse,
+    });
+
+    setFormMessage({ type: 'success', text: result.message || '입출고 기록을 저장했습니다.' });
     setForm((current) => ({
       ...defaultForm,
+      ...getStoredDefaults(),
       type: current.type,
+      vendor: current.vendor,
+      warehouse: current.warehouse,
       date: toLocalDateKey(),
     }));
     setSelectedItemKey('');
@@ -125,13 +157,25 @@ export function InoutComposer({ items, vendors, warehouses, onSubmit }: InoutCom
     applySelectedItem(selected);
   }
 
+  function resetForm() {
+    setForm({
+      ...defaultForm,
+      ...getStoredDefaults(),
+    });
+    setSelectedItemKey('');
+    setFormMessage(null);
+  }
+
   return (
     <article className="react-card">
       <div className="react-section-head">
         <div>
           <span className="react-card__eyebrow">입출고 등록</span>
-          <h3>입고/출고 이력 추가</h3>
+          <h3>입고와 출고를 빠르게 기록하기</h3>
         </div>
+        <button type="button" className="react-secondary-button" onClick={resetForm}>
+          새로 입력
+        </button>
       </div>
 
       <form className="react-form-grid" onSubmit={handleSubmit}>
@@ -144,9 +188,9 @@ export function InoutComposer({ items, vendors, warehouses, onSubmit }: InoutCom
         </div>
 
         <div className="react-field react-field--wide">
-          <span>품목 선택</span>
+          <span>기존 품목 선택</span>
           <select className="react-select" value={selectedItemKey} onChange={(e) => handleSelectItem(e.target.value)}>
-            <option value="">선택하면 거래처/창고/단가가 자동 채워집니다.</option>
+            <option value="">선택하면 거래처, 창고, 단가를 자동으로 채웁니다.</option>
             {itemOptions.map((item) => {
               const itemName = normalizeText(item.itemName);
               const itemCode = normalizeText(item.itemCode);
@@ -182,7 +226,7 @@ export function InoutComposer({ items, vendors, warehouses, onSubmit }: InoutCom
             onBlur={bindMasterFieldsFromInput}
             placeholder="예: BEAN-1KG"
           />
-          <small className="react-field-help">품목코드/품목명이 등록값과 같으면 마스터 정보를 자동 반영합니다.</small>
+          <small className="react-field-help">품목명이나 코드가 기존 데이터와 같으면 저장된 정보가 자동 반영됩니다.</small>
         </div>
 
         <div className="react-field">
@@ -220,7 +264,7 @@ export function InoutComposer({ items, vendors, warehouses, onSubmit }: InoutCom
         </div>
 
         <div className="react-field">
-          <span>거래일</span>
+          <span>거래 날짜</span>
           <input className="react-input" type="date" value={form.date} onChange={(e) => update('date', e.target.value)} required />
         </div>
 
@@ -252,6 +296,12 @@ export function InoutComposer({ items, vendors, warehouses, onSubmit }: InoutCom
           />
         </div>
 
+        <div className="react-field">
+          <span>예상 금액</span>
+          <div className="react-inline-metric">{new Intl.NumberFormat('ko-KR').format(estimatedAmount)}원</div>
+          <small className="react-field-help">수량 × 단가 기준으로 계산됩니다.</small>
+        </div>
+
         <div className="react-field react-field--wide">
           <span>비고</span>
           <input className="react-input react-input--wide" value={form.note} onChange={(e) => update('note', e.target.value)} placeholder="선택 사항" />
@@ -265,7 +315,7 @@ export function InoutComposer({ items, vendors, warehouses, onSubmit }: InoutCom
 
         <div className="react-form-actions">
           <button type="submit" className="react-auth-submit">
-            거래 등록
+            거래 저장
           </button>
         </div>
       </form>

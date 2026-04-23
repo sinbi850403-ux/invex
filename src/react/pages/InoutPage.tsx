@@ -64,10 +64,10 @@ export function InoutPage() {
     <section className="react-page">
       <article className="react-card">
         <span className="react-chip">입출고 관리</span>
-        <h2>입고/출고 이력을 등록하고 재고에 즉시 반영합니다.</h2>
+        <h2>입고와 출고를 입력하면 재고가 바로 반영되도록 흐름을 단순하게 정리했습니다.</h2>
         <p>
-          건별로 직접 입력하거나 엑셀로 대량 업로드할 수 있습니다.
-          등록 즉시 재고 수량이 갱신되며, 실수로 등록했을 때 즉시 취소도 가능합니다.
+          자주 쓰는 거래처와 창고를 기억하고, 기존 품목을 선택하면 거래에 필요한 정보가 바로 채워집니다.
+          건별 입력과 엑셀 일괄 등록을 같은 화면에서 이어서 처리할 수 있습니다.
         </p>
       </article>
 
@@ -79,7 +79,13 @@ export function InoutPage() {
         warehouses={composerOptions.warehouses}
         onSubmit={saveTransaction}
       />
-      <InoutFilters filter={filter} options={options} onChange={setFilter} />
+      <InoutFilters
+        filter={filter}
+        options={options}
+        resultCount={rows.length}
+        totalCount={summary.totalTransactions}
+        onChange={setFilter}
+      />
       <InoutTable rows={rows} sort={sort} onSortChange={changeSort} onDelete={requestDelete} />
 
       <ConfirmDialog

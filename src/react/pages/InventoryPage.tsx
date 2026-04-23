@@ -59,10 +59,10 @@ export function InventoryPage() {
     <section className="react-page">
       <article className="react-card">
         <span className="react-chip">재고 현황</span>
-        <h2>품목 등록, 수정, 삭제를 현재 화면에서 바로 처리합니다.</h2>
+        <h2>품목 등록부터 수정, 검색, 삭제까지 한 화면에서 끝낼 수 있습니다.</h2>
         <p>
-          입력한 내용은 목록에 즉시 반영됩니다.
-          기존 품목 템플릿을 불러와 빠르게 등록할 수 있습니다.
+          같은 거래처나 창고를 반복 입력하는 시간을 줄이기 위해 최근 입력값을 기억하고,
+          기존 품목 정보를 불러와 새 품목을 더 빠르게 추가할 수 있게 구성했습니다.
         </p>
       </article>
 
@@ -78,7 +78,13 @@ export function InventoryPage() {
         onCancelEdit={startCreate}
         onSubmit={saveItem}
       />
-      <InventoryFilters filter={filter} options={options} onChange={setFilter} />
+      <InventoryFilters
+        filter={filter}
+        options={options}
+        resultCount={rows.length}
+        totalCount={summary.itemCount}
+        onChange={setFilter}
+      />
       <InventoryTable rows={rows} sort={sort} onSortChange={changeSort} onEdit={startEdit} onDelete={requestDelete} />
 
       <ConfirmDialog

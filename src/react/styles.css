@@ -282,7 +282,7 @@ a {
 .react-quick-btn {
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: flex-start;
   gap: 8px;
   padding: 18px 12px;
   border: 1px solid rgba(148, 163, 184, 0.22);
@@ -296,10 +296,24 @@ a {
   transition: transform 120ms ease, border-color 120ms ease, background 120ms ease;
 }
 
+.react-quick-btn strong {
+  font-size: 1rem;
+}
+
+.react-quick-btn small {
+  color: #475569;
+  font-weight: 500;
+  text-align: left;
+}
+
 .react-quick-btn:hover {
   transform: translateY(-2px);
   border-color: rgba(15, 118, 110, 0.45);
   background: rgba(240, 253, 250, 0.95);
+}
+
+.react-quick-btn--link {
+  text-decoration: none;
 }
 
 .react-quick-btn__icon {
@@ -313,6 +327,15 @@ a {
   justify-content: space-between;
   gap: 16px;
   margin-bottom: 18px;
+}
+
+.react-section-head--compact {
+  margin-bottom: 14px;
+}
+
+.react-filter-summary {
+  font-size: 0.95rem;
+  color: #334155;
 }
 
 .react-toolbar {
@@ -380,6 +403,12 @@ a {
   border-color: #0f766e;
 }
 
+.react-chip-button--ghost {
+  color: #0f766e;
+  background: rgba(15, 118, 110, 0.08);
+  border-color: rgba(15, 118, 110, 0.2);
+}
+
 .react-data-table {
   overflow-x: auto;
 }
@@ -435,6 +464,12 @@ a {
 
 .react-empty-cell,
 .react-empty-note {
+  color: #64748b;
+}
+
+.react-table-subtext {
+  margin-top: 4px;
+  font-size: 0.82rem;
   color: #64748b;
 }
 
@@ -634,6 +669,18 @@ a {
   padding: 10px 12px;
   border-radius: 12px;
   font-size: 0.9rem;
+}
+
+.react-inline-metric {
+  display: inline-flex;
+  align-items: center;
+  min-height: 52px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  background: rgba(248, 250, 252, 0.9);
+  font-weight: 700;
+  color: #0f172a;
 }
 
 .react-inline-feedback.is-error {
@@ -929,11 +976,23 @@ html.dark-mode .react-chip-button.is-active {
   color: #ecfeff;
 }
 
+html.dark-mode .react-chip-button--ghost {
+  background: rgba(45, 212, 191, 0.1);
+  border-color: rgba(45, 212, 191, 0.3);
+  color: #2dd4bf;
+}
+
 /* 빠른 메뉴 버튼 */
 html.dark-mode .react-quick-btn {
   background: rgba(13, 17, 23, 0.7);
   border-color: rgba(48, 54, 61, 0.7);
   color: #e6edf3;
+}
+
+html.dark-mode .react-quick-btn small,
+html.dark-mode .react-filter-summary,
+html.dark-mode .react-table-subtext {
+  color: #8b949e;
 }
 
 html.dark-mode .react-quick-btn:hover {
@@ -950,6 +1009,12 @@ html.dark-mode .react-empty-note {
 /* 버튼 */
 html.dark-mode .react-secondary-button {
   background: rgba(33, 38, 45, 0.9);
+  color: #e6edf3;
+}
+
+html.dark-mode .react-inline-metric {
+  background: rgba(13, 17, 23, 0.9);
+  border-color: rgba(48, 54, 61, 0.9);
   color: #e6edf3;
 }
 

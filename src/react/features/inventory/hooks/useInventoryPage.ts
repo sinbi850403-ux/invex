@@ -144,13 +144,13 @@ export function useInventoryPage() {
       if (editingTarget === null) {
         createInventoryItem(value);
         setDraft(emptyDraft);
-        return { ok: true, message: '품목이 등록되었습니다.' };
+        return { ok: true, message: '품목을 등록했습니다.' };
       }
 
       editInventoryItem(editingTarget, value);
       setEditingTarget(null);
       setDraft(emptyDraft);
-      return { ok: true, message: '품목이 수정되었습니다.' };
+      return { ok: true, message: '품목을 수정했습니다.' };
     } catch (error) {
       return { ok: false, message: error instanceof Error ? error.message : '저장 중 오류가 발생했습니다.' };
     }
@@ -159,13 +159,13 @@ export function useInventoryPage() {
   function deleteItem(row: { id?: string; _index?: number }): DeleteResult {
     const target = row.id || row._index;
     if (typeof target !== 'number' && typeof target !== 'string') {
-      return { ok: false, message: '삭제 대상 ID를 찾을 수 없습니다.' };
+      return { ok: false, message: '삭제할 대상을 찾지 못했습니다.' };
     }
 
     try {
       const result = removeInventoryItem(target);
       if (!result?.deleted) {
-        return { ok: false, message: '이미 삭제되었거나 삭제할 수 없는 항목입니다.' };
+        return { ok: false, message: '이미 삭제되었거나 존재하지 않는 품목입니다.' };
       }
       if (editingTarget === target) {
         setEditingTarget(null);

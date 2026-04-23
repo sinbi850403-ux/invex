@@ -23,6 +23,8 @@ type InventoryEditorProps = {
   onSubmit: (value: InventoryInput) => MutationResult;
 };
 
+const STORAGE_KEY = 'invex.react.inventory.defaults';
+
 const emptyForm: InventoryInput = {
   itemName: '',
   itemCode: '',
@@ -36,6 +38,25 @@ const emptyForm: InventoryInput = {
 
 function normalizeText(value: unknown) {
   return String(value || '').trim();
+}
+
+function getStoredDefaults() {
+  if (typeof window === 'undefined') return {};
+  try {
+    const raw = window.localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+}
+
+function saveDefaults(next: Partial<InventoryInput>) {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+  } catch {
+    // Ignore storage failures and keep the form usable.
+  }
 }
 
 export function InventoryEditor({
@@ -63,11 +84,22 @@ export function InventoryEditor({
     [itemTemplates],
   );
 
+  const estimatedAmount = Math.max(0, Number(form.quantity || 0) * Number(form.unitPrice || 0));
+
   useEffect(() => {
-    setForm(initialValue);
+    if (isEditing) {
+      setForm(initialValue);
+    } else {
+      const defaults = getStoredDefaults();
+      setForm({
+        ...emptyForm,
+        ...defaults,
+        ...initialValue,
+      });
+    }
     setSelectedTemplateKey('');
     setFormMessage(null);
-  }, [initialValue]);
+  }, [initialValue, isEditing]);
 
   function update<K extends keyof InventoryInput>(key: K, value: InventoryInput[K]) {
     setForm((current) => ({ ...current, [key]: value }));
@@ -92,13 +124,26 @@ export function InventoryEditor({
 
     const result = onSubmit(form);
     if (!result.ok) {
-      setFormMessage({ type: 'error', text: result.message || '입력값을 다시 확인해 주세요.' });
+      setFormMessage({ type: 'error', text: result.message || '입력값을 다시 확인해주세요.' });
       return;
     }
 
+    saveDefaults({
+      category: form.category,
+      vendor: form.vendor,
+      warehouse: form.warehouse,
+      unit: form.unit,
+    });
+
     setFormMessage({ type: 'success', text: result.message || (isEditing ? '품목을 수정했습니다.' : '품목을 등록했습니다.') });
     if (!isEditing) {
-      setForm(emptyForm);
+      setForm((current) => ({
+        ...emptyForm,
+        category: current.category,
+        vendor: current.vendor,
+        warehouse: current.warehouse,
+        unit: current.unit || 'EA',
+      }));
       setSelectedTemplateKey('');
     }
   }
@@ -130,13 +175,28 @@ export function InventoryEditor({
     }
   }
 
+  function resetCreateForm() {
+    const defaults = getStoredDefaults();
+    setForm({
+      ...emptyForm,
+      ...defaults,
+    });
+    setSelectedTemplateKey('');
+    setFormMessage(null);
+  }
+
   return (
     <article className="react-card">
       <div className="react-section-head">
         <div>
-          <span className="react-card__eyebrow">품목 편집기</span>
+          <span className="react-card__eyebrow">품목 입력</span>
           <h3>{isEditing ? '품목 수정' : '품목 등록'}</h3>
         </div>
+        {!isEditing ? (
+          <button type="button" className="react-secondary-button" onClick={resetCreateForm}>
+            새로 입력
+          </button>
+        ) : null}
       </div>
 
       <form className="react-form-grid" onSubmit={handleSubmit}>
@@ -144,7 +204,7 @@ export function InventoryEditor({
           <div className="react-field react-field--wide">
             <span>기존 품목 불러오기</span>
             <select className="react-select" value={selectedTemplateKey} onChange={(e) => applyTemplate(e.target.value)}>
-              <option value="">선택하면 카테고리/단위/거래처/창고가 자동 채워집니다.</option>
+              <option value="">선택하면 카테고리, 단위, 거래처, 창고를 자동으로 채웁니다.</option>
               {normalizedTemplates.map((item) => {
                 const key = `${item.id}::${item.itemCode}::${item.itemName}`;
                 return (
@@ -179,7 +239,7 @@ export function InventoryEditor({
             onBlur={handleItemCodeBlur}
             placeholder="예: BEAN-1KG"
           />
-          <small className="react-field-help">코드/품목명이 기존 값과 같으면 마스터 정보를 자동 반영합니다.</small>
+          <small className="react-field-help">기존 코드나 품목명을 입력하면 저장된 기본 정보가 자동으로 반영됩니다.</small>
         </div>
 
         <div className="react-field">
@@ -246,7 +306,7 @@ export function InventoryEditor({
         </div>
 
         <div className="react-field">
-          <span>원가</span>
+          <span>단가</span>
           <input
             className="react-input"
             type="number"
@@ -257,6 +317,12 @@ export function InventoryEditor({
             placeholder="0"
             required
           />
+        </div>
+
+        <div className="react-field react-field--wide">
+          <span>예상 금액</span>
+          <div className="react-inline-metric">{new Intl.NumberFormat('ko-KR').format(estimatedAmount)}원</div>
+          <small className="react-field-help">수량 × 단가 기준으로 바로 계산됩니다.</small>
         </div>
 
         {formMessage ? (

@@ -10,8 +10,8 @@ export function AuthGuard() {
       <section className="react-page">
         <article className="react-card react-card--loading">
           <span className="react-chip">로딩 중</span>
-          <h2>세션 확인 중</h2>
-          <p>인증 세션을 복원하고 있습니다. 잠시만 기다려 주세요.</p>
+          <h2>인증 상태를 확인하고 있습니다.</h2>
+          <p>로그인 정보와 사용자 세션을 복원하는 중입니다. 잠시만 기다려주세요.</p>
         </article>
       </section>
     );

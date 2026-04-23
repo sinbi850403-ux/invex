@@ -27,8 +27,8 @@ function toNumber(value: unknown) {
 
 function normalizeType(value: unknown) {
   const type = String(value ?? '').trim().toLowerCase();
-  if (type === 'in' || type === '입고' || type === '입') return 'in';
-  if (type === 'out' || type === '출고' || type === '출') return 'out';
+  if (type === 'in' || type === '입고') return 'in';
+  if (type === 'out' || type === '출고') return 'out';
   return '';
 }
 
@@ -49,8 +49,12 @@ function getComparableTxValue(tx: Record<string, unknown>, key: InoutSortKey) {
 
 export function getInoutSummary(state: AppStoreState) {
   const transactions = state.transactions || [];
-  const todayInbound = transactions.filter((tx) => normalizeType(tx.type) === 'in' && isSameLocalDate(normalizeYyyyMmDd(tx.date) ? tx.date : tx.createdAt)).length;
-  const todayOutbound = transactions.filter((tx) => normalizeType(tx.type) === 'out' && isSameLocalDate(normalizeYyyyMmDd(tx.date) ? tx.date : tx.createdAt)).length;
+  const todayInbound = transactions.filter(
+    (tx) => normalizeType(tx.type) === 'in' && isSameLocalDate(normalizeYyyyMmDd(tx.date) ? tx.date : tx.createdAt),
+  ).length;
+  const todayOutbound = transactions.filter(
+    (tx) => normalizeType(tx.type) === 'out' && isSameLocalDate(normalizeYyyyMmDd(tx.date) ? tx.date : tx.createdAt),
+  ).length;
   const missingVendor = transactions.filter((tx) => !String(tx.vendor || '').trim()).length;
 
   return {
@@ -69,7 +73,11 @@ export function getInoutOptions(state: AppStoreState) {
   };
 }
 
-export function getFilteredTransactions(state: AppStoreState, filter: InoutFilterState, sort: InoutSortState = DEFAULT_SORT) {
+export function getFilteredTransactions(
+  state: AppStoreState,
+  filter: InoutFilterState,
+  sort: InoutSortState = DEFAULT_SORT,
+) {
   const keyword = filter.keyword.trim().toLowerCase();
   const direction = sort.direction === 'asc' ? 1 : -1;
 
