@@ -10,7 +10,7 @@ import { getFallbackProfile as createFallbackProfile, mapProfileData } from './a
 import { renderInlineLoginError as renderVanillaLoginError, renderLoginScreen as renderVanillaLoginScreen } from './auth/ui.js';
 import { purgeLegacyAuthStorage as purgeAuthStorage, sanitizeSupabaseStorage as sanitizeAuthStorage } from './auth/storage.js';
 import { withTimeout, TimeoutError } from './auth/async.js';
-import { shouldAttemptProfileLoad } from './auth/session-guards.js';
+import { hasSessionAccessToken, shouldAttemptProfileLoad } from './auth/session-guards.js';
 
 let currentUser = null;
 let userProfile = null;
@@ -163,7 +163,9 @@ async function loadProfile(user, session = null) {
     return mapProfileData(data, fallback);
   } catch (error) {
     // 타임아웃 또는 네트워크 오류 — 폴백 프로필로 계속 진행
-    console.warn('[Auth] profile load failed:', error.message);
+    if (!(error instanceof TimeoutError)) {
+      console.warn('[Auth] profile load failed:', error.message);
+    }
     return fallback;
   }
 }
@@ -179,7 +181,7 @@ async function loadProfile(user, session = null) {
  *   → 로그아웃 후 늦게 도착한 프로필로 상태가 덮어씌워지는 race condition 제거.
  */
 async function applySession(session, seq) {
-  if (!session?.user) {
+  if (!session?.user || !hasSessionAccessToken(session)) {
     // 이미 미인증 상태이면 중복 콜백 방지
     if (currentUser === null && !isLoggingIn) return;
     currentUser = null;

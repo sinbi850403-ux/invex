@@ -722,11 +722,11 @@ async function initAppAfterAuth() {
     ])
       .then(({ data, error }) => {
         if (error) throw error;
-        if (!data?.session?.user) {
-          throw new Error('no active session');
-        }
+        if (!data?.session?.user) return;
       })
       .catch((e) => {
+        const message = String(e?.message || '').toLowerCase();
+        if (message.includes('no active session') || message.includes('session missing')) return;
         console.warn('[Health] Supabase 연결 불안정:', e.message);
         showToast('서버 연결이 불안정합니다. 일부 기능이 제한될 수 있습니다.', 'warning');
       });
