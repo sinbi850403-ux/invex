@@ -100,7 +100,7 @@ const ALL_PERMISSIONS = [
   { id: 'documents', name: '문서 생성', icon: '📄', group: '보고' },
   { id: 'auditlog', name: '감사 추적', icon: '🔍', group: '보고' },
 
-  { id: 'hr-dashboard', name: 'HR 대시보드', icon: '👥', group: '인사·급여' },
+  { id: 'hr-dashboard', name: '인사 대시보드', icon: '👥', group: '인사·급여' },
   { id: 'employees', name: '직원 관리', icon: '🪪', group: '인사·급여' },
   { id: 'attendance', name: '근태 관리', icon: '🕒', group: '인사·급여' },
   { id: 'payroll', name: '급여 계산', icon: '💵', group: '인사·급여' },
@@ -131,6 +131,10 @@ function closeModal(modal) {
   if (modal) modal.style.display = 'none';
 }
 
+function getRoleBadge(role) {
+  return `<span class="badge" style="background:${role?.color || '#666'}20; color:${role?.color || '#666'};">${role?.icon || ''} ${role?.name || '미지정'}</span>`;
+}
+
 export function renderRolesPage(container) {
   const state = getState();
   const roles = getRolesFromState(state);
@@ -145,7 +149,7 @@ export function renderRolesPage(container) {
     <div class="page-header">
       <div>
         <h1 class="page-title"><span class="title-icon">🔐</span> 권한 관리</h1>
-        <div class="page-desc">역할별로 메뉴 접근 권한을 설정하고 팀원을 관리합니다.</div>
+        <div class="page-desc">역할별 메뉴 접근 권한을 설정하고 팀원을 관리합니다.</div>
       </div>
       <div style="display:flex; gap:8px;">
         <button class="btn btn-primary" id="btn-add-role">+ 역할 추가</button>
@@ -158,7 +162,6 @@ export function renderRolesPage(container) {
         .map((role) => {
           const memberCount = members.filter((member) => member.roleId === role.id).length;
           const permissionCount = role.permissions.includes('*') ? ALL_PERMISSIONS.length : role.permissions.length;
-
           return `
             <div class="card" style="border-top:3px solid ${role.color}; position:relative;">
               ${
@@ -166,7 +169,6 @@ export function renderRolesPage(container) {
                   ? '<div style="position:absolute; top:8px; right:10px; font-size:11px; color:var(--text-muted);">시스템 역할</div>'
                   : `<button class="btn btn-ghost btn-sm btn-delete-role" data-role-id="${role.id}" style="position:absolute; top:4px; right:4px;">삭제</button>`
               }
-
               <div style="display:flex; align-items:center; gap:10px; margin-bottom:12px;">
                 <div style="font-size:28px;">${role.icon}</div>
                 <div>
@@ -174,7 +176,6 @@ export function renderRolesPage(container) {
                   <div style="font-size:11px; color:var(--text-muted);">${role.description}</div>
                 </div>
               </div>
-
               <div style="display:flex; gap:12px; margin-bottom:12px;">
                 <div style="background:var(--bg-secondary); border-radius:6px; padding:6px 10px; flex:1; text-align:center;">
                   <div style="font-size:18px; font-weight:700;">${memberCount}</div>
@@ -185,10 +186,7 @@ export function renderRolesPage(container) {
                   <div style="font-size:10px; color:var(--text-muted);">권한</div>
                 </div>
               </div>
-
-              <button class="btn btn-ghost btn-sm btn-edit-perm" data-role-id="${role.id}" style="width:100%;">
-                🔧 권한 설정
-              </button>
+              <button class="btn btn-ghost btn-sm btn-edit-perm" data-role-id="${role.id}" style="width:100%;">🔧 권한 설정</button>
             </div>
           `;
         })
@@ -220,20 +218,14 @@ export function renderRolesPage(container) {
                         <tr>
                           <td><strong>${member.name}</strong></td>
                           <td style="color:var(--text-muted);">${member.email}</td>
-                          <td>
-                            <span class="badge" style="background:${role?.color || '#666'}20; color:${role?.color || '#666'};">
-                              ${role?.icon || ''} ${role?.name || '미지정'}
-                            </span>
-                          </td>
+                          <td>${getRoleBadge(role)}</td>
                           <td>
                             <span class="badge ${member.status === 'active' ? 'badge-success' : 'badge-default'}">
                               ${member.status === 'active' ? '활성' : '초대 중'}
                             </span>
                           </td>
                           <td style="font-size:12px; color:var(--text-muted);">${member.joinedAt || '-'}</td>
-                          <td>
-                            <button class="btn btn-ghost btn-sm btn-remove-member" data-member-id="${member.id}">제거</button>
-                          </td>
+                          <td><button class="btn btn-ghost btn-sm btn-remove-member" data-member-id="${member.id}">제거</button></td>
                         </tr>
                       `;
                     })
@@ -253,13 +245,13 @@ export function renderRolesPage(container) {
     </div>
 
     <div id="perm-modal" class="modal-overlay" style="display:none;">
-      <div class="modal" style="max-width:640px;">
+      <div class="modal" style="max-width:640px; max-height:90vh; display:flex; flex-direction:column;">
         <div class="modal-header">
           <h3 id="perm-modal-title">권한 설정</h3>
           <button class="btn btn-ghost btn-sm" id="perm-modal-close">✕</button>
         </div>
-        <div class="modal-body" id="perm-modal-body" style="max-height:450px; overflow-y:auto;"></div>
-        <div class="modal-footer" style="display:flex; gap:8px; justify-content:flex-end;">
+        <div class="modal-body" id="perm-modal-body" style="overflow:auto; max-height:calc(90vh - 140px);"></div>
+        <div class="modal-footer">
           <button class="btn btn-ghost" id="perm-cancel">취소</button>
           <button class="btn btn-primary" id="perm-save">저장</button>
         </div>
@@ -279,7 +271,7 @@ export function renderRolesPage(container) {
           </div>
           <div class="form-group">
             <label class="form-label">설명</label>
-            <input class="form-input" id="role-desc" placeholder="역할에 대한 간단한 설명" />
+            <input class="form-input" id="role-desc" placeholder="역할 설명을 입력하세요" />
           </div>
           <div class="form-group">
             <label class="form-label">아이콘</label>
@@ -288,16 +280,14 @@ export function renderRolesPage(container) {
                 (icon, index) => `
                   <label style="cursor:pointer;">
                     <input type="radio" name="role-icon" value="${icon}" style="display:none;" ${index === 0 ? 'checked' : ''} />
-                    <span class="icon-option" style="font-size:24px; padding:4px 8px; border-radius:6px; border:2px solid ${
-                      index === 0 ? 'var(--accent)' : 'transparent'
-                    };">${icon}</span>
+                    <span class="icon-option" style="font-size:24px; padding:4px 8px; border-radius:6px; border:2px solid ${index === 0 ? 'var(--accent)' : 'transparent'};">${icon}</span>
                   </label>
                 `,
               ).join('')}
             </div>
           </div>
         </div>
-        <div class="modal-footer" style="display:flex; gap:8px; justify-content:flex-end;">
+        <div class="modal-footer">
           <button class="btn btn-ghost" id="role-cancel">취소</button>
           <button class="btn btn-primary" id="role-save">추가</button>
         </div>
@@ -313,11 +303,11 @@ export function renderRolesPage(container) {
         <div class="modal-body">
           <div class="form-group">
             <label class="form-label">이름 <span class="required">*</span></label>
-            <input class="form-input" id="member-name" placeholder="팀원 이름" />
+            <input class="form-input" id="member-name" placeholder="홍길동" />
           </div>
           <div class="form-group">
             <label class="form-label">이메일 <span class="required">*</span></label>
-            <input class="form-input" type="email" id="member-email" placeholder="email@example.com" />
+            <input class="form-input" id="member-email" placeholder="name@company.com" />
           </div>
           <div class="form-group">
             <label class="form-label">역할</label>
@@ -326,7 +316,7 @@ export function renderRolesPage(container) {
             </select>
           </div>
         </div>
-        <div class="modal-footer" style="display:flex; gap:8px; justify-content:flex-end;">
+        <div class="modal-footer">
           <button class="btn btn-ghost" id="member-cancel">취소</button>
           <button class="btn btn-primary" id="member-save">초대</button>
         </div>
@@ -357,7 +347,7 @@ export function renderRolesPage(container) {
 
       const body = container.querySelector('#perm-modal-body');
       const title = container.querySelector('#perm-modal-title');
-      title.textContent = `${role.icon} ${role.name} — 권한 설정`;
+      title.textContent = `${role.icon} ${role.name} 권한 설정`;
 
       const isAll = role.permissions.includes('*');
       body.innerHTML = `
@@ -377,9 +367,7 @@ export function renderRolesPage(container) {
                     .map(
                       (permission) => `
                         <label style="display:flex; align-items:center; gap:8px; padding:4px 0; cursor:pointer;">
-                          <input type="checkbox" class="perm-check" value="${permission.id}" ${
-                            isAll || role.permissions.includes(permission.id) ? 'checked' : ''
-                          } />
+                          <input type="checkbox" class="perm-check" value="${permission.id}" ${isAll || role.permissions.includes(permission.id) ? 'checked' : ''} />
                           <span>${permission.icon} ${permission.name}</span>
                         </label>
                       `,
@@ -394,6 +382,8 @@ export function renderRolesPage(container) {
 
       const allCheckbox = body.querySelector('#perm-all');
       const permissionList = body.querySelector('#perm-list');
+      body.scrollTop = 0;
+
       allCheckbox?.addEventListener('change', (event) => {
         const checked = event.target.checked;
         permissionList.style.opacity = checked ? '0.45' : '1';
