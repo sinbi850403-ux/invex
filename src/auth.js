@@ -150,7 +150,7 @@ async function loadProfile(user, session = null) {
   try {
     const { data, error } = await withTimeout(
       supabase.from('profiles').select('*').eq('id', user.uid).maybeSingle(),
-      15000,
+      8000,
       'load-profile',
     );
 
@@ -498,16 +498,13 @@ export async function loginWithEmail(email, password) {
     // ── Supabase 클라이언트 내부 상태 초기화 ─────────────────────────────────
     // localStorage 정리만으로는 클라이언트 내부 토큰/갱신 상태가 남아
     // signInWithPassword 충돌 또는 fetch timeout의 근본 원인이 됨
-    try {
-      await withTimeout(supabase.auth.signOut({ scope: 'local' }), 3000, 'pre-login-signout');
-    } catch {
-      // signOut 실패해도 로그인 계속
-    }
+    // ★ non-blocking: 완료를 기다리지 않아 3s 낭비 제거
+    supabase.auth.signOut({ scope: 'local' }).catch(() => {});
     purgeAuthStorage({ includeSupabaseSession: true });
 
     // ── 로그인 시도 (재시도 1회 포함) ────────────────────────────────────────
     async function attemptLogin(attempt = 1) {
-      const timeout = attempt === 1 ? 8000 : 12000; // 1차 8s, 재시도 12s
+      const timeout = attempt === 1 ? 5000 : 8000; // 1차 5s, 재시도 8s (기존 8s/12s → 단축)
       const { data, error } = await withTimeout(
         supabase.auth.signInWithPassword({ email, password }),
         timeout,
