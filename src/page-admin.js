@@ -694,15 +694,35 @@ function showPlanChangeModal(user, container, navigateTo) {
     card.addEventListener('click', async () => {
       const planId = card.dataset.plan;
       try {
-        const { error } = await supabase
+        // .select()로 실제 업데이트된 행 수 확인 — RLS 차단 시 data=[] 반환
+        const { data, error } = await supabase
           .from('profiles')
           .update({ plan: planId })
-          .eq('id', user.id);
+          .eq('id', user.id)
+          .select('id, plan');
+
         if (error) throw error;
+
+        // data가 비어있으면 RLS가 업데이트를 차단한 것
+        if (!data || data.length === 0) {
+          throw new Error(
+            'RLS 정책으로 인해 변경이 차단됐습니다.\n' +
+            'Supabase SQL Editor에서 supabase/fix-admin-plan-update.sql 을 실행해 주세요.'
+          );
+        }
+
+        // 로컬 캐시 즉시 반영 (재렌더 전 캐시 동기화)
+        if (_adminUserCache) {
+          const cached = _adminUserCache.find(u => u.id === user.id);
+          if (cached) cached.plan = planId;
+        }
+
+        // 현재 로그인한 관리자 본인이면 로컬 플랜도 갱신
         const me = getCurrentUser();
         if (me?.uid === user.id) {
           setPlan(planId);
         }
+
         modal.remove();
         showToast(`${user.name || '사용자'}님의 요금제를 ${PLANS[planId].name}으로 변경했습니다.`, 'success');
         renderAdminPage(container, navigateTo);
