@@ -184,7 +184,7 @@ export function renderSummaryPage(container, navigateTo) {
                 <td><strong>${escapeHtml(item.itemName || '-')}</strong></td>
                 <td>${escapeHtml(item.category || '-')}</td>
                 <td class="text-right">${toNumber(item.quantity).toLocaleString('ko-KR')}</td>
-                <td class="text-right">${formatCurrency(toNumber(item.totalPrice) || toNumber(item.supplyValue))}</td>
+                <td class="text-right">${formatCurrency((() => { const t = toNumber(item.totalPrice); if (t > 0) return t; const s = toNumber(item.supplyValue); if (s > 0) return s; return Math.round(toNumber(item.quantity) * toNumber(item.unitPrice)); })())}</td>
               </tr>
             `).join('') : `
               <tr><td colspan="5" class="text-center">품목 데이터가 없습니다.</td></tr>
@@ -222,7 +222,13 @@ export function renderSummaryPage(container, navigateTo) {
 function buildSummary(data, transactions, safetyStock) {
   const itemCount = data.length;
   const totalQty = data.reduce((sum, row) => sum + toNumber(row.quantity), 0);
-  const totalPrice = data.reduce((sum, row) => sum + (toNumber(row.totalPrice) || toNumber(row.supplyValue)), 0);
+  const totalPrice = data.reduce((sum, row) => {
+    const t = toNumber(row.totalPrice);
+    if (t > 0) return sum + t;
+    const s = toNumber(row.supplyValue);
+    if (s > 0) return sum + s;
+    return sum + Math.round(toNumber(row.quantity) * toNumber(row.unitPrice));
+  }, 0);
 
   const categoryMap = new Map();
   data.forEach((row) => {
@@ -233,7 +239,9 @@ function buildSummary(data, transactions, safetyStock) {
     const category = categoryMap.get(key);
     category.count += 1;
     category.qty += toNumber(row.quantity);
-    category.price += toNumber(row.totalPrice) || toNumber(row.supplyValue);
+    const t = toNumber(row.totalPrice);
+    const s = toNumber(row.supplyValue);
+    category.price += t > 0 ? t : s > 0 ? s : Math.round(toNumber(row.quantity) * toNumber(row.unitPrice));
   });
   const categories = [...categoryMap.values()].sort((a, b) => b.qty - a.qty);
 
