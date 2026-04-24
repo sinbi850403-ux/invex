@@ -20,7 +20,7 @@ export function renderScannerPage(container, navigateTo) {
   container.innerHTML = `
     <div class="page-header">
       <div>
-        <h1 class="page-title"><span class="title-icon">📱</span> 바코드/QR 스캔</h1>
+        <h1 class="page-title">바코드/QR 스캔</h1>
         <div class="page-desc">카메라로 바코드를 스캔하면 자동으로 품목을 찾아 입출고를 등록합니다.</div>
       </div>
     </div>

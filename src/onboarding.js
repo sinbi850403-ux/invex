@@ -39,7 +39,7 @@ function showOnboardingModal(navigateTo) {
 
   const steps = [
     {
-      icon: '👋',
+      icon: '',
       title: 'INVEX에 오신 것을 환영합니다!',
       desc: `재고 관리, 입출고 추적, 세무 서류까지<br/>
              모든 기능을 <strong>1년 무료</strong>로 이용할 수 있습니다.`,
@@ -66,7 +66,7 @@ function showOnboardingModal(navigateTo) {
       btnText: '시작하기 →',
     },
     {
-      icon: '📄',
+      icon: '',
       title: '기존 엑셀 파일이 있으신가요?',
       desc: '엑셀 파일을 업로드하면 품목을 자동으로 인식합니다.<br/>없어도 괜찮아요, 직접 추가할 수 있습니다.',
       detail: `
@@ -82,7 +82,7 @@ function showOnboardingModal(navigateTo) {
       btnText: '다음 →',
     },
     {
-      icon: '🎉',
+      icon: '',
       title: '준비 완료!',
       desc: '이제 INVEX의 모든 기능을 사용할 수 있습니다.',
       detail: `

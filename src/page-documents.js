@@ -40,7 +40,7 @@ export function renderDocumentsPage(container, navigateTo) {
   container.innerHTML = `
     <div class="page-header">
       <div>
-        <h1 class="page-title"><span class="title-icon">📄</span> 문서 자동생성</h1>
+        <h1 class="page-title">문서 자동생성</h1>
         <div class="page-desc">발주서, 견적서, 거래명세서를 자동으로 생성하고 PDF로 다운로드합니다.</div>
       </div>
     </div>

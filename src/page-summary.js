@@ -20,7 +20,7 @@ export function renderSummaryPage(container, navigateTo) {
   if (data.length === 0 && transactions.length === 0) {
     container.innerHTML = `
       <div class="page-header">
-        <h1 class="page-title"><span class="title-icon">📊</span> 요약 보고</h1>
+        <h1 class="page-title">요약 보고</h1>
       </div>
       <div class="card">
         <div class="empty-state">
@@ -41,7 +41,7 @@ export function renderSummaryPage(container, navigateTo) {
   container.innerHTML = `
     <div class="page-header">
       <div>
-        <h1 class="page-title"><span class="title-icon">📊</span> 요약 보고</h1>
+        <h1 class="page-title">요약 보고</h1>
         <div class="page-desc">재고 현황과 입출고 통계를 한눈에 확인합니다.</div>
       </div>
       <div class="page-actions">

@@ -47,7 +47,7 @@ export function renderUploadPage(container, navigateTo) {
   container.innerHTML = `
     <div class="page-header">
       <div>
-        <h1 class="page-title"><span class="title-icon">📂</span> 파일 업로드</h1>
+        <h1 class="page-title">파일 업로드</h1>
         <div class="page-desc">엑셀 파일을 올리면 자동으로 데이터를 읽고 재고에 등록합니다.</div>
       </div>
     </div>

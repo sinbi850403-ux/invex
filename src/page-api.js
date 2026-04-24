@@ -35,7 +35,7 @@ export function renderApiPage(container, navigateTo) {
   container.innerHTML = `
     <div class="page-header">
       <div>
-        <h1 class="page-title"><span class="title-icon">🔌</span> API 연동</h1>
+        <h1 class="page-title">API 연동</h1>
         <div class="page-desc">Enterprise — 외부 시스템과 데이터를 연동하고 API 키를 관리합니다.</div>
       </div>
     </div>

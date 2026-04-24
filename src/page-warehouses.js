@@ -94,7 +94,7 @@ export function renderWarehousesPage(container, navigateTo) {
   container.innerHTML = `
     <div class="page-header">
       <div>
-        <h1 class="page-title"><span class="title-icon">🏢</span> 다중 창고 관리</h1>
+        <h1 class="page-title">다중 창고 관리</h1>
         <div class="page-desc">Enterprise — 창고별 재고 현황을 한눈에 관리합니다.</div>
       </div>
       <div style="display:flex; gap:8px;">

@@ -24,7 +24,7 @@ export function renderBackupPage(container, navigateTo) {
   container.innerHTML = `
     <div class="page-header">
       <div>
-        <h1 class="page-title"><span class="title-icon">💾</span> 데이터 백업/복원</h1>
+        <h1 class="page-title">데이터 백업/복원</h1>
         <div class="page-desc">소중한 데이터를 안전하게 백업하고, 필요할 때 복원하세요.</div>
       </div>
     </div>

@@ -28,7 +28,7 @@ export async function renderPayrollPage(container, navigateTo) {
   container.innerHTML = `
     <div class="page-header">
       <div>
-        <h1 class="page-title"><span class="title-icon">💵</span> 급여 계산 & 확정</h1>
+        <h1 class="page-title">급여 계산 & 확정</h1>
         <div class="page-desc">월별 급여를 자동 계산·검토·확정합니다. Admin만 확정 및 명세서 발행 가능합니다.</div>
       </div>
     </div>

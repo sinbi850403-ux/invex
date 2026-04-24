@@ -19,7 +19,7 @@ export function renderTransferPage(container, navigateTo) {
   container.innerHTML = `
     <div class="page-header">
       <div>
-        <h1 class="page-title"><span class="title-icon">🏭</span> 창고 간 이동</h1>
+        <h1 class="page-title">창고 간 이동</h1>
         <div class="page-desc">품목을 다른 창고로 옮기고 이동 이력을 관리합니다.</div>
       </div>
     </div>

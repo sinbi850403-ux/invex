@@ -65,7 +65,7 @@ export function renderWeeklyReportPage(container, navigateTo) {
   container.innerHTML = `
     <div class="page-header">
       <div>
-        <h1 class="page-title"><span class="title-icon">📬</span> 주간 경영 보고서</h1>
+        <h1 class="page-title">주간 경영 보고서</h1>
         <div class="page-desc">${weekLabel}</div>
       </div>
     </div>

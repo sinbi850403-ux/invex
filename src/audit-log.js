@@ -63,7 +63,7 @@ export function renderAuditLogPage(container, navigateTo) {
   container.innerHTML = `
     <div class="page-header">
       <div>
-        <h1 class="page-title"><span class="title-icon">📝</span> 감사 추적</h1>
+        <h1 class="page-title">감사 추적</h1>
         <div class="page-desc">모든 데이터 변경 이력을 기록합니다. 세무·감사 대비 필수 기능.</div>
       </div>
       <div class="page-actions">

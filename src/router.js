@@ -138,7 +138,7 @@ export function renderQuickAccess() {
 
   nav.innerHTML = pages.map(id => `
     <button class="nav-btn nav-btn-quick" data-quick-page="${id}" title="${getPageLabel(id)}">
-      <span class="nav-icon">🕘</span> ${getPageLabel(id)}
+      <span class="nav-icon"></span> ${getPageLabel(id)}
     </button>
   `).join('');
 
@@ -156,10 +156,10 @@ export function updateBreadcrumb(pageName) {
   const parentHub = HUB_MAP[pageName];
 
   if (pageName === 'home') {
-    el.innerHTML = `<span class="breadcrumb-current">🏠 대시보드</span>`;
+    el.innerHTML = `<span class="breadcrumb-current">대시보드</span>`;
   } else if (parentHub) {
     el.innerHTML = `
-      <span class="breadcrumb-item" data-bc-nav="home">🏠</span>
+      <span class="breadcrumb-item" data-bc-nav="home">대시보드</span>
       <span class="breadcrumb-sep">›</span>
       <span class="breadcrumb-item" data-bc-nav="${parentHub}">${PAGE_LABELS[parentHub] || parentHub}</span>
       <span class="breadcrumb-sep">›</span>
@@ -167,7 +167,7 @@ export function updateBreadcrumb(pageName) {
     `;
   } else {
     el.innerHTML = `
-      <span class="breadcrumb-item" data-bc-nav="home">🏠</span>
+      <span class="breadcrumb-item" data-bc-nav="home">대시보드</span>
       <span class="breadcrumb-sep">›</span>
       <span class="breadcrumb-current">${label}</span>
     `;

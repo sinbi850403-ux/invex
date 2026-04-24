@@ -26,7 +26,7 @@ export function renderStocktakePage(container, navigateTo) {
   container.innerHTML = `
     <div class="page-header">
       <div>
-        <h1 class="page-title"><span class="title-icon">📋</span> 재고 실사</h1>
+        <h1 class="page-title">재고 실사</h1>
         <div class="page-desc">시스템 재고와 실물 재고를 대조하고 차이를 조정합니다.</div>
       </div>
       <div class="page-actions">

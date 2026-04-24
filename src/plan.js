@@ -11,7 +11,7 @@ export const PLANS = {
   free: {
     id: 'free',
     name: 'Free',
-    icon: '🆓',
+    icon: '',
     color: '#6b7280',
     price: '₩0',
     period: '영구 무료',
@@ -30,7 +30,7 @@ export const PLANS = {
   pro: {
     id: 'pro',
     name: 'Pro',
-    icon: '⭐',
+    icon: '',
     color: '#3b82f6',
     price: '₩290,000',
     period: '월',
@@ -53,7 +53,7 @@ export const PLANS = {
   enterprise: {
     id: 'enterprise',
     name: 'Enterprise',
-    icon: '🏢',
+    icon: '',
     color: '#8b5cf6',
     price: '₩490,000',
     period: '월',

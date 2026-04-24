@@ -50,7 +50,7 @@ export function renderBillingPage(container, navigateTo) {
   container.innerHTML = `
     <div class="page-header">
       <div>
-        <h1 class="page-title"><span class="title-icon">💳</span> 구독 관리</h1>
+        <h1 class="page-title">구독 관리</h1>
         <div class="page-desc">요금제를 선택하고 결제를 관리합니다.</div>
       </div>
     </div>

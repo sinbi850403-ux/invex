@@ -107,7 +107,7 @@ export function renderInventoryPage(container, navigateTo) {
     container.innerHTML = `
       <div class="page-header">
         <div>
-          <h1 class="page-title"><span class="title-icon">📦</span> 재고 현황</h1>
+          <h1 class="page-title">재고 현황</h1>
           <div class="page-desc">품목별 재고 수량과 금액을 관리합니다.</div>
         </div>
         <div class="page-actions">
@@ -198,7 +198,7 @@ export function renderInventoryPage(container, navigateTo) {
   container.innerHTML = `
     <div class="page-header">
       <div>
-        <h1 class="page-title"><span class="title-icon">📦</span> 재고 현황</h1>
+        <h1 class="page-title">재고 현황</h1>
         <div class="page-desc">${state.fileName ? `📄 ${state.fileName}` : ''} 총 ${data.length}개 품목</div>
       </div>
       <div class="page-actions">

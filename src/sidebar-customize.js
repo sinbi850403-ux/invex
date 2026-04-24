@@ -9,15 +9,15 @@ const STORAGE_KEY = 'invex:sidebar-hidden';
 
 // 커스터마이징 가능한 모든 항목 정의 (home은 항상 표시)
 const ALL_NAV_ITEMS = [
-  { page: 'hub-data',      icon: '📂', label: '데이터 가져오기' },
-  { page: 'hub-inventory', icon: '📦', label: '재고 관리' },
-  { page: 'hub-warehouse', icon: '🏢', label: '창고·거래처' },
-  { page: 'hub-order',     icon: '🤖', label: '발주·예측' },
-  { page: 'hub-report',    icon: '📊', label: '보고·분석' },
-  { page: 'hub-documents', icon: '📑', label: '문서·서류' },
-  { page: 'hub-hr',        icon: '👥', label: '인사·급여' },
-  { page: 'hub-settings',  icon: '⚙️', label: '설정' },
-  { page: 'hub-support',   icon: '💬', label: '지원' },
+  { page: 'hub-data',      icon: '', label: '데이터 가져오기' },
+  { page: 'hub-inventory', icon: '', label: '재고 관리' },
+  { page: 'hub-warehouse', icon: '', label: '창고·거래처' },
+  { page: 'hub-order',     icon: '', label: '발주·예측' },
+  { page: 'hub-report',    icon: '', label: '보고·분석' },
+  { page: 'hub-documents', icon: '', label: '문서·서류' },
+  { page: 'hub-hr',        icon: '', label: '인사·급여' },
+  { page: 'hub-settings',  icon: '', label: '설정' },
+  { page: 'hub-support',   icon: '', label: '지원' },
 ];
 
 function getHidden() {

@@ -134,7 +134,7 @@ export function renderProfitPage(container, navigateTo) {
   container.innerHTML = `
     <div class="page-header">
       <div>
-        <h1 class="page-title"><span class="title-icon">💹</span> 손익 분석</h1>
+        <h1 class="page-title">손익 분석</h1>
         <div class="page-desc">재고 기준 예상 손익과 기간 거래 손익을 한 화면에서 확인합니다.</div>
       </div>
       <div class="page-actions" style="gap:8px;">

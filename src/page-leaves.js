@@ -38,7 +38,7 @@ export async function renderLeavesPage(container, navigateTo) {
   container.innerHTML = `
     <div class="page-header">
       <div>
-        <h1 class="page-title"><span class="title-icon">🏖️</span> 휴가·연차 관리</h1>
+        <h1 class="page-title">휴가·연차 관리</h1>
         <div class="page-desc">휴가 신청과 승인. (연차 자동 부여 로직은 Phase C 배포)</div>
       </div>
       <div class="page-actions"><button class="btn btn-primary" id="btn-lv-add">+ 휴가 신청</button></div>

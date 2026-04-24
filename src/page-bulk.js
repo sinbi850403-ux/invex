@@ -19,7 +19,7 @@ export function renderBulkPage(container, navigateTo) {
   container.innerHTML = `
     <div class="page-header">
       <div>
-        <h1 class="page-title"><span class="title-icon">⚡</span> 일괄 처리 & 자동 발주</h1>
+        <h1 class="page-title">일괄 처리 & 자동 발주</h1>
         <div class="page-desc">여러 품목을 한번에 입고/출고하고, 발주 시점을 자동 추천받습니다.</div>
       </div>
     </div>

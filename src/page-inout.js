@@ -92,7 +92,7 @@ export function renderInoutPage(container, navigateTo) {
   container.innerHTML = `
     <div class="page-header">
       <div>
-        <h1 class="page-title"><span class="title-icon">📥</span> 입출고 관리</h1>
+        <h1 class="page-title">입출고 관리</h1>
         <div class="page-desc">입고와 출고를 기록하면 재고 수량이 자동으로 반영됩니다.</div>
       </div>
       <div class="page-actions">

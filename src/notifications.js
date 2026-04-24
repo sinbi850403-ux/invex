@@ -62,7 +62,7 @@ export function getNotifications(options = {}) {
     if (qty <= 0) {
       pushNotification(notifications, {
         type: 'danger',
-        icon: '🚨',
+        icon: '',
         title: `재고 없음: ${item.itemName}`,
         desc: `현재 재고 0 / 안전재고 ${min}`,
         category: 'stock',
@@ -73,7 +73,7 @@ export function getNotifications(options = {}) {
     if (qty <= toNumber(min)) {
       pushNotification(notifications, {
         type: 'warning',
-        icon: '⚠️',
+        icon: '',
         title: `재고 부족: ${item.itemName}`,
         desc: `현재 ${qty} / 안전재고 ${min}`,
         category: 'stock',
@@ -89,7 +89,7 @@ export function getNotifications(options = {}) {
     if (daysLeft <= 0) {
       pushNotification(notifications, {
         type: 'danger',
-        icon: '🔴',
+        icon: '',
         title: `유통기한 만료: ${item.itemName}`,
         desc: `${item.expiryDate} (만료됨)`,
         category: 'expiry',
@@ -100,7 +100,7 @@ export function getNotifications(options = {}) {
     if (daysLeft <= 7) {
       pushNotification(notifications, {
         type: 'danger',
-        icon: '🟠',
+        icon: '',
         title: `유통기한 임박: ${item.itemName}`,
         desc: `${item.expiryDate} (D-${daysLeft})`,
         category: 'expiry',
@@ -111,7 +111,7 @@ export function getNotifications(options = {}) {
     if (daysLeft <= 30) {
       pushNotification(notifications, {
         type: 'warning',
-        icon: '🟡',
+        icon: '',
         title: `유통기한 주의: ${item.itemName}`,
         desc: `${item.expiryDate} (D-${daysLeft})`,
         category: 'expiry',
@@ -127,7 +127,7 @@ export function getNotifications(options = {}) {
   if (noValueItems.length > 0) {
     pushNotification(notifications, {
       type: 'info',
-      icon: 'ℹ️',
+      icon: '',
       title: `단가 미설정 품목 ${noValueItems.length}건`,
       desc: '단가를 설정하면 정확한 재고 가치를 파악할 수 있습니다.',
       category: 'info',

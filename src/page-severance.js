@@ -16,7 +16,7 @@ export async function renderSeverancePage(container, navigateTo) {
   container.innerHTML = `
     <div class="page-header">
       <div>
-        <h1 class="page-title"><span class="title-icon">💰</span> 퇴직금 계산</h1>
+        <h1 class="page-title">퇴직금 계산</h1>
         <div class="page-desc">직원의 퇴직금을 자동으로 계산합니다. (평균임금 × 30일 × 근속년수)</div>
       </div>
       <div class="page-actions"></div>

@@ -67,7 +67,7 @@ export function renderSalesPage(container, navigateTo) {
   container.innerHTML = `
     <div class="page-header">
       <div>
-        <h1 class="page-title"><span class="title-icon">🛒</span> 수주 관리</h1>
+        <h1 class="page-title">수주 관리</h1>
         <div class="page-desc">견적 → 수주확정 → 출고 → 세금계산서 → 미수금 파이프라인을 관리합니다.</div>
       </div>
       <div class="page-actions">

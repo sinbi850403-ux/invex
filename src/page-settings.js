@@ -84,7 +84,7 @@ export function renderSettingsPage(container, navigateTo) {
   container.innerHTML = `
     <div class="page-header">
       <div>
-        <h1 class="page-title"><span class="title-icon">⚙️</span> 설정</h1>
+        <h1 class="page-title">설정</h1>
         <div class="page-desc">커스텀 필드와 업종별 템플릿을 관리합니다.</div>
       </div>
     </div>
