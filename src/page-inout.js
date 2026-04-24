@@ -11,6 +11,7 @@ import { escapeHtml, renderGuidedPanel, renderInsightHero, renderQuickFilterRow 
 import { canAction } from './auth.js';
 import { handlePageError } from './error-monitor.js';
 import { showFieldError, clearAllFieldErrors, setSavingState } from './ux-toolkit.js';
+import { currentPage } from './router.js';
 
 const PAGE_SIZE = 15;
 
@@ -92,7 +93,7 @@ export function renderInoutPage(container, navigateTo) {
   container.innerHTML = `
     <div class="page-header">
       <div>
-        <h1 class="page-title">입출고 관리</h1>
+        <h1 class="page-title">${currentPage === 'in' ? '입고 관리' : currentPage === 'out' ? '출고 관리' : '입출고 관리'}</h1>
         <div class="page-desc">입고와 출고를 기록하면 재고 수량이 자동으로 반영됩니다.</div>
       </div>
       <div class="page-actions">
@@ -227,6 +228,16 @@ export function renderInoutPage(container, navigateTo) {
   const defaultSort = { key: 'date', direction: 'desc' };
   const savedViewPrefs = state.inoutViewPrefs || {};
   let filter = sanitizeInoutFilter(savedViewPrefs.filter);
+  
+  // URL이나 router의 상태로 'in' 또는 'out' 페이지로 넘어왔을 때 초기 필터 오버라이드
+  if (currentPage === 'in') {
+    filter.type = 'in';
+    filter.quick = 'in';
+  } else if (currentPage === 'out') {
+    filter.type = 'out';
+    filter.quick = 'out';
+  }
+
   let sort = sanitizeInoutSort(savedViewPrefs.sort);
   let persistTimer = null;
 

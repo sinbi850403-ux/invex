@@ -237,7 +237,7 @@ export function renderHubSupport(container, navigateTo) {
 /* ── 자식 페이지 → 부모 허브 매핑 (사이드바 하이라이트 + 브레드크럼 용) ── */
 export const HUB_MAP = {
   upload: 'hub-data', mapping: 'hub-data',
-  inventory: 'hub-inventory', inout: 'hub-inventory', bulk: 'hub-inventory', stocktake: 'hub-inventory',
+  inventory: 'hub-inventory', inout: 'hub-inventory', in: 'hub-inventory', out: 'hub-inventory', bulk: 'hub-inventory', stocktake: 'hub-inventory',
   warehouses: 'hub-warehouse', transfer: 'hub-warehouse', vendors: 'hub-warehouse',
   'auto-order': 'hub-order', orders: 'hub-order', sales: 'hub-order', forecast: 'hub-order',
   summary: 'hub-report', 'weekly-report': 'hub-report', profit: 'hub-report',
@@ -256,7 +256,7 @@ export const PAGE_LABELS = {
   'hub-settings': '설정', 'hub-support': '지원', 'hub-hr': '인사·급여',
   'hr-dashboard': 'HR 대시보드', employees: '직원 관리', attendance: '근태 관리', payroll: '급여 계산', leaves: '휴가·연차 관리', severance: '퇴직금 계산', 'yearend-settlement': '연말정산 보조',
   upload: '파일 업로드', mapping: '데이터 확인',
-  inventory: '재고 현황', inout: '입출고 관리', bulk: '일괄 처리', stocktake: '수불관리',
+  inventory: '재고현황', inout: '입출고 관리', in: '입고관리', out: '출고관리', bulk: '일괄 처리', stocktake: '수불관리',
   warehouses: '다중 창고 관리', transfer: '창고 이동', vendors: '거래처 관리',
   'auto-order': '자동 발주 추천', orders: '발주 관리', sales: '수주 관리', forecast: 'AI 수요 예측',
   summary: '요약 보고', 'weekly-report': '주간 보고서', profit: '손익 분석',

@@ -57,6 +57,8 @@ export const PAGE_LOADERS = {
   mapping:         () => import('./page-mapping.js').then(m => m.renderMappingPage),
   inventory:       () => import('./page-inventory.js').then(m => m.renderInventoryPage),
   inout:           () => import('./page-inout.js').then(m => m.renderInoutPage),
+  in:              () => import('./page-inout.js').then(m => m.renderInoutPage),
+  out:             () => import('./page-inout.js').then(m => m.renderInoutPage),
   summary:         () => import('./page-summary.js').then(m => m.renderSummaryPage),
   scanner:         () => import('./page-scanner.js').then(m => m.renderScannerPage),
   documents:       () => import('./page-documents.js').then(m => m.renderDocumentsPage),
