@@ -19,18 +19,27 @@ const PAGE_SIZE = 20;
 
 // ?꾩껜 ?꾨뱶 ?뺤쓽 (?쒖꽌 ?좎?)
 const ALL_FIELDS = [
-  { key: 'itemName', label: '품목명', numeric: false },
-  { key: 'itemCode', label: '품목코드', numeric: false },
-  { key: 'spec', label: '규격/스펙', numeric: false },
-  { key: 'category', label: '분류', numeric: false },
+  { key: 'category', label: '자산', numeric: false },
+  { key: 'inDate', label: '입고일자', numeric: false },
+  { key: 'itemCode', label: '상품코드', numeric: false },
   { key: 'vendor', label: '거래처', numeric: false },
-  { key: 'quantity', label: '수량', numeric: true },
+  { key: 'itemName', label: '품명', numeric: false },
+  { key: 'spec', label: '규격', numeric: false },
   { key: 'unit', label: '단위', numeric: false },
-  { key: 'unitPrice', label: '매입가(원가)', numeric: true },
-  { key: 'salePrice', label: '판매가(소가)', numeric: true },
+  { key: 'inQty', label: '입고수량', numeric: true },
+  { key: 'unitPrice', label: '단가', numeric: true },
   { key: 'supplyValue', label: '공급가액', numeric: true },
   { key: 'vat', label: '부가세', numeric: true },
   { key: 'totalPrice', label: '합계금액', numeric: true },
+  { key: 'salePrice', label: '출고단가', numeric: true },
+  { key: 'outQty', label: '출고수량', numeric: true },
+  { key: 'outTotalPrice', label: '출고금액', numeric: true },
+  { key: 'purchaseCost', label: '매입원가', numeric: true },
+  { key: 'profit', label: '이익액', numeric: true },
+  { key: 'profitMargin', label: '이익율', numeric: true },
+  { key: 'cogsMargin', label: '매출원가율', numeric: true },
+  { key: 'quantity', label: '기말재고수량', numeric: true },
+  { key: 'endingInventoryValue', label: '기말재고', numeric: true },
   { key: 'warehouse', label: '창고/위치', numeric: false },
   { key: 'expiryDate', label: '유통기한', numeric: false },
   { key: 'lotNumber', label: 'LOT번호', numeric: false },
@@ -50,7 +59,14 @@ function getVisibleFields(data) {
   const state = getState();
   const visibleColumns = state.visibleColumns;
 
-  // 페이지당 행 수
+  // 항상 표시할 기본 디폴트 컬럼(엑셀 유사 그리드)
+  const alwaysVisible = [
+    'category', 'inDate', 'itemCode', 'vendor', 'itemName', 'spec', 'unit',
+    'inQty', 'unitPrice', 'supplyValue', 'vat', 'totalPrice', 'salePrice', 
+    'outQty', 'outTotalPrice', 'purchaseCost', 'profit', 'profitMargin', 
+    'cogsMargin', 'quantity', 'endingInventoryValue'
+  ];
+
   const hasData = new Set(
     ALL_FIELDS.map(f => f.key).filter(key =>
       data.some(row => row[key] !== '' && row[key] !== undefined && row[key] !== null)
@@ -59,17 +75,17 @@ function getVisibleFields(data) {
 
   if (visibleColumns && Array.isArray(visibleColumns)) {
     // [VAT ?⑥튂] 湲곗〈 ?ㅼ젙???덈뜑?쇰룄 ?덈∼寃?異붽???怨듦툒媛?? 遺媛?몃뒗 ?곗꽑 蹂댁씠寃?蹂댁젙
-    const updatedVisible = [...visibleColumns];
-    if (!updatedVisible.includes('supplyValue')) updatedVisible.push('supplyValue');
-    if (!updatedVisible.includes('vat')) updatedVisible.push('vat');
+    // 사용자 설정이 있으면
+    const validCols = [...visibleColumns];
+    if (!validCols.includes('category')) validCols.push('category');
     
     // 사용자 설정이 있으면 → 설정에 포함된 것만 (순서는 ALL_FIELDS 순서 유지)
-    return ALL_FIELDS.filter(f => updatedVisible.includes(f.key)).map(f => f.key);
+    return ALL_FIELDS.filter(f => validCols.includes(f.key)).map(f => f.key);
   }
 
   // 페이지당 행 수
   // 전체 필드 정의 (순서 유지)
-  return ALL_FIELDS.filter(f => hasData.has(f.key) || f.key === 'supplyValue' || f.key === 'vat').map(f => f.key);
+  return ALL_FIELDS.filter(f => hasData.has(f.key) || alwaysVisible.includes(f.key)).map(f => f.key);
 }
 
 /**
