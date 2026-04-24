@@ -57,26 +57,28 @@ export function renderInoutPage(container, navigateTo) {
   const todayTxOut = countToday(transactions, 'out');
   const vendorMissingCount = transactions.filter(tx => !String(tx.vendor || '').trim()).length;
   const quickTxFilters = [
-    { value: 'all', label: '전체 보기' },
+    { value: currentPage === 'in' ? 'in' : (currentPage === 'out' ? 'out' : 'all'), label: '전체 보기' },
     { value: 'today', label: '오늘 기록' },
-    { value: 'in', label: '입고만' },
-    { value: 'out', label: '출고만' },
+    ...(currentPage !== 'out' && currentPage !== 'in' ? [
+      { value: 'in', label: '입고만' },
+      { value: 'out', label: '출고만' }
+    ] : []),
     { value: 'missingVendor', label: '거래처 미입력' },
     { value: 'recent3', label: '최근 3일' },
   ];
   const inoutHighlights = [
-    {
+    ...(currentPage !== 'out' ? [{
       label: '오늘 입고 건수',
       value: `${todayTxIn}건`,
       note: '오늘 입력된 입고 기록 수입니다.',
       stateClass: todayTxIn > 0 ? 'text-success' : '',
-    },
-    {
+    }] : []),
+    ...(currentPage !== 'in' ? [{
       label: '오늘 출고 건수',
       value: `${todayTxOut}건`,
       note: '오늘 입력된 출고 기록 수입니다.',
       stateClass: todayTxOut > 0 ? 'text-danger' : '',
-    },
+    }] : []),
     {
       label: '거래처 미입력',
       value: vendorMissingCount > 0 ? `${vendorMissingCount}건` : '완료',
@@ -98,9 +100,9 @@ export function renderInoutPage(container, navigateTo) {
       </div>
       <div class="page-actions">
         <button class="btn btn-outline" id="btn-export-tx">이력 내보내기</button>
-        <button class="btn btn-outline" id="btn-bulk-upload">엑셀 일괄 등록</button>
-        <button class="btn btn-success" id="btn-in">입고 등록</button>
-        <button class="btn btn-danger" id="btn-out">출고 등록</button>
+        <button class="btn btn-outline" id="btn-bulk-upload">엑셀 대량 업로드</button>
+        ${currentPage !== 'out' ? `<button class="btn btn-success" id="btn-in">입고 등록</button>` : ''}
+        ${currentPage !== 'in' ? `<button class="btn btn-danger" id="btn-out">출고 등록</button>` : ''}
       </div>
     </div>
 
@@ -110,14 +112,18 @@ export function renderInoutPage(container, navigateTo) {
         <div class="stat-label">전체 기록</div>
         <div class="stat-value text-accent">${transactions.length}건</div>
       </div>
+      ${currentPage !== 'out' ? `
       <div class="stat-card">
         <div class="stat-label">오늘 입고</div>
         <div class="stat-value text-success">${countToday(transactions, 'in')}건</div>
       </div>
+      ` : ''}
+      ${currentPage !== 'in' ? `
       <div class="stat-card">
         <div class="stat-label">오늘 출고</div>
         <div class="stat-value text-danger">${countToday(transactions, 'out')}건</div>
       </div>
+      ` : ''}
       <div class="stat-card">
         <div class="stat-label">등록 품목 수</div>
         <div class="stat-value">${items.length}</div>
@@ -136,8 +142,8 @@ export function renderInoutPage(container, navigateTo) {
         items.length === 0 ? '먼저 품목을 등록해야 입출고를 정확하게 기록할 수 있습니다.' : '품목 등록이 되어 있으므로 바로 입고와 출고를 기록할 수 있습니다.',
       ],
       actions: [
-        { id: 'btn-open-inbound-inline', label: '입고 바로 등록', variant: 'btn-success' },
-        { id: 'btn-open-outbound-inline', label: '출고 바로 등록', variant: 'btn-outline' },
+        ...(currentPage !== 'out' ? [{ id: 'btn-open-inbound-inline', label: '입고 바로 등록', variant: 'btn-success' }] : []),
+        ...(currentPage !== 'in' ? [{ id: 'btn-open-outbound-inline', label: '출고 바로 등록', variant: 'btn-danger' }] : []),
         { nav: 'summary', label: '요약 보고 보기', variant: 'btn-ghost' },
       ],
     })}
@@ -178,7 +184,7 @@ export function renderInoutPage(container, navigateTo) {
     <!-- ?꾪꽣 -->
     <div class="toolbar">
       <input type="text" class="search-input" id="tx-search" placeholder="품목명 또는 코드로 검색..." />
-      <select class="filter-select" id="tx-type-filter">
+      <select class="filter-select" id="tx-type-filter" ${currentPage === 'in' || currentPage === 'out' ? 'style="display:none;"' : ''}>
         <option value="">전체</option>
         <option value="in">입고만</option>
         <option value="out">출고만</option>
@@ -802,6 +808,23 @@ export function renderInoutPage(container, navigateTo) {
     if (!canCreate) { showToast('출고 등록 권한이 없습니다. 직원 이상만 가능합니다.', 'warning'); return; }
     openTxModal(container, navigateTo, 'out', items);
   });
+
+  // 헤더 버튼 바인딩
+  container.querySelector('#btn-in')?.addEventListener('click', () => {
+    if (!canCreate) { showToast('입고 등록 권한이 없습니다. 직원 이상만 가능합니다.', 'warning'); return; }
+    openTxModal(container, navigateTo, 'in', items);
+  });
+  container.querySelector('#btn-out')?.addEventListener('click', () => {
+    if (!canCreate) { showToast('출고 등록 권한이 없습니다. 직원 이상만 가능합니다.', 'warning'); return; }
+    openTxModal(container, navigateTo, 'out', items);
+  });
+  container.querySelector('#btn-bulk-upload')?.addEventListener('click', () => {
+    navigateTo('bulk');
+  });
+  container.querySelector('#btn-export-tx')?.addEventListener('click', () => {
+    downloadExcel(container.querySelector('#tx-body'), '입출고이력.xlsx', { includeHeaders: true });
+  });
+
   container.querySelectorAll('[data-nav]').forEach(button => {
     button.addEventListener('click', () => navigateTo(button.dataset.nav));
   });
@@ -819,8 +842,16 @@ export function renderInoutPage(container, navigateTo) {
         filter.type = filter.quick;
         container.querySelector('#tx-type-filter').value = filter.type;
       } else if (filter.type && (filter.quick === 'all' || filter.quick === 'today' || filter.quick === 'missingVendor' || filter.quick === 'recent3')) {
-        filter.type = '';
-        container.querySelector('#tx-type-filter').value = '';
+        if (currentPage === 'in') {
+          filter.type = 'in';
+          if (container.querySelector('#tx-type-filter')) container.querySelector('#tx-type-filter').value = 'in';
+        } else if (currentPage === 'out') {
+          filter.type = 'out';
+          if (container.querySelector('#tx-type-filter')) container.querySelector('#tx-type-filter').value = 'out';
+        } else {
+          filter.type = '';
+          if (container.querySelector('#tx-type-filter')) container.querySelector('#tx-type-filter').value = '';
+        }
       }
       if (filter.quick === 'today') {
         filter.date = new Date().toISOString().split('T')[0];
