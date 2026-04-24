@@ -71,33 +71,72 @@ export function renderStocktakePage(container, navigateTo) {
               <thead>
                 <tr>
                   <th style="width:40px;">#</th>
-                  <th>품명</th>
-                  <th>상품코드</th>
                   <th>자산</th>
+                  <th>입고일자</th>
+                  <th>상품코드</th>
+                  <th>거래처</th>
+                  <th>품명</th>
+                  <th>규격</th>
+                  <th>단위</th>
                   <th class="text-right">입고수량</th>
+                  <th class="text-right">단가</th>
+                  <th class="text-right">공급가액</th>
+                  <th class="text-right">부가세</th>
+                  <th class="text-right">합계금액</th>
+                  <th class="text-right">출고단가</th>
                   <th class="text-right">출고수량</th>
+                  <th class="text-right">출고금액</th>
+                  <th class="text-right">매입원가</th>
+                  <th class="text-right">이익액</th>
+                  <th class="text-right">이익율</th>
+                  <th class="text-right">매출원가율</th>
                   <th class="text-right">기말재고수량</th>
-                  <th>상태</th>
-                  <th>기말재고</th>
+                  <th class="text-right">기말재고</th>
                 </tr>
               </thead>
               <tbody id="st-body">
                 ${items.map((item, i) => {
                   const sysQty = parseFloat(item.quantity) || 0;
+                  const unitPrice = parseFloat(item.unitPrice) || 0;
+                  const inQty = sysQty;
+                  const supplyValue = inQty * unitPrice;
+                  const vat = Math.floor(supplyValue * 0.1);
+                  const totalPrice = supplyValue + vat;
+                  const outQty = 0;
+                  const outUnitPrice = parseFloat(item.actualSellingPrice || item.salePrice || 0) || 0;
+                  const outAmount = outQty * outUnitPrice;
+                  const purchaseCost = outQty * unitPrice;
+                  const profitAmount = outAmount - purchaseCost;
+                  const profitRate = purchaseCost > 0 ? ((profitAmount / purchaseCost) * 100) : 0;
+                  const salesCostRate = outAmount > 0 ? ((purchaseCost / outAmount) * 100) : 0;
                   return `
                     <tr data-idx="${i}">
                       <td class="col-num">${i + 1}</td>
-                      <td><strong>${item.itemName}</strong></td>
+                      <td>${item.category || '자산'}</td>
+                      <td>${today}</td>
                       <td style="color:var(--text-muted); font-size:12px;">${item.itemCode || '-'}</td>
-                      <td style="font-size:12px;">${item.warehouse || '-'}</td>
-                      <td class="text-right">${sysQty.toLocaleString('ko-KR')}</td>
+                      <td style="font-size:12px;">${item.vendor || '-'}</td>
+                      <td><strong>${item.itemName}</strong></td>
+                      <td>${item.spec || '-'}</td>
+                      <td>${item.unit || 'EA'}</td>
+                      <td class="text-right">${inQty.toLocaleString('ko-KR')}</td>
+                      <td class="text-right">${Math.round(unitPrice).toLocaleString('ko-KR')}</td>
+                      <td class="text-right">${Math.round(supplyValue).toLocaleString('ko-KR')}</td>
+                      <td class="text-right">${Math.round(vat).toLocaleString('ko-KR')}</td>
+                      <td class="text-right">${Math.round(totalPrice).toLocaleString('ko-KR')}</td>
+                      <td class="text-right">${Math.round(outUnitPrice).toLocaleString('ko-KR')}</td>
+                      <td class="text-right">${outQty.toLocaleString('ko-KR')}</td>
+                      <td class="text-right">${Math.round(outAmount).toLocaleString('ko-KR')}</td>
+                      <td class="text-right">${Math.round(purchaseCost).toLocaleString('ko-KR')}</td>
+                      <td class="text-right">${Math.round(profitAmount).toLocaleString('ko-KR')}</td>
+                      <td class="text-right">${profitRate.toFixed(2)}%</td>
+                      <td class="text-right">${salesCostRate.toFixed(2)}%</td>
                       <td class="text-right">
-                        <input type="number" class="form-input st-actual" data-idx="${i}" value="" placeholder="${sysQty}" style="width:80px; padding:3px 6px; text-align:right; font-weight:600;" />
+                        <input type="number" class="form-input st-actual" data-idx="${i}" value="" placeholder="${sysQty}" style="width:88px; padding:3px 6px; text-align:right; font-weight:600;" />
                       </td>
-                      <td class="text-right st-diff" data-idx="${i}" style="font-weight:600;">-</td>
-                      <td class="st-status" data-idx="${i}">-</td>
-                      <td>
-                        <input class="form-input st-note" data-idx="${i}" placeholder="메모" style="width:100px; padding:3px 6px; font-size:11px;" />
+                      <td class="text-right">
+                        <span class="st-diff" data-idx="${i}" style="font-weight:600;">-</span>
+                        <span class="st-status" data-idx="${i}" style="display:none;"></span>
                       </td>
                     </tr>
                   `;
