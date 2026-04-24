@@ -1110,18 +1110,20 @@ async function processUploadedFile(file, overlay, container, navigateTo, items, 
 
     const headers = sheetData[0].map((header) => String(header ?? '').trim());
     const colMap = {
-      type: headers.findIndex((header) => header === '구분'),
-      vendor: headers.findIndex((header) => header === '거래처'),
-      itemName: headers.findIndex((header) => header === '품목명'),
-      itemCode: headers.findIndex((header) => header === '품목코드'),
-      quantity: headers.findIndex((header) => header === '수량'),
-      unitPrice: headers.findIndex((header) => header === '단가'),
-      date: headers.findIndex((header) => header === '날짜'),
-      note: headers.findIndex((header) => header === '비고'),
+      type: headers.findIndex((h) => ['구분'].includes(h)),
+      vendor: headers.findIndex((h) => ['거래처'].includes(h)),
+      itemName: headers.findIndex((h) => ['품목명', '품명'].includes(h)),
+      itemCode: headers.findIndex((h) => ['품목코드', '상품코드'].includes(h)),
+      quantity: headers.findIndex((h) => ['수량', '입고수량', '출고수량'].includes(h)),
+      unitPrice: headers.findIndex((h) => ['단가'].includes(h)),
+      date: headers.findIndex((h) => ['날짜', '입고일자', '출고일자'].includes(h)),
+      note: headers.findIndex((h) => ['비고'].includes(h)),
+      quantityIn: headers.findIndex((h) => ['입고수량'].includes(h)),
+      quantityOut: headers.findIndex((h) => ['출고수량'].includes(h)),
     };
 
-    if (colMap.type === -1 || colMap.itemName === -1 || colMap.quantity === -1) {
-      previewEl.innerHTML = '<div class="alert alert-danger">필수 컬럼을 찾을 수 없습니다. 양식에 "구분", "품목명", "수량" 컬럼이 포함되어 있는지 확인해 주세요.</div>';
+    if (colMap.itemName === -1 || colMap.quantity === -1) {
+      previewEl.innerHTML = '<div class="alert alert-danger">필수 컬럼을 찾을 수 없습니다. 양식에 "품목명"(또는 "품명") 및 "수량"(또는 "입고수량", "출고수량") 컬럼이 포함되어 있는지 확인해 주세요.</div>';
       return;
     }
 
@@ -1130,11 +1132,18 @@ async function processUploadedFile(file, overlay, container, navigateTo, items, 
       const row = sheetData[index];
       if (!row || row.length === 0) continue;
 
-      const typeCell = String(row[colMap.type] ?? '').trim();
+      const typeCell = colMap.type >= 0 ? String(row[colMap.type] ?? '').trim().toLowerCase() : '';
       const itemName = String(row[colMap.itemName] ?? '').trim();
       const quantity = Number.parseFloat(row[colMap.quantity]) || 0;
 
       if (!itemName || quantity <= 0) continue;
+
+      let derivedType = typeCell === '출고' || typeCell === 'out' ? 'out' : (typeCell === '입고' || typeCell === 'in' ? 'in' : '');
+      if (!derivedType) {
+        if (colMap.quantityIn >= 0 && colMap.quantity === colMap.quantityIn) derivedType = 'in';
+        else if (colMap.quantityOut >= 0 && colMap.quantity === colMap.quantityOut) derivedType = 'out';
+        else derivedType = 'in'; // 기본값
+      }
 
       const rawItemCode = colMap.itemCode >= 0 ? String(row[colMap.itemCode] ?? '').trim() : '';
       const matchedItem = items.find((item) =>
@@ -1153,7 +1162,7 @@ async function processUploadedFile(file, overlay, container, navigateTo, items, 
       }
 
       rows.push({
-        type: typeCell === '출고' ? 'out' : 'in',
+        type: derivedType,
         vendor: colMap.vendor >= 0 ? String(row[colMap.vendor] ?? '').trim() : '',
         itemName,
         itemCode: rawItemCode || matchedItem?.itemCode || '',
@@ -1166,7 +1175,7 @@ async function processUploadedFile(file, overlay, container, navigateTo, items, 
     }
 
     if (rows.length === 0) {
-      previewEl.innerHTML = '<div class="alert alert-warning">유효한 데이터가 없습니다. 구분, 품목명, 수량 값을 다시 확인해 주세요.</div>';
+      previewEl.innerHTML = '<div class="alert alert-warning">유효한 데이터가 없습니다. 품명, 수량 값을 다시 확인해 주세요.</div>';
       return;
     }
 
