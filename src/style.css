@@ -470,6 +470,101 @@ a:hover {
   margin: 12px 16px;
 }
 
+/* ===== 아코디언 사이드바 ===== */
+
+/* 단일 버튼 (대시보드) */
+.acc-nav-single {
+  padding: 4px 12px 0;
+}
+
+/* 아코디언 그룹 */
+.acc-group {
+  margin-bottom: 2px;
+}
+
+/* 그룹 헤더 (클릭 가능한 카테고리 제목) */
+.acc-group-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 9px 20px;
+  cursor: pointer;
+  user-select: none;
+  list-style: none;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: rgba(255,255,255,0.35);
+  transition: color 0.15s;
+}
+
+.acc-group-header::-webkit-details-marker { display: none; }
+.acc-group-header::marker { content: ''; }
+
+.acc-group-header::after {
+  content: '▸';
+  font-size: 10px;
+  transition: transform 0.2s;
+  color: rgba(255,255,255,0.2);
+}
+
+.acc-group[open] > .acc-group-header::after {
+  transform: rotate(90deg);
+}
+
+.acc-group-header:hover {
+  color: rgba(255,255,255,0.6);
+}
+
+/* 그룹 아이템 컨테이너 */
+.acc-group-body {
+  padding: 0 8px 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+/* 개별 메뉴 아이템 */
+.acc-item-btn {
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: none;
+  color: rgba(200, 215, 235, 0.75);
+  font-family: var(--font-family);
+  font-size: 13px;
+  font-weight: 500;
+  padding: 7px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+  letter-spacing: -0.1px;
+  border-left: 2px solid transparent;
+}
+
+.acc-item-btn:hover {
+  background: rgba(255,255,255,0.07);
+  color: rgba(238, 247, 255, 0.95);
+  border: none;
+}
+
+.acc-item-btn.active {
+  background: rgba(75, 146, 228, 0.18);
+  color: #60a5fa;
+  font-weight: 600;
+  border: none;
+  border-left: 2px solid #60a5fa;
+}
+
+/* 다크모드에서 active 강조 */
+html.dark-mode .acc-item-btn.active {
+  background: rgba(88,166,255,0.15);
+  color: #79c0ff;
+  border-left-color: #79c0ff;
+}
+
+
 /* === 모바일 반응형 레이아웃 === */
 @media (max-width: 768px) {
   #sidebar {
