@@ -71,14 +71,14 @@ export function renderStocktakePage(container, navigateTo) {
               <thead>
                 <tr>
                   <th style="width:40px;">#</th>
-                  <th>품목명</th>
-                  <th>코드</th>
-                  <th>창고</th>
-                  <th class="text-right">시스템 재고</th>
-                  <th class="text-right">실물 재고</th>
-                  <th class="text-right">차이</th>
+                  <th>품명</th>
+                  <th>상품코드</th>
+                  <th>자산</th>
+                  <th class="text-right">입고수량</th>
+                  <th class="text-right">출고수량</th>
+                  <th class="text-right">기말재고수량</th>
                   <th>상태</th>
-                  <th>비고</th>
+                  <th>기말재고</th>
                 </tr>
               </thead>
               <tbody id="st-body">

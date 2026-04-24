@@ -339,6 +339,48 @@ export function renderInoutPage(container, navigateTo) {
   }
 
   function renderTxHeader() {
+    const headerLabels = currentPage === 'out'
+      ? {
+        type: '자산',
+        vendor: '매장명',
+        itemName: '품명',
+        itemCode: '상품코드',
+        quantity: '출고수량',
+        unitPrice: '단가',
+        sellingPrice: '출고단가',
+        actualSellingPrice: '출고금액',
+        margin: '이익율',
+        date: '출고일자',
+        note: '매출원가율',
+      }
+      : currentPage === 'in'
+        ? {
+          type: '자산',
+          vendor: '거래처',
+          itemName: '품명',
+          itemCode: '상품코드',
+          quantity: '입고수량',
+          unitPrice: '단가',
+          sellingPrice: '출고단가',
+          actualSellingPrice: '출고금액',
+          margin: '이익율',
+          date: '입고일자',
+          note: '기말재고',
+        }
+        : {
+          type: '구분',
+          vendor: '거래처',
+          itemName: '품목명',
+          itemCode: '품목코드',
+          quantity: '수량',
+          unitPrice: '원가',
+          sellingPrice: '판매가',
+          actualSellingPrice: '실판매가',
+          margin: '이익률',
+          date: '날짜',
+          note: '비고',
+        };
+
     const thead = container.querySelector('#tx-head');
     thead.innerHTML = `
       <tr>
@@ -346,39 +388,39 @@ export function renderInoutPage(container, navigateTo) {
         <th class="col-num">#</th>
         <th class="sortable-header ${sort.key === 'type' ? 'is-active' : ''}" data-sort-key="type" title="클릭하여 정렬" aria-sort="${sort.key === 'type' ? (sort.direction === 'asc' ? 'ascending' : sort.direction === 'desc' ? 'descending' : 'none') : 'none'}">
           <button type="button" class="sort-hitbox" tabindex="-1" aria-hidden="true">
-            <span class="sort-label">구분</span><span class="sort-indicator">${getSortIndicator('type')}</span>
+            <span class="sort-label">${headerLabels.type}</span><span class="sort-indicator">${getSortIndicator('type')}</span>
           </button>
         </th>
         <th class="sortable-header ${sort.key === 'vendor' ? 'is-active' : ''}" data-sort-key="vendor" title="클릭하여 정렬" aria-sort="${sort.key === 'vendor' ? (sort.direction === 'asc' ? 'ascending' : sort.direction === 'desc' ? 'descending' : 'none') : 'none'}">
           <button type="button" class="sort-hitbox" tabindex="-1" aria-hidden="true">
-            <span class="sort-label">거래처</span><span class="sort-indicator">${getSortIndicator('vendor')}</span>
+            <span class="sort-label">${headerLabels.vendor}</span><span class="sort-indicator">${getSortIndicator('vendor')}</span>
           </button>
         </th>
         <th class="sortable-header ${sort.key === 'itemName' ? 'is-active' : ''}" data-sort-key="itemName" title="클릭하여 정렬" aria-sort="${sort.key === 'itemName' ? (sort.direction === 'asc' ? 'ascending' : sort.direction === 'desc' ? 'descending' : 'none') : 'none'}">
           <button type="button" class="sort-hitbox" tabindex="-1" aria-hidden="true">
-            <span class="sort-label">품목명</span><span class="sort-indicator">${getSortIndicator('itemName')}</span>
+            <span class="sort-label">${headerLabels.itemName}</span><span class="sort-indicator">${getSortIndicator('itemName')}</span>
           </button>
         </th>
-        <th>품목코드</th>
+        <th>${headerLabels.itemCode}</th>
         <th class="sortable-header text-right ${sort.key === 'quantity' ? 'is-active' : ''}" data-sort-key="quantity" title="클릭하여 정렬" aria-sort="${sort.key === 'quantity' ? (sort.direction === 'asc' ? 'ascending' : sort.direction === 'desc' ? 'descending' : 'none') : 'none'}">
           <button type="button" class="sort-hitbox" tabindex="-1" aria-hidden="true">
-            <span class="sort-label">수량</span><span class="sort-indicator">${getSortIndicator('quantity')}</span>
+            <span class="sort-label">${headerLabels.quantity}</span><span class="sort-indicator">${getSortIndicator('quantity')}</span>
           </button>
         </th>
         <th class="sortable-header text-right ${sort.key === 'unitPrice' ? 'is-active' : ''}" data-sort-key="unitPrice" title="클릭하여 정렬" aria-sort="${sort.key === 'unitPrice' ? (sort.direction === 'asc' ? 'ascending' : sort.direction === 'desc' ? 'descending' : 'none') : 'none'}">
           <button type="button" class="sort-hitbox" tabindex="-1" aria-hidden="true">
-            <span class="sort-label">원가</span><span class="sort-indicator">${getSortIndicator('unitPrice')}</span>
+            <span class="sort-label">${headerLabels.unitPrice}</span><span class="sort-indicator">${getSortIndicator('unitPrice')}</span>
           </button>
         </th>
-        <th class="text-right">판매가</th>
-        <th class="text-right">실판매가</th>
-        <th class="text-right">이익률</th>
+        <th class="text-right">${headerLabels.sellingPrice}</th>
+        <th class="text-right">${headerLabels.actualSellingPrice}</th>
+        <th class="text-right">${headerLabels.margin}</th>
         <th class="sortable-header ${sort.key === 'date' ? 'is-active' : ''}" data-sort-key="date" title="클릭하여 정렬" aria-sort="${sort.key === 'date' ? (sort.direction === 'asc' ? 'ascending' : sort.direction === 'desc' ? 'descending' : 'none') : 'none'}">
           <button type="button" class="sort-hitbox" tabindex="-1" aria-hidden="true">
-            <span class="sort-label">날짜</span><span class="sort-indicator">${getSortIndicator('date')}</span>
+            <span class="sort-label">${headerLabels.date}</span><span class="sort-indicator">${getSortIndicator('date')}</span>
           </button>
         </th>
-        <th>비고</th>
+        <th>${headerLabels.note}</th>
         <th style="width:50px;">삭제</th>
       </tr>
     `;
@@ -536,6 +578,12 @@ export function renderInoutPage(container, navigateTo) {
       };
 
       const renderTxRow = (tx, isChild = false) => {
+        const rowLabels = currentPage === 'out'
+          ? { type: '자산', vendor: '매장명', itemName: '품명', itemCode: '상품코드', quantity: '출고수량', unitPrice: '단가', sellingPrice: '출고단가', actualSellingPrice: '출고금액', margin: '이익율', date: '출고일자', note: '매출원가율' }
+          : currentPage === 'in'
+            ? { type: '자산', vendor: '거래처', itemName: '품명', itemCode: '상품코드', quantity: '입고수량', unitPrice: '단가', sellingPrice: '출고단가', actualSellingPrice: '출고금액', margin: '이익율', date: '입고일자', note: '기말재고' }
+            : { type: '구분', vendor: '거래처', itemName: '품목명', itemCode: '품목코드', quantity: '수량', unitPrice: '원가', sellingPrice: '판매가', actualSellingPrice: '실판매가', margin: '이익률', date: '날짜', note: '비고' };
+
         const childStyle = isChild ? 'background:var(--bg-lighter);' : '';
         const indent = isChild ? 'padding-left:24px;' : '';
         return `
@@ -544,33 +592,33 @@ export function renderInoutPage(container, navigateTo) {
               <input type="checkbox" class="tx-select-row" value="${tx.id}" ${selectedTxIds.has(tx.id) ? 'checked' : ''} />
             </td>
             <td class="col-num"></td>
-            <td data-label="구분">
+            <td data-label="${rowLabels.type}">
               <span class="${tx.type === 'in' ? 'type-in' : 'type-out'}">
                 ${tx.type === 'in' ? '입고' : '출고'}
               </span>
             </td>
-            <td data-label="거래처" style="font-size:12px; ${indent}">${tx.vendor || '<span style="color:var(--text-muted)">-</span>'}</td>
-            <td data-label="품목명" style="${indent}">
+            <td data-label="${rowLabels.vendor}" style="font-size:12px; ${indent}">${tx.vendor || '<span style="color:var(--text-muted)">-</span>'}</td>
+            <td data-label="${rowLabels.itemName}" style="${indent}">
               ${isChild
                 ? `<span style="color:var(--text-muted); font-size:12px;">${tx.itemName || '-'}</span>`
                 : `<strong>${tx.itemName || '-'}</strong>`}
             </td>
-            <td data-label="품목코드" style="color:var(--text-muted); font-size:12px;">${tx.itemCode || '-'}</td>
-            <td data-label="수량" class="text-right">
+            <td data-label="${rowLabels.itemCode}" style="color:var(--text-muted); font-size:12px;">${tx.itemCode || '-'}</td>
+            <td data-label="${rowLabels.quantity}" class="text-right">
               <span class="${tx.type === 'in' ? 'type-in' : 'type-out'}">
                 ${tx.type === 'in' ? '+' : '-'}${parseFloat(tx.quantity || 0).toLocaleString('ko-KR')}
               </span>
             </td>
-            <td data-label="원가" class="text-right">${tx.unitPrice ? '₩' + Math.round(parseFloat(tx.unitPrice)).toLocaleString('ko-KR') : '-'}</td>
-            <td data-label="판매가" class="text-right editable-price-cell" data-tx-id="${tx.id}" data-field="sellingPrice" title="클릭하여 수정">
+            <td data-label="${rowLabels.unitPrice}" class="text-right">${tx.unitPrice ? '₩' + Math.round(parseFloat(tx.unitPrice)).toLocaleString('ko-KR') : '-'}</td>
+            <td data-label="${rowLabels.sellingPrice}" class="text-right editable-price-cell" data-tx-id="${tx.id}" data-field="sellingPrice" title="클릭하여 수정">
               <span class="price-display">${tx.sellingPrice ? '₩' + Math.round(parseFloat(tx.sellingPrice)).toLocaleString('ko-KR') : '<span style="color:var(--text-muted)">-</span>'}</span>
             </td>
-            <td data-label="실판매가" class="text-right editable-price-cell" data-tx-id="${tx.id}" data-field="actualSellingPrice" title="클릭하여 수정">
+            <td data-label="${rowLabels.actualSellingPrice}" class="text-right editable-price-cell" data-tx-id="${tx.id}" data-field="actualSellingPrice" title="클릭하여 수정">
               <span class="price-display">${tx.actualSellingPrice ? '₩' + Math.round(parseFloat(tx.actualSellingPrice)).toLocaleString('ko-KR') : '<span style="color:var(--text-muted)">-</span>'}</span>
             </td>
-            <td data-label="이익률" class="text-right">${renderMargin(tx)}</td>
-            <td data-label="날짜">${formatDate(tx.date)}</td>
-            <td data-label="비고" style="color:var(--text-muted); font-size:13px;">${tx.note || ''}</td>
+            <td data-label="${rowLabels.margin}" class="text-right">${renderMargin(tx)}</td>
+            <td data-label="${rowLabels.date}">${formatDate(tx.date)}</td>
+            <td data-label="${rowLabels.note}" style="color:var(--text-muted); font-size:13px;">${tx.note || ''}</td>
             <td class="text-center">
               <button class="btn-icon btn-icon-danger btn-del-tx" data-id="${tx.id}" title="삭제">삭제</button>
             </td>
