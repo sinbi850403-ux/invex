@@ -153,11 +153,6 @@ export function renderInsightHero({
             `).join('')}
           </div>
         ` : ''}
-        ${bullets.length > 0 ? `
-          <div class="mission-bullet-list">
-            ${bullets.map(bullet => `<div class="mission-bullet">${escapeHtml(bullet)}</div>`).join('')}
-          </div>
-        ` : ''}
         ${actions.length > 0 ? `
           <div class="mission-actions">
             ${actions.map(renderAction).join('')}
