@@ -67,14 +67,14 @@ export function renderHubInventory(container, navigateTo) {
     <div class="page-header">
       <div>
         <h1 class="page-title">재고 관리</h1>
-        <div class="page-desc">재고 조회, 입출고 기록, 일괄 처리, 재고 실사를 하나의 허브에서 관리합니다</div>
+        <div class="page-desc">재고 조회, 입출고 기록, 일괄 처리, 수불관리를 하나의 허브에서 관리합니다</div>
       </div>
     </div>
     <div class="hub-grid">
       ${renderHubCard({ icon: '', title: '재고 현황', desc: '품목별 재고와 금액을 조회하고 새 품목을 등록합니다', nav: 'inventory', color: '#2563eb', meta: `등록 품목 ${itemCount}건` })}
       ${renderHubCard({ icon: '', title: '입출고 관리', desc: '입고·출고를 등록하면 재고가 자동으로 반영됩니다', nav: 'inout', color: '#16a34a', meta: `전체 기록 ${txCount}건` })}
       ${renderHubCard({ icon: '', title: '일괄 처리', desc: '대량 수정·삭제·분류 변경을 한 번에 처리합니다', nav: 'bulk', color: '#d97706' })}
-      ${renderHubCard({ icon: '', title: '재고 실사', desc: '실물 재고와 장부를 비교하고 차이를 보정합니다', nav: 'stocktake', color: '#7c3aed' })}
+      ${renderHubCard({ icon: '', title: '수불관리', desc: '실물 재고와 장부를 비교하고 차이를 보정합니다', nav: 'stocktake', color: '#7c3aed' })}
     </div>
   `;
   bindHubNav(container, navigateTo);
@@ -256,7 +256,7 @@ export const PAGE_LABELS = {
   'hub-settings': '설정', 'hub-support': '지원', 'hub-hr': '인사·급여',
   'hr-dashboard': 'HR 대시보드', employees: '직원 관리', attendance: '근태 관리', payroll: '급여 계산', leaves: '휴가·연차 관리', severance: '퇴직금 계산', 'yearend-settlement': '연말정산 보조',
   upload: '파일 업로드', mapping: '데이터 확인',
-  inventory: '재고 현황', inout: '입출고 관리', bulk: '일괄 처리', stocktake: '재고 실사',
+  inventory: '재고 현황', inout: '입출고 관리', bulk: '일괄 처리', stocktake: '수불관리',
   warehouses: '다중 창고 관리', transfer: '창고 이동', vendors: '거래처 관리',
   'auto-order': '자동 발주 추천', orders: '발주 관리', sales: '수주 관리', forecast: 'AI 수요 예측',
   summary: '요약 보고', 'weekly-report': '주간 보고서', profit: '손익 분석',

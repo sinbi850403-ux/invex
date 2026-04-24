@@ -178,7 +178,7 @@ function renderSearchResults(query) {
     { name: '수불부', page: 'ledger', icon: '' },
     { name: '문서 생성 발주서 견적서', page: 'documents', icon: '' },
     { name: '거래처 관리', page: 'vendors', icon: '' },
-    { name: '재고 실사', page: 'stocktake', icon: '' },
+    { name: '수불관리', page: 'stocktake', icon: '' },
     { name: '일괄 처리 발주 추천', page: 'bulk', icon: '' },
     { name: '설정 템플릿', page: 'settings', icon: '' },
   ];

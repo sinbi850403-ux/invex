@@ -69,7 +69,7 @@ const ALL_PERMISSIONS = [
   { id: 'labels', name: '라벨 인쇄', icon: '', group: '관리' },
   { id: 'warehouses', name: '다중 창고', icon: '', group: '관리' },
   { id: 'transfer', name: '창고 이동', icon: '', group: '관리' },
-  { id: 'stocktake', name: '재고 실사', icon: '', group: '관리' },
+  { id: 'stocktake', name: '수불관리', icon: '', group: '관리' },
   { id: 'vendors', name: '거래처 관리', icon: '', group: '관리' },
   { id: 'summary', name: '요약 보고', icon: '', group: '보고' },
   { id: 'costing', name: '원가 분석', icon: '', group: '보고' },

@@ -109,7 +109,7 @@ export function renderBackupPage(container, navigateTo) {
       <div style="font-size:13px; color:var(--text-muted); line-height:1.8;">
         <ul style="margin:0; padding-left:16px;">
           <li>매주 1회 이상 정기 백업을 권장합니다</li>
-          <li>중요한 변경 작업(일괄 등록, 재고 실사 등) 전후에 백업하세요</li>
+          <li>중요한 변경 작업(일괄 등록, 수불관리 등) 전후에 백업하세요</li>
           <li>백업 파일은 안전한 클라우드(구글 드라이브, 네이버 클라우드 등)에 보관하세요</li>
           <li>로그인하면 클라우드에 자동 동기화되어 별도 백업 없이도 안전합니다</li>
         </ul>

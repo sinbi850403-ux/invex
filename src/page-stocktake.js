@@ -26,7 +26,7 @@ export function renderStocktakePage(container, navigateTo) {
   container.innerHTML = `
     <div class="page-header">
       <div>
-        <h1 class="page-title">재고 실사</h1>
+        <h1 class="page-title">수불관리</h1>
         <div class="page-desc">시스템 재고와 실물 재고를 대조하고 차이를 조정합니다.</div>
       </div>
       <div class="page-actions">
@@ -46,7 +46,7 @@ export function renderStocktakePage(container, navigateTo) {
         </div>
       ` : `
         <div class="card">
-          <div class="card-title">🔍 재고 실사표</div>
+          <div class="card-title">🔍 수불내역표</div>
           <div style="display:flex; gap:12px; margin-bottom:16px; align-items:center;">
             <div class="form-group" style="margin:0;">
               <label class="form-label">실사일자</label>
