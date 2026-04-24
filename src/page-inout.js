@@ -999,24 +999,35 @@ export function renderInoutPage(container, navigateTo) {
  * 왜 필요? → 건별 등록은 수십 건 이상일 때 비효율적.
  */
 function openBulkUploadModal(container, navigateTo, items) {
+  const isInboundPage = currentPage === 'in';
+  const isOutboundPage = currentPage === 'out';
+  const bulkTemplateSpec = getInoutBulkTemplateSpec(currentPage);
+
   const overlay = document.createElement('div');
   overlay.className = 'modal-overlay';
   overlay.innerHTML = `
     <div class="modal" style="max-width:700px;">
       <div class="modal-header">
-        <h3 class="modal-title">엑셀 일괄 입출고 등록</h3>
+        <h3 class="modal-title">${isOutboundPage ? '출고관리 엑셀 일괄 등록' : isInboundPage ? '입고관리 엑셀 일괄 등록' : '엑셀 일괄 입출고 등록'}</h3>
         <button class="modal-close" id="bulk-close">✕</button>
       </div>
       <div class="modal-body" id="bulk-body">
         <div class="alert alert-info" style="margin-bottom:16px;">
           <strong>사용 방법</strong><br/>
           1. 아래에서 샘플 양식을 내려받습니다.<br/>
-          2. 양식에 입고 또는 출고 데이터를 입력합니다.<br/>
+          2. 양식에 ${isOutboundPage ? '출고' : isInboundPage ? '입고' : '입고 또는 출고'} 데이터를 입력합니다.<br/>
           3. 저장한 엑셀 파일을 끌어놓거나 선택하면 미리보기 후 한 번에 등록할 수 있습니다.
         </div>
 
         <div style="display:flex; gap:8px; margin-bottom:16px;">
           <button class="btn btn-outline" id="bulk-download-template">엑셀 양식 다운로드</button>
+        </div>
+
+        <div style="margin-bottom:16px; padding:10px 12px; border:1px solid var(--border); border-radius:8px; background:var(--bg-lighter);">
+          <div style="font-size:12px; color:var(--text-muted); margin-bottom:8px;">양식 헤더 미리보기</div>
+          <div style="display:flex; flex-wrap:wrap; gap:6px;">
+            ${bulkTemplateSpec.headers.map((header) => `<span class="badge" style="font-size:11px;">${header}</span>`).join('')}
+          </div>
         </div>
 
         <div style="border:2px dashed var(--border); border-radius:8px; padding:32px; text-align:center; cursor:pointer; transition:border-color 0.2s;" id="bulk-dropzone">
@@ -1040,31 +1051,8 @@ function openBulkUploadModal(container, navigateTo, items) {
   });
 
   overlay.querySelector('#bulk-download-template').addEventListener('click', () => {
-    const date = new Date().toISOString().split('T')[0];
-    const inQty = 100;
-    const unitPrice = 1200000;
-    const supplyValue = inQty * unitPrice;
-    const vat = Math.floor(supplyValue * 0.1);
-    const totalAmount = supplyValue + vat;
-    const template = [
-      {
-        자산: '완제품',
-        입고일자: date,
-        상품코드: 'SM-S925',
-        거래처: '(주)삼성전자',
-        품명: '갤럭시 S25',
-        규격: '256GB',
-        단위: 'EA',
-        입고수량: inQty,
-        단가: unitPrice,
-        공급가액: supplyValue,
-        부가세: vat,
-        합계금액: totalAmount,
-      },
-    ];
-
-    downloadExcel(template, '입고관리_일괄등록_양식');
-    showToast('입고관리 양식을 내려받았습니다. 내용을 입력한 뒤 다시 업로드해 주세요.', 'success');
+    downloadExcel([bulkTemplateSpec.sample], bulkTemplateSpec.fileName);
+    showToast(`${bulkTemplateSpec.title} 양식을 내려받았습니다. 내용을 입력한 뒤 다시 업로드해 주세요.`, 'success');
   });
 
   const dropzone = overlay.querySelector('#bulk-dropzone');
@@ -1112,6 +1100,7 @@ async function processUploadedFile(file, overlay, container, navigateTo, items, 
     const colMap = {
       type: headers.findIndex((h) => ['구분'].includes(h)),
       vendor: headers.findIndex((h) => ['거래처'].includes(h)),
+      storeName: headers.findIndex((h) => ['매장명'].includes(h)),
       itemName: headers.findIndex((h) => ['품목명', '품명'].includes(h)),
       itemCode: headers.findIndex((h) => ['품목코드', '상품코드'].includes(h)),
       quantity: headers.findIndex((h) => ['수량', '입고수량', '출고수량'].includes(h)),
@@ -1138,16 +1127,26 @@ async function processUploadedFile(file, overlay, container, navigateTo, items, 
       const quantityRaw = colMap.quantity >= 0 ? row[colMap.quantity] : '';
       const inQuantityRaw = colMap.quantityIn >= 0 ? row[colMap.quantityIn] : '';
       const outQuantityRaw = colMap.quantityOut >= 0 ? row[colMap.quantityOut] : '';
-      const quantity = Number.parseFloat(quantityRaw) || Number.parseFloat(inQuantityRaw) || Number.parseFloat(outQuantityRaw) || 0;
+      const qty = Number.parseFloat(quantityRaw) || 0;
+      const inQty = Number.parseFloat(inQuantityRaw) || 0;
+      const outQty = Number.parseFloat(outQuantityRaw) || 0;
 
-      if (!itemName || quantity <= 0) continue;
+      if (!itemName) continue;
 
       let derivedType = typeCell === '출고' || typeCell === 'out' ? 'out' : (typeCell === '입고' || typeCell === 'in' ? 'in' : '');
       if (!derivedType) {
-        if (colMap.quantityIn >= 0 && colMap.quantity === colMap.quantityIn) derivedType = 'in';
+        if (outQty > 0 && inQty <= 0) derivedType = 'out';
+        else if (inQty > 0 && outQty <= 0) derivedType = 'in';
+        else if (isOutboundPage) derivedType = 'out';
+        else if (isInboundPage) derivedType = 'in';
         else if (colMap.quantityOut >= 0 && colMap.quantity === colMap.quantityOut) derivedType = 'out';
-        else derivedType = 'in'; // 기본값
+        else derivedType = 'in';
       }
+
+      let quantity = qty || inQty || outQty || 0;
+      if (derivedType === 'out' && outQty > 0) quantity = outQty;
+      if (derivedType === 'in' && inQty > 0) quantity = inQty;
+      if (quantity <= 0) continue;
 
       const rawItemCode = colMap.itemCode >= 0 ? String(row[colMap.itemCode] ?? '').trim() : '';
       const matchedItem = items.find((item) =>
@@ -1176,6 +1175,9 @@ async function processUploadedFile(file, overlay, container, navigateTo, items, 
         note: [
           colMap.note >= 0 ? String(row[colMap.note] ?? '').trim() : '',
           colMap.spec >= 0 ? String(row[colMap.spec] ?? '').trim() : '',
+          colMap.storeName >= 0
+            ? `매장:${String(row[colMap.storeName] ?? '').trim()}`
+            : '',
         ].filter(Boolean).join(' | '),
         matched: Boolean(matchedItem),
       });
@@ -1260,6 +1262,72 @@ async function processUploadedFile(file, overlay, container, navigateTo, items, 
   } catch (err) {
     previewEl.innerHTML = `<div class="alert alert-danger">파일 처리 중 오류가 발생했습니다: ${escapeHtml(err.message)}</div>`;
   }
+}
+
+function getInoutBulkTemplateSpec(page) {
+  const date = new Date().toISOString().split('T')[0];
+
+  if (page === 'out') {
+    const outQty = 12;
+    const unitPrice = 21000;
+    const supplyValue = outQty * unitPrice;
+    const vat = Math.floor(supplyValue * 0.1);
+    const totalAmount = supplyValue + vat;
+    const outUnitPrice = 27500;
+    const outAmount = outUnitPrice * outQty;
+    const purchaseCost = supplyValue;
+    const profitAmount = outAmount - purchaseCost;
+    const profitRate = purchaseCost > 0 ? Number(((profitAmount / purchaseCost) * 100).toFixed(2)) : 0;
+    const salesCostRate = outAmount > 0 ? Number(((purchaseCost / outAmount) * 100).toFixed(2)) : 0;
+    return {
+      title: '출고관리',
+      fileName: '출고관리_일괄등록_양식',
+      headers: ['자산', '출고일자', '매장명', '상품코드', '입고수량', '단가', '공급가액', '부가세', '합계금액', '출고단가', '출고수량', '출고금액', '매입원가', '이익액', '이익율', '매출원가율'],
+      sample: {
+        자산: '완제품',
+        출고일자: date,
+        매장명: '강남점',
+        상품코드: 'PMZBA-CHAN1821',
+        입고수량: 0,
+        단가: unitPrice,
+        공급가액: supplyValue,
+        부가세: vat,
+        합계금액: totalAmount,
+        출고단가: outUnitPrice,
+        출고수량: outQty,
+        출고금액: outAmount,
+        매입원가: purchaseCost,
+        이익액: profitAmount,
+        이익율: profitRate,
+        매출원가율: salesCostRate,
+      },
+    };
+  }
+
+  const inQty = 100;
+  const unitPrice = 1200000;
+  const supplyValue = inQty * unitPrice;
+  const vat = Math.floor(supplyValue * 0.1);
+  const totalAmount = supplyValue + vat;
+  return {
+    title: page === 'in' ? '입고관리' : '입출고관리',
+    fileName: page === 'in' ? '입고관리_일괄등록_양식' : '입출고관리_일괄등록_양식',
+    headers: ['자산', '입고일자', '상품코드', '거래처', '품명', '규격', '단위', '입고수량', '단가', '공급가액', '부가세', '합계금액'],
+    sample: {
+      자산: '완제품',
+      입고일자: date,
+      상품코드: 'SM-S925',
+      거래처: '(주)삼성전자',
+      품명: '갤럭시 S25',
+      규격: '256GB',
+      단위: 'EA',
+      입고수량: inQty,
+      단가: unitPrice,
+      공급가액: supplyValue,
+      부가세: vat,
+      합계금액: totalAmount,
+    },
+  };
 }
 
 /**

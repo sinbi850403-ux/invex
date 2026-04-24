@@ -30,6 +30,7 @@ export function renderStocktakePage(container, navigateTo) {
         <div class="page-desc">시스템 재고와 실물 재고를 대조하고 차이를 조정합니다.</div>
       </div>
       <div class="page-actions">
+        <button class="btn btn-outline" id="btn-stocktake-template">엑셀 양식 다운로드</button>
         <button class="btn btn-outline" id="btn-stocktake-history">📅 실사 이력 (${stocktakeHistory.length}건)</button>
         <button class="btn btn-primary" id="btn-start-stocktake">📋 새 실사 시작</button>
       </div>
@@ -125,6 +126,51 @@ export function renderStocktakePage(container, navigateTo) {
   `;
 
   if (items.length === 0) return;
+
+  container.querySelector('#btn-stocktake-template')?.addEventListener('click', () => {
+    const today = new Date().toISOString().split('T')[0];
+    const inQty = 120;
+    const inUnitPrice = 21000;
+    const supplyValue = inQty * inUnitPrice;
+    const vat = Math.floor(supplyValue * 0.1);
+    const totalAmount = supplyValue + vat;
+    const outQty = 45;
+    const outUnitPrice = 28000;
+    const outAmount = outUnitPrice * outQty;
+    const purchaseCost = inUnitPrice * outQty;
+    const profitAmount = outAmount - purchaseCost;
+    const profitRate = purchaseCost > 0 ? Number(((profitAmount / purchaseCost) * 100).toFixed(2)) : 0;
+    const salesCostRate = outAmount > 0 ? Number(((purchaseCost / outAmount) * 100).toFixed(2)) : 0;
+    const endingQty = inQty - outQty;
+    const endingValue = endingQty * inUnitPrice;
+
+    const template = [{
+      자산: '완제품',
+      입고일자: today,
+      상품코드: 'PMZBA-CHAN1821',
+      거래처: '기본 거래처',
+      품명: '핸들/통합/스트라이커/신규[200]',
+      규격: '표준',
+      단위: 'EA',
+      입고수량: inQty,
+      단가: inUnitPrice,
+      공급가액: supplyValue,
+      부가세: vat,
+      합계금액: totalAmount,
+      출고단가: outUnitPrice,
+      출고수량: outQty,
+      출고금액: outAmount,
+      매입원가: purchaseCost,
+      이익액: profitAmount,
+      이익율: profitRate,
+      매출원가율: salesCostRate,
+      기말재고수량: endingQty,
+      기말재고: endingValue,
+    }];
+
+    downloadExcel(template, '수불관리_엑셀양식');
+    showToast('수불관리 엑셀 양식을 내려받았습니다.', 'success');
+  });
 
   // 실물 수량 입력 시 차이 계산
   container.querySelectorAll('.st-actual').forEach(input => {
