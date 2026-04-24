@@ -867,6 +867,45 @@ export async function loadAllData() {
 }
 
 // ============================================================
+// 현재 사용자 데이터 전체 삭제 (설정 페이지 전체초기화용)
+// ============================================================
+export async function clearAllUserData() {
+  const userId = await getUserId();
+  const tableNames = [
+    'transactions',
+    'transfers',
+    'stocktakes',
+    'audit_logs',
+    'account_entries',
+    'purchase_orders',
+    'pos_sales',
+    'custom_fields',
+    'items',
+    'vendors',
+    'employees',
+    'attendance',
+    'payrolls',
+    'leaves',
+    'salary_items',
+    'user_settings',
+  ];
+
+  const failures = [];
+  for (const tableName of tableNames) {
+    const { error } = await supabase
+      .from(tableName)
+      .delete()
+      .eq('user_id', userId);
+    if (error) failures.push({ tableName, error });
+  }
+
+  if (failures.length > 0) {
+    const tableSummary = failures.map((entry) => entry.tableName).join(', ');
+    throw new Error(`클라우드 초기화 실패: ${tableSummary}`);
+  }
+}
+
+// ============================================================
 // DB ↔ Store 변환 유틸
 // DB는 snake_case, 기존 store는 camelCase라서 변환 필요
 // ============================================================

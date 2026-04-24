@@ -4,8 +4,10 @@
  * 왜 필요? → 업종마다 필요한 정보가 다름 (의류=사이즈/색상, 식품=유통기한, 건설=규격)
  */
 
-import { getState, setState } from './store.js';
+import { getState, setState, resetState } from './store.js';
 import { showToast } from './toast.js';
+import { isSupabaseConfigured } from './supabase-client.js';
+import { clearAllUserData } from './db.js';
 
 // 업종별 템플릿 정의
 const INDUSTRY_TEMPLATES = [
@@ -285,32 +287,32 @@ export function renderSettingsPage(container, navigateTo) {
     showToast('이동 이력이 초기화되었습니다.', 'info');
   });
 
-  container.querySelector('#btn-clear-all').addEventListener('click', () => {
+  container.querySelector('#btn-clear-all').addEventListener('click', async () => {
     if (!confirm('⚠️ 모든 데이터(품목, 거래, 설정)를 초기화하시겠습니까?\n이 작업은 되돌릴 수 없습니다.')) return;
     if (!confirm('정말로 전체 초기화하시겠습니까? (최종 확인)')) return;
-    setState({
-      rawData: [],
-      mappedData: [],
-      transactions: [],
-      transfers: [],
-      safetyStock: {},
-      customFields: [],
-      columnMapping: {},
-      visibleColumns: null,
-      beginnerMode: true,
-      inventoryViewPrefs: {
-        filter: { keyword: '', category: '', warehouse: '', stock: '', itemCode: '', vendor: '', focus: 'all' },
-        sort: { key: '', direction: '' },
-      },
-      inoutViewPrefs: {
-        filter: { keyword: '', type: '', date: '', vendor: '', itemCode: '', quick: 'all' },
-        sort: { key: 'date', direction: 'desc' },
-      },
-      fileName: '',
-      currentStep: 1,
-      _onboardingDone: false,
-    });
-    showToast('전체 데이터가 초기화되었습니다.', 'info');
-    navigateTo('home');
+    const clearButton = container.querySelector('#btn-clear-all');
+    const originalLabel = clearButton?.textContent || '데이터 전체초기화';
+    if (clearButton) {
+      clearButton.disabled = true;
+      clearButton.textContent = '초기화 중...';
+    }
+
+    try {
+      if (isSupabaseConfigured) {
+        await clearAllUserData();
+      }
+      resetState();
+      setState({ _onboardingDone: false });
+      showToast('전체 데이터가 초기화되었습니다.', 'info');
+      navigateTo('home');
+    } catch (error) {
+      console.error('[Settings] 전체 초기화 실패:', error);
+      showToast(error?.message || '전체 초기화에 실패했습니다.', 'error');
+    } finally {
+      if (clearButton) {
+        clearButton.disabled = false;
+        clearButton.textContent = originalLabel;
+      }
+    }
   });
 }
