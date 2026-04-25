@@ -13,7 +13,7 @@ import { handlePageError } from './error-monitor.js';
 import { showFieldError, clearAllFieldErrors, setSavingState } from './ux-toolkit.js';
 
 const PAGE_SIZE = 15;
-const BULK_INOUT_TEMPLATE_HEADERS = ['자산', '입고일자', '거래처', '상품코드', '품명', '규격', '단위', '입고수량', '단가', '공급가액', '부가세', '합계금액'];
+const BULK_INOUT_TEMPLATE_HEADERS = ['자산', '입고일자', '거래처', '상품코드', '품명', '규격', '단위', '입고수량', '단가'];
 
 function safeAttr(value) {
   return String(value ?? '')
@@ -1215,37 +1215,21 @@ function openBulkUploadModal(container, navigateTo, items, modeDefault = null) {
     let templateRows, sheetName, fileName;
 
     if (modeDefault === 'out') {
-      // 출고 양식: 내보내기와 동일한 19열 컬럼
-      const outHeaders = ['자산', '출고일자', '매장명', '상품코드', '품명', '규격', '단위', '출고수량', '출고단가', '출고금액', '출고합', '공급가', '부가세', '공가합', '매입원가', '이익액', '이익률', '매출원가율'];
-      const s1 = 1200000 * 10, v1 = Math.floor(s1 * 0.1), sale1 = 1500000 * 10;
-      const s2 = 850000 * 5,   v2 = Math.floor(s2 * 0.1),   sale2 = 1100000 * 5;
+      // 출고 양식: 사용자 입력 필드만 (계산값은 시스템이 자동 산출)
+      const outHeaders = ['자산', '출고일자', '매장명', '상품코드', '품명', '규격', '단위', '출고수량', '출고단가'];
       templateRows = [
         outHeaders,
-        [
-          '전자기기', today, '강남점', 'SM-S925', '갤럭시 S25', '256GB 블랙', 'EA',
-          10, 1500000, sale1, Math.round(sale1 * 1.1),
-          s1, v1, s1 + v1, s1, sale1 - s1,
-          ((sale1 - s1) / s1 * 100).toFixed(1) + '%', (s1 / sale1 * 100).toFixed(1) + '%',
-        ],
-        [
-          '전자기기', today, '홍대점', 'AP-001', '아이패드 Air', '256GB 스타라이트', 'EA',
-          5, 1100000, sale2, Math.round(sale2 * 1.1),
-          s2, v2, s2 + v2, s2, sale2 - s2,
-          ((sale2 - s2) / s2 * 100).toFixed(1) + '%', (s2 / sale2 * 100).toFixed(1) + '%',
-        ],
+        ['전자기기', today, '강남점', 'SM-S925', '갤럭시 S25', '256GB 블랙', 'EA', 10, 1500000],
+        ['전자기기', today, '홍대점', 'AP-001',  '아이패드 Air', '256GB 스타라이트', 'EA', 5, 1100000],
       ];
       sheetName = '출고_양식';
       fileName = '출고_일괄등록_양식';
     } else {
-      // 입고 양식 (기본): 자산|입고일자|상품코드|거래처|품명|규격|단위|입고수량|단가|공급가액|부가세|합계금액
-      const supply1 = 1200000 * 100;
-      const vat1 = Math.floor(supply1 * 0.1);
-      const supply2 = 850000 * 50;
-      const vat2 = Math.floor(supply2 * 0.1);
+      // 입고 양식: 사용자 입력 필드만 (공급가·부가세·합계는 시스템이 자동 산출)
       templateRows = [
         BULK_INOUT_TEMPLATE_HEADERS,
-        ['전자기기', today, 'SM-S925', '(주)삼성전자', '갤럭시 S25', '256GB 블랙', 'EA', 100, 1200000, supply1, vat1, supply1 + vat1],
-        ['전자기기', today, 'AP-001', '(주)애플코리아', '아이패드 Air', '256GB 스타라이트', 'EA', 50, 850000, supply2, vat2, supply2 + vat2],
+        ['전자기기', today, '(주)삼성전자', 'SM-S925', '갤럭시 S25', '256GB 블랙', 'EA', 100, 1200000],
+        ['전자기기', today, '(주)애플코리아', 'AP-001', '아이패드 Air', '256GB 스타라이트', 'EA', 50, 850000],
       ];
       sheetName = '입고_양식';
       fileName = '입고_일괄등록_양식';
