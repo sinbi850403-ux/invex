@@ -33,39 +33,6 @@ function bindHubNav(container, navigateTo) {
   });
 }
 
-export function renderHubData(container, navigateTo) {
-  const state = getState();
-  const itemCount = (state.mappedData || []).length;
-
-  container.innerHTML = `
-    <div class="page-header">
-      <div>
-        <h1 class="page-title"><span class="title-icon">📂</span> 데이터 가져오기</h1>
-        <div class="page-desc">엑셀/CSV 업로드와 컬럼 매핑 확인을 한 곳에서 진행합니다.</div>
-      </div>
-    </div>
-    <div class="hub-grid">
-      ${renderHubCard({
-        icon: '📥',
-        title: '파일 업로드',
-        desc: '엑셀 또는 CSV 파일을 불러와 재고 데이터를 등록합니다.',
-        nav: 'upload',
-        color: '#2563eb',
-        meta: `현재 등록 품목 ${itemCount}건`,
-      })}
-      ${renderHubCard({
-        icon: '📋',
-        title: '데이터 확인',
-        desc: '업로드한 데이터의 컬럼 매핑과 정합성을 점검합니다.',
-        nav: 'mapping',
-        color: '#7c3aed',
-      })}
-    </div>
-  `;
-
-  bindHubNav(container, navigateTo);
-}
-
 export function renderHubInventory(container, navigateTo) {
   const state = getState();
   const itemCount = (state.mappedData || []).length;
@@ -472,8 +439,6 @@ export function renderHubSupport(container, navigateTo) {
 }
 
 export const HUB_MAP = {
-  upload: 'hub-data',
-  mapping: 'hub-data',
   inventory: 'hub-inventory',
   inout: 'hub-inventory',
   bulk: 'hub-inventory',
@@ -515,7 +480,6 @@ export const HUB_MAP = {
 
 export const PAGE_LABELS = {
   home: '대시보드',
-  'hub-data': '데이터 가져오기',
   'hub-inventory': '재고 관리',
   'hub-warehouse': '창고·거래처',
   'hub-order': '발주·예측',
@@ -569,3 +533,7 @@ export const PAGE_LABELS = {
   labels: '라벨 출력',
   api: 'API 연동',
 };
+
+// Note: upload and mapping pages still exist (page-upload.js, page-mapping.js)
+// but are no longer directly accessible from sidebar navigation.
+// They can still be accessed programmatically via navigateTo('upload') or navigateTo('mapping')

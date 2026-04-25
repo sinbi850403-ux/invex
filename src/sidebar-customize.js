@@ -9,7 +9,6 @@ const STORAGE_KEY = 'invex:sidebar-hidden';
 
 // 커스터마이징 가능한 모든 항목 정의 (home은 항상 표시)
 const ALL_NAV_ITEMS = [
-  { page: 'hub-data',      icon: '📂', label: '데이터 가져오기' },
   { page: 'hub-inventory', icon: '📦', label: '재고 관리' },
   { page: 'hub-warehouse', icon: '🏢', label: '창고·거래처' },
   { page: 'hub-order',     icon: '🤖', label: '발주·예측' },

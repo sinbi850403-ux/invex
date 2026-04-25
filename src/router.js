@@ -21,7 +21,7 @@ import { showToast } from './toast.js';
 import { syncExternalNotifications } from './notifications.js';
 import { HUB_MAP, PAGE_LABELS } from './page-hubs.js';
 import {
-  renderHubData, renderHubInventory, renderHubWarehouse, renderHubOrder,
+  renderHubInventory, renderHubWarehouse, renderHubOrder,
   renderHubReport, renderHubDocuments, renderHubSettings, renderHubSupport,
   renderHubHr,
 } from './page-hubs.js';
@@ -98,7 +98,6 @@ export const PAGE_LOADERS = {
   'yearend-settlement': () => import('./page-yearend-settlement.js').then(m => m.renderYearendSettlementPage),
   // 동기 렌더러 (이미 import된 모듈)
   auditlog:        async () => renderAuditLogPage,
-  'hub-data':      async () => renderHubData,
   'hub-inventory': async () => renderHubInventory,
   'hub-warehouse': async () => renderHubWarehouse,
   'hub-order':     async () => renderHubOrder,
