@@ -17,6 +17,16 @@ let _cachedUserId = null;
 let _cachedUserIdAt = 0;
 
 /**
+ * 로그인 직후 uid를 캐시에 주입 — getUserId()의 getSession 재호출 타이밍 경쟁 방지
+ */
+export function primeUserIdCache(uid) {
+  if (uid) {
+    _cachedUserId = uid;
+    _cachedUserIdAt = Date.now();
+  }
+}
+
+/**
  * Supabase 쿼리에 타임아웃을 적용하는 래퍼
  * 왜 필요? → 네트워크 지연 시 무한 대기 → UI 스피너 갇힘 방지
  */

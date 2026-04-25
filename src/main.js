@@ -15,6 +15,7 @@ import { isAdmin } from './admin-auth.js';
 import { navigateTo, injectRouterCallbacks, PAGE_LOADERS, LAST_PAGE_KEY, renderQuickAccess } from './router.js';
 import { initGlobalSearch, toggleGlobalSearch } from './global-search.js';
 import { restoreState } from './store.js';
+import { primeUserIdCache } from './db.js';
 import { checkAndShowOnboarding } from './onboarding.js';
 import { initSidebarCustomize } from './sidebar-customize.js';
 // framework.js: html, on, createPage 유틸 (page-*.js에서 사용)
@@ -775,7 +776,9 @@ async function initAppAfterAuth() {
       });
   }
 
-  await restoreState();
+  const uid = getCurrentUser()?.uid || null;
+  primeUserIdCache(uid);
+  await restoreState(uid);
   // restoreState가 로컬 캐시의 예전 currentPlan을 복원할 수 있으므로,
   // 인증 프로필(plan)을 다시 우선 동기화한다.
   const profilePlan = getUserProfileData()?.plan;

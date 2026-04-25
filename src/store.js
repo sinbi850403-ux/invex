@@ -418,13 +418,17 @@ export function resetState() {
  * 앱 시작 시 상태 복원
  * 전략: Supabase에서 먼저 로드 → 실패 시 IndexedDB 폴백
  */
-export async function restoreState() {
+export async function restoreState(userId = null) {
   // 1. Supabase에서 데이터 로딩 시도
   if (isSupabaseConfigured) {
     try {
-      // 인증 세션 확인 — 미로그인이면 Supabase 로드 건너뜀 (조용히 IndexedDB 폴백)
-      const { data: { session } } = await supabase.auth.getSession().catch(() => ({ data: { session: null } }));
-      if (!session?.user) {
+      // userId가 전달되면 getSession 재호출 생략 — 로그인 직후 세션 타이밍 경쟁 방지
+      let hasSession = !!userId;
+      if (!hasSession) {
+        const { data: { session } } = await supabase.auth.getSession().catch(() => ({ data: { session: null } }));
+        hasSession = !!session?.user;
+      }
+      if (!hasSession) {
         // 로그인 안 된 상태는 정상 흐름 — 경고 출력하지 않음, IndexedDB 폴백으로 진행
       } else {
         const cloudData = await managedQuery(() => db.loadAllData());

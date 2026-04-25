@@ -249,7 +249,7 @@ export function enableColumnResize(table) {
       document.addEventListener('mousemove', onMove);
       document.addEventListener('mouseup', onUp);
     });
-    th.style.position = 'relative';
+    if (getComputedStyle(th).position === 'static') th.style.position = 'relative';
     th.appendChild(handle);
   });
 }

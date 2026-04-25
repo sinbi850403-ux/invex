@@ -220,7 +220,8 @@ async function loadProfile(user) {
               }
             }
           })
-          .catch(() => {});
+          .catch(() => {})
+          .finally(() => { profileBootstrapInflight = null; });
       }
       await profileBootstrapInflight;
       return { ...fallback, createdAt: newProfile.created_at };
@@ -777,6 +778,10 @@ export async function logout() {
     signOutError = error;
   } finally {
     purgeAuthStorage({ includeSupabaseSession: true });
+    // 부트스트랩 차단 상태 초기화 — 다음 로그인(다른 계정 포함)이 정상 부트스트랩되도록
+    profileBootstrapBlocked = false;
+    profileBootstrapInflight = null;
+    try { localStorage.removeItem(_BS_BLOCKED_KEY); } catch (_) {}
     currentUser = null;
     userProfile = null;
     isLoggingIn = false;
