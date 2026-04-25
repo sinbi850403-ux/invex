@@ -14,6 +14,7 @@ const ERP_FIELDS = [
   { key: 'itemName',   label: '품목명' },
   { key: 'itemCode',   label: '품목코드' },
   { key: 'category',   label: '분류' },
+  { key: 'spec',       label: '규격' },
   { key: 'quantity',   label: '수량' },
   { key: 'unit',       label: '단위' },
   { key: 'unitPrice',  label: '단가' },
@@ -29,8 +30,9 @@ const ERP_FIELDS = [
 // 자동 매핑용 키워드 사전
 const MAPPING_KEYWORDS = {
   itemName:   ['품목', '품명', '제품명', '상품명', '이름', 'name', 'item', '자재명', '자재'],
-  itemCode:   ['코드', 'code', '품번', '품목코드', 'sku', '자재코드'],
-  category:   ['분류', '카테고리', 'category', '유형', '종류', '구분'],
+  itemCode:   ['코드', 'code', '품번', '품목코드', 'sku', '자재코드', '상품코드'],
+  category:   ['분류', '카테고리', 'category', '유형', '종류', '구분', '자산'],
+  spec:       ['규격', 'spec', '사양', '스펙'],
   quantity:   ['수량', 'qty', 'quantity', '재고', '개수', '입고수량', '출고수량', '현재고'],
   unit:       ['단위', 'unit', 'uom'],
   unitPrice:  ['단가', 'price', '가격', '원가', '매입가'],

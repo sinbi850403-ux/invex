@@ -1274,6 +1274,9 @@ async function processUploadedFile(file, overlay, container, navigateTo, items, 
       actualSellingPrice: findCol('실판매가'),
       date:               findCol('입고일자', '출고일자', '날짜'),
       note:               findCol('비고'),
+      spec:               findCol('규격'),
+      unit:               findCol('단위'),
+      category:           findCol('자산', '분류', '카테고리'),
     };
     const detected = detectBulkInoutColumns(sheetData);
     Object.keys(colMap).forEach((key) => {
@@ -1328,6 +1331,9 @@ async function processUploadedFile(file, overlay, container, navigateTo, items, 
         actualSellingPrice: colMap.actualSellingPrice >= 0 ? parseBulkNumber(row[colMap.actualSellingPrice]) : 0,
         date: dateStr || new Date().toISOString().split('T')[0],
         note: colMap.note >= 0 ? String(row[colMap.note] ?? '').trim() : '',
+        spec: colMap.spec >= 0 ? String(row[colMap.spec] ?? '').trim() : (matchedItem?.spec || ''),
+        unit: colMap.unit >= 0 ? String(row[colMap.unit] ?? '').trim() : (matchedItem?.unit || ''),
+        category: colMap.category >= 0 ? String(row[colMap.category] ?? '').trim() : (matchedItem?.category || ''),
         matched: Boolean(matchedItem),
       });
     }
@@ -1395,6 +1401,21 @@ async function processUploadedFile(file, overlay, container, navigateTo, items, 
     });
 
     previewEl.querySelector('#bulk-confirm').addEventListener('click', () => {
+      // 아이템 마스터에 spec/unit/category 업데이트
+      const currentState = getState();
+      const updatedMappedData = [...(currentState.mappedData || [])];
+      rows.forEach((row) => {
+        const idx = updatedMappedData.findIndex(it =>
+          it.itemName === row.itemName || (row.itemCode && it.itemCode && it.itemCode === row.itemCode)
+        );
+        if (idx >= 0) {
+          if (row.spec && !updatedMappedData[idx].spec) updatedMappedData[idx] = { ...updatedMappedData[idx], spec: row.spec };
+          if (row.unit && !updatedMappedData[idx].unit) updatedMappedData[idx] = { ...updatedMappedData[idx], unit: row.unit };
+          if (row.category && !updatedMappedData[idx].category) updatedMappedData[idx] = { ...updatedMappedData[idx], category: row.category };
+        }
+      });
+      setState({ mappedData: updatedMappedData });
+
       rows.forEach((row) => {
         addTransaction({
           type: row.type,
