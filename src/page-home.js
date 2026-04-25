@@ -180,7 +180,6 @@ export function renderHomePage(container, navigateTo) {
       <div class="dashboard-quick-head">
         <div>
           <div class="card-title">홈에서 바로 실행</div>
-          <div class="chart-help-text">자주 쓰는 기능을 바로 열어 입력 단계 없이 즉시 시작할 수 있습니다.</div>
         </div>
         <span class="badge badge-info">빠른 액션</span>
       </div>
@@ -244,7 +243,6 @@ export function renderHomePage(container, navigateTo) {
         <div class="chart-control-row">
           <div>
             <div class="card-title">최근 7일 입출고 흐름</div>
-            <div class="chart-help-text">오래된 날짜부터 볼지, 최신 날짜부터 볼지 바꿔서 확인할 수 있습니다.</div>
           </div>
           <div class="chart-control-inline">
             <span class="chart-control-label">보기 순서</span>
@@ -262,7 +260,6 @@ export function renderHomePage(container, navigateTo) {
         <div class="chart-control-row">
           <div>
             <div class="card-title">최근 6개월 입출고 비교</div>
-            <div class="chart-help-text">월 흐름도 시간순 또는 최신순으로 바꿔서 볼 수 있습니다.</div>
           </div>
           <div class="chart-control-inline">
             <span class="chart-control-label">보기 순서</span>
@@ -301,7 +298,6 @@ export function renderHomePage(container, navigateTo) {
           <div class="chart-control-row">
             <div>
               <div class="card-title">분류별 재고 비중</div>
-              <div class="chart-help-text">분류 순서를 수량 기준이나 가나다순으로 바꿔서 볼 수 있습니다.</div>
             </div>
             <div class="chart-control-inline">
               <span class="chart-control-label">정렬 기준</span>
@@ -510,35 +506,29 @@ function renderExecutiveView(context) {
         <div>
           <div class="dashboard-eyebrow">경영자 한눈 요약</div>
           <div class="dashboard-hero-title">현재 재고 운영 상태는 ${context.riskLevel} 단계입니다.</div>
-          <div class="dashboard-hero-desc">${context.executiveSummary}</div>
 
           <div class="dashboard-highlight-grid">
             <div class="dashboard-highlight">
               <div class="dashboard-highlight-label">총 재고자산(소가)</div>
               <div class="dashboard-highlight-value">${formatCurrency(context.totalSaleValue)}</div>
-              <div class="dashboard-highlight-note">판매가가 입력된 품목 기준 재고 자산입니다.</div>
             </div>
             <div class="dashboard-highlight">
               <div class="dashboard-highlight-label">총 재고자산(공급가)</div>
               <div class="dashboard-highlight-value">${formatCurrency(context.totalSupplyValue)}</div>
-              <div class="dashboard-highlight-note">원가 기준 공급가액 합계입니다.</div>
             </div>
             <div class="dashboard-highlight">
               <div class="dashboard-highlight-label">가장 먼저 볼 리스크</div>
               <div class="dashboard-highlight-value ${context.lowStockItems.length > 0 ? 'text-danger' : 'text-success'}">
                 ${context.lowStockItems.length > 0 ? `${formatNumber(context.lowStockItems.length)}건 부족` : '부족 없음'}
               </div>
-              <div class="dashboard-highlight-note">안전재고 기준 아래로 내려간 품목 수입니다.</div>
             </div>
             <div class="dashboard-highlight">
               <div class="dashboard-highlight-label">장기 정체 재고</div>
               <div class="dashboard-highlight-value">${formatNumber(context.deadStockItems.length)}건</div>
-              <div class="dashboard-highlight-note">최근 30일 동안 출고가 없었던 품목입니다.</div>
             </div>
             <div class="dashboard-highlight">
               <div class="dashboard-highlight-label">출고 기준 커버일</div>
               <div class="dashboard-highlight-value">${context.coverageDays === null ? '계산 불가' : `${formatNumber(context.coverageDays)}일`}</div>
-              <div class="dashboard-highlight-note">최근 30일 평균 출고 속도로 본 재고 커버 기간입니다.</div>
             </div>
           </div>
 
@@ -635,30 +625,25 @@ function renderOperatorView(context) {
         <div>
           <div class="dashboard-eyebrow">실무자 바로 실행</div>
           <div class="dashboard-hero-title">오늘 바로 처리할 작업을 우선순위대로 정리했습니다.</div>
-          <div class="dashboard-hero-desc">${context.operatorSummary}</div>
 
           <div class="dashboard-highlight-grid">
             <div class="dashboard-highlight">
               <div class="dashboard-highlight-label">오늘 입고</div>
               <div class="dashboard-highlight-value text-success">+${formatNumber(context.todayInQty)}</div>
-              <div class="dashboard-highlight-note">오늘 등록된 입고 수량 합계입니다.</div>
             </div>
             <div class="dashboard-highlight">
               <div class="dashboard-highlight-label">오늘 출고</div>
               <div class="dashboard-highlight-value text-danger">-${formatNumber(context.todayOutQty)}</div>
-              <div class="dashboard-highlight-note">오늘 등록된 출고 수량 합계입니다.</div>
             </div>
             <div class="dashboard-highlight">
               <div class="dashboard-highlight-label">부족 품목</div>
               <div class="dashboard-highlight-value ${context.lowStockItems.length > 0 ? 'text-danger' : 'text-success'}">
                 ${context.lowStockItems.length > 0 ? `${formatNumber(context.lowStockItems.length)}건` : '없음'}
               </div>
-              <div class="dashboard-highlight-note">지금 바로 보충 여부를 판단해야 하는 품목입니다.</div>
             </div>
             <div class="dashboard-highlight">
               <div class="dashboard-highlight-label">임박 품목</div>
               <div class="dashboard-highlight-value">${formatNumber(context.expiringSoonItems.length)}건</div>
-              <div class="dashboard-highlight-note">30일 이내 유통기한 도래 품목입니다.</div>
             </div>
           </div>
 

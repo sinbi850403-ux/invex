@@ -422,7 +422,10 @@ export async function restoreState() {
   // 1. Supabase에서 데이터 로딩 시도
   if (isSupabaseConfigured) {
     try {
-      console.log('[Store] Supabase에서 데이터 로딩 중...');
+      // 인증 세션 확인 — 미로그인이면 Supabase 로드 건너뜀
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) throw new Error('로그인이 필요합니다');
+
       const cloudData = await managedQuery(() => db.loadAllData());
 
       // 로컬 IndexedDB 전체를 먼저 읽어 두고, Supabase가 담당하는 키만 cloudData로 덮어쓴다.

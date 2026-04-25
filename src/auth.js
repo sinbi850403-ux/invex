@@ -140,12 +140,12 @@ async function loadProfile(user) {
 
   try {
     const { data, error } = await withTimeout(
-      supabase.from('profiles').select('*').eq('id', user.uid).single(),
+      supabase.from('profiles').select('*').eq('id', user.uid).maybeSingle(),
       15000,
       'load-profile',
     );
 
-    if (error && error.code !== 'PGRST116') {
+    if (error) {
       throw error;
     }
 
@@ -153,10 +153,14 @@ async function loadProfile(user) {
       // 프로필 미존재 → 신규 생성
       const newProfile = createBootstrapProfile(user);
 
-      let { error: insertError } = await supabase.from('profiles').insert(newProfile);
+      // upsert: 동시 가입/재시도에서도 충돌 없이 처리
+      let { error: insertError } = await supabase
+        .from('profiles')
+        .upsert(newProfile, { onConflict: 'id', ignoreDuplicates: true });
+
       if (insertError) {
-        // schema cache 오류 발생 시 (role, plan 컬럼 미존재) 기본 정보만 인서트 시도
-        if (insertError.message && insertError.message.includes('schema cache')) {
+        // schema cache 오류 → 최소 컬럼만으로 재시도
+        if (insertError.message && (insertError.message.includes('schema cache') || insertError.message.includes('row-level security'))) {
           const basicProfile = {
             id: user.uid,
             email: user.email,
@@ -164,16 +168,20 @@ async function loadProfile(user) {
             photo_url: user.photoURL,
             created_at: new Date().toISOString(),
           };
-          ({ error: insertError } = await supabase.from('profiles').insert(basicProfile));
+          ({ error: insertError } = await supabase
+            .from('profiles')
+            .upsert(basicProfile, { onConflict: 'id', ignoreDuplicates: true }));
         } else {
-          // 1회 재시도 (네트워크 순간 실패 대비)
-          await new Promise(r => setTimeout(r, 1500));
-          ({ error: insertError } = await supabase.from('profiles').insert(newProfile));
+          // 1회 재시도
+          await new Promise(r => setTimeout(r, 1000));
+          ({ error: insertError } = await supabase
+            .from('profiles')
+            .upsert(newProfile, { onConflict: 'id', ignoreDuplicates: true }));
         }
       }
       if (insertError) {
-        console.warn('[Auth] profile bootstrap failed:', insertError.message);
-        // 에러를 던지지 않고 기본 프로필로 로컬 앱 작동은 보장
+        // RLS INSERT 정책 미설치 등 → 폴백 프로필로 앱은 정상 동작
+        console.warn('[Auth] profile bootstrap failed (RLS?):', insertError.message);
       }
 
       return { ...fallback, createdAt: newProfile.created_at };
