@@ -16,6 +16,8 @@ let userProfile = null;
 let authChangeCallbacks = [];
 let authSubscription = null;
 let authInitialized = false;
+// 세션 동안 RLS/권한 오류로 프로필 부트스트랩이 실패했으면 재시도하지 않음
+let profileBootstrapBlocked = false;
 
 // ─── 이중 클릭 / 중복 요청 방지 플래그 ─────────────────────────────────────
 // isLoggingIn: 이메일 로그인 진행 중 이중 클릭 방지 (Google OAuth 에는 사용 X)
@@ -135,76 +137,89 @@ function sanitizeSupabaseStorage() {
 
 // ─── 프로필 로드 ──────────────────────────────────────────────────────────────
 
+function isRlsOrAuthError(err) {
+  if (!err) return false;
+  const msg = String(err.message || err.code || '').toLowerCase();
+  return msg.includes('row-level security') ||
+         msg.includes('row level security') ||
+         msg.includes('401') ||
+         msg.includes('unauthorized') ||
+         err.code === '42501' ||
+         err.code === 'PGRST301';
+}
+
 async function loadProfile(user) {
   const fallback = createFallbackProfile(user);
 
   try {
-    // 첫 시도: 8초 타임아웃
-    let result = await withTimeout(
-      supabase.from('profiles').select('*').eq('id', user.uid).maybeSingle(),
-      8000,
-      'load-profile',
-    ).catch(async (firstErr) => {
-      // 타임아웃 또는 일시 오류 → 2초 뒤 1회 재시도
-      if (firstErr.message?.includes('timeout') || firstErr.message?.includes('fetch')) {
-        console.warn('[Auth] profile load 재시도 중...');
-        await new Promise(r => setTimeout(r, 2000));
-        return withTimeout(
+    // SELECT 시도 — 8초 타임아웃, 실패 시 한 번만 재시도
+    let result;
+    try {
+      result = await withTimeout(
+        supabase.from('profiles').select('*').eq('id', user.uid).maybeSingle(),
+        8000,
+        'load-profile',
+      );
+    } catch (firstErr) {
+      const transient = firstErr.message?.includes('timeout') || firstErr.message?.includes('fetch');
+      if (!transient) {
+        // 권한·RLS 오류는 즉시 폴백
+        return fallback;
+      }
+      // 일시 오류만 1회 재시도 (조용히)
+      await new Promise(r => setTimeout(r, 1500));
+      try {
+        result = await withTimeout(
           supabase.from('profiles').select('*').eq('id', user.uid).maybeSingle(),
-          8000,
+          6000,
           'load-profile-retry',
         );
+      } catch {
+        // 재시도도 실패 — 폴백으로 조용히 계속 진행 (콘솔 도배 X)
+        return fallback;
       }
-      throw firstErr;
-    });
-    const { data, error } = result;
+    }
 
+    const { data, error } = result || {};
     if (error) {
-      throw error;
+      // 권한 오류면 조용히 폴백
+      if (isRlsOrAuthError(error)) return fallback;
+      // 그 외는 1회만 경고 후 폴백
+      console.warn('[Auth] profile select error:', error.message);
+      return fallback;
     }
 
     if (!data) {
-      // 프로필 미존재 → 신규 생성
-      const newProfile = createBootstrapProfile(user);
+      // 프로필 미존재 → 부트스트랩 시도. 단, 이전에 RLS로 차단됐으면 건너뜀.
+      if (profileBootstrapBlocked) {
+        return { ...fallback, createdAt: new Date().toISOString() };
+      }
 
-      // upsert: 동시 가입/재시도에서도 충돌 없이 처리
-      let { error: insertError } = await supabase
+      const newProfile = createBootstrapProfile(user);
+      const { error: insertError } = await supabase
         .from('profiles')
         .upsert(newProfile, { onConflict: 'id', ignoreDuplicates: true });
 
       if (insertError) {
-        // schema cache 오류 → 최소 컬럼만으로 재시도
-        if (insertError.message && (insertError.message.includes('schema cache') || insertError.message.includes('row-level security'))) {
-          const basicProfile = {
-            id: user.uid,
-            email: user.email,
-            name: user.displayName,
-            photo_url: user.photoURL,
-            created_at: new Date().toISOString(),
-          };
-          ({ error: insertError } = await supabase
-            .from('profiles')
-            .upsert(basicProfile, { onConflict: 'id', ignoreDuplicates: true }));
+        if (isRlsOrAuthError(insertError)) {
+          // RLS INSERT 정책 미설치 — 세션 동안 더 이상 시도하지 않음
+          if (!profileBootstrapBlocked) {
+            console.info('[Auth] profile 부트스트랩 차단 (RLS) — 폴백 프로필로 동작');
+            profileBootstrapBlocked = true;
+          }
         } else {
-          // 1회 재시도
-          await new Promise(r => setTimeout(r, 1000));
-          ({ error: insertError } = await supabase
-            .from('profiles')
-            .upsert(newProfile, { onConflict: 'id', ignoreDuplicates: true }));
+          console.warn('[Auth] profile insert error:', insertError.message);
         }
       }
-      if (insertError) {
-        // RLS INSERT 정책 미설치 등 → 폴백 프로필로 앱은 정상 동작
-        console.warn('[Auth] profile bootstrap failed (RLS?):', insertError.message);
-      }
-
       return { ...fallback, createdAt: newProfile.created_at };
     }
 
     return mapProfileData(data, fallback);
   } catch (error) {
-    // 타임아웃 또는 네트워크 오류 — 폴백 프로필로 계속 진행
-    console.warn('[Auth] profile load failed:', error.message);
+    // 어떤 오류든 앱이 멈추면 안 됨 — 폴백으로 계속
+    if (!isRlsOrAuthError(error)) {
+      console.warn('[Auth] profile load fallback:', error.message);
+    }
     return fallback;
   }
 }
@@ -391,9 +406,20 @@ export function initAuth(callback) {
 
   // 초기 세션 복구 — seq=0 으로 시작
   const initSeq = applySessionSeq;
-  withTimeout(supabase.auth.getSession(), 8000, 'initial-session')
+  withTimeout(supabase.auth.getSession(), 6000, 'initial-session')
     .then(({ data }) => applySession(data?.session || null, initSeq))
-    .catch((error) => {
+    .catch(async (error) => {
+      // 타임아웃 시 1회 조용히 재시도 (네트워크 일시 지연 대응)
+      if (error.message?.includes('timeout')) {
+        await new Promise(r => setTimeout(r, 1500));
+        try {
+          const { data } = await withTimeout(supabase.auth.getSession(), 6000, 'initial-session-retry');
+          return applySession(data?.session || null, initSeq);
+        } catch {
+          // 재시도 실패 — 로그인 화면으로 (조용히)
+          return applySession(null, initSeq);
+        }
+      }
       console.warn('[Auth] Initial session recovery failed:', error.message);
       applySession(null, initSeq);
     });

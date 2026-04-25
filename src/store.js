@@ -422,30 +422,33 @@ export async function restoreState() {
   // 1. Supabase에서 데이터 로딩 시도
   if (isSupabaseConfigured) {
     try {
-      // 인증 세션 확인 — 미로그인이면 Supabase 로드 건너뜀
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.user) throw new Error('로그인이 필요합니다');
+      // 인증 세션 확인 — 미로그인이면 Supabase 로드 건너뜀 (조용히 IndexedDB 폴백)
+      const { data: { session } } = await supabase.auth.getSession().catch(() => ({ data: { session: null } }));
+      if (!session?.user) {
+        // 로그인 안 된 상태는 정상 흐름 — 경고 출력하지 않음, IndexedDB 폴백으로 진행
+      } else {
+        const cloudData = await managedQuery(() => db.loadAllData());
 
-      const cloudData = await managedQuery(() => db.loadAllData());
+        // 로컬 IndexedDB 전체를 먼저 읽어 두고, Supabase가 담당하는 키만 cloudData로 덮어쓴다.
+        const localData = await loadFromDB();
 
-      // 로컬 IndexedDB 전체를 먼저 읽어 두고, Supabase가 담당하는 키만 cloudData로 덮어쓴다.
-      // 이렇게 해야 아직 Supabase 동기화 대상이 아닌 로컬 전용/미이관 데이터가
-      // 로그인 후 복원 과정에서 DEFAULT_STATE로 날아가지 않는다.
-      const localData = await loadFromDB();
+        // Supabase 데이터에 입출고는 _synced 표시
+        if (cloudData.transactions) {
+          cloudData.transactions.forEach(tx => { tx._synced = true; });
+        }
 
-      // Supabase 데이터에 입출고는 _synced 표시
-      if (cloudData.transactions) {
-        cloudData.transactions.forEach(tx => { tx._synced = true; });
+        state = { ...DEFAULT_STATE, ...(localData || {}), ...cloudData };
+        window.dispatchEvent(new CustomEvent('invex:store-updated', { detail: { changedKeys: ['*'] } }));
+        saveToDB();
+        console.log(`[Store] Supabase 로딩 완료: 품목 ${(cloudData.mappedData || []).length}건, 입출고 ${(cloudData.transactions || []).length}건`);
+        return;
       }
-
-      state = { ...DEFAULT_STATE, ...(localData || {}), ...cloudData };
-      window.dispatchEvent(new CustomEvent('invex:store-updated', { detail: { changedKeys: ['*'] } }));
-      // 로컬 캐시도 업데이트
-      saveToDB();
-      console.log(`[Store] Supabase 로딩 완료: 품목 ${(cloudData.mappedData || []).length}건, 입출고 ${(cloudData.transactions || []).length}건`);
-      return;
     } catch (err) {
-      console.warn('[Store] Supabase 로딩 실패, IndexedDB로 폴백:', err.message);
+      // 401/RLS/타임아웃은 IndexedDB 폴백이 자연스러운 흐름 — 디버그 수준만
+      const msg = String(err.message || '');
+      if (!msg.includes('401') && !msg.includes('row-level') && !msg.includes('timeout')) {
+        console.warn('[Store] Supabase 로딩 실패, IndexedDB로 폴백:', msg);
+      }
     }
   }
 
