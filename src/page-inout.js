@@ -321,51 +321,84 @@ export function renderInoutPage(container, navigateTo, mode = 'all') {
     });
   }
 
+  // 품목 맵 (규격·단위·카테고리 참조용)
+  const itemMap = new Map(items.map(it => [it.itemName, it]));
+
+  function sortableTh(key, label, extraClass = '') {
+    const isActive = sort.key === key;
+    const ariaSortVal = isActive ? (sort.direction === 'asc' ? 'ascending' : 'descending') : 'none';
+    return `<th class="sortable-header ${extraClass} ${isActive ? 'is-active' : ''}" data-sort-key="${key}" title="클릭하여 정렬" aria-sort="${ariaSortVal}">
+      <button type="button" class="sort-hitbox" tabindex="-1" aria-hidden="true">
+        <span class="sort-label">${label}</span><span class="sort-indicator">${getSortIndicator(key)}</span>
+      </button>
+    </th>`;
+  }
+
   function renderTxHeader() {
     const thead = container.querySelector('#tx-head');
     if (!thead) return;
-    thead.innerHTML = `
-      <tr>
+
+    let cols = '';
+    if (isInMode) {
+      // 입고관리: 자산|입고일자|상품코드|거래처|품명|규격|단위|입고수량|단가|공급가액|부가세|합계금액
+      cols = `
         <th style="width:40px; text-align:center;"><input type="checkbox" id="tx-select-all" /></th>
         <th class="col-num">#</th>
-        <th class="sortable-header ${sort.key === 'type' ? 'is-active' : ''}" data-sort-key="type" title="클릭하여 정렬" aria-sort="${sort.key === 'type' ? (sort.direction === 'asc' ? 'ascending' : sort.direction === 'desc' ? 'descending' : 'none') : 'none'}">
-          <button type="button" class="sort-hitbox" tabindex="-1" aria-hidden="true">
-            <span class="sort-label">구분</span><span class="sort-indicator">${getSortIndicator('type')}</span>
-          </button>
-        </th>
-        <th class="sortable-header ${sort.key === 'vendor' ? 'is-active' : ''}" data-sort-key="vendor" title="클릭하여 정렬" aria-sort="${sort.key === 'vendor' ? (sort.direction === 'asc' ? 'ascending' : sort.direction === 'desc' ? 'descending' : 'none') : 'none'}">
-          <button type="button" class="sort-hitbox" tabindex="-1" aria-hidden="true">
-            <span class="sort-label">거래처</span><span class="sort-indicator">${getSortIndicator('vendor')}</span>
-          </button>
-        </th>
-        <th class="sortable-header ${sort.key === 'itemName' ? 'is-active' : ''}" data-sort-key="itemName" title="클릭하여 정렬" aria-sort="${sort.key === 'itemName' ? (sort.direction === 'asc' ? 'ascending' : sort.direction === 'desc' ? 'descending' : 'none') : 'none'}">
-          <button type="button" class="sort-hitbox" tabindex="-1" aria-hidden="true">
-            <span class="sort-label">품목명</span><span class="sort-indicator">${getSortIndicator('itemName')}</span>
-          </button>
-        </th>
+        <th>자산</th>
+        ${sortableTh('date', '입고일자')}
+        <th>상품코드</th>
+        ${sortableTh('vendor', '거래처')}
+        ${sortableTh('itemName', '품명')}
+        <th>규격</th>
+        <th>단위</th>
+        ${sortableTh('quantity', '입고수량', 'text-right')}
+        ${sortableTh('unitPrice', '단가', 'text-right')}
+        <th class="text-right">공급가액</th>
+        <th class="text-right">부가세</th>
+        <th class="text-right">합계금액</th>
+        <th style="width:50px;">삭제</th>`;
+    } else if (isOutMode) {
+      // 출고관리: 자산|출고일자|매장명|상품코드|입고수량|단가|공급가액|부가세|합계금액|출고단가|출고수량|출고금액|매입원가|이익액|이익율|매출원가율
+      cols = `
+        <th style="width:40px; text-align:center;"><input type="checkbox" id="tx-select-all" /></th>
+        <th class="col-num">#</th>
+        <th>자산</th>
+        ${sortableTh('date', '출고일자')}
+        ${sortableTh('vendor', '매장명')}
+        <th>상품코드</th>
+        ${sortableTh('quantity', '입고수량', 'text-right')}
+        ${sortableTh('unitPrice', '단가', 'text-right')}
+        <th class="text-right">공급가액</th>
+        <th class="text-right">부가세</th>
+        <th class="text-right">합계금액</th>
+        <th class="text-right">출고단가</th>
+        <th class="text-right">출고수량</th>
+        <th class="text-right">출고금액</th>
+        <th class="text-right">매입원가</th>
+        <th class="text-right">이익액</th>
+        <th class="text-right">이익율</th>
+        <th class="text-right">매출원가율</th>
+        <th style="width:50px;">삭제</th>`;
+    } else {
+      // 전체(all) 모드
+      cols = `
+        <th style="width:40px; text-align:center;"><input type="checkbox" id="tx-select-all" /></th>
+        <th class="col-num">#</th>
+        ${sortableTh('type', '구분')}
+        ${sortableTh('vendor', '거래처')}
+        ${sortableTh('itemName', '품목명')}
         <th>품목코드</th>
-        <th class="sortable-header text-right ${sort.key === 'quantity' ? 'is-active' : ''}" data-sort-key="quantity" title="클릭하여 정렬" aria-sort="${sort.key === 'quantity' ? (sort.direction === 'asc' ? 'ascending' : sort.direction === 'desc' ? 'descending' : 'none') : 'none'}">
-          <button type="button" class="sort-hitbox" tabindex="-1" aria-hidden="true">
-            <span class="sort-label">수량</span><span class="sort-indicator">${getSortIndicator('quantity')}</span>
-          </button>
-        </th>
-        <th class="sortable-header text-right ${sort.key === 'unitPrice' ? 'is-active' : ''}" data-sort-key="unitPrice" title="클릭하여 정렬" aria-sort="${sort.key === 'unitPrice' ? (sort.direction === 'asc' ? 'ascending' : sort.direction === 'desc' ? 'descending' : 'none') : 'none'}">
-          <button type="button" class="sort-hitbox" tabindex="-1" aria-hidden="true">
-            <span class="sort-label">원가</span><span class="sort-indicator">${getSortIndicator('unitPrice')}</span>
-          </button>
-        </th>
+        ${sortableTh('quantity', '수량', 'text-right')}
+        ${sortableTh('unitPrice', '원가', 'text-right')}
         <th class="text-right">판매가</th>
         <th class="text-right">실판매가</th>
         <th class="text-right">이익률</th>
-        <th class="sortable-header ${sort.key === 'date' ? 'is-active' : ''}" data-sort-key="date" title="클릭하여 정렬" aria-sort="${sort.key === 'date' ? (sort.direction === 'asc' ? 'ascending' : sort.direction === 'desc' ? 'descending' : 'none') : 'none'}">
-          <button type="button" class="sort-hitbox" tabindex="-1" aria-hidden="true">
-            <span class="sort-label">날짜</span><span class="sort-indicator">${getSortIndicator('date')}</span>
-          </button>
-        </th>
+        ${sortableTh('date', '날짜')}
         <th>비고</th>
-        <th style="width:50px;">삭제</th>
-      </tr>
-    `;
+        <th style="width:50px;">삭제</th>`;
+    }
+
+    thead.innerHTML = `<tr>${cols}</tr>`;
 
     const applySortByKey = (key) => {
       if (!key) return;
@@ -476,8 +509,9 @@ export function renderInoutPage(container, navigateTo, mode = 'all') {
 
     const tbody = container.querySelector('#tx-body');
     if (!tbody) return;
+    const totalColCount = isInMode ? 15 : isOutMode ? 19 : 14;
     if (sorted.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="14" style="text-align:center; padding:32px; color:var(--text-muted);">
+      tbody.innerHTML = `<tr><td colspan="${totalColCount}" style="text-align:center; padding:32px; color:var(--text-muted);">
         ${transactions.length === 0 ? '아직 입출고 기록이 없습니다. 위 버튼으로 먼저 등록해 주세요.' : '검색 결과가 없습니다.'}
       </td></tr>`;
     } else {
@@ -529,45 +563,100 @@ export function renderInoutPage(container, navigateTo, mode = 'all') {
         return '<span style="color:var(--text-muted)">-</span>';
       };
 
+      const W = (v) => v ? '₩' + Math.round(parseFloat(v)).toLocaleString('ko-KR') : '-';
+      const N = (v) => v ? parseFloat(v).toLocaleString('ko-KR') : '-';
+
       const renderTxRow = (tx, isChild = false) => {
         const childStyle = isChild ? 'background:var(--bg-lighter);' : '';
         const indent = isChild ? 'padding-left:24px;' : '';
+        const it = itemMap.get(tx.itemName) || {};
+        const chk = `<td style="text-align:center;"><input type="checkbox" class="tx-select-row" value="${safeAttr(tx.id)}" ${selectedTxIds.has(tx.id) ? 'checked' : ''} /></td>`;
+        const del = `<td class="text-center"><button class="btn-icon btn-icon-danger btn-del-tx" data-id="${safeAttr(tx.id)}" title="삭제">삭제</button></td>`;
+
+        if (isInMode) {
+          const qty = parseFloat(tx.quantity) || 0;
+          const cost = parseFloat(tx.unitPrice) || 0;
+          const supply = Math.round(cost * qty);
+          const vat = Math.floor(supply * 0.1);
+          return `<tr class="${selectedTxIds.has(tx.id) ? 'selected' : ''}" data-tx-id="${safeAttr(tx.id)}" style="${childStyle}">
+            ${chk}
+            <td class="col-num"></td>
+            <td style="font-size:12px;">${escapeHtml(it.category || '')}</td>
+            <td>${formatDate(tx.date)}</td>
+            <td style="font-size:12px; color:var(--text-muted);">${escapeHtml(tx.itemCode || it.itemCode || '-')}</td>
+            <td style="font-size:12px;">${tx.vendor ? escapeHtml(tx.vendor) : '<span style="color:var(--text-muted)">-</span>'}</td>
+            <td style="${indent}"><strong>${escapeHtml(tx.itemName || '-')}</strong></td>
+            <td style="font-size:12px; color:var(--text-muted);">${escapeHtml(it.spec || '')}</td>
+            <td style="font-size:12px;">${escapeHtml(it.unit || '')}</td>
+            <td class="text-right type-in">+${qty.toLocaleString('ko-KR')}</td>
+            <td class="text-right">${cost ? W(cost) : '-'}</td>
+            <td class="text-right">${supply ? W(supply) : '-'}</td>
+            <td class="text-right">${vat ? W(vat) : '-'}</td>
+            <td class="text-right">${supply ? W(supply + vat) : '-'}</td>
+            ${del}
+          </tr>`;
+        }
+
+        if (isOutMode) {
+          const qty = parseFloat(tx.quantity) || 0;
+          const cost = parseFloat(tx.unitPrice) || 0;
+          const supply = Math.round(cost * qty);
+          const vat = Math.floor(supply * 0.1);
+          const salePrice = parseFloat(tx.actualSellingPrice || tx.sellingPrice || it.sellingPrice) || 0;
+          const outAmt = Math.round(salePrice * qty);
+          const purchase = Math.round(cost * qty);
+          const profit = outAmt - purchase;
+          const profitRate = purchase > 0 ? (profit / purchase * 100).toFixed(1) + '%' : '-';
+          const costRate  = outAmt > 0   ? (purchase / outAmt * 100).toFixed(1) + '%'  : '-';
+          const profitColor = profit > 0 ? 'var(--success)' : profit < 0 ? 'var(--danger)' : 'var(--text-muted)';
+          return `<tr class="${selectedTxIds.has(tx.id) ? 'selected' : ''}" data-tx-id="${safeAttr(tx.id)}" style="${childStyle}">
+            ${chk}
+            <td class="col-num"></td>
+            <td style="font-size:12px;">${escapeHtml(it.category || '')}</td>
+            <td>${formatDate(tx.date)}</td>
+            <td style="font-size:12px;">${tx.vendor ? escapeHtml(tx.vendor) : '<span style="color:var(--text-muted)">-</span>'}</td>
+            <td style="font-size:12px; color:var(--text-muted);">${escapeHtml(tx.itemCode || it.itemCode || '-')}</td>
+            <td class="text-right type-out">${qty.toLocaleString('ko-KR')}</td>
+            <td class="text-right">${cost ? W(cost) : '-'}</td>
+            <td class="text-right">${supply ? W(supply) : '-'}</td>
+            <td class="text-right">${vat ? W(vat) : '-'}</td>
+            <td class="text-right">${supply ? W(supply + vat) : '-'}</td>
+            <td class="text-right">${salePrice ? W(salePrice) : '-'}</td>
+            <td class="text-right type-out">${qty.toLocaleString('ko-KR')}</td>
+            <td class="text-right">${outAmt ? W(outAmt) : '-'}</td>
+            <td class="text-right">${purchase ? W(purchase) : '-'}</td>
+            <td class="text-right" style="color:${profitColor}; font-weight:600;">${profit ? W(profit) : '-'}</td>
+            <td class="text-right" style="color:${profitColor};">${profitRate}</td>
+            <td class="text-right">${costRate}</td>
+            ${del}
+          </tr>`;
+        }
+
+        // all 모드 (기존)
         return `
           <tr class="${selectedTxIds.has(tx.id) ? 'selected' : ''} ${isChild ? 'tx-child-row' : ''}" data-tx-id="${safeAttr(tx.id)}" style="${childStyle}">
-            <td style="text-align:center;">
-              <input type="checkbox" class="tx-select-row" value="${safeAttr(tx.id)}" ${selectedTxIds.has(tx.id) ? 'checked' : ''} />
-            </td>
+            ${chk}
             <td class="col-num"></td>
-            <td data-label="구분">
-              <span class="${tx.type === 'in' ? 'type-in' : 'type-out'}">
-                ${tx.type === 'in' ? '입고' : '출고'}
-              </span>
-            </td>
+            <td data-label="구분"><span class="${tx.type === 'in' ? 'type-in' : 'type-out'}">${tx.type === 'in' ? '입고' : '출고'}</span></td>
             <td data-label="거래처" style="font-size:12px; ${indent}">${tx.vendor ? escapeHtml(tx.vendor) : '<span style="color:var(--text-muted)">-</span>'}</td>
             <td data-label="품목명" style="${indent}">
-              ${isChild
-                ? `<span style="color:var(--text-muted); font-size:12px;">${escapeHtml(tx.itemName || '-')}</span>`
-                : `<strong>${escapeHtml(tx.itemName || '-')}</strong>`}
+              ${isChild ? `<span style="color:var(--text-muted); font-size:12px;">${escapeHtml(tx.itemName || '-')}</span>` : `<strong>${escapeHtml(tx.itemName || '-')}</strong>`}
             </td>
             <td data-label="품목코드" style="color:var(--text-muted); font-size:12px;">${escapeHtml(tx.itemCode || '-')}</td>
             <td data-label="수량" class="text-right">
-              <span class="${tx.type === 'in' ? 'type-in' : 'type-out'}">
-                ${tx.type === 'in' ? '+' : '-'}${parseFloat(tx.quantity || 0).toLocaleString('ko-KR')}
-              </span>
+              <span class="${tx.type === 'in' ? 'type-in' : 'type-out'}">${tx.type === 'in' ? '+' : '-'}${parseFloat(tx.quantity || 0).toLocaleString('ko-KR')}</span>
             </td>
-            <td data-label="원가" class="text-right">${tx.unitPrice ? '₩' + Math.round(parseFloat(tx.unitPrice)).toLocaleString('ko-KR') : '-'}</td>
+            <td data-label="원가" class="text-right">${tx.unitPrice ? W(tx.unitPrice) : '-'}</td>
             <td data-label="판매가" class="text-right editable-price-cell" data-tx-id="${safeAttr(tx.id)}" data-field="sellingPrice" title="클릭하여 수정">
-              <span class="price-display">${tx.sellingPrice ? '₩' + Math.round(parseFloat(tx.sellingPrice)).toLocaleString('ko-KR') : '<span style="color:var(--text-muted)">-</span>'}</span>
+              <span class="price-display">${tx.sellingPrice ? W(tx.sellingPrice) : '<span style="color:var(--text-muted)">-</span>'}</span>
             </td>
             <td data-label="실판매가" class="text-right editable-price-cell" data-tx-id="${safeAttr(tx.id)}" data-field="actualSellingPrice" title="클릭하여 수정">
-              <span class="price-display">${tx.actualSellingPrice ? '₩' + Math.round(parseFloat(tx.actualSellingPrice)).toLocaleString('ko-KR') : '<span style="color:var(--text-muted)">-</span>'}</span>
+              <span class="price-display">${tx.actualSellingPrice ? W(tx.actualSellingPrice) : '<span style="color:var(--text-muted)">-</span>'}</span>
             </td>
             <td data-label="이익률" class="text-right">${renderMargin(tx)}</td>
             <td data-label="날짜">${formatDate(tx.date)}</td>
             <td data-label="비고" style="color:var(--text-muted); font-size:13px;">${escapeHtml(tx.note || '')}</td>
-            <td class="text-center">
-              <button class="btn-icon btn-icon-danger btn-del-tx" data-id="${safeAttr(tx.id)}" title="삭제">삭제</button>
-            </td>
+            ${del}
           </tr>`;
       };
 
@@ -605,6 +694,7 @@ export function renderInoutPage(container, navigateTo, mode = 'all') {
           const pageCountNote = group.length < totalCount ? ` <span style="color:var(--text-muted); font-size:10px;">(이 페이지 ${group.length}건)</span>` : '';
           const marginColor = avgMargin !== null ? (parseFloat(avgMargin) > 0 ? 'var(--success)' : parseFloat(avgMargin) < 0 ? 'var(--danger)' : 'var(--text-muted)') : '';
 
+          const groupRestCols = totalColCount - 4; // chk + num + name-cell(colspan3) = 4 accounted
           html += `
             <tr class="tx-group-header" data-group-key="${safeAttr(key)}" style="cursor:pointer; background:var(--bg-card); border-left:3px solid var(--accent);">
               <td style="text-align:center;">
@@ -617,17 +707,23 @@ export function renderInoutPage(container, navigateTo, mode = 'all') {
                 ${firstCode ? `<span style="color:var(--text-muted); font-size:11px; margin-left:6px;">${escapeHtml(firstCode)}</span>` : ''}
                 <span style="font-size:11px; color:var(--text-muted); margin-left:8px;">총 ${totalCount}건${pageCountNote}</span>
               </td>
-              <td class="col-num"></td>
-              <td class="text-right">
-                ${stockLabel}
-                ${txNote ? `<div style="font-size:10px; color:var(--text-muted); margin-top:2px;">${txNote}</div>` : ''}
-              </td>
-              <td class="text-right" style="font-size:12px;">${avgCost > 0 ? '<span style="color:var(--text-muted); font-size:10px;">평균</span> ₩' + avgCost.toLocaleString('ko-KR') : '-'}</td>
-              <td class="text-right" style="font-size:12px;">${avgSell > 0 ? '₩' + avgSell.toLocaleString('ko-KR') : '-'}</td>
-              <td class="text-right" style="font-size:12px;">${avgActual > 0 ? '₩' + avgActual.toLocaleString('ko-KR') : '-'}</td>
-              <td class="text-right" style="font-size:12px;">${avgMargin !== null ? `<span style="color:${marginColor}; font-weight:600;">${parseFloat(avgMargin) > 0 ? '+' : ''}${avgMargin}%</span>` : '-'}</td>
-              <td colspan="2"></td>
-              <td></td>
+              ${isInMode || isOutMode
+                ? `<td colspan="${groupRestCols}" style="color:var(--text-muted); font-size:12px; padding-left:8px;">
+                    ${txNote}
+                    ${stockLabel ? `&nbsp;·&nbsp;재고 ${stockLabel}` : ''}
+                  </td>`
+                : `<td class="col-num"></td>
+                  <td class="text-right">
+                    ${stockLabel}
+                    ${txNote ? `<div style="font-size:10px; color:var(--text-muted); margin-top:2px;">${txNote}</div>` : ''}
+                  </td>
+                  <td class="text-right" style="font-size:12px;">${avgCost > 0 ? '<span style="color:var(--text-muted); font-size:10px;">평균</span> ₩' + avgCost.toLocaleString('ko-KR') : '-'}</td>
+                  <td class="text-right" style="font-size:12px;">${avgSell > 0 ? '₩' + avgSell.toLocaleString('ko-KR') : '-'}</td>
+                  <td class="text-right" style="font-size:12px;">${avgActual > 0 ? '₩' + avgActual.toLocaleString('ko-KR') : '-'}</td>
+                  <td class="text-right" style="font-size:12px;">${avgMargin !== null ? `<span style="color:${marginColor}; font-weight:600;">${parseFloat(avgMargin) > 0 ? '+' : ''}${avgMargin}%</span>` : '-'}</td>
+                  <td colspan="2"></td>
+                  <td></td>`
+              }
             </tr>
             ${isExpanded ? group.map(tx => renderTxRow(tx, true)).join('') : ''}`;
         }
