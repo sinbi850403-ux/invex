@@ -96,7 +96,6 @@ export const PAGE_LOADERS = {
   leaves:          () => import('./page-leaves.js').then(m => m.renderLeavesPage),
   // 동기 렌더러 (이미 import된 모듈)
   auditlog:        async () => renderAuditLogPage,
-  'hub-data':      async () => renderHubData,
   'hub-inventory': async () => renderHubInventory,
   'hub-warehouse': async () => renderHubWarehouse,
   'hub-order':     async () => renderHubOrder,

@@ -234,7 +234,7 @@ export function renderHubSupport(container, navigateTo) {
 
 /* ── 자식 페이지 → 부모 허브 매핑 (사이드바 하이라이트 + 브레드크럼 용) ── */
 export const HUB_MAP = {
-  upload: 'hub-data', mapping: 'hub-data',
+  inventory: 'hub-inventory', inout: 'hub-inventory', bulk: 'hub-inventory', stocktake: 'hub-inventory',
   inventory: 'hub-inventory', inout: 'hub-inventory', bulk: 'hub-inventory', stocktake: 'hub-inventory',
   warehouses: 'hub-warehouse', transfer: 'hub-warehouse', vendors: 'hub-warehouse',
   'auto-order': 'hub-order', orders: 'hub-order', sales: 'hub-order', forecast: 'hub-order',
