@@ -10,7 +10,7 @@ export async function renderHrDashboardPage(container, navigateTo) {
   container.innerHTML = `
     <div class="page-header">
       <div>
-        <h1 class="page-title"><span class="title-icon">📊</span> HR 대시보드</h1>
+        <h1 class="page-title">HR 대시보드</h1>
         <div class="page-desc">인원·근태·휴가 현황을 한눈에 확인합니다</div>
       </div>
     </div>

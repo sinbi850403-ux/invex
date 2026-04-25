@@ -33,7 +33,7 @@ export async function renderTeamPage(container, navigateTo) {
   if (!isConfigured || !user) {
     container.innerHTML = `
       <div class="page-header">
-        <h1 class="page-title"><span class="title-icon">👥</span> 팀 관리</h1>
+        <h1 class="page-title">팀 관리</h1>
       </div>
       <div class="card">
         <div class="empty-state">
@@ -49,7 +49,7 @@ export async function renderTeamPage(container, navigateTo) {
   // 로딩 표시
   container.innerHTML = `
     <div class="page-header">
-      <h1 class="page-title"><span class="title-icon">👥</span> 팀 관리</h1>
+      <h1 class="page-title">팀 관리</h1>
     </div>
     <div class="card" style="text-align:center; padding:40px;">
       <div style="font-size:24px; margin-bottom:8px;">⏳</div>
@@ -73,17 +73,17 @@ export async function renderTeamPage(container, navigateTo) {
 
   // 역할 라벨
   const roleLabels = {
-    owner: { text: '대표', color: 'var(--accent)', icon: '👑' },
-    admin: { text: '관리자', color: 'var(--success)', icon: '⚙️' },
-    manager: { text: '매니저', color: 'var(--info, #58a6ff)', icon: '📋' },
-    staff: { text: '직원', color: 'var(--text-muted)', icon: '👤' },
-    viewer: { text: '열람자', color: 'var(--text-muted)', icon: '👁️' },
+    owner: { text: '대표', color: 'var(--accent)', icon: '' },
+    admin: { text: '관리자', color: 'var(--success)', icon: '' },
+    manager: { text: '매니저', color: 'var(--info, #58a6ff)', icon: '' },
+    staff: { text: '직원', color: 'var(--text-muted)', icon: '' },
+    viewer: { text: '열람자', color: 'var(--text-muted)', icon: '' },
   };
 
   container.innerHTML = `
     <div class="page-header">
       <div>
-        <h1 class="page-title"><span class="title-icon">👥</span> 팀 관리</h1>
+        <h1 class="page-title">팀 관리</h1>
         <div class="page-desc">팀원을 초대하고 함께 재고를 관리하세요. 모든 데이터가 실시간으로 공유됩니다.</div>
       </div>
       ${isOwner ? `

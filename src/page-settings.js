@@ -1,11 +1,13 @@
 /**
- * page-settings.js - 설정 페이지 (커스텀 필드 + 업종 템플릿)
+ * page-settings.js - 설정 페이지 (업종 템플릿 + 데이터 관리)
  * 역할: 사용자 정의 컬럼 추가/관리, 업종별 초기 설정
  * 왜 필요? → 업종마다 필요한 정보가 다름 (의류=사이즈/색상, 식품=유통기한, 건설=규격)
  */
 
-import { getState, setState } from './store.js';
+import { getState, setState, resetState } from './store.js';
 import { showToast } from './toast.js';
+import { isSupabaseConfigured } from './supabase-client.js';
+import { clearAllUserData } from './db.js';
 
 // 업종별 템플릿 정의
 const INDUSTRY_TEMPLATES = [
@@ -77,15 +79,14 @@ const INDUSTRY_TEMPLATES = [
 
 export function renderSettingsPage(container, navigateTo) {
   const state = getState();
-  const customFields = state.customFields || [];
   const currentTemplate = state.industryTemplate || 'general';
   const beginnerMode = state.beginnerMode !== false;
 
   container.innerHTML = `
     <div class="page-header">
       <div>
-        <h1 class="page-title"><span class="title-icon">⚙️</span> 설정</h1>
-        <div class="page-desc">커스텀 필드와 업종별 템플릿을 관리합니다.</div>
+        <h1 class="page-title">설정</h1>
+        <div class="page-desc">업종별 템플릿과 데이터 초기화를 관리합니다.</div>
       </div>
     </div>
 
@@ -120,50 +121,6 @@ export function renderSettingsPage(container, navigateTo) {
         `).join('')}
       </div>
       <button class="btn btn-primary" id="btn-apply-template">✓ 템플릿 적용</button>
-    </div>
-
-    <!-- 커스텀 필드 관리 -->
-    <div class="card">
-      <div class="card-title">📋 사용자 정의 필드 <span class="card-subtitle">원하는 컬럼을 자유롭게 추가합니다</span></div>
-
-      <!-- 현재 커스텀 필드 목록 -->
-      <div id="custom-fields-list" style="margin-bottom:16px;">
-        ${customFields.length > 0 ? customFields.map((f, i) => `
-          <div style="display:flex; align-items:center; gap:10px; padding:8px 0; border-bottom:1px solid var(--border-light);">
-            <span style="font-size:16px;">📎</span>
-            <div style="flex:1;">
-              <div style="font-weight:500; font-size:13px;">${f.label}</div>
-              <div style="font-size:11px; color:var(--text-muted);">키: ${f.key} | 타입: ${f.type}</div>
-            </div>
-            <button class="btn-icon btn-icon-danger cf-delete" data-idx="${i}" title="삭제">🗑️</button>
-          </div>
-        `).join('') : '<div style="padding:16px; text-align:center; color:var(--text-muted); font-size:13px;">추가된 커스텀 필드가 없습니다</div>'}
-      </div>
-
-      <!-- 새 필드 추가 -->
-      <div style="background:var(--bg-main); border-radius:var(--radius-lg); padding:16px;">
-        <div style="font-weight:500; font-size:13px; margin-bottom:12px;">➕ 새 필드 추가</div>
-        <div class="form-row" style="margin-bottom:12px;">
-          <div class="form-group" style="margin:0;">
-            <label class="form-label">필드 이름 <span class="required">*</span></label>
-            <input class="form-input" id="cf-label" placeholder="예: 색상, 사이즈, 원산지" />
-          </div>
-          <div class="form-group" style="margin:0;">
-            <label class="form-label">데이터 타입</label>
-            <select class="form-select" id="cf-type">
-              <option value="text">텍스트</option>
-              <option value="number">숫자</option>
-              <option value="date">날짜</option>
-              <option value="select">선택지 (콤마구분)</option>
-            </select>
-          </div>
-        </div>
-        <div class="form-group" style="margin-bottom:12px;" id="cf-options-group" style="display:none;">
-          <label class="form-label">선택지 (콤마로 구분)</label>
-          <input class="form-input" id="cf-options" placeholder="예: 빨강,파랑,노랑" />
-        </div>
-        <button class="btn btn-success" id="btn-add-field">+ 필드 추가</button>
-      </div>
     </div>
 
     <!-- 데이터 관리 -->
@@ -217,59 +174,9 @@ export function renderSettingsPage(container, navigateTo) {
     const template = INDUSTRY_TEMPLATES.find(t => t.id === selectedTemplate);
     if (!template) return;
 
-    // 템플릿 필드를 커스텀 필드에 병합 (중복 제거)
-    const existing = state.customFields || [];
-    const existingKeys = new Set(existing.map(f => f.key));
-    const newFields = template.fields.filter(f => !existingKeys.has(f.key));
-    const merged = [...existing, ...newFields];
-
-    setState({ customFields: merged, industryTemplate: selectedTemplate });
-    showToast(`"${template.name}" 템플릿 적용 완료 (+${newFields.length}개 필드)`, 'success');
+    setState({ industryTemplate: selectedTemplate });
+    showToast(`"${template.name}" 템플릿 적용 완료`, 'success');
     renderSettingsPage(container, navigateTo);
-  });
-
-  // 타입 변경 시 선택지 입력 표시/숨김
-  container.querySelector('#cf-type').addEventListener('change', (e) => {
-    container.querySelector('#cf-options-group').style.display = e.target.value === 'select' ? 'block' : 'none';
-  });
-
-  // 필드 추가
-  container.querySelector('#btn-add-field').addEventListener('click', () => {
-    const label = container.querySelector('#cf-label').value.trim();
-    const type = container.querySelector('#cf-type').value;
-    const options = container.querySelector('#cf-options').value.trim();
-
-    if (!label) { showToast('필드 이름을 입력해 주세요.', 'warning'); return; }
-
-    // key 생성 (영문 변환 또는 한글 그대로)
-    const key = 'custom_' + label.replace(/[^a-zA-Z0-9가-힣]/g, '_').toLowerCase();
-
-    const existing = state.customFields || [];
-    if (existing.some(f => f.key === key)) {
-      showToast('이미 같은 이름의 필드가 있습니다.', 'warning');
-      return;
-    }
-
-    const newField = { key, label, type };
-    if (type === 'select' && options) {
-      newField.options = options.split(',').map(o => o.trim()).filter(Boolean);
-    }
-
-    setState({ customFields: [...existing, newField] });
-    showToast(`"${label}" 필드가 추가되었습니다.`, 'success');
-    renderSettingsPage(container, navigateTo);
-  });
-
-  // 필드 삭제
-  container.querySelectorAll('.cf-delete').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const idx = parseInt(btn.dataset.idx);
-      const fields = [...(state.customFields || [])];
-      const removed = fields.splice(idx, 1);
-      setState({ customFields: fields });
-      showToast(`"${removed[0]?.label}" 필드를 삭제했습니다.`, 'info');
-      renderSettingsPage(container, navigateTo);
-    });
   });
 
   // 데이터 초기화
@@ -285,32 +192,32 @@ export function renderSettingsPage(container, navigateTo) {
     showToast('이동 이력이 초기화되었습니다.', 'info');
   });
 
-  container.querySelector('#btn-clear-all').addEventListener('click', () => {
+  container.querySelector('#btn-clear-all').addEventListener('click', async () => {
     if (!confirm('⚠️ 모든 데이터(품목, 거래, 설정)를 초기화하시겠습니까?\n이 작업은 되돌릴 수 없습니다.')) return;
     if (!confirm('정말로 전체 초기화하시겠습니까? (최종 확인)')) return;
-    setState({
-      rawData: [],
-      mappedData: [],
-      transactions: [],
-      transfers: [],
-      safetyStock: {},
-      customFields: [],
-      columnMapping: {},
-      visibleColumns: null,
-      beginnerMode: true,
-      inventoryViewPrefs: {
-        filter: { keyword: '', category: '', warehouse: '', stock: '', itemCode: '', vendor: '', focus: 'all' },
-        sort: { key: '', direction: '' },
-      },
-      inoutViewPrefs: {
-        filter: { keyword: '', type: '', date: '', vendor: '', itemCode: '', quick: 'all' },
-        sort: { key: 'date', direction: 'desc' },
-      },
-      fileName: '',
-      currentStep: 1,
-      _onboardingDone: false,
-    });
-    showToast('전체 데이터가 초기화되었습니다.', 'info');
-    navigateTo('home');
+    const clearButton = container.querySelector('#btn-clear-all');
+    const originalLabel = clearButton?.textContent || '데이터 전체초기화';
+    if (clearButton) {
+      clearButton.disabled = true;
+      clearButton.textContent = '초기화 중...';
+    }
+
+    try {
+      if (isSupabaseConfigured) {
+        await clearAllUserData();
+      }
+      resetState();
+      setState({ _onboardingDone: false });
+      showToast('전체 데이터가 초기화되었습니다.', 'info');
+      navigateTo('home');
+    } catch (error) {
+      console.error('[Settings] 전체 초기화 실패:', error);
+      showToast(error?.message || '전체 초기화에 실패했습니다.', 'error');
+    } finally {
+      if (clearButton) {
+        clearButton.disabled = false;
+        clearButton.textContent = originalLabel;
+      }
+    }
   });
 }

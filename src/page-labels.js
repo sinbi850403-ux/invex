@@ -14,7 +14,7 @@ export function renderLabelsPage(container, navigateTo) {
   container.innerHTML = `
     <div class="page-header">
       <div>
-        <h1 class="page-title"><span class="title-icon">🏷️</span> 라벨 인쇄</h1>
+        <h1 class="page-title">라벨 인쇄</h1>
         <div class="page-desc">품목 라벨을 생성하고 인쇄합니다. 바코드/QR 코드 포함.</div>
       </div>
       <div class="page-actions">

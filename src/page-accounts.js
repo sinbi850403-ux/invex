@@ -58,7 +58,7 @@ export function renderAccountsPage(container, navigateTo) {
   container.innerHTML = `
     <div class="page-header">
       <div>
-        <h1 class="page-title"><span class="title-icon">💰</span> 미수금/미지급금 정산</h1>
+        <h1 class="page-title">미수금/미지급금 정산</h1>
         <div class="page-desc">판매 미수금과 구매 미지급금을 통합 관리하고 정산 처리합니다.</div>
       </div>
       <div class="page-actions">

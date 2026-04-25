@@ -13,7 +13,7 @@ const DEFAULT_ROLES = [
   {
     id: 'admin',
     name: '관리자',
-    icon: '👑',
+    icon: '',
     color: '#f59e0b',
     description: '모든 기능에 접근 가능. 사용자/역할 관리 권한 보유.',
     permissions: ['*'], // 전체 권한
@@ -22,7 +22,7 @@ const DEFAULT_ROLES = [
   {
     id: 'manager',
     name: '매니저',
-    icon: '📊',
+    icon: '',
     color: '#3b82f6',
     description: '데이터 조회/편집 가능. 설정 및 사용자 관리 불가.',
     permissions: [
@@ -35,7 +35,7 @@ const DEFAULT_ROLES = [
   {
     id: 'editor',
     name: '편집자',
-    icon: '✏️',
+    icon: '',
     color: '#10b981',
     description: '재고 입출고, 문서 생성 등 일상 업무 수행.',
     permissions: [
@@ -47,7 +47,7 @@ const DEFAULT_ROLES = [
   {
     id: 'viewer',
     name: '뷰어',
-    icon: '👁️',
+    icon: '',
     color: '#8b5cf6',
     description: '데이터 조회만 가능. 편집/삭제 불가.',
     permissions: [
@@ -59,27 +59,27 @@ const DEFAULT_ROLES = [
 
 // 메뉴/기능 목록 (권한 체크용)
 const ALL_PERMISSIONS = [
-  { id: 'dashboard', name: '대시보드', icon: '🏠', group: '기본' },
-  { id: 'upload', name: '파일 업로드', icon: '📁', group: '데이터' },
-  { id: 'mapping', name: '데이터 확인', icon: '📋', group: '데이터' },
-  { id: 'inventory', name: '재고 현황', icon: '📦', group: '관리' },
-  { id: 'inout', name: '입출고 관리', icon: '🔄', group: '관리' },
-  { id: 'bulk', name: '일괄 처리', icon: '⚡', group: '관리' },
-  { id: 'scanner', name: '바코드 스캔', icon: '📱', group: '관리' },
-  { id: 'labels', name: '라벨 인쇄', icon: '🏷️', group: '관리' },
-  { id: 'warehouses', name: '다중 창고', icon: '🏢', group: '관리' },
-  { id: 'transfer', name: '창고 이동', icon: '🏭', group: '관리' },
-  { id: 'stocktake', name: '재고 실사', icon: '📋', group: '관리' },
-  { id: 'vendors', name: '거래처 관리', icon: '🤝', group: '관리' },
-  { id: 'summary', name: '요약 보고', icon: '📊', group: '보고' },
-  { id: 'costing', name: '원가 분석', icon: '💰', group: '보고' },
-  { id: 'accounts', name: '매출/매입', icon: '💳', group: '보고' },
-  { id: 'ledger', name: '수불부', icon: '📒', group: '보고' },
-  { id: 'documents', name: '문서 생성', icon: '📄', group: '보고' },
-  { id: 'auditlog', name: '감사 추적', icon: '🔍', group: '보고' },
-  { id: 'settings', name: '설정', icon: '⚙️', group: '시스템' },
-  { id: 'roles', name: '권한 관리', icon: '🔐', group: '시스템' },
-  { id: 'api', name: 'API 연동', icon: '🔌', group: '시스템' },
+  { id: 'dashboard', name: '대시보드', icon: '', group: '기본' },
+  { id: 'upload', name: '파일 업로드', icon: '', group: '데이터' },
+  { id: 'mapping', name: '데이터 확인', icon: '', group: '데이터' },
+  { id: 'inventory', name: '재고 현황', icon: '', group: '관리' },
+  { id: 'inout', name: '입출고 관리', icon: '', group: '관리' },
+  { id: 'bulk', name: '일괄 처리', icon: '', group: '관리' },
+  { id: 'scanner', name: '바코드 스캔', icon: '', group: '관리' },
+  { id: 'labels', name: '라벨 인쇄', icon: '', group: '관리' },
+  { id: 'warehouses', name: '다중 창고', icon: '', group: '관리' },
+  { id: 'transfer', name: '창고 이동', icon: '', group: '관리' },
+  { id: 'stocktake', name: '수불관리', icon: '', group: '관리' },
+  { id: 'vendors', name: '거래처 관리', icon: '', group: '관리' },
+  { id: 'summary', name: '요약 보고', icon: '', group: '보고' },
+  { id: 'costing', name: '원가 분석', icon: '', group: '보고' },
+  { id: 'accounts', name: '매출/매입', icon: '', group: '보고' },
+  { id: 'ledger', name: '수불부', icon: '', group: '보고' },
+  { id: 'documents', name: '문서 생성', icon: '', group: '보고' },
+  { id: 'auditlog', name: '감사 추적', icon: '', group: '보고' },
+  { id: 'settings', name: '설정', icon: '', group: '시스템' },
+  { id: 'roles', name: '권한 관리', icon: '', group: '시스템' },
+  { id: 'api', name: 'API 연동', icon: '', group: '시스템' },
 ];
 
 function fmt(n) { return Math.round(n || 0).toLocaleString('ko-KR'); }
@@ -105,7 +105,7 @@ export function renderRolesPage(container, navigateTo) {
   container.innerHTML = `
     <div class="page-header">
       <div>
-        <h1 class="page-title"><span class="title-icon">🔐</span> 권한 관리</h1>
+        <h1 class="page-title">권한 관리</h1>
         <div class="page-desc">Enterprise — 역할별 접근 권한을 설정하고 팀원을 관리합니다.</div>
       </div>
       <div style="display:flex; gap:8px;">

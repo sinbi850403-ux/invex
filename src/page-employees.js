@@ -49,7 +49,7 @@ export async function renderEmployeesPage(container, navigateTo) {
   container.innerHTML = `
     <div class="page-header">
       <div>
-        <h1 class="page-title"><span class="title-icon">👥</span> 직원 관리</h1>
+        <h1 class="page-title">직원 관리</h1>
         <div class="page-desc">직원 등록·수정·조회. 주민번호는 암호화 저장되며 admin만 평문 열람 가능합니다.</div>
       </div>
       <div class="page-actions">

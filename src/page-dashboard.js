@@ -21,7 +21,7 @@ export function renderDashboardPage(container, navigateTo) {
   if (items.length === 0) {
     container.innerHTML = `
       <div class="page-header">
-        <h1 class="page-title"><span class="title-icon">📈</span> 고급 분석</h1>
+        <h1 class="page-title">고급 분석</h1>
       </div>
       <div class="card">
         <div class="empty-state">
@@ -51,7 +51,7 @@ export function renderDashboardPage(container, navigateTo) {
   container.innerHTML = `
     <div class="page-header">
       <div>
-        <h1 class="page-title"><span class="title-icon">📈</span> 고급 분석</h1>
+        <h1 class="page-title">고급 분석</h1>
         <div class="page-desc">재고 데이터를 바탕으로 운영 판단에 필요한 핵심 지표를 보여줍니다.</div>
       </div>
       <div class="page-actions">

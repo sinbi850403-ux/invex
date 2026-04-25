@@ -21,7 +21,7 @@ export async function renderAttendancePage(container, navigateTo) {
   container.innerHTML = `
     <div class="page-header">
       <div>
-        <h1 class="page-title"><span class="title-icon">🕒</span> 근태 관리</h1>
+        <h1 class="page-title">근태 관리</h1>
         <div class="page-desc">월 단위 출퇴근 기록. 연장·야간·휴일 근무는 자동 분류됩니다.</div>
       </div>
     </div>

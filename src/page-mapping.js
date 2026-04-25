@@ -91,7 +91,7 @@ export function renderMappingPage(container, navigateTo) {
 
     container.innerHTML = `
       <div class="page-header">
-        <h1 class="page-title"><span class="title-icon">📋</span> 데이터 확인</h1>
+        <h1 class="page-title">데이터 확인</h1>
       </div>
       <div class="card">
         <div class="empty-state">
@@ -121,7 +121,7 @@ export function renderMappingPage(container, navigateTo) {
   container.innerHTML = `
     <div class="page-header">
       <div>
-        <h1 class="page-title"><span class="title-icon">📋</span> 데이터 확인</h1>
+        <h1 class="page-title">데이터 확인</h1>
         <div class="page-desc">엑셀 컬럼과 ERP 항목을 연결합니다.</div>
       </div>
     </div>

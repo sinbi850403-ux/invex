@@ -29,7 +29,7 @@ export function renderReferralPage(container, navigateTo) {
   container.innerHTML = `
     <div class="page-header">
       <div>
-        <h1 class="page-title"><span class="title-icon">🎁</span> 친구 초대 프로그램</h1>
+        <h1 class="page-title">친구 초대 프로그램</h1>
         <div class="page-desc">친구를 초대하면 Pro 기능을 무료로 사용할 수 있어요!</div>
       </div>
     </div>

@@ -147,7 +147,7 @@ export function renderHomePage(container, navigateTo) {
   container.innerHTML = `
     <div class="page-header">
       <div>
-        <h1 class="page-title"><span class="title-icon">📊</span> 대시보드</h1>
+        <h1 class="page-title">대시보드</h1>
         <div class="page-desc">${today.toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' })} 운영 요약</div>
       </div>
       <div class="page-actions">

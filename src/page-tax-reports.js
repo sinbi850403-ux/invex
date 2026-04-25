@@ -27,7 +27,7 @@ export function renderTaxReportsPage(container, navigateTo) {
   container.innerHTML = `
     <div class="page-header">
       <div>
-        <h1 class="page-title"><span class="title-icon">📑</span> 세무/회계 서류</h1>
+        <h1 class="page-title">세무/회계 서류</h1>
         <div class="page-desc">월마감, 부가세 신고, 재고 평가 등 세무 서류를 자동으로 생성합니다.</div>
       </div>
     </div>

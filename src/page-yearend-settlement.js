@@ -17,7 +17,7 @@ export async function renderYearendSettlementPage(container, navigateTo) {
   container.innerHTML = `
     <div class="page-header">
       <div>
-        <h1 class="page-title"><span class="title-icon">📊</span> 연말정산 보조</h1>
+        <h1 class="page-title">연말정산 보조</h1>
         <div class="page-desc">연간 급여를 기반으로 환급액을 자동 계산합니다.</div>
       </div>
       <div class="page-actions"></div>

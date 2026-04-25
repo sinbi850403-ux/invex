@@ -79,7 +79,7 @@ export function renderPosPage(container, navigateTo) {
   if (!isAdmin()) {
     container.innerHTML = `
       <div class="page-header">
-        <h1 class="page-title"><span class="title-icon">🔒</span> 접근 제한</h1>
+        <h1 class="page-title">접근 제한</h1>
       </div>
       <div class="alert alert-danger" style="margin-top:16px;">
         ⛔ 이 기능은 관리자만 사용할 수 있습니다.
@@ -94,7 +94,7 @@ export function renderPosPage(container, navigateTo) {
   container.innerHTML = `
     <div class="page-header">
       <div>
-        <h1 class="page-title"><span class="title-icon">🏪</span> POS 매출 분석</h1>
+        <h1 class="page-title">POS 매출 분석</h1>
         <div class="page-desc">POS 매출 데이터를 업로드하여 매출 현황을 분석합니다. <span class="badge badge-danger" style="font-size:10px;">관리자 전용</span></div>
       </div>
       <div class="page-actions">

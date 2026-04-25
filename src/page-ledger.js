@@ -40,7 +40,7 @@ export function renderLedgerPage(container, navigateTo) {
   container.innerHTML = `
     <div class="page-header">
       <div>
-        <h1 class="page-title"><span class="title-icon">📒</span> 수불부 (재고수불대장)</h1>
+        <h1 class="page-title">수불부 (재고수불대장)</h1>
         <div class="page-desc">기간별 품목의 입고, 출고, 잔량을 장부 형식으로 자동 생성합니다.</div>
       </div>
       <div class="page-actions">

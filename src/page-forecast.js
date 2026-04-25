@@ -84,15 +84,15 @@ export function renderForecastPage(container, navigateTo) {
   forecasts.sort((a, b) => b.predicted - a.predicted);
 
   const confidenceLabels = {
-    high: { text: '높음', color: 'var(--success)', icon: '🟢' },
-    medium: { text: '보통', color: '#d29922', icon: '🟡' },
-    low: { text: '낮음', color: 'var(--text-muted)', icon: '⚪' },
+    high: { text: '높음', color: 'var(--success)', icon: '' },
+    medium: { text: '보통', color: '#d29922', icon: '' },
+    low: { text: '낮음', color: 'var(--text-muted)', icon: '' },
   };
 
   const trendLabels = {
-    up: { text: '증가', icon: '📈', color: 'var(--success)' },
-    down: { text: '감소', icon: '📉', color: 'var(--danger)' },
-    stable: { text: '안정', icon: '➡️', color: 'var(--text-muted)' },
+    up: { text: '증가', icon: '', color: 'var(--success)' },
+    down: { text: '감소', icon: '', color: 'var(--danger)' },
+    stable: { text: '안정', icon: '', color: 'var(--text-muted)' },
   };
 
   // 예상 총 발주 금액
@@ -101,7 +101,7 @@ export function renderForecastPage(container, navigateTo) {
   container.innerHTML = `
     <div class="page-header">
       <div>
-        <h1 class="page-title"><span class="title-icon">🔮</span> AI 수요 예측</h1>
+        <h1 class="page-title">AI 수요 예측</h1>
         <div class="page-desc">${nextYear}년 ${nextMonthLabel} 예상 수요량을 분석합니다. (최근 6개월 출고 패턴 기반)</div>
       </div>
     </div>

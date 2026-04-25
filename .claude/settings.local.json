@@ -1,0 +1,42 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(gh pr create --title 'fix: 입출고 수량 집계 오류 및 재고 즉시 반영 수정' --body ':*)",
+      "Bash(gh pr:*)",
+      "Bash(python3 -c ':*)",
+      "Bash(node -e ':*)",
+      "Bash(npm run:*)",
+      "Bash(gh run:*)",
+      "Bash(wc -l C:\\\\\\\\Users\\\\\\\\admin\\\\\\\\Documents\\\\\\\\GitHub\\\\\\\\invex\\\\\\\\.claude\\\\\\\\worktrees\\\\\\\\nifty-proskuriakova\\\\\\\\src\\\\\\\\db.js)",
+      "Bash(gh -R sinbi850403-ux/invex pr merge 22 --squash --auto)",
+      "Bash(gh -R sinbi850403-ux/invex pr view 22 --json state,mergeable,mergeStateStatus,mergedAt)",
+      "Bash(gh -R sinbi850403-ux/invex pr merge 23 --squash --auto)",
+      "Bash(gh -R sinbi850403-ux/invex pr view 23 --json state,mergedAt)",
+      "Bash(gh -R sinbi850403-ux/invex pr merge 23 --squash)",
+      "Bash(gh -R sinbi850403-ux/invex pr view 23 --json mergeable,mergeStateStatus,headRefName,baseRefName,commits)",
+      "Bash(gh -R sinbi850403-ux/invex pr close 23)",
+      "Bash(node --input-type=module)",
+      "Bash(python -c ' *)",
+      "Bash(node -e ' *)",
+      "Bash(curl -s http://localhost:5173/)",
+      "Bash(mkdir -p \"C:\\\\Users\\\\admin\\\\Documents\\\\GitHub\\\\invex\\\\.claude\")",
+      "Bash(echo '{}')",
+      "Bash(git fetch *)",
+      "Bash(git rebase *)",
+      "mcp__Claude_Preview__preview_start",
+      "WebSearch",
+      "Bash(touch page-payroll.js)",
+      "Read(//c/c/Users/admin/Documents/GitHub/invex/src/**)",
+      "Bash(npm ls *)",
+      "Bash(npm install *)",
+      "Bash(git add *)",
+      "Bash(git commit -m 'Remove data import/fetch from sidebar navigation *)",
+      "Bash(git push *)",
+      "Bash(git pull *)",
+      "Bash(git stash *)",
+      "Bash(git checkout *)",
+      "Bash(git commit *)",
+      "Bash(grep -v \"//.*hub-data\")"
+    ]
+  }
+}

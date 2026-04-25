@@ -21,14 +21,14 @@ function safeAttr(value) {
 
 /* ── 상수 ──────────────────────────────────────────────── */
 const STATUS = {
-  draft:     { text: '작성중',   icon: '📝', color: 'var(--text-muted)',  bg: 'rgba(139,148,158,.15)' },
-  confirmed: { text: '발주확정', icon: '📤', color: '#58a6ff',            bg: 'rgba(88,166,255,.15)' },
-  partial:   { text: '부분입고', icon: '📦', color: '#d29922',            bg: 'rgba(210,153,34,.15)' },
-  complete:  { text: '입고완료', icon: '✅', color: 'var(--success)',      bg: 'rgba(63,185,80,.15)' },
-  cancelled: { text: '취소',     icon: '❌', color: 'var(--danger)',       bg: 'rgba(248,81,73,.15)' },
+  draft:     { text: '작성중',   icon: '', color: 'var(--text-muted)',  bg: 'rgba(139,148,158,.15)' },
+  confirmed: { text: '발주확정', icon: '', color: '#58a6ff',            bg: 'rgba(88,166,255,.15)' },
+  partial:   { text: '부분입고', icon: '', color: '#d29922',            bg: 'rgba(210,153,34,.15)' },
+  complete:  { text: '입고완료', icon: '', color: 'var(--success)',      bg: 'rgba(63,185,80,.15)' },
+  cancelled: { text: '취소',     icon: '', color: 'var(--danger)',       bg: 'rgba(248,81,73,.15)' },
   // 하위호환: 기존 'pending'→draft, 'sent'→confirmed
-  pending:   { text: '작성중',   icon: '📝', color: 'var(--text-muted)',  bg: 'rgba(139,148,158,.15)' },
-  sent:      { text: '발주확정', icon: '📤', color: '#58a6ff',            bg: 'rgba(88,166,255,.15)' },
+  pending:   { text: '작성중',   icon: '', color: 'var(--text-muted)',  bg: 'rgba(139,148,158,.15)' },
+  sent:      { text: '발주확정', icon: '', color: '#58a6ff',            bg: 'rgba(88,166,255,.15)' },
 };
 
 const fmt = v => v ? '₩' + Math.round(Number(v) || 0).toLocaleString('ko-KR') : '-';
@@ -74,7 +74,7 @@ export function renderOrdersPage(container, navigateTo) {
   container.innerHTML = `
     <div class="page-header">
       <div>
-        <h1 class="page-title"><span class="title-icon">📋</span> 발주 관리</h1>
+        <h1 class="page-title">발주 관리</h1>
         <div class="page-desc">발주서 작성 → 발주 확정 → 입고 처리 → 세금계산서 생성까지 전체 구매 플로우를 관리합니다.</div>
       </div>
       <div class="page-actions">

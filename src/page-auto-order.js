@@ -65,9 +65,9 @@ export function renderAutoOrderPage(container, navigateTo) {
   recommendations.sort((a, b) => urgencyOrder[a.urgency] - urgencyOrder[b.urgency]);
 
   const urgencyLabels = {
-    critical: { text: '긴급', color: 'var(--danger)',         bg: 'rgba(248,81,73,0.15)',   icon: '🔴' },
-    high:     { text: '주의', color: '#d29922',               bg: 'rgba(210,153,34,0.15)',  icon: '🟡' },
-    medium:   { text: '보통', color: 'var(--info, #58a6ff)',  bg: 'rgba(88,166,255,0.15)', icon: '🔵' },
+    critical: { text: '긴급', color: 'var(--danger)',         bg: 'rgba(248,81,73,0.15)',   icon: '' },
+    high:     { text: '주의', color: '#d29922',               bg: 'rgba(210,153,34,0.15)',  icon: '' },
+    medium:   { text: '보통', color: 'var(--info, #58a6ff)',  bg: 'rgba(88,166,255,0.15)', icon: '' },
   };
 
   const totalCost = recommendations.reduce((s, r) => s + r.estimatedCost, 0);
@@ -75,7 +75,7 @@ export function renderAutoOrderPage(container, navigateTo) {
   container.innerHTML = `
     <div class="page-header">
       <div>
-        <h1 class="page-title"><span class="title-icon">🤖</span> 자동 발주 추천</h1>
+        <h1 class="page-title">자동 발주 추천</h1>
         <div class="page-desc">안전재고 부족 품목을 감지하여 최적 발주 정보를 추천합니다. 항목을 선택해 즉시 발주서를 생성하세요.</div>
       </div>
     </div>

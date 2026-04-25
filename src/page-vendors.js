@@ -100,7 +100,7 @@ export function renderVendorsPage(container, navigateTo) {
   container.innerHTML = `
     <div class="page-header">
       <div>
-        <h1 class="page-title"><span class="title-icon">🤝</span> 거래처 관리</h1>
+        <h1 class="page-title">거래처 관리</h1>
         <div class="page-desc">공급처·고객사 마스터 데이터를 관리합니다. 발주서·거래명세서·세금계산서에 자동 연동됩니다.</div>
       </div>
       <div class="page-actions">

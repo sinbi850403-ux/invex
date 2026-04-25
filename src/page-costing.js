@@ -40,7 +40,7 @@ export function renderCostingPage(container, navigateTo) {
   container.innerHTML = `
     <div class="page-header">
       <div>
-        <h1 class="page-title"><span class="title-icon">🧮</span> 원가 분석</h1>
+        <h1 class="page-title">원가 분석</h1>
         <div class="page-desc">매입 원가와 예상 마진을 한눈에 정리합니다.</div>
       </div>
       <div class="page-actions">
