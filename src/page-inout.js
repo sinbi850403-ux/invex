@@ -923,35 +923,108 @@ export function renderInoutPage(container, navigateTo, mode = 'all') {
     openTxModal(container, navigateTo, 'out', items);
   });
 
-  // ?대젰 ?대낫?닿린
+  // 이력 내보내기 (모드별 양식)
   container.querySelector('#btn-export-tx').addEventListener('click', () => {
     if (transactions.length === 0) {
       showToast('내보낼 기록이 없습니다.', 'warning');
       return;
     }
-    const exportData = transactions.map(tx => {
-      const cost = parseFloat(tx.unitPrice) || 0;
-      const actual = parseFloat(tx.actualSellingPrice) || 0;
-      const marginStr = cost > 0 && actual > 0
-        ? `${((actual - cost) / cost * 100).toFixed(1)}%`
-        : '';
-      return {
-        '구분': tx.type === 'in' ? '입고' : '출고',
-        '날짜': tx.date,
-        '거래처': tx.vendor || '',
-        '품목명': tx.itemName,
-        '품목코드': tx.itemCode || '',
-        '수량': tx.quantity,
-        '원가': tx.unitPrice || '',
-        '판매가': tx.sellingPrice || '',
-        '실판매가': tx.actualSellingPrice || '',
-        '이익률': marginStr,
-        '비고': tx.note || '',
-        '등록시간': tx.createdAt,
-      };
-    });
-    downloadExcel(exportData, '입출고이력');
-    showToast('이력을 엑셀로 내보냈습니다.', 'success');
+
+    // 품목 맵: itemName → item 객체 (규격·단위·카테고리 참조용)
+    const itemMap = new Map(items.map(it => [it.itemName, it]));
+
+    if (isInMode) {
+      // ── 입고관리 양식 ──────────────────────────────────────
+      const inList = transactions.filter(tx => tx.type === 'in');
+      if (inList.length === 0) { showToast('입고 기록이 없습니다.', 'warning'); return; }
+      const exportData = inList.map(tx => {
+        const it = itemMap.get(tx.itemName) || {};
+        const qty = parseFloat(tx.quantity) || 0;
+        const unitCost = parseFloat(tx.unitPrice) || 0;
+        const supply = Math.round(unitCost * qty);
+        const vat = Math.floor(supply * 0.1);
+        return {
+          '자산':     it.category || '',
+          '입고일자': tx.date || '',
+          '상품코드': tx.itemCode || it.itemCode || '',
+          '거래처':   tx.vendor || '',
+          '품명':     tx.itemName || '',
+          '규격':     it.spec || '',
+          '단위':     it.unit || '',
+          '입고수량': qty,
+          '단가':     unitCost,
+          '공급가액': supply,
+          '부가세':   vat,
+          '합계금액': supply + vat,
+        };
+      });
+      downloadExcel(exportData, '입고관리');
+      showToast('입고 이력을 엑셀로 내보냈습니다.', 'success');
+
+    } else if (isOutMode) {
+      // ── 출고관리 양식 ──────────────────────────────────────
+      const outList = transactions.filter(tx => tx.type === 'out');
+      if (outList.length === 0) { showToast('출고 기록이 없습니다.', 'warning'); return; }
+      const exportData = outList.map(tx => {
+        const it = itemMap.get(tx.itemName) || {};
+        const qty = parseFloat(tx.quantity) || 0;
+        const unitCost = parseFloat(tx.unitPrice) || 0;
+        const supply = Math.round(unitCost * qty);
+        const vat = Math.floor(supply * 0.1);
+        const salePrice = parseFloat(tx.actualSellingPrice || tx.sellingPrice || it.sellingPrice) || 0;
+        const outAmt = Math.round(salePrice * qty);
+        const purchase = Math.round(unitCost * qty);
+        const profit = outAmt - purchase;
+        const profitRate = purchase > 0 ? (profit / purchase * 100).toFixed(1) + '%' : '';
+        const costRate  = outAmt > 0   ? (purchase / outAmt * 100).toFixed(1) + '%'  : '';
+        return {
+          '자산':     it.category || '',
+          '출고일자': tx.date || '',
+          '매장명':   tx.vendor || '',
+          '상품코드': tx.itemCode || it.itemCode || '',
+          '입고수량': qty,
+          '단가':     unitCost,
+          '공급가액': supply,
+          '부가세':   vat,
+          '합계금액': supply + vat,
+          '출고단가': salePrice,
+          '출고수량': qty,
+          '출고금액': outAmt,
+          '매입원가': purchase,
+          '이익액':   profit,
+          '이익율':   profitRate,
+          '매출원가율': costRate,
+        };
+      });
+      downloadExcel(exportData, '출고관리');
+      showToast('출고 이력을 엑셀로 내보냈습니다.', 'success');
+
+    } else {
+      // ── 전체 (입출고 통합) ──────────────────────────────────
+      const exportData = transactions.map(tx => {
+        const it = itemMap.get(tx.itemName) || {};
+        const qty = parseFloat(tx.quantity) || 0;
+        const unitCost = parseFloat(tx.unitPrice) || 0;
+        const supply = Math.round(unitCost * qty);
+        const vat = Math.floor(supply * 0.1);
+        return {
+          '구분':     tx.type === 'in' ? '입고' : '출고',
+          '날짜':     tx.date || '',
+          '거래처':   tx.vendor || '',
+          '품목명':   tx.itemName || '',
+          '품목코드': tx.itemCode || it.itemCode || '',
+          '규격':     it.spec || '',
+          '단위':     it.unit || '',
+          '수량':     qty,
+          '단가':     unitCost,
+          '공급가액': supply,
+          '부가세':   vat,
+          '합계금액': supply + vat,
+        };
+      });
+      downloadExcel(exportData, '입출고이력');
+      showToast('이력을 엑셀로 내보냈습니다.', 'success');
+    }
   });
 
   // ?묒? ?쇨큵 ?깅줉

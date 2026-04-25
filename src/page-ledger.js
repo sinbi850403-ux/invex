@@ -89,17 +89,44 @@ export function renderLedgerPage(container, navigateTo) {
       return;
     }
 
-    const exportRows = rows.map(row => ({
-      '품목명': row.itemName,
-      '품목코드': row.itemCode || '',
-      '단위': row.unit || '',
-      '기초재고': row.openingQty,
-      '입고수량': row.inQty,
-      '출고수량': row.outQty,
-      '기말재고': row.closingQty,
-      '단가': row.unitPrice,
-      '재고금액': row.closingValue,
-    }));
+    const exportRows = rows.map(row => {
+      const unitCost = row.unitPrice || 0;
+      const inQty   = row.inQty || 0;
+      const outQty  = row.outQty || 0;
+      const salePrice = row.sellingPrice || 0;
+
+      const supply = Math.round(unitCost * inQty);
+      const vat    = Math.floor(supply * 0.1);
+      const outAmt = Math.round(salePrice * outQty);
+      const purchase = Math.round(unitCost * outQty);
+      const profit   = outAmt - purchase;
+      const profitRate = purchase > 0 ? (profit / purchase * 100).toFixed(1) + '%' : '';
+      const costRate   = outAmt > 0   ? (purchase / outAmt * 100).toFixed(1) + '%'  : '';
+
+      return {
+        '자산':       row.category || '',
+        '입고일자':   from || '',
+        '상품코드':   row.itemCode || '',
+        '거래처':     row.vendor || '',
+        '품명':       row.itemName,
+        '규격':       row.spec || '',
+        '단위':       row.unit || '',
+        '입고수량':   inQty,
+        '단가':       unitCost,
+        '공급가액':   supply,
+        '부가세':     vat,
+        '합계금액':   supply + vat,
+        '출고단가':   salePrice,
+        '출고수량':   outQty,
+        '출고금액':   outAmt,
+        '매입원가':   purchase,
+        '이익액':     profit,
+        '이익율':     profitRate,
+        '매출원가율': costRate,
+        '기말재고수량': row.closingQty,
+        '기말재고':   row.closingValue,
+      };
+    });
 
     downloadExcel(exportRows, `수불부_${from}_${to}`);
     showToast('수불부를 엑셀로 내보냈습니다.', 'success');
@@ -434,6 +461,7 @@ function buildLedger(items, transactions, from, to, itemFilter, openingOverrides
     let periodInQty = 0;
     let periodOutQty = 0;
     let openingQty = currentQty;
+    let primaryVendor = '';  // 해당 기간 가장 최근 거래처
 
     transactions.forEach(tx => {
       if (tx.itemName !== item.itemName) return;
@@ -447,8 +475,12 @@ function buildLedger(items, transactions, from, to, itemFilter, openingOverrides
 
       // 지정된 [from, to] 기간 동안의 입출고 실적 합산
       if (tx.date >= from && tx.date <= to) {
-        if (tx.type === 'in') periodInQty += qty;
-        else periodOutQty += qty;
+        if (tx.type === 'in') {
+          periodInQty += qty;
+          if (tx.vendor) primaryVendor = tx.vendor; // 가장 마지막 입고 거래처
+        } else {
+          periodOutQty += qty;
+        }
       }
     });
 
@@ -461,13 +493,17 @@ function buildLedger(items, transactions, from, to, itemFilter, openingOverrides
     const closingValue = closingQty * unitPrice;
 
     return {
-      itemName: item.itemName,
-      itemCode: item.itemCode || '',
-      unit: item.unit || '',
+      itemName:    item.itemName,
+      itemCode:    item.itemCode || '',
+      category:    item.category || '',
+      spec:        item.spec || '',
+      unit:        item.unit || '',
+      vendor:      primaryVendor,
       unitPrice,
-      openingQty: Math.max(0, openingQty),
-      inQty: periodInQty,
-      outQty: periodOutQty,
+      sellingPrice: parseFloat(item.sellingPrice || item.salePrice) || 0,
+      openingQty:  Math.max(0, openingQty),
+      inQty:       periodInQty,
+      outQty:      periodOutQty,
       closingQty,
       closingValue,
     };
