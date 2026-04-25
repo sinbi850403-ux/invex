@@ -106,6 +106,9 @@ CREATE TABLE IF NOT EXISTS items (
   expiry_date TEXT,
   lot_number TEXT,
   memo TEXT,
+  -- ▼ 추가 컬럼 (스크린샷 수불 테이블 기준)
+  asset_type TEXT,                      -- 자산 구분 (재고자산/소모품/비품 등)
+  spec TEXT,                            -- 규격
   -- 커스텀 필드용 유연한 JSON 컬럼
   extra JSONB DEFAULT '{}',
   created_at TIMESTAMPTZ DEFAULT now(),
@@ -130,8 +133,12 @@ CREATE TABLE IF NOT EXISTS transactions (
   type TEXT NOT NULL CHECK (type IN ('in', 'out')),
   item_name TEXT NOT NULL,
   item_id UUID REFERENCES items(id) ON DELETE SET NULL,
+  item_code TEXT,                        -- 상품코드 (비정규화 저장 → 조회 성능)
   quantity NUMERIC NOT NULL DEFAULT 0,
   unit_price NUMERIC DEFAULT 0,
+  supply_value NUMERIC DEFAULT 0,        -- 공급가액 (unit_price × quantity)
+  vat NUMERIC DEFAULT 0,                 -- 부가세 (supply_value × 0.1)
+  total_amount NUMERIC DEFAULT 0,        -- 합계금액 (supply_value + vat)
   date TEXT,
   vendor TEXT,
   warehouse TEXT,

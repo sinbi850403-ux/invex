@@ -1018,13 +1018,15 @@ function dbItemToStoreItem(dbItem) {
     expiryDate: dbItem.expiry_date,
     lotNumber: dbItem.lot_number,
     memo: dbItem.memo,
+    assetType: dbItem.asset_type,   // 자산 구분
+    spec: dbItem.spec,              // 규격
     ...(dbItem.extra || {}),
   };
 }
 
 export function storeItemToDb(storeItem) {
   const { _id, itemName, itemCode, unitPrice, supplyValue, totalPrice,
-    salePrice, minStock, expiryDate, lotNumber, ...rest } = storeItem;
+    salePrice, minStock, expiryDate, lotNumber, assetType, spec, ...rest } = storeItem;
 
   // 알려진 필드와 커스텀 필드 분리
   const knownKeys = new Set([
@@ -1048,6 +1050,8 @@ export function storeItemToDb(storeItem) {
     min_stock: toNullableNumber(minStock),
     expiry_date: toNullableString(expiryDate),
     lot_number: toNullableString(lotNumber),
+    asset_type: toNullableString(assetType),   // 자산 구분
+    spec: toNullableString(spec),              // 규격
     extra,
     ...known,
   };
@@ -1058,8 +1062,12 @@ function dbTxToStoreTx(dbTx) {
     id: dbTx.id,
     type: dbTx.type,
     itemName: dbTx.item_name,
+    itemCode: dbTx.item_code,        // 상품코드
     quantity: dbTx.quantity,
     unitPrice: dbTx.unit_price,
+    supplyValue: dbTx.supply_value,  // 공급가액
+    vat: dbTx.vat,                   // 부가세
+    totalAmount: dbTx.total_amount,  // 합계금액
     date: dbTx.date,
     vendor: dbTx.vendor,
     warehouse: dbTx.warehouse,
