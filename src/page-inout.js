@@ -358,7 +358,7 @@ export function renderInoutPage(container, navigateTo, mode = 'all') {
         <th class="text-right">합계금액</th>
         <th style="width:50px;">삭제</th>`;
     } else if (isOutMode) {
-      // 출고관리: 자산|출고일자|매장명|상품코드|품명|규격|단위|단가|공급가액|부가세|공가합|출고단가|출고수량|출고금액|출고합|매입원가|이익액|이익률|매출원가율
+      // 출고관리: 자산|출고일자|매장명|상품코드|품명|규격|단위|출고수량|출고단가|출고금액|출고합|공급가|부가세|공가합|매입원가|이익액|이익률|매출원가율
       cols = `
         <th style="width:40px; text-align:center;"><input type="checkbox" id="tx-select-all" /></th>
         <th class="col-num">#</th>
@@ -369,14 +369,13 @@ export function renderInoutPage(container, navigateTo, mode = 'all') {
         ${sortableTh('itemName', '품명')}
         <th>규격</th>
         <th>단위</th>
-        ${sortableTh('unitPrice', '단가', 'text-right')}
-        <th class="text-right">공급가액</th>
-        <th class="text-right">부가세</th>
-        <th class="text-right">공가합</th>
-        <th class="text-right">출고단가</th>
         ${sortableTh('quantity', '출고수량', 'text-right')}
+        <th class="text-right">출고단가</th>
         <th class="text-right">출고금액</th>
         <th class="text-right">출고합</th>
+        <th class="text-right">공급가</th>
+        <th class="text-right">부가세</th>
+        <th class="text-right">공가합</th>
         <th class="text-right">매입원가</th>
         <th class="text-right">이익액</th>
         <th class="text-right">이익률</th>
@@ -514,7 +513,7 @@ export function renderInoutPage(container, navigateTo, mode = 'all') {
 
     const tbody = container.querySelector('#tx-body');
     if (!tbody) return;
-    const totalColCount = isInMode ? 15 : isOutMode ? 24 : 14;
+    const totalColCount = isInMode ? 15 : isOutMode ? 23 : 14;
     if (sorted.length === 0) {
       tbody.innerHTML = `<tr><td colspan="${totalColCount}" style="text-align:center; padding:32px; color:var(--text-muted);">
         ${transactions.length === 0 ? '아직 입출고 기록이 없습니다. 위 버튼으로 먼저 등록해 주세요.' : '검색 결과가 없습니다.'}
@@ -625,14 +624,13 @@ export function renderInoutPage(container, navigateTo, mode = 'all') {
             <td style="${indent}"><strong>${escapeHtml(tx.itemName || '-')}</strong></td>
             <td style="font-size:12px; color:var(--text-muted);">${escapeHtml(tx.spec || it.spec || '')}</td>
             <td style="font-size:12px;">${escapeHtml(tx.unit || it.unit || '')}</td>
-            <td class="text-right">${cost ? W(cost) : '-'}</td>
+            <td class="text-right type-out">${qty.toLocaleString('ko-KR')}</td>
+            <td class="text-right">${salePrice ? W(salePrice) : '-'}</td>
+            <td class="text-right">${outAmt ? W(outAmt) : '-'}</td>
+            <td class="text-right">${outTotal ? W(outTotal) : '-'}</td>
             <td class="text-right">${supply ? W(supply) : '-'}</td>
             <td class="text-right">${vat ? W(vat) : '-'}</td>
             <td class="text-right">${supply ? W(supply + vat) : '-'}</td>
-            <td class="text-right">${salePrice ? W(salePrice) : '-'}</td>
-            <td class="text-right type-out">${qty.toLocaleString('ko-KR')}</td>
-            <td class="text-right">${outAmt ? W(outAmt) : '-'}</td>
-            <td class="text-right">${outTotal ? W(outTotal) : '-'}</td>
             <td class="text-right">${purchase ? W(purchase) : '-'}</td>
             <td class="text-right" style="color:${profitColor}; font-weight:600;">${profit ? W(profit) : '-'}</td>
             <td class="text-right" style="color:${profitColor};">${profitRate}</td>
@@ -1084,24 +1082,23 @@ export function renderInoutPage(container, navigateTo, mode = 'all') {
         const profitRate = purchase > 0 ? (profit / purchase * 100).toFixed(1) + '%' : '';
         const costRate  = outAmt > 0   ? (purchase / outAmt * 100).toFixed(1) + '%'  : '';
         return {
-          '자산':     it.category || tx.category || '',
-          '출고일자': tx.date || '',
-          '매장명':   tx.vendor || '',
-          '상품코드': tx.itemCode || it.itemCode || '',
-          '품명':     tx.itemName || '',
-          '규격':     tx.spec || it.spec || '',
-          '단위':     tx.unit || it.unit || '',
-          '단가':     unitCost,
-          '공급가액': supply,
-          '부가세':   vat,
-          '공가합':   supply + vat,
-          '출고단가': salePrice,
-          '출고수량': qty,
-          '출고금액': outAmt,
-          '출고합':   Math.round(outAmt * 1.1),
-          '매입원가': purchase,
-          '이익액':   profit,
-          '이익률':   profitRate,
+          '자산':       it.category || tx.category || '',
+          '출고일자':   tx.date || '',
+          '매장명':     tx.vendor || '',
+          '상품코드':   tx.itemCode || it.itemCode || '',
+          '품명':       tx.itemName || '',
+          '규격':       tx.spec || it.spec || '',
+          '단위':       tx.unit || it.unit || '',
+          '출고수량':   qty,
+          '출고단가':   salePrice,
+          '출고금액':   outAmt,
+          '출고합':     Math.round(outAmt * 1.1),
+          '공급가':     supply,
+          '부가세':     vat,
+          '공가합':     supply + vat,
+          '매입원가':   purchase,
+          '이익액':     profit,
+          '이익률':     profitRate,
           '매출원가율': costRate,
         };
       });
@@ -1219,13 +1216,23 @@ function openBulkUploadModal(container, navigateTo, items, modeDefault = null) {
 
     if (modeDefault === 'out') {
       // 출고 양식: 내보내기와 동일한 19열 컬럼
-      const outHeaders = ['자산', '출고일자', '매장명', '상품코드', '품명', '규격', '단위', '단가', '공급가액', '부가세', '공가합', '출고단가', '출고수량', '출고금액', '출고합', '매입원가', '이익액', '이익률', '매출원가율'];
+      const outHeaders = ['자산', '출고일자', '매장명', '상품코드', '품명', '규격', '단위', '출고수량', '출고단가', '출고금액', '출고합', '공급가', '부가세', '공가합', '매입원가', '이익액', '이익률', '매출원가율'];
       const s1 = 1200000 * 10, v1 = Math.floor(s1 * 0.1), sale1 = 1500000 * 10;
       const s2 = 850000 * 5,   v2 = Math.floor(s2 * 0.1),   sale2 = 1100000 * 5;
       templateRows = [
         outHeaders,
-        ['전자기기', today, '강남점', 'SM-S925', '갤럭시 S25', '256GB 블랙', 'EA', 1200000, s1, v1, s1 + v1, 1500000, 10, sale1, Math.round(sale1 * 1.1), s1, sale1 - s1, ((sale1 - s1) / s1 * 100).toFixed(1) + '%', (s1 / sale1 * 100).toFixed(1) + '%'],
-        ['전자기기', today, '홍대점', 'AP-001',  '아이패드 Air', '256GB 스타라이트', 'EA', 850000, s2, v2, s2 + v2, 1100000, 5, sale2, Math.round(sale2 * 1.1), s2, sale2 - s2, ((sale2 - s2) / s2 * 100).toFixed(1) + '%', (s2 / sale2 * 100).toFixed(1) + '%'],
+        [
+          '전자기기', today, '강남점', 'SM-S925', '갤럭시 S25', '256GB 블랙', 'EA',
+          10, 1500000, sale1, Math.round(sale1 * 1.1),
+          s1, v1, s1 + v1, s1, sale1 - s1,
+          ((sale1 - s1) / s1 * 100).toFixed(1) + '%', (s1 / sale1 * 100).toFixed(1) + '%',
+        ],
+        [
+          '전자기기', today, '홍대점', 'AP-001', '아이패드 Air', '256GB 스타라이트', 'EA',
+          5, 1100000, sale2, Math.round(sale2 * 1.1),
+          s2, v2, s2 + v2, s2, sale2 - s2,
+          ((sale2 - s2) / s2 * 100).toFixed(1) + '%', (s2 / sale2 * 100).toFixed(1) + '%',
+        ],
       ];
       sheetName = '출고_양식';
       fileName = '출고_일괄등록_양식';
