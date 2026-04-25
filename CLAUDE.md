@@ -184,20 +184,18 @@ store.js (상태관리)
    - `plan.js` ↔ `auth.js` 간 `injectGetCurrentUser()` 패턴 사용
    - 의존성 역전으로 순환 import 차단
 
-### 4.3 네비게이션 구조 (허브 기반)
+### 4.3 네비게이션 구조
+
+사이드바는 **허브 버튼 + 재고관리 아코디언** 혼합 구조입니다.
 
 ```
 🏠 홈 대시보드
     │
-    ├── 📂 데이터 가져오기 (hub-data)
-    │   ├── 파일 업로드
-    │   └── 데이터 확인
-    │
-    ├── 📦 재고 관리 (hub-inventory)
-    │   ├── 재고 현황
-    │   ├── 입출고 관리
-    │   ├── 일괄 처리
-    │   └── 재고 실사
+    ├── 📦 재고관리 ← 클릭하면 접기/펼치기 (아코디언)
+    │   ├── 📥 입고관리  (route: 'in')     ← 입고 전용 뷰
+    │   ├── 📤 출고관리  (route: 'out')    ← 출고 전용 뷰
+    │   ├── 📋 수불관리  (route: 'ledger') ← 수불부
+    │   └── 📊 재고현황  (route: 'inventory')
     │
     ├── 🏢 창고·거래처 (hub-warehouse)
     │   ├── 다중 창고 관리
@@ -220,8 +218,16 @@ store.js (상태관리)
     ├── 📑 문서·서류 (hub-documents)
     │   ├── 세무/회계 서류
     │   ├── 문서 생성
-    │   ├── 수불부
     │   └── 감사 추적
+    │
+    ├── 👥 인사·급여 (hub-hr)
+    │   ├── HR 대시보드
+    │   ├── 직원 관리
+    │   ├── 근태 관리
+    │   ├── 급여 계산
+    │   ├── 휴가·연차
+    │   ├── 퇴직금 계산
+    │   └── 연말정산 보조
     │
     ├── ⚙️ 설정 (hub-settings)
     │   ├── 기본 설정
@@ -236,6 +242,12 @@ store.js (상태관리)
         ├── 고객 문의
         └── 친구 초대
 ```
+
+#### 재고관리 아코디언 동작 규칙
+- `in`, `out`, `inventory`, `ledger`, `inout` 페이지 진입 시 자동으로 펼쳐짐
+- 아코디언 헤더 클릭으로 수동 접기/펼치기 가능
+- 서브 버튼(`.nav-btn-sub`)에 `active` 클래스로 현재 페이지 표시
+- `HUB_MAP`에서 `in`, `out`, `inventory`, `ledger`는 매핑하지 않음 → `activeId = 자기 자신`
 
 ---
 
@@ -404,11 +416,13 @@ export function renderExamplePage(container, navigateTo) {
 
 ### 9.3 새 페이지 추가 체크리스트
 1. `src/page-{name}.js` 생성 → `renderXxxPage(container, navigateTo)` export
-2. `main.js → pageLoaders` 객체에 lazy import 등록
-3. `page-hubs.js → HUB_MAP`에 부모 허브 매핑 추가
+2. `src/router.js → PAGE_LOADERS`에 lazy import 등록
+3. `page-hubs.js → HUB_MAP`에 부모 허브 매핑 추가 (재고관리 서브 페이지는 매핑 안 함)
 4. `page-hubs.js → PAGE_LABELS`에 한글 라벨 추가
-5. `plan.js → PAGE_MIN_PLAN`에 요금제 등급 등록
-6. 해당 허브 렌더 함수에 카드 추가 (icon, title, desc, nav, color)
+5. `plan.js → PAGE_MIN_PLAN`에 요금제 등급 등록, 각 요금제 `pages` 배열에도 추가
+6. 허브 페이지라면 해당 허브 렌더 함수에 카드 추가 (icon, title, desc, nav, color)
+
+> **재고관리 서브 페이지 추가 시**: `index.html` 사이드바 아코디언 (`#nav-sub-inventory`)에 `.nav-btn-sub` 버튼 추가, `router.js`의 `inventorySubPages` Set에 pageId 추가
 
 ### 9.4 DB 컬럼 네이밍
 - **Supabase (DB)**: `snake_case` → `item_name`, `unit_price`
@@ -427,6 +441,8 @@ export function renderExamplePage(container, navigateTo) {
 | 허브 카드 | `.hub-grid > .hub-card` | `.hub-card-icon`, `.hub-card-title` |
 | 페이지 헤더 | `.page-header` | `.page-title`, `.page-desc`, `.page-actions` |
 | 빈 상태 | `.empty-state` | `.msg`, `.sub` |
+| 사이드바 그룹 | `.nav-group` | `.nav-group.open` → 서브 펼침 |
+| 사이드바 서브 버튼 | `.nav-btn-sub` | `.nav-btn-sub.active` → 현재 페이지 강조 |
 
 ---
 
@@ -434,12 +450,14 @@ export function renderExamplePage(container, navigateTo) {
 
 | 모듈 | 역할 | 한 줄 설명 |
 |------|------|-----------|
-| `main.js` | 앱 엔트리 | 라우팅, 인증 게이트, 사이드바, 페이지 전환 관리 |
+| `main.js` | 앱 엔트리 | 인증 게이트, 사이드바 이벤트, 아코디언 토글 |
+| `router.js` | 라우팅 | PAGE_LOADERS, navigateTo, breadcrumb, 사이드바 active 상태 |
 | `store.js` | 상태관리 | 메모리 + IndexedDB + Supabase 3층 저장 |
-| `db.js` | DAL | Supabase CRUD API 래핑 (`db.items.list()` 등) |
+| `db.js` | DAL | Supabase CRUD API 래핑 (`db.items.list()` 등), `clearAllUserData()` |
 | `auth.js` | 인증 | 로그인/회원가입/로그아웃, 프로필 로드 |
 | `plan.js` | 요금제 | 기능 접근 제어, 업그레이드 모달 |
-| `page-hubs.js` | 허브 네비 | 8개 허브 → 하위 페이지 타일 구조 |
+| `page-hubs.js` | 허브 네비 | HUB_MAP, PAGE_LABELS, 허브 렌더 함수 |
+| `page-inout.js` | 입출고 | `renderInoutPage(mode)` — 'all'·'in'·'out' 모드 지원 |
 | `traffic-manager.js` | API 보호 | 레이트 리밋, 재시도, 큐 관리 |
 | `notifications.js` | 알림 | 안전재고 경고, 만료일 알림 등 |
 | `charts.js` | 차트 유틸 | Chart.js 래퍼 (그라디언트, 반응형) |
@@ -626,6 +644,29 @@ import * as db from './db.js';
 const items = await db.items.list({ category: '식품' });
 await db.items.create({ item_name: '사과', quantity: 100 });
 await db.transactions.create({ type: 'in', item_name: '사과', quantity: 50 });
+
+// 전체 사용자 데이터 삭제 (회원탈퇴/초기화)
+await db.clearAllUserData();
+```
+
+### 입출고 페이지 모드 패턴
+`page-inout.js`는 단일 파일에서 세 가지 뷰를 제공합니다:
+
+```javascript
+// router.js — 라우트별 전용 함수 사용
+import('./page-inout.js').then(m => m.renderInoutPage) // 전체(inout)
+import('./page-inout.js').then(m => m.renderInPage)    // 입고만(in)
+import('./page-inout.js').then(m => m.renderOutPage)   // 출고만(out)
+
+// page-inout.js 내부 구조
+export function renderInoutPage(container, navigateTo, mode = 'all') {
+  // mode: 'all' | 'in' | 'out'
+  // - 제목·아이콘·설명이 mode에 따라 자동 변경
+  // - 퀵필터 초기값이 mode에 맞게 고정
+  // - in/out 전용 모드에서는 저장된 필터 무시
+}
+export function renderInPage(container, navigateTo)  { return renderInoutPage(container, navigateTo, 'in'); }
+export function renderOutPage(container, navigateTo) { return renderInoutPage(container, navigateTo, 'out'); }
 ```
 
 ---
