@@ -13,7 +13,7 @@ import { handlePageError } from './error-monitor.js';
 import { showFieldError, clearAllFieldErrors, setSavingState } from './ux-toolkit.js';
 
 const PAGE_SIZE = 15;
-const BULK_INOUT_TEMPLATE_HEADERS = ['구분', '거래처', '품목명', '품목코드', '수량', '원가', '판매가', '실판매가', '이익률', '날짜', '비고'];
+const BULK_INOUT_TEMPLATE_HEADERS = ['자산', '입고일자', '상품코드', '거래처', '품명', '규격', '단위', '입고수량', '단가', '공급가액', '부가세', '합계금액'];
 
 function safeAttr(value) {
   return String(value ?? '')
@@ -1199,10 +1199,15 @@ function openBulkUploadModal(container, navigateTo, items) {
 
   overlay.querySelector('#bulk-download-template').addEventListener('click', () => {
     const today = new Date().toISOString().split('T')[0];
+    const supply1 = 1200000 * 100;
+    const vat1 = Math.floor(supply1 * 0.1);
+    const supply2 = 850000 * 50;
+    const vat2 = Math.floor(supply2 * 0.1);
     const templateRows = [
       BULK_INOUT_TEMPLATE_HEADERS,
-      ['입고', '(주)삼성전자', '갤럭시 S25', 'SM-S925', 100, 1200000, 1450000, 1450000, 20.8, today, '1차 입고'],
-      ['출고', '쿠팡', '갤럭시 S25', 'SM-S925', 30, 1200000, 1450000, 1490000, 24.2, today, '쿠팡 출고'],
+      // 자산, 입고일자, 상품코드, 거래처, 품명, 규격, 단위, 입고수량, 단가, 공급가액, 부가세, 합계금액
+      ['전자기기', today, 'SM-S925', '(주)삼성전자', '갤럭시 S25', '256GB 블랙', 'EA', 100, 1200000, supply1, vat1, supply1 + vat1],
+      ['전자기기', today, 'AP-001', '(주)애플코리아', '아이패드 Air', '256GB 스타라이트', 'EA', 50, 850000, supply2, vat2, supply2 + vat2],
     ];
 
     downloadExcelSheets([{ name: '입출고_양식', rows: templateRows }], '입출고_일괄등록_양식');
@@ -1251,17 +1256,24 @@ async function processUploadedFile(file, overlay, container, navigateTo, items, 
     }
 
     const headers = sheetData[0].map((header) => String(header ?? '').trim());
+    const findCol = (...names) => {
+      for (const n of names) {
+        const idx = headers.findIndex(h => h === n);
+        if (idx >= 0) return idx;
+      }
+      return -1;
+    };
     const colMap = {
-      type: headers.findIndex((header) => header === '구분'),
-      vendor: headers.findIndex((header) => header === '거래처'),
-      itemName: headers.findIndex((header) => header === '품목명'),
-      itemCode: headers.findIndex((header) => header === '품목코드'),
-      quantity: headers.findIndex((header) => header === '수량'),
-      unitPrice: headers.findIndex((header) => header === '원가'),
-      sellingPrice: headers.findIndex((header) => header === '판매가'),
-      actualSellingPrice: headers.findIndex((header) => header === '실판매가'),
-      date: headers.findIndex((header) => header === '날짜'),
-      note: headers.findIndex((header) => header === '비고'),
+      type:               findCol('구분'),
+      vendor:             findCol('거래처'),
+      itemName:           findCol('품명', '품목명'),
+      itemCode:           findCol('상품코드', '품목코드'),
+      quantity:           findCol('입고수량', '수량'),
+      unitPrice:          findCol('단가', '원가'),
+      sellingPrice:       findCol('판매가'),
+      actualSellingPrice: findCol('실판매가'),
+      date:               findCol('입고일자', '출고일자', '날짜'),
+      note:               findCol('비고'),
     };
     const detected = detectBulkInoutColumns(sheetData);
     Object.keys(colMap).forEach((key) => {
@@ -1271,17 +1283,19 @@ async function processUploadedFile(file, overlay, container, navigateTo, items, 
     });
     const dataStartIndex = Math.max(1, detected.headerRowIndex + 1);
 
-    if (colMap.type === -1 || colMap.itemName === -1 || colMap.quantity === -1) {
-      previewEl.innerHTML = '<div class="alert alert-danger">필수 컬럼을 찾을 수 없습니다. 양식에 "구분", "품목명", "수량" 컬럼이 포함되어 있는지 확인해 주세요.</div>';
+    if (colMap.itemName === -1 || colMap.quantity === -1) {
+      previewEl.innerHTML = '<div class="alert alert-danger">필수 컬럼을 찾을 수 없습니다. 양식에 "품명"(또는 "품목명"), "입고수량"(또는 "수량") 컬럼이 포함되어 있는지 확인해 주세요.</div>';
       return;
     }
+    // 구분 컬럼 없는 입고 전용 양식이면 기본값 'in'
+    const defaultTxType = colMap.type === -1 ? 'in' : null;
 
     const rows = [];
     for (let index = dataStartIndex; index < sheetData.length; index += 1) {
       const row = sheetData[index];
       if (!row || row.length === 0) continue;
 
-      const typeCell = String(row[colMap.type] ?? '').trim();
+      const typeCell = colMap.type >= 0 ? String(row[colMap.type] ?? '').trim() : '';
       const itemName = String(row[colMap.itemName] ?? '').trim();
       const quantity = parseBulkNumber(row[colMap.quantity]);
 
@@ -1304,7 +1318,7 @@ async function processUploadedFile(file, overlay, container, navigateTo, items, 
       }
 
       rows.push({
-        type: normalizeBulkTxType(typeCell),
+        type: defaultTxType ?? normalizeBulkTxType(typeCell),
         vendor: colMap.vendor >= 0 ? String(row[colMap.vendor] ?? '').trim() : '',
         itemName,
         itemCode: rawItemCode || matchedItem?.itemCode || '',
