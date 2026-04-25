@@ -7,7 +7,7 @@
 import { getState, setState, addTransaction, deleteTransaction, restoreTransaction, updateTransactionPrices } from './store.js';
 import { showToast } from './toast.js';
 import { downloadExcel, downloadExcelSheets, readExcelFile } from './excel.js';
-import { escapeHtml, renderGuidedPanel, renderInsightHero, renderQuickFilterRow } from './ux-toolkit.js';
+import { escapeHtml, renderQuickFilterRow } from './ux-toolkit.js';
 import { canAction } from './auth.js';
 import { handlePageError } from './error-monitor.js';
 import { showFieldError, clearAllFieldErrors, setSavingState } from './ux-toolkit.js';
@@ -90,31 +90,6 @@ export function renderInoutPage(container, navigateTo, mode = 'all') {
     { value: 'missingVendor', label: '거래처 미입력' },
     { value: 'recent3', label: '최근 3일' },
   ];
-  const inoutHighlights = [
-    {
-      label: '오늘 입고 건수',
-      value: `${todayTxIn}건`,
-      note: '오늘 입력된 입고 기록 수입니다.',
-      stateClass: todayTxIn > 0 ? 'text-success' : '',
-    },
-    {
-      label: '오늘 출고 건수',
-      value: `${todayTxOut}건`,
-      note: '오늘 입력된 출고 기록 수입니다.',
-      stateClass: todayTxOut > 0 ? 'text-danger' : '',
-    },
-    {
-      label: '거래처 미입력',
-      value: vendorMissingCount > 0 ? `${vendorMissingCount}건` : '완료',
-      note: '거래처가 있으면 문서와 보고서가 더 정확해집니다.',
-      stateClass: vendorMissingCount > 0 ? 'text-warning' : 'text-success',
-    },
-    {
-      label: '등록 품목 수',
-      value: `${items.length}개`,
-      note: '입출고로 연결할 수 있는 전체 품목 수입니다.',
-    },
-  ];
 
   container.innerHTML = `
     <div class="page-header">
@@ -153,51 +128,6 @@ export function renderInoutPage(container, navigateTo, mode = 'all') {
         <div class="stat-value">${items.length}</div>
       </div>
     </div>
-
-    ${renderInsightHero({
-      eyebrow: '입출고 운영 보드',
-      title: '업무를 바로 처리할 수 있도록 흐름과 확인 포인트를 먼저 정리했습니다.',
-      desc: '오늘 기록, 거래처 연결 상태, 등록 품목 수를 먼저 보여주고 바로 입고·출고 등록으로 이어지게 구성했습니다.',
-      tone: vendorMissingCount > 0 ? 'warning' : 'success',
-      metrics: inoutHighlights,
-      bullets: [
-        todayTxIn + todayTxOut > 0 ? `오늘 총 ${todayTxIn + todayTxOut}건이 입력되었습니다. 방금 등록한 기록까지 마지막으로 확인해 보세요.` : '오늘은 아직 입력된 기록이 없습니다. 첫 입고 또는 출고를 등록해 흐름을 시작해 보세요.',
-        vendorMissingCount > 0 ? `거래처가 비어 있는 기록 ${vendorMissingCount}건은 문서 생성 전에 보완하는 것이 좋습니다.` : '거래처 정보가 깔끔하게 연결되어 있습니다.',
-        items.length === 0 ? '먼저 품목을 등록해야 입출고를 정확하게 기록할 수 있습니다.' : '품목 등록이 되어 있으므로 바로 입고와 출고를 기록할 수 있습니다.',
-      ],
-      actions: [
-        { id: 'btn-open-inbound-inline', label: '입고 바로 등록', variant: 'btn-success' },
-        { id: 'btn-open-outbound-inline', label: '출고 바로 등록', variant: 'btn-outline' },
-        { nav: 'summary', label: '요약 보고 보기', variant: 'btn-ghost' },
-      ],
-    })}
-
-    ${beginnerMode && (items.length === 0 || transactions.length === 0) ? `
-      <div class="card quick-start-card">
-        <div class="quick-start-head">
-          <div>
-            <div class="quick-start-title">입출고 빠른 시작</div>
-            <div class="quick-start-desc">처음이라면 아래 순서대로 진행해 주세요.</div>
-          </div>
-          <span class="badge badge-warning">가이드</span>
-        </div>
-        <div class="quick-start-steps">
-          <div class="quick-start-step ${items.length > 0 ? 'is-done' : ''}">
-            1) 재고 품목 등록 (${items.length > 0 ? '완료' : '필요'})
-          </div>
-          <div class="quick-start-step ${transactions.length > 0 ? 'is-done' : ''}">
-            2) 첫 입고/출고 기록 (${transactions.length > 0 ? '완료' : '필요'})
-          </div>
-          <div class="quick-start-step">3) 요약 보고에서 흐름 확인</div>
-        </div>
-        <div class="quick-start-actions">
-          ${items.length === 0 ? '<button class="btn btn-primary btn-sm" id="btn-quick-item">품목 먼저 등록</button>' : ''}
-          ${items.length > 0 ? '<button class="btn btn-primary btn-sm" id="btn-quick-first-tx">첫 입출고 등록</button>' : ''}
-          <button class="btn btn-outline btn-sm" id="btn-quick-guide">사용 가이드</button>
-          <button class="btn btn-ghost btn-sm" id="btn-quick-summary">요약 보고 이동</button>
-        </div>
-      </div>
-    ` : ''}
 
     ${renderQuickFilterRow({
       label: '빠른 조건',
@@ -1383,18 +1313,6 @@ function openTxModal(container, navigateTo, type, items) {
       <div class="modal-body">
         <div class="form-shell">
           <div class="form-shell-main">
-            ${renderGuidedPanel({
-              eyebrow: `${typeLabel} 입력 순서`,
-              title: `${typeLabel} 기록은 품목, 수량, 날짜만 정확하면 바로 반영됩니다.`,
-              desc: `${partnerLabel}와 단가는 있으면 더 좋지만, 지금 급하면 필수값부터 저장한 뒤 보강해도 됩니다.`,
-              badge: type === 'in' ? '입고 흐름' : '출고 흐름',
-              steps: [
-                { kicker: 'STEP 1', title: '거래처 선택', desc: `${partnerLabel}가 있으면 문서와 보고서 연결이 쉬워집니다.` },
-                { kicker: 'STEP 2', title: '품목과 수량 입력', desc: '선택한 품목의 현재 재고와 반영 후 수량을 오른쪽에서 바로 확인할 수 있습니다.' },
-                { kicker: 'STEP 3', title: '날짜 확인 후 저장', desc: '오늘 기록인지, 과거 보정 입력인지 마지막으로 확인하세요.' },
-              ],
-            })}
-
             <div class="form-group">
               <label class="form-label">${partnerLabel}</label>
               <select class="form-select" id="tx-vendor">

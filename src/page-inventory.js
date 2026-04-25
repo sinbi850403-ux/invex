@@ -9,7 +9,7 @@ import { showToast } from './toast.js';
 import { downloadExcel } from './excel.js';
 import { generateInventoryPDF } from './pdf-generator.js';
 import { renderItemTimelineChart } from './charts.js';
-import { renderGuidedPanel, renderInsightHero, renderQuickFilterRow, escapeHtml } from './ux-toolkit.js';
+import { renderQuickFilterRow, escapeHtml } from './ux-toolkit.js';
 import { canAction } from './auth.js';
 import { handlePageError } from './error-monitor.js';
 import { showFieldError, clearAllFieldErrors, setSavingState } from './ux-toolkit.js';
@@ -183,34 +183,7 @@ export function renderInventoryPage(container, navigateTo) {
   const missingVendorCount = data.filter(row => !String(row.vendor || '').trim()).length;
   const missingWarehouseCount = data.filter(row => !String(row.warehouse || '').trim()).length;
   const missingSalePriceCount = data.filter(row => !(parseFloat(row.salePrice) > 0)).length;
-  const beginnerMode = state.beginnerMode !== false;
   const hasTransactions = (state.transactions || []).length > 0;
-  const inventoryHealthMetrics = [
-    {
-      label: '부족 품목',
-      value: warningCount > 0 ? `${warningCount}건` : '안정',
-      note: '안전재고 아래로 내려간 품목 수입니다.',
-      stateClass: warningCount > 0 ? 'text-danger' : 'text-success',
-    },
-    {
-      label: '거래처 미연결',
-      value: missingVendorCount > 0 ? `${missingVendorCount}건` : '완료',
-      note: '거래처를 연결하면 발주와 보고가 더 쉬워집니다.',
-      stateClass: missingVendorCount > 0 ? 'text-warning' : 'text-success',
-    },
-    {
-      label: '위치 미입력',
-      value: missingWarehouseCount > 0 ? `${missingWarehouseCount}건` : '완료',
-      note: '창고나 위치를 넣어두면 현장 찾기가 쉬워집니다.',
-      stateClass: missingWarehouseCount > 0 ? 'text-warning' : 'text-success',
-    },
-    {
-      label: '판매가 미입력',
-      value: missingSalePriceCount > 0 ? `${missingSalePriceCount}건` : '완료',
-      note: '판매가를 넣어두면 이익과 마진을 더 정확히 볼 수 있습니다.',
-      stateClass: missingSalePriceCount > 0 ? 'text-warning' : 'text-success',
-    },
-  ];
   const inventoryFocusChips = [
     { value: 'all', label: '전체 보기' },
     { value: 'low', label: '부족 품목' },
@@ -291,25 +264,6 @@ export function renderInventoryPage(container, navigateTo) {
         </div>
       </div>
     ` : ''}
-
-    <div class="inventory-collapsible-section" data-collapsible-section="inventory-health" data-collapsible-label="재고 운영 상태">
-      ${renderInsightHero({
-        eyebrow: '재고 운영 상태',
-        title: '누가 봐도 바로 이해되는 재고 상태를 먼저 보여줍니다.',
-        desc: '수량, 금액, 거래처 연결, 위치 입력 상태를 한 번에 묶어 초보자도 무엇부터 정리할지 바로 판단할 수 있게 구성했습니다.',
-        tone: warningCount > 0 ? 'warning' : 'success',
-        metrics: inventoryHealthMetrics,
-        bullets: [
-          warningCount > 0 ? `부족 품목 ${warningCount}건을 먼저 보충할지 여부를 판단해 보세요.` : '부족 품목이 없습니다. 현재 재고 흐름이 안정적입니다.',
-          missingVendorCount > 0 ? `거래처가 비어 있는 품목 ${missingVendorCount}건은 발주와 문서 연결 전에 보완하는 것이 좋습니다.` : '거래처 정보가 충분히 연결되어 있습니다.',
-          missingWarehouseCount > 0 ? '위치가 비어 있으면 현장 조회가 느려집니다. 위치 미입력 품목을 우선 정리해 주세요.' : '위치 정보도 잘 정리되어 있습니다.',
-        ],
-        actions: [
-          { id: 'btn-add-item-inline', label: '품목 바로 추가', variant: 'btn-primary' },
-          { nav: 'dashboard', label: '고급 분석 보기', variant: 'btn-outline' },
-        ],
-      })}
-    </div>
 
     <div class="inventory-collapsible-section" data-collapsible-section="inventory-filters" data-collapsible-label="검색 · 필터 · 일괄 작업">
       ${renderQuickFilterRow({
@@ -1799,18 +1753,6 @@ function openItemModal(container, navigateTo, editIdx = null) {
       <div class="modal-body">
         <div class="form-shell">
           <div class="form-shell-main">
-            ${renderGuidedPanel({
-              eyebrow: '품목 입력 순서',
-              title: isEdit ? '필수값만 먼저 확인하고 빠르게 수정하세요.' : '필수값만 입력해도 바로 저장할 수 있습니다.',
-              desc: '품목명, 수량, 원가만 입력하면 재고 금액 계산이 즉시 됩니다. 거래처, 위치, 판매가는 나중에 채워도 괜찮습니다.',
-              badge: isEdit ? '수정 모드' : '초보자 추천',
-              steps: [
-                { kicker: 'STEP 1', title: '품목명과 수량 입력', desc: '현장에서 부르는 이름 그대로 적으면 검색이 빨라집니다.' },
-                { kicker: 'STEP 2', title: '원가와 판매가 확인', desc: '판매가를 넣으면 손익 분석 정확도가 올라갑니다.' },
-                { kicker: 'STEP 3', title: '거래처와 위치는 보강 추천', desc: '지금 급하면 비워두고 저장 후 다시 수정해도 됩니다.' },
-              ],
-            })}
-
             <!-- datalist 마스터 -->
             <datalist id="dl-category">${buildDatalistOptionTags(existingCats)}</datalist>
             <datalist id="dl-unit">${buildDatalistOptionTags([...existingUnits, 'EA', 'BOX', 'KG', 'L', 'M', 'SET'])}</datalist>

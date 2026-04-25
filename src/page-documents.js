@@ -12,7 +12,6 @@ applyPlugin(jsPDF);
 import { getState, setState } from './store.js';
 import { showToast } from './toast.js';
 import { applyKoreanFont, getKoreanFontStyle } from './pdf-font.js';
-import { renderGuidedPanel, renderInsightHero } from './ux-toolkit.js';
 
 /**
  * 문서 자동생성 페이지 렌더링
@@ -45,49 +44,6 @@ export function renderDocumentsPage(container, navigateTo) {
         <div class="page-desc">발주서, 견적서, 거래명세서를 자동으로 생성하고 PDF로 다운로드합니다.</div>
       </div>
     </div>
-
-    ${renderInsightHero({
-      eyebrow: '문서 작업 센터',
-      title: '필요한 문서를 고르고, 추천 항목을 확인한 뒤 바로 PDF로 만들 수 있습니다.',
-      desc: '부족 재고, 연결된 거래처, 최근 거래 기록을 먼저 보여줘서 어떤 문서를 먼저 만들어야 하는지 한눈에 판단할 수 있습니다.',
-      tone: lowStockItems.length > 0 ? 'warning' : 'info',
-      metrics: [
-        {
-          label: '발주 추천 품목',
-          value: lowStockItems.length > 0 ? `${lowStockItems.length}건` : '없음',
-          note: '안전재고 이하 품목 기준 추천입니다.',
-          stateClass: lowStockItems.length > 0 ? 'text-danger' : 'text-success',
-        },
-        {
-          label: '연결 거래처',
-          value: `${vendors.length}곳`,
-          note: '문서 수신처로 바로 사용할 수 있는 거래처 수입니다.',
-        },
-        {
-          label: '최근 30일 거래',
-          value: `${recentTransactionCount}건`,
-          note: '거래명세서 작성에 활용할 수 있는 최근 거래 기록입니다.',
-        },
-      ],
-      bullets: [
-        lowStockItems.length > 0 ? `발주서는 부족 품목 ${lowStockItems.length}건을 기본 추천으로 채워줍니다.` : '현재 부족 품목이 없어도 발주서는 수동으로 작성할 수 있습니다.',
-        vendors.length === 0 ? '거래처가 아직 없으면 문서는 만들 수 있지만, 받는 쪽 정보가 비어 있을 수 있습니다.' : '거래처가 연결되어 있어 문서 작성 속도가 빨라집니다.',
-        '문서마다 필요한 정보만 먼저 보이고, 추가 입력은 아래 편집 영역에서 이어서 채울 수 있습니다.',
-      ],
-    })}
-
-    ${renderGuidedPanel({
-      eyebrow: '문서 작성 흐름',
-      title: '처음이어도 세 단계만 따라가면 바로 만들 수 있습니다.',
-      desc: '문서 종류 선택, 기본 정보 입력, PDF 생성 순서로 정리했습니다.',
-      badge: '초보자 안내',
-      tone: 'info',
-      steps: [
-        { kicker: 'STEP 1', title: '문서 종류 선택', desc: '발주서, 견적서, 거래명세서 중 지금 필요한 문서를 먼저 고릅니다.' },
-        { kicker: 'STEP 2', title: '받는 곳 정보와 품목 확인', desc: '거래처, 날짜, 품목만 채워도 기본 문서를 바로 만들 수 있습니다.' },
-        { kicker: 'STEP 3', title: 'PDF 생성 후 전달', desc: '작성한 내용이 즉시 반영된 PDF를 내려받아 바로 전달할 수 있습니다.' },
-      ],
-    })}
 
     <div class="stat-grid" style="grid-template-columns: repeat(3, 1fr);">
       <div class="card doc-type-card active" data-doc="purchase" style="cursor:pointer;">

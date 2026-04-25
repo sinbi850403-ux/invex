@@ -6,7 +6,6 @@ import {
   renderMonthlyChart,
   destroyAllCharts,
 } from './charts.js';
-import { renderGuidedPanel } from './ux-toolkit.js';
 
 const HOME_COLLAPSE_STORAGE_KEY = 'invex:home:collapsed-sections:v1';
 
@@ -205,36 +204,6 @@ export function renderHomePage(container, navigateTo) {
       </div>
     </div>
     ` : ''}
-
-    ${beginnerMode ? renderGuidedPanel({
-      eyebrow: '대시보드 읽는 순서',
-      title: dashboardMode === 'executive' ? '경영자는 위험과 의사결정 포인트부터 보면 됩니다.' : '실무자는 오늘 처리 순서와 현장 우선 품목부터 보면 됩니다.',
-      desc: dashboardMode === 'executive'
-        ? '윗줄 핵심 카드에서 자산과 위험도를 보고, 아래 의사결정 포인트와 자산 집중 품목으로 내려가면 됩니다.'
-        : '윗줄 핵심 카드에서 오늘 입출고와 부족 품목을 보고, 아래 처리 순서와 우선 품목으로 내려가면 됩니다.',
-      badge: dashboardMode === 'executive' ? '경영자용 도움' : '실무자용 도움',
-      tone: dashboardMode === 'executive' ? 'info' : 'success',
-      steps: dashboardMode === 'executive'
-        ? [
-            { kicker: '1', title: '재고자산과 부족 품목 확인', desc: '현재 자산 규모와 가장 급한 리스크를 먼저 봅니다.' },
-            { kicker: '2', title: '의사결정 포인트 점검', desc: '보충, 정리, 할인, 정책 변경이 필요한 항목을 확인합니다.' },
-            { kicker: '3', title: '최근 흐름과 차트 확인', desc: '주간/월간 흐름으로 방향이 맞는지 검증합니다.' },
-          ]
-        : [
-            { kicker: '1', title: '오늘 입고/출고 확인', desc: '오늘 해야 할 기록 누락이 없는지 먼저 봅니다.' },
-            { kicker: '2', title: '부족 품목과 임박 품목 확인', desc: '현장 리스크를 줄일 순서대로 확인합니다.' },
-            { kicker: '3', title: '입출고 등록이나 수불부로 이동', desc: '바로 실행할 페이지로 한 번에 이동할 수 있습니다.' },
-          ],
-      actions: dashboardMode === 'executive'
-        ? [
-            { nav: 'inventory', label: '재고 현황 보기', variant: 'btn-primary' },
-            { nav: 'dashboard', label: '고급 분석 열기', variant: 'btn-outline' },
-          ]
-        : [
-            { nav: 'in', label: '입출고 등록', variant: 'btn-primary' },
-            { nav: 'ledger', label: '수불부 보기', variant: 'btn-outline' },
-          ],
-    }) : ''}
 
     ${hasData ? (dashboardMode === 'executive'
       ? renderExecutiveView({

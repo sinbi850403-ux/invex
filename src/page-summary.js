@@ -6,7 +6,6 @@
 import { getState } from './store.js';
 import { showToast } from './toast.js';
 import { downloadExcel } from './excel.js';
-import { renderInsightHero } from './ux-toolkit.js';
 import { enableLocalReportSort } from './report-local-sort.js';
 
 /**
@@ -50,24 +49,6 @@ export function renderSummaryPage(container, navigateTo) {
         <button class="btn btn-outline" id="btn-print">인쇄</button>
       </div>
     </div>
-
-    ${renderInsightHero({
-      eyebrow: '보고 한눈 요약',
-      title: '표를 읽기 전에 핵심 숫자와 우선 확인 항목부터 보여줍니다.',
-      desc: '총 재고, 부족 품목, 가장 큰 분류, 최근 흐름을 먼저 정리해서 누구나 페이지 맨 위에서 상황을 파악할 수 있게 구성했습니다.',
-      tone: summary.warnings.length > 0 ? 'warning' : 'success',
-      metrics: [
-        { label: '부족 품목', value: summary.warnings.length > 0 ? `${summary.warnings.length}건` : '없음', note: '안전재고 기준 이하 품목 수입니다.', stateClass: summary.warnings.length > 0 ? 'text-danger' : 'text-success' },
-        { label: '가장 큰 분류', value: summary.categories[0]?.name || '미분류', note: summary.categories[0] ? `${summary.categories[0].qty.toLocaleString('ko-KR')}개 보유` : '분류 데이터가 아직 없습니다.' },
-        { label: '최근 7일 순증감', value: `${(summary.dailyTrend || []).reduce((acc, day) => acc + day.net, 0).toLocaleString('ko-KR')}`, note: '최근 7일 입출고 순증감입니다.' },
-        { label: '연결 거래처', value: `${summary.vendors.length}곳`, note: '보고서에 잡히는 거래처 수입니다.' },
-      ],
-      bullets: [
-        summary.warnings.length > 0 ? `부족 품목 ${summary.warnings.length}건은 발주 또는 보충 여부를 먼저 판단하세요.` : '지금은 부족 품목이 없어 운영 상태가 안정적입니다.',
-        summary.categories[0] ? `${summary.categories[0].name || '미분류'} 분류가 현재 가장 큰 비중을 차지하고 있습니다.` : '분류를 채우면 보고 정확도가 더 좋아집니다.',
-        transactions.length > 0 ? '아래 표는 모두 헤더 클릭 정렬이 가능하므로 원하는 기준으로 바로 다시 볼 수 있습니다.' : '거래 기록이 쌓이면 최근 흐름과 순증감 표가 더 풍부해집니다.',
-      ],
-    })}
 
     <!-- 핵심 지표 -->
     <div class="stat-grid">
