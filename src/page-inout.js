@@ -1275,7 +1275,10 @@ async function processUploadedFile(file, overlay, container, navigateTo, items, 
       return;
     }
 
-    const headers = sheetData[0].map((header) => String(header ?? '').trim());
+    const detected = detectBulkInoutColumns(sheetData);
+    const dataStartIndex = Math.max(1, detected.headerRowIndex + 1);
+    const headerRow = sheetData[detected.headerRowIndex] || sheetData[0];
+    const headers = headerRow.map((header) => String(header ?? '').trim());
     const findCol = (...names) => {
       for (const n of names) {
         const idx = headers.findIndex(h => h === n);
@@ -1298,16 +1301,15 @@ async function processUploadedFile(file, overlay, container, navigateTo, items, 
       unit:               findCol('단위'),
       category:           findCol('자산', '분류', '카테고리'),
     };
-    const detected = detectBulkInoutColumns(sheetData);
     Object.keys(colMap).forEach((key) => {
       if (colMap[key] === -1 && detected.colMap[key] >= 0) {
         colMap[key] = detected.colMap[key];
       }
     });
-    const dataStartIndex = Math.max(1, detected.headerRowIndex + 1);
 
     if (colMap.itemName === -1 || colMap.quantity === -1) {
-      previewEl.innerHTML = '<div class="alert alert-danger">필수 컬럼을 찾을 수 없습니다. 양식에 "품명"(또는 "품목명"), "입고수량"(또는 "출고수량") 컬럼이 포함되어 있는지 확인해 주세요.</div>';
+      const missing = [colMap.itemName === -1 && '품명', colMap.quantity === -1 && '수량'].filter(Boolean).join(', ');
+      previewEl.innerHTML = `<div class="alert alert-danger">필수 컬럼을 찾을 수 없습니다 (누락: ${missing}). 양식에 "품명"(또는 "품목명"), "입고수량"(또는 "출고수량") 컬럼이 포함되어 있는지 확인해 주세요.</div>`;
       return;
     }
     // 구분 컬럼 없으면 현재 페이지 모드(입고/출고) 기본값 사용
@@ -1492,14 +1494,14 @@ function emptyBulkColMap() {
 function detectBulkInoutColumns(sheetData) {
   const aliasMap = {
     type: ['구분', '입출고', '거래구분', '유형', 'type', 'inout'],
-    vendor: ['거래처', '공급처', '고객처', 'vendor', 'supplier', 'customer'],
-    itemName: ['품목명', '상품명', '제품명', 'itemname', 'item', 'name'],
+    vendor: ['거래처', '매장명', '공급처', '고객처', 'vendor', 'supplier', 'customer'],
+    itemName: ['품명', '품목명', '상품명', '제품명', 'itemname', 'item', 'name'],
     itemCode: ['품목코드', '상품코드', '코드', 'sku', 'itemcode'],
     quantity: ['수량', 'qty', 'quantity', '입고수량', '출고수량'],
     unitPrice: ['단가', '원가', '매입단가', '공급단가', 'unitprice', 'price', 'cost'],
-    sellingPrice: ['판매가', '판매단가', 'saleprice', 'sellingprice', 'sale', 'selling'],
+    sellingPrice: ['판매가', '출고단가', '판매단가', 'saleprice', 'sellingprice', 'sale', 'selling'],
     actualSellingPrice: ['실판매가', '실판매단가', 'actualsellingprice', 'actualsaleprice', 'actualprice'],
-    date: ['날짜', '일자', '거래일자', '입출고일', 'date'],
+    date: ['날짜', '일자', '거래일자', '입출고일', '입고일자', '출고일자', 'date'],
     note: ['비고', '메모', 'note', 'memo', 'remarks'],
   };
 
