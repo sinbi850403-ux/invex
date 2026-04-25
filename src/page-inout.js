@@ -603,7 +603,7 @@ export function renderInoutPage(container, navigateTo, mode = 'all') {
 
         if (isOutMode) {
           const qty = parseFloat(tx.quantity) || 0;
-          const cost = parseFloat(tx.unitPrice) || 0;
+          const cost = parseFloat(it.unitPrice || tx.unitPrice) || 0;
           const supply = Math.round(cost * qty);
           const vat = Math.floor(supply * 0.1);
           const salePrice = parseFloat(tx.actualSellingPrice || tx.sellingPrice || it.sellingPrice) || 0;
@@ -632,7 +632,7 @@ export function renderInoutPage(container, navigateTo, mode = 'all') {
             <td class="text-right">${vat ? W(vat) : '-'}</td>
             <td class="text-right">${supply ? W(supply + vat) : '-'}</td>
             <td class="text-right">${purchase ? W(purchase) : '-'}</td>
-            <td class="text-right" style="color:${profitColor}; font-weight:600;">${profit ? W(profit) : '-'}</td>
+            <td class="text-right" style="color:${profitColor}; font-weight:600;">${purchase > 0 ? W(profit) : '-'}</td>
             <td class="text-right" style="color:${profitColor};">${profitRate}</td>
             <td class="text-right">${costRate}</td>
             ${del}

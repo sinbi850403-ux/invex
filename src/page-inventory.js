@@ -157,10 +157,11 @@ export function renderInventoryPage(container, navigateTo) {
     const agg = txAgg[item.itemName] || {};
     const outQty       = agg.outQty  || 0;
     const outAmt       = agg.outAmt  || 0;
-    const costAmt      = agg.costAmt || 0;
-    const profit       = outAmt - costAmt;
     const unitPrice    = parseFloat(item.unitPrice) || 0;
     const qty          = parseFloat(item.quantity)  || 0;
+    // 매입원가는 품목 마스터 단가 기준 (거래 tx.unitPrice는 출고단가일 수 있음)
+    const costAmt      = unitPrice > 0 ? Math.round(unitPrice * outQty) : (agg.costAmt || 0);
+    const profit       = outAmt - costAmt;
     return {
       ...item,
       inQty:                agg.inQty || 0,
