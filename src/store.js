@@ -52,8 +52,6 @@ const DEFAULT_STATE = {
   transfers: [],        // [{date, fromWarehouse, toWarehouse, itemName, quantity, ...}]
   // 커스텀 필드 (사용자 정의 컬럼)
   customFields: [],     // [{key, label, type, options?}]
-  // 업종 템플릿
-  industryTemplate: 'general', // 'general' | 'food' | 'clothing' | ...
   // 거래처 마스터
   vendorMaster: [],     // [{name, type, bizNumber, ceoName, contactName, phone, ...}]
   // 재고 실사 이력
@@ -320,7 +318,7 @@ async function syncToSupabase() {
     const settingKeys = [
       'safetyStock', 'beginnerMode', 'dashboardMode', 'visibleColumns',
       'inventoryViewPrefs', 'inoutViewPrefs', 'tableSortPrefs',
-      'industryTemplate', 'costMethod', 'currency',
+      'costMethod', 'currency',
     ];
     for (const key of settingKeys) {
       if (keysToSync.has(key) && state[key] !== undefined) {

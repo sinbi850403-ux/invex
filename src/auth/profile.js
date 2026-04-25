@@ -42,6 +42,5 @@ export function mapProfileData(data, fallback) {
     lastLogin: new Date().toISOString(),
     beginnerMode: data.beginner_mode,
     dashboardMode: data.dashboard_mode,
-    industryTemplate: data.industry_template,
   };
 }

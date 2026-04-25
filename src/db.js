@@ -988,7 +988,6 @@ export async function loadAllData() {
     inventoryViewPrefs: settingsData.inventoryViewPrefs || {},
     inoutViewPrefs: settingsData.inoutViewPrefs || {},
     tableSortPrefs: settingsData.tableSortPrefs || {},
-    industryTemplate: settingsData.industryTemplate || 'general',
     costMethod: settingsData.costMethod || 'weighted-avg',
     currency: settingsData.currency || { code: 'KRW', symbol: '₩', rate: 1 },
   };

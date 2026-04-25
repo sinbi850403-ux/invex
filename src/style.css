@@ -3982,27 +3982,6 @@ html.dark-mode .report-spotlight-card {
   border-radius: 8px;
 }
 
-/* --- 설정 템플릿 카드 --- */
-.template-card {
-  padding: 16px;
-  border: 2px solid var(--border);
-  border-radius: var(--radius-lg);
-  transition: all 0.2s ease;
-  text-align: center;
-}
-
-.template-card:hover {
-  border-color: var(--accent);
-  transform: translateY(-2px);
-  box-shadow: var(--shadow);
-}
-
-.template-card.active {
-  border-color: var(--accent);
-  background: var(--accent-light);
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
-}
-
 /* --- 수불부 컴팩트 카드 --- */
 .card-compact {
   padding: 12px 16px;

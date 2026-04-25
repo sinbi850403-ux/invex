@@ -259,7 +259,6 @@ export function syncWorkspaceToCloud() {
         customFields: state.customFields || [],
         safetyStock: state.safetyStock || {},
         warehouses: state.warehouses || [],
-        industryTemplate: state.industryTemplate || 'general',
         costMethod: state.costMethod || 'weighted-avg',
         currency: state.currency || { code: 'KRW', symbol: '₩', rate: 1 },
         _lastSync: now,
