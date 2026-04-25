@@ -1206,12 +1206,23 @@ function openBulkUploadModal(container, navigateTo, items, modeDefault = null) {
     let templateRows, sheetName, fileName;
 
     if (modeDefault === 'out') {
-      // 출고 양식: 이력 내보내기와 동일한 컬럼 (자산|출고일자|매장명|상품코드|품명|규격|단위|출고수량|단가|출고단가)
-      const outHeaders = ['자산', '출고일자', '매장명', '상품코드', '품명', '규격', '단위', '출고수량', '단가', '출고단가'];
+      // 출고 양식: 출고관리 이력 export와 동일한 16열 구조
+      // 자산|출고일자|매장명|상품코드|입고수량|단가|공급가액|부가세|합계금액|출고단가|출고수량|출고금액|매입원가|이익액|이익율|매출원가율
+      const outHeaders = ['자산', '출고일자', '매장명', '상품코드', '입고수량', '단가', '공급가액', '부가세', '합계금액', '출고단가', '출고수량', '출고금액', '매입원가', '이익액', '이익율', '매출원가율'];
+      const buildOutSampleRow = (asset, vendor, code, qty, unitCost, salePrice) => {
+        const supply = Math.round(unitCost * qty);
+        const vat = Math.floor(supply * 0.1);
+        const outAmt = Math.round(salePrice * qty);
+        const purchase = Math.round(unitCost * qty);
+        const profit = outAmt - purchase;
+        const profitRate = purchase > 0 ? (profit / purchase * 100).toFixed(1) + '%' : '';
+        const costRate = outAmt > 0 ? (purchase / outAmt * 100).toFixed(1) + '%' : '';
+        return [asset, today, vendor, code, qty, unitCost, supply, vat, supply + vat, salePrice, qty, outAmt, purchase, profit, profitRate, costRate];
+      };
       templateRows = [
         outHeaders,
-        ['전자기기', today, '강남점', 'SM-S925', '갤럭시 S25', '256GB 블랙', 'EA', 10, 1200000, 1500000],
-        ['전자기기', today, '홍대점', 'AP-001', '아이패드 Air', '256GB 스타라이트', 'EA', 5, 850000, 1100000],
+        buildOutSampleRow('전자기기', '강남점', 'SM-S925', 10, 1200000, 1500000),
+        buildOutSampleRow('전자기기', '홍대점', 'AP-001', 5, 850000, 1100000),
       ];
       sheetName = '출고_양식';
       fileName = '출고_일괄등록_양식';
@@ -1283,16 +1294,22 @@ async function processUploadedFile(file, overlay, container, navigateTo, items, 
       }
       return -1;
     };
+    const quantityNames = modeDefault === 'out'
+      ? ['출고수량', '입고수량', '수량']
+      : ['입고수량', '출고수량', '수량'];
+    const dateNames = modeDefault === 'out'
+      ? ['출고일자', '입고일자', '날짜']
+      : ['입고일자', '출고일자', '날짜'];
     const colMap = {
       type:               findCol('구분'),
       vendor:             findCol('거래처', '매장명'),
       itemName:           findCol('품명', '품목명'),
       itemCode:           findCol('상품코드', '품목코드'),
-      quantity:           findCol('입고수량', '출고수량', '수량'),
+      quantity:           findCol(...quantityNames),
       unitPrice:          findCol('단가', '원가'),
       sellingPrice:       findCol('판매가', '출고단가'),
       actualSellingPrice: findCol('실판매가'),
-      date:               findCol('입고일자', '출고일자', '날짜'),
+      date:               findCol(...dateNames),
       note:               findCol('비고'),
       spec:               findCol('규격'),
       unit:               findCol('단위'),
@@ -1306,8 +1323,8 @@ async function processUploadedFile(file, overlay, container, navigateTo, items, 
     });
     const dataStartIndex = Math.max(1, detected.headerRowIndex + 1);
 
-    if (colMap.itemName === -1 || colMap.quantity === -1) {
-      previewEl.innerHTML = '<div class="alert alert-danger">필수 컬럼을 찾을 수 없습니다. 양식에 "품명"(또는 "품목명"), "입고수량"(또는 "출고수량") 컬럼이 포함되어 있는지 확인해 주세요.</div>';
+    if (colMap.quantity === -1 || (colMap.itemName === -1 && colMap.itemCode === -1)) {
+      previewEl.innerHTML = '<div class="alert alert-danger">필수 컬럼을 찾을 수 없습니다. 양식에 "품명"(또는 "품목명") 또는 "상품코드"(또는 "품목코드"), 그리고 "입고수량"(또는 "출고수량") 컬럼이 포함되어 있는지 확인해 주세요.</div>';
       return;
     }
     // 구분 컬럼 없으면 현재 페이지 모드(입고/출고) 기본값 사용
@@ -1319,15 +1336,18 @@ async function processUploadedFile(file, overlay, container, navigateTo, items, 
       if (!row || row.length === 0) continue;
 
       const typeCell = colMap.type >= 0 ? String(row[colMap.type] ?? '').trim() : '';
-      const itemName = String(row[colMap.itemName] ?? '').trim();
+      let itemName = colMap.itemName >= 0 ? String(row[colMap.itemName] ?? '').trim() : '';
       const quantity = parseBulkNumber(row[colMap.quantity]);
+      const rawItemCode = colMap.itemCode >= 0 ? String(row[colMap.itemCode] ?? '').trim() : '';
+
+      // 품명이 없으면 상품코드로 기존 품목 매칭하여 품명 보완
+      const matchedItem = items.find((item) =>
+        (itemName && item.itemName === itemName) ||
+        (rawItemCode && item.itemCode && item.itemCode === rawItemCode)
+      );
+      if (!itemName && matchedItem) itemName = matchedItem.itemName;
 
       if (!itemName || quantity <= 0) continue;
-
-      const rawItemCode = colMap.itemCode >= 0 ? String(row[colMap.itemCode] ?? '').trim() : '';
-      const matchedItem = items.find((item) =>
-        item.itemName === itemName || (rawItemCode && item.itemCode && item.itemCode === rawItemCode)
-      );
 
       let dateStr = '';
       if (colMap.date >= 0) {
