@@ -439,7 +439,8 @@ export function renderHubSupport(container, navigateTo) {
 }
 
 export const HUB_MAP = {
-  inventory: 'hub-inventory',
+  // 재고관리 서브메뉴 페이지 — 사이드바 서브 버튼이 직접 활성화되므로 hub 매핑 제외
+  // in, out, inventory, ledger는 매핑하지 않음 (activeId = 자기 자신)
   inout: 'hub-inventory',
   bulk: 'hub-inventory',
   stocktake: 'hub-inventory',
@@ -458,8 +459,8 @@ export const HUB_MAP = {
   dashboard: 'hub-report',
   'tax-reports': 'hub-documents',
   documents: 'hub-documents',
-  ledger: 'hub-documents',
   auditlog: 'hub-documents',
+  // ledger는 재고관리 서브메뉴에 있으므로 hub 매핑 제외
   settings: 'hub-settings',
   team: 'hub-settings',
   backup: 'hub-settings',
@@ -497,8 +498,10 @@ export const PAGE_LABELS = {
   'yearend-settlement': '연말정산 보조',
   upload: '파일 업로드',
   mapping: '데이터 확인',
-  inventory: '재고 현황',
+  inventory: '재고현황',
   inout: '입출고 관리',
+  in: '입고관리',
+  out: '출고관리',
   bulk: '일괄 처리',
   stocktake: '재고 실사',
   warehouses: '창고 관리',

@@ -361,10 +361,28 @@
       <!-- 업무 -->
       <div class="nav-section"><div class="nav-section-title">업무</div></div>
       <nav class="nav-rich-list">
-        <button class="nav-btn nav-btn-rich" data-page="hub-inventory">
-          <span class="nav-icon">📦</span>
-          <span class="nav-copy"><span class="nav-main">재고 관리</span></span>
-        </button>
+        <!-- 재고관리 아코디언 -->
+        <div class="nav-group" id="nav-group-inventory">
+          <button class="nav-btn nav-btn-rich nav-group-header" id="nav-group-inventory-toggle">
+            <span class="nav-icon">📦</span>
+            <span class="nav-copy"><span class="nav-main">재고관리</span></span>
+            <span class="nav-group-chevron">›</span>
+          </button>
+          <div class="nav-sub-list" id="nav-sub-inventory">
+            <button class="nav-btn nav-btn-sub" data-page="in">
+              <span class="nav-sub-icon">📥</span> 입고관리
+            </button>
+            <button class="nav-btn nav-btn-sub" data-page="out">
+              <span class="nav-sub-icon">📤</span> 출고관리
+            </button>
+            <button class="nav-btn nav-btn-sub" data-page="ledger">
+              <span class="nav-sub-icon">📋</span> 수불관리
+            </button>
+            <button class="nav-btn nav-btn-sub" data-page="inventory">
+              <span class="nav-sub-icon">📊</span> 재고현황
+            </button>
+          </div>
+        </div>
         <button class="nav-btn nav-btn-rich" data-page="hub-warehouse">
           <span class="nav-icon">🏢</span>
           <span class="nav-copy"><span class="nav-main">창고·거래처</span></span>

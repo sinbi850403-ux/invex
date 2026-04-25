@@ -57,8 +57,8 @@ export const PAGE_LOADERS = {
   mapping:         () => import('./page-mapping.js').then(m => m.renderMappingPage),
   inventory:       () => import('./page-inventory.js').then(m => m.renderInventoryPage),
   inout:           () => import('./page-inout.js').then(m => m.renderInoutPage),
-  in:              () => import('./page-inout.js').then(m => m.renderInoutPage),
-  out:             () => import('./page-inout.js').then(m => m.renderInoutPage),
+  in:              () => import('./page-inout.js').then(m => m.renderInPage),
+  out:             () => import('./page-inout.js').then(m => m.renderOutPage),
   summary:         () => import('./page-summary.js').then(m => m.renderSummaryPage),
   scanner:         () => import('./page-scanner.js').then(m => m.renderScannerPage),
   documents:       () => import('./page-documents.js').then(m => m.renderDocumentsPage),
@@ -244,6 +244,14 @@ export async function navigateTo(pageName) {
     document.querySelectorAll('[data-page]').forEach(btn => {
       btn.classList.toggle('active', btn.dataset.page === activeId);
     });
+
+    // 재고관리 아코디언: in/out/inventory/ledger 진입 시 자동 펼침
+    const inventorySubPages = new Set(['in', 'out', 'inventory', 'ledger', 'inout']);
+    const invGroup = document.getElementById('nav-group-inventory');
+    if (invGroup) {
+      const shouldOpen = inventorySubPages.has(pageName);
+      invGroup.classList.toggle('open', shouldOpen);
+    }
 
     updateBreadcrumb(pageName);
 

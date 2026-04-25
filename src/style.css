@@ -833,6 +833,83 @@ html.dark-mode .acc-item-btn.active {
   color: #f8fbff;
 }
 
+/* ── 재고관리 아코디언 그룹 ──────────────────────────────── */
+.nav-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.nav-group-header {
+  display: flex !important;
+  align-items: center;
+  cursor: pointer;
+  position: relative;
+}
+
+.nav-group-chevron {
+  margin-left: auto;
+  font-size: 14px;
+  color: rgba(176, 199, 230, 0.6);
+  transition: transform 0.2s ease;
+  font-style: normal;
+  line-height: 1;
+}
+
+.nav-group.open .nav-group-chevron {
+  transform: rotate(90deg);
+}
+
+.nav-sub-list {
+  display: none;
+  flex-direction: column;
+  gap: 1px;
+  padding-left: 12px;
+  margin-top: 2px;
+}
+
+.nav-group.open .nav-sub-list {
+  display: flex;
+}
+
+.nav-btn-sub {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 7px 10px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(126, 156, 193, 0.12);
+  border-radius: 9px;
+  color: rgba(220, 235, 250, 0.85);
+  font-size: 12.5px;
+  font-weight: 550;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  text-align: left;
+}
+
+.nav-btn-sub:hover {
+  background: rgba(75, 146, 228, 0.15);
+  border-color: rgba(116, 186, 255, 0.35);
+  color: #fff;
+}
+
+.nav-btn-sub.active {
+  background: rgba(75, 146, 228, 0.28);
+  border-color: rgba(116, 186, 255, 0.65);
+  color: #f0f8ff;
+  font-weight: 650;
+}
+
+.nav-sub-icon {
+  font-size: 13px;
+  width: 16px;
+  text-align: center;
+  flex-shrink: 0;
+}
+/* ────────────────────────────────────────────────────────── */
+
 #quick-access-nav {
   display: flex;
   flex-direction: column;

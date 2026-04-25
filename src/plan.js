@@ -21,7 +21,7 @@ export const PLANS = {
     userLimit: 1,
     // Free에서 접근 가능한 페이지
     pages: [
-      'home', 'upload', 'mapping', 'inventory', 'inout', 'settings', 'billing', 'admin',
+      'home', 'upload', 'mapping', 'inventory', 'inout', 'in', 'out', 'ledger', 'settings', 'billing', 'admin',
       'mypage', 'guide', 'support', 'team', 'backup', 'referral',
       // 허브 페이지 — 요금제와 무관하게 항상 접근 가능 (네비게이션 역할)
       'hub-inventory', 'hub-warehouse', 'hub-order',
@@ -40,7 +40,7 @@ export const PLANS = {
     userLimit: 5,
     // Pro에서 추가로 접근 가능한 페이지
     pages: [
-      'home', 'upload', 'mapping', 'inventory', 'inout', 'settings',
+      'home', 'upload', 'mapping', 'inventory', 'inout', 'in', 'out', 'settings',
       'bulk', 'scanner', 'labels', 'transfer', 'stocktake', 'vendors',
       'summary', 'dashboard', 'costing', 'accounts', 'ledger', 'documents', 'auditlog',
       'billing', 'admin', 'mypage', 'guide', 'support', 'team', 'backup', 'referral',
@@ -74,7 +74,8 @@ const PAGE_MIN_PLAN = {
   'hub-settings': 'free', 'hub-support': 'free', 'hub-hr': 'free',
   // Free 기능
   home: 'free', upload: 'free', mapping: 'free',
-  inventory: 'free', inout: 'free', settings: 'free', billing: 'free', admin: 'free',
+  inventory: 'free', inout: 'free', in: 'free', out: 'free', ledger: 'free',
+  settings: 'free', billing: 'free', admin: 'free',
   mypage: 'free', guide: 'free', support: 'free', team: 'free', backup: 'free', referral: 'free',
   // Pro 기능
   bulk: 'pro', scanner: 'pro', labels: 'pro', transfer: 'pro',

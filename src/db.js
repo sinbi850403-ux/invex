@@ -1273,3 +1273,24 @@ function storeLeaveToDb(l) {
   return out;
 }
 
+
+/**
+ * 현재 사용자의 모든 데이터 삭제 (회원탈퇴/초기화용)
+ * 각 테이블에서 user_id = auth.uid() 인 데이터를 순서대로 삭제
+ */
+export async function clearAllUserData() {
+  const userId = await getUserId();
+  if (!userId) throw new Error('로그인이 필요합니다.');
+
+  const tables = [
+    'salary_items', 'leaves', 'payrolls', 'attendance', 'employees',
+    'pos_sales', 'purchase_orders', 'account_entries',
+    'audit_logs', 'stocktakes', 'transfers', 'vendors',
+    'transactions', 'items', 'user_settings', 'custom_fields',
+  ];
+
+  for (const table of tables) {
+    const { error } = await supabase.from(table).delete().eq('user_id', userId);
+    if (error) console.warn(`[clearAllUserData] ${table} 삭제 경고:`, error.message);
+  }
+}

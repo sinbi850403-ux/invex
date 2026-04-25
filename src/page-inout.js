@@ -47,12 +47,25 @@ function formatDate(dateStr) {
 /**
  * 입출고 관리 페이지 렌더링
  */
-export function renderInoutPage(container, navigateTo) {
+/**
+ * mode: 'all' | 'in' | 'out'
+ *  - 'all' → 기존 입출고 통합 뷰
+ *  - 'in'  → 입고관리 전용 (입고 기록만, 제목·기본필터 변경)
+ *  - 'out' → 출고관리 전용 (출고 기록만, 제목·기본필터 변경)
+ */
+export function renderInoutPage(container, navigateTo, mode = 'all') {
   // ── 권한 플래그 ──────────────────────────────────────────
   const canCreate = canAction('inout:create');
   const canDelete = canAction('inout:delete');
   const canBulk   = canAction('inout:bulk');
   // ─────────────────────────────────────────────────────────
+
+  // mode별 설정
+  const isInMode  = mode === 'in';
+  const isOutMode = mode === 'out';
+  const pageTitle  = isInMode ? '입고 관리' : isOutMode ? '출고 관리' : '입출고 관리';
+  const pageIcon   = isInMode ? '📥' : isOutMode ? '📤' : '📥';
+  const initialQuick = isInMode ? 'in' : isOutMode ? 'out' : 'all';
 
   const state = getState();
   const items = state.mappedData || [];
@@ -106,8 +119,12 @@ export function renderInoutPage(container, navigateTo) {
   container.innerHTML = `
     <div class="page-header">
       <div>
-        <h1 class="page-title"><span class="title-icon">📥</span> 입출고 관리</h1>
-        <div class="page-desc">입고와 출고를 기록하면 재고 수량이 자동으로 반영됩니다.</div>
+        <h1 class="page-title"><span class="title-icon">${pageIcon}</span> ${pageTitle}</h1>
+        <div class="page-desc">${
+          isInMode  ? '입고 기록을 등록하면 재고 수량이 자동으로 증가합니다.' :
+          isOutMode ? '출고 기록을 등록하면 재고 수량이 자동으로 감소합니다.' :
+                     '입고와 출고를 기록하면 재고 수량이 자동으로 반영됩니다.'
+        }</div>
       </div>
       <div class="page-actions">
         <button class="btn btn-outline" id="btn-export-tx">이력 내보내기</button>
@@ -185,7 +202,7 @@ export function renderInoutPage(container, navigateTo) {
     ${renderQuickFilterRow({
       label: '빠른 조건',
       attr: 'data-tx-quick',
-      chips: quickTxFilters.map(chip => ({ ...chip, active: chip.value === 'all' })),
+      chips: quickTxFilters.map(chip => ({ ...chip, active: chip.value === initialQuick })),
     })}
 
     <!-- ?꾪꽣 -->
@@ -237,10 +254,13 @@ export function renderInoutPage(container, navigateTo) {
   let currentPageNum = 1;
   let selectedTxIds = new Set();
   const expandedGroups = new Set(); // 펼쳐진 그룹 키
-  const defaultFilter = { keyword: '', type: '', date: '', vendor: '', itemCode: '', quick: 'all' };
+  const defaultFilter = { keyword: '', type: '', date: '', vendor: '', itemCode: '', quick: initialQuick };
   const defaultSort = { key: 'date', direction: 'desc' };
-  const savedViewPrefs = state.inoutViewPrefs || {};
+  // mode가 'in'/'out'이면 저장된 필터 무시하고 항상 해당 타입으로 고정
+  const savedViewPrefs = (isInMode || isOutMode) ? {} : (state.inoutViewPrefs || {});
   let filter = sanitizeInoutFilter(savedViewPrefs.filter);
+  // mode 고정: in/out 전용 페이지에서는 quick 필터를 mode로 강제 설정
+  if (isInMode || isOutMode) filter.quick = initialQuick;
   let sort = sanitizeInoutSort(savedViewPrefs.sort);
   let persistTimer = null;
 
@@ -1801,10 +1821,17 @@ function getVendorOptions(transactions, items) {
   return [...new Set([...fromTx, ...fromItems])].sort();
 }
 
-/**
- * 입출고 관리 페이지 렌더링
- */
 function getCodeList(items) {
   return [...new Set(items.map(i => i.itemCode).filter(Boolean))].sort();
+}
+
+/** 입고관리 전용 페이지 (입고 기록만 표시) */
+export function renderInPage(container, navigateTo) {
+  return renderInoutPage(container, navigateTo, 'in');
+}
+
+/** 출고관리 전용 페이지 (출고 기록만 표시) */
+export function renderOutPage(container, navigateTo) {
+  return renderInoutPage(container, navigateTo, 'out');
 }
 
