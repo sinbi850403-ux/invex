@@ -775,7 +775,7 @@ async function initAppAfterAuth() {
       });
   }
 
-  await restoreState();
+  await restoreState(getCurrentUser()?.uid || null);
   // restoreState가 로컬 캐시의 예전 currentPlan을 복원할 수 있으므로,
   // 인증 프로필(plan)을 다시 우선 동기화한다.
   const profilePlan = getUserProfileData()?.plan;
