@@ -645,10 +645,11 @@ export const settings = {
 
   async set(key, value) {
     const userId = await getUserId();
-    const { error } = await supabase
+    const result = await supabase
       .from('user_settings')
       .upsert({ user_id: userId, key, value }, { onConflict: 'user_id,key' });
-    handleError(error, `설정 저장 (${key})`);
+    if (!result) return; // Supabase가 undefined 반환 시 안전 처리
+    handleError(result.error, `설정 저장 (${key})`);
   },
 
   /**

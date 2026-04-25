@@ -326,7 +326,7 @@ async function syncToSupabase() {
       if (keysToSync.has(key) && state[key] !== undefined) {
         promises.push(
           managedQuery(() => db.settings.set(key, state[key]))
-            .catch(err => { console.warn(`[Sync] 설정 ${key} 동기화 실패:`, err.message); failedKeys.add(key); })
+            .catch(err => { console.warn(`[Sync] 설정 ${key} 동기화 실패:`, err?.message ?? err); failedKeys.add(key); })
         );
       }
     }
