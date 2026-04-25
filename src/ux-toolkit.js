@@ -225,3 +225,31 @@ export function renderQuickFilterRow({
     </div>
   `;
 }
+
+export function enableColumnResize(table) {
+  if (!table) return;
+  table.querySelectorAll('th').forEach(th => {
+    if (th.querySelector('.col-resize-handle')) return;
+    const handle = document.createElement('div');
+    handle.className = 'col-resize-handle';
+    handle.addEventListener('mousedown', e => {
+      e.preventDefault();
+      e.stopPropagation();
+      const startX = e.pageX;
+      const startWidth = th.offsetWidth;
+      const onMove = mv => {
+        const newWidth = Math.max(40, startWidth + mv.pageX - startX);
+        th.style.width = newWidth + 'px';
+        th.style.minWidth = newWidth + 'px';
+      };
+      const onUp = () => {
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup', onUp);
+      };
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', onUp);
+    });
+    th.style.position = 'relative';
+    th.appendChild(handle);
+  });
+}

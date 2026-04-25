@@ -7,7 +7,7 @@
 import { getState, setState, addTransaction, deleteTransaction, restoreTransaction, updateTransactionPrices } from './store.js';
 import { showToast } from './toast.js';
 import { downloadExcel, downloadExcelSheets, readExcelFile } from './excel.js';
-import { escapeHtml, renderQuickFilterRow } from './ux-toolkit.js';
+import { escapeHtml, renderQuickFilterRow, enableColumnResize } from './ux-toolkit.js';
 import { canAction } from './auth.js';
 import { handlePageError } from './error-monitor.js';
 import { showFieldError, clearAllFieldErrors, setSavingState } from './ux-toolkit.js';
@@ -807,13 +807,13 @@ export function renderInoutPage(container, navigateTo, mode = 'all') {
           }
           const itemName = removed.deleted.itemName || '선택 기록';
           selectedTxIds.delete(btn.dataset.id);
-          renderInoutPage(container, navigateTo);
+          renderInoutPage(container, navigateTo, mode);
           showToast(`"${itemName}" 기록을 삭제했습니다.`, 'info', 5000, {
             actionLabel: '실행 취소',
             onAction: () => {
               try {
                 restoreTransaction(removed.deleted, removed.index);
-                renderInoutPage(container, navigateTo);
+                renderInoutPage(container, navigateTo, mode);
                 showToast(`"${itemName}" 기록을 복원했습니다.`, 'success');
               } catch (err) {
                 handlePageError(err, { page: 'inout', action: 'restore-transaction' });
@@ -872,14 +872,15 @@ export function renderInoutPage(container, navigateTo, mode = 'all') {
           });
           selectedTxIds.clear();
           showToast(`일괄 삭제 완료! (${totalSelected}건 중 ${totalSelected - failCount}건 삭제)`, 'success');
-          renderInoutPage(container, navigateTo);
+          renderInoutPage(container, navigateTo, mode);
         } catch (err) {
           handlePageError(err, { page: 'inout', action: 'bulk-delete' });
         }
       };
     }
 
-    //   같은 품목을 여러 거래처에서 입고할 수 있으므로 트랜잭션 기준이 정확
+    enableColumnResize(container.querySelector('.data-table'));
+
     pagEl.querySelector('#tx-prev')?.addEventListener('click', () => { currentPageNum--; renderTxTable(); });
     pagEl.querySelector('#tx-next')?.addEventListener('click', () => { currentPageNum++; renderTxTable(); });
   }
@@ -1157,12 +1158,15 @@ export function renderInoutPage(container, navigateTo, mode = 'all') {
  * 왜 필요? → 건별 등록은 수십 건 이상일 때 비효율적.
  */
 function openBulkUploadModal(container, navigateTo, items, modeDefault = null) {
+  const modalTitle = modeDefault === 'in' ? '엑셀 일괄 입고 등록'
+    : modeDefault === 'out' ? '엑셀 일괄 출고 등록'
+    : '엑셀 일괄 입출고 등록';
   const overlay = document.createElement('div');
   overlay.className = 'modal-overlay';
   overlay.innerHTML = `
     <div class="modal" style="max-width:700px;">
       <div class="modal-header">
-        <h3 class="modal-title">엑셀 일괄 입출고 등록</h3>
+        <h3 class="modal-title">${modalTitle}</h3>
         <button class="modal-close" id="bulk-close">✕</button>
       </div>
       <div class="modal-body" id="bulk-body">
@@ -1199,19 +1203,35 @@ function openBulkUploadModal(container, navigateTo, items, modeDefault = null) {
 
   overlay.querySelector('#bulk-download-template').addEventListener('click', () => {
     const today = new Date().toISOString().split('T')[0];
-    const supply1 = 1200000 * 100;
-    const vat1 = Math.floor(supply1 * 0.1);
-    const supply2 = 850000 * 50;
-    const vat2 = Math.floor(supply2 * 0.1);
-    const templateRows = [
-      BULK_INOUT_TEMPLATE_HEADERS,
-      // 자산, 입고일자, 상품코드, 거래처, 품명, 규격, 단위, 입고수량, 단가, 공급가액, 부가세, 합계금액
-      ['전자기기', today, 'SM-S925', '(주)삼성전자', '갤럭시 S25', '256GB 블랙', 'EA', 100, 1200000, supply1, vat1, supply1 + vat1],
-      ['전자기기', today, 'AP-001', '(주)애플코리아', '아이패드 Air', '256GB 스타라이트', 'EA', 50, 850000, supply2, vat2, supply2 + vat2],
-    ];
+    let templateRows, sheetName, fileName;
 
-    downloadExcelSheets([{ name: '입출고_양식', rows: templateRows }], '입출고_일괄등록_양식');
-    showToast('입출고 일괄등록 양식을 내려받았습니다. 내용을 입력한 뒤 다시 업로드해 주세요.', 'success');
+    if (modeDefault === 'out') {
+      // 출고 양식: 이력 내보내기와 동일한 컬럼 (자산|출고일자|매장명|상품코드|품명|규격|단위|출고수량|단가|출고단가)
+      const outHeaders = ['자산', '출고일자', '매장명', '상품코드', '품명', '규격', '단위', '출고수량', '단가', '출고단가'];
+      templateRows = [
+        outHeaders,
+        ['전자기기', today, '강남점', 'SM-S925', '갤럭시 S25', '256GB 블랙', 'EA', 10, 1200000, 1500000],
+        ['전자기기', today, '홍대점', 'AP-001', '아이패드 Air', '256GB 스타라이트', 'EA', 5, 850000, 1100000],
+      ];
+      sheetName = '출고_양식';
+      fileName = '출고_일괄등록_양식';
+    } else {
+      // 입고 양식 (기본): 자산|입고일자|상품코드|거래처|품명|규격|단위|입고수량|단가|공급가액|부가세|합계금액
+      const supply1 = 1200000 * 100;
+      const vat1 = Math.floor(supply1 * 0.1);
+      const supply2 = 850000 * 50;
+      const vat2 = Math.floor(supply2 * 0.1);
+      templateRows = [
+        BULK_INOUT_TEMPLATE_HEADERS,
+        ['전자기기', today, 'SM-S925', '(주)삼성전자', '갤럭시 S25', '256GB 블랙', 'EA', 100, 1200000, supply1, vat1, supply1 + vat1],
+        ['전자기기', today, 'AP-001', '(주)애플코리아', '아이패드 Air', '256GB 스타라이트', 'EA', 50, 850000, supply2, vat2, supply2 + vat2],
+      ];
+      sheetName = '입고_양식';
+      fileName = '입고_일괄등록_양식';
+    }
+
+    downloadExcelSheets([{ name: sheetName, rows: templateRows }], fileName);
+    showToast(`${modeDefault === 'out' ? '출고' : '입고'} 일괄등록 양식을 내려받았습니다.`, 'success');
   });
 
   const dropzone = overlay.querySelector('#bulk-dropzone');
@@ -1265,12 +1285,12 @@ async function processUploadedFile(file, overlay, container, navigateTo, items, 
     };
     const colMap = {
       type:               findCol('구분'),
-      vendor:             findCol('거래처'),
+      vendor:             findCol('거래처', '매장명'),
       itemName:           findCol('품명', '품목명'),
       itemCode:           findCol('상품코드', '품목코드'),
-      quantity:           findCol('입고수량', '수량'),
+      quantity:           findCol('입고수량', '출고수량', '수량'),
       unitPrice:          findCol('단가', '원가'),
-      sellingPrice:       findCol('판매가'),
+      sellingPrice:       findCol('판매가', '출고단가'),
       actualSellingPrice: findCol('실판매가'),
       date:               findCol('입고일자', '출고일자', '날짜'),
       note:               findCol('비고'),
@@ -1287,7 +1307,7 @@ async function processUploadedFile(file, overlay, container, navigateTo, items, 
     const dataStartIndex = Math.max(1, detected.headerRowIndex + 1);
 
     if (colMap.itemName === -1 || colMap.quantity === -1) {
-      previewEl.innerHTML = '<div class="alert alert-danger">필수 컬럼을 찾을 수 없습니다. 양식에 "품명"(또는 "품목명"), "입고수량"(또는 "수량") 컬럼이 포함되어 있는지 확인해 주세요.</div>';
+      previewEl.innerHTML = '<div class="alert alert-danger">필수 컬럼을 찾을 수 없습니다. 양식에 "품명"(또는 "품목명"), "입고수량"(또는 "출고수량") 컬럼이 포함되어 있는지 확인해 주세요.</div>';
       return;
     }
     // 구분 컬럼 없으면 현재 페이지 모드(입고/출고) 기본값 사용
@@ -1436,7 +1456,7 @@ async function processUploadedFile(file, overlay, container, navigateTo, items, 
 
       showToast(`일괄 등록 완료: 총 ${rows.length}건, 입고 ${inCount}건, 출고 ${outCount}건`, 'success');
       closeModal();
-      renderInoutPage(container, navigateTo);
+      renderInoutPage(container, navigateTo, modeDefault || 'all');
     });
   } catch (err) {
     previewEl.innerHTML = `<div class="alert alert-danger">파일 처리 중 오류가 발생했습니다: ${escapeHtml(err.message)}</div>`;

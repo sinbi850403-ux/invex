@@ -6,6 +6,7 @@
 import { getState, setState } from './store.js';
 import { showToast } from './toast.js';
 import { downloadExcel } from './excel.js';
+import { enableColumnResize } from './ux-toolkit.js';
 import { jsPDF } from 'jspdf';
 import { applyPlugin } from 'jspdf-autotable';
 import { applyKoreanFont, getKoreanFontStyle } from './pdf-font.js';
@@ -234,6 +235,8 @@ export function renderLedgerPage(container, navigateTo) {
         renderLedgerTable();
       });
     });
+
+    enableColumnResize(tableArea.querySelector('#ledger-data-table'));
   }
 }
 

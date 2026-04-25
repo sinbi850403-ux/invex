@@ -1336,7 +1336,7 @@ html.dark-mode .acc-item-btn.active {
 .data-table th {
   background: #f8f9fb;
   border-bottom: 2px solid var(--border);
-  padding: 10px 12px;
+  padding: 6px 10px;
   text-align: left;
   font-weight: 600;
   color: var(--text-secondary);
@@ -1347,11 +1347,27 @@ html.dark-mode .acc-item-btn.active {
   position: sticky;
   top: 0;
   z-index: 1;
+  user-select: none;
+}
+
+.col-resize-handle {
+  position: absolute;
+  right: 0;
+  top: 0;
+  width: 6px;
+  height: 100%;
+  cursor: col-resize;
+  z-index: 2;
+}
+.col-resize-handle:hover,
+.col-resize-handle:active {
+  background: var(--accent);
+  opacity: 0.4;
 }
 
 .data-table td {
   border-bottom: 1px solid var(--border-light);
-  padding: 10px 12px;
+  padding: 6px 10px;
   vertical-align: middle;
 }
 
