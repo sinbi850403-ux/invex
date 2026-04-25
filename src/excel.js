@@ -54,6 +54,13 @@ export async function readExcelFile(file) {
       return filled.map((cell) => {
         if (cell == null) return '';
         if (typeof cell !== 'object') return cell;
+        // Date — YYYY-MM-DD 문자열로 변환
+        if (cell instanceof Date) {
+          const y = cell.getFullYear();
+          const m = String(cell.getMonth() + 1).padStart(2, '0');
+          const d = String(cell.getDate()).padStart(2, '0');
+          return `${y}-${m}-${d}`;
+        }
         // ExcelJS richText
         if (cell.richText) return cell.richText.map(r => r.text || '').join('');
         // ExcelJS formula → use result

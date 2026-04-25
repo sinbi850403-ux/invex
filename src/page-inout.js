@@ -581,13 +581,13 @@ export function renderInoutPage(container, navigateTo, mode = 'all') {
           return `<tr class="${selectedTxIds.has(tx.id) ? 'selected' : ''}" data-tx-id="${safeAttr(tx.id)}" style="${childStyle}">
             ${chk}
             <td class="col-num"></td>
-            <td style="font-size:12px;">${escapeHtml(it.category || '')}</td>
+            <td style="font-size:12px;">${escapeHtml(tx.category || it.category || '')}</td>
             <td>${formatDate(tx.date)}</td>
             <td style="font-size:12px; color:var(--text-muted);">${escapeHtml(tx.itemCode || it.itemCode || '-')}</td>
             <td style="font-size:12px;">${tx.vendor ? escapeHtml(tx.vendor) : '<span style="color:var(--text-muted)">-</span>'}</td>
             <td style="${indent}"><strong>${escapeHtml(tx.itemName || '-')}</strong></td>
-            <td style="font-size:12px; color:var(--text-muted);">${escapeHtml(it.spec || '')}</td>
-            <td style="font-size:12px;">${escapeHtml(it.unit || '')}</td>
+            <td style="font-size:12px; color:var(--text-muted);">${escapeHtml(tx.spec || it.spec || '')}</td>
+            <td style="font-size:12px;">${escapeHtml(tx.unit || it.unit || '')}</td>
             <td class="text-right type-in">+${qty.toLocaleString('ko-KR')}</td>
             <td class="text-right">${cost ? W(cost) : '-'}</td>
             <td class="text-right">${supply ? W(supply) : '-'}</td>
@@ -612,7 +612,7 @@ export function renderInoutPage(container, navigateTo, mode = 'all') {
           return `<tr class="${selectedTxIds.has(tx.id) ? 'selected' : ''}" data-tx-id="${safeAttr(tx.id)}" style="${childStyle}">
             ${chk}
             <td class="col-num"></td>
-            <td style="font-size:12px;">${escapeHtml(it.category || '')}</td>
+            <td style="font-size:12px;">${escapeHtml(tx.category || it.category || '')}</td>
             <td>${formatDate(tx.date)}</td>
             <td style="font-size:12px;">${tx.vendor ? escapeHtml(tx.vendor) : '<span style="color:var(--text-muted)">-</span>'}</td>
             <td style="font-size:12px; color:var(--text-muted);">${escapeHtml(tx.itemCode || it.itemCode || '-')}</td>
@@ -1428,6 +1428,9 @@ async function processUploadedFile(file, overlay, container, navigateTo, items, 
           actualSellingPrice: row.actualSellingPrice,
           date: row.date,
           note: row.note,
+          spec: row.spec,
+          unit: row.unit,
+          category: row.category,
         });
       });
 

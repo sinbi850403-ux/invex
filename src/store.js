@@ -574,9 +574,10 @@ export function addTransaction(tx) {
     const newItem = {
       itemName: tx.itemName,
       itemCode: tx.itemCode || '',
-      category: '미분류',
+      category: tx.category || '미분류',
+      spec: tx.spec || '',
       quantity: qty,
-      unit: 'EA',
+      unit: tx.unit || 'EA',
       unitPrice: price,
       salePrice: 0,
       supplyValue: supplyValue,
