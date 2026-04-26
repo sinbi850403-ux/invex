@@ -442,6 +442,11 @@ export function initAuth(callback) {
   // onAuthStateChange — 내부 에러를 반드시 캐치하여 Supabase 리스너가 죽지 않도록
   const { data: listener } = supabase.auth.onAuthStateChange(async (_event, session) => {
     try {
+      if (_event === 'PASSWORD_RECOVERY') {
+        // 비밀번호 재설정 링크 클릭 시 — 새 비밀번호 입력 모달 표시
+        showPasswordRecoveryModal();
+        return;
+      }
       await applySession(session, applySessionSeq);
     } catch (err) {
       console.error('[Auth] onAuthStateChange handler error:', err);
@@ -744,6 +749,88 @@ export async function resetPassword(email) {
     }
     return false;
   }
+}
+
+/**
+ * 비밀번호 재설정 링크 클릭 후 새 비밀번호 입력 모달
+ */
+function showPasswordRecoveryModal() {
+  const existing = document.getElementById('pw-recovery-modal');
+  if (existing) existing.remove();
+
+  const overlay = document.createElement('div');
+  overlay.id = 'pw-recovery-modal';
+  overlay.style.cssText = [
+    'position:fixed; inset:0; z-index:9999;',
+    'background:rgba(0,0,0,0.7); backdrop-filter:blur(4px);',
+    'display:flex; align-items:center; justify-content:center;',
+  ].join('');
+
+  overlay.innerHTML = `
+    <div style="background:var(--bg-card,#1e293b); border:1px solid rgba(255,255,255,0.1);
+                border-radius:16px; padding:40px 32px; width:100%; max-width:400px;
+                box-shadow:0 24px 80px rgba(0,0,0,0.5); font-family:inherit;">
+      <div style="text-align:center; margin-bottom:24px;">
+        <div style="font-size:40px; margin-bottom:10px;">🔑</div>
+        <h2 style="font-size:18px; font-weight:800; color:var(--text,#f0f4f8); margin-bottom:6px;">새 비밀번호 설정</h2>
+        <p style="font-size:13px; color:var(--text-muted,#94a3b8);">사용할 새 비밀번호를 입력해 주세요.</p>
+      </div>
+      <div id="pw-recovery-err" style="display:none; margin-bottom:14px; padding:10px 14px;
+           background:rgba(239,68,68,0.1); border-radius:8px;
+           color:#ef4444; font-size:13px; text-align:center;"></div>
+      <input id="pw-recovery-new" type="password" placeholder="새 비밀번호 (8자 이상)"
+        style="width:100%; padding:12px 14px; border-radius:10px; border:1px solid rgba(255,255,255,0.1);
+               background:rgba(255,255,255,0.05); color:var(--text,#f0f4f8); font-size:14px;
+               margin-bottom:10px; outline:none; box-sizing:border-box;" />
+      <input id="pw-recovery-confirm" type="password" placeholder="새 비밀번호 확인"
+        style="width:100%; padding:12px 14px; border-radius:10px; border:1px solid rgba(255,255,255,0.1);
+               background:rgba(255,255,255,0.05); color:var(--text,#f0f4f8); font-size:14px;
+               margin-bottom:20px; outline:none; box-sizing:border-box;" />
+      <button id="pw-recovery-btn"
+        style="width:100%; padding:13px; border-radius:10px; border:none; cursor:pointer;
+               background:linear-gradient(135deg,#3b82f6,#6366f1); color:#fff;
+               font-size:15px; font-weight:700; font-family:inherit; transition:opacity 0.2s;">
+        비밀번호 변경하기
+      </button>
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+
+  const newPw = overlay.querySelector('#pw-recovery-new');
+  const confirmPw = overlay.querySelector('#pw-recovery-confirm');
+  const btn = overlay.querySelector('#pw-recovery-btn');
+  const errEl = overlay.querySelector('#pw-recovery-err');
+
+  function showErr(msg) {
+    errEl.textContent = msg;
+    errEl.style.display = 'block';
+  }
+
+  btn.addEventListener('click', async () => {
+    const pw = newPw.value.trim();
+    const cpw = confirmPw.value.trim();
+    errEl.style.display = 'none';
+
+    if (pw.length < 8) { showErr('비밀번호는 8자 이상이어야 합니다.'); return; }
+    if (pw !== cpw) { showErr('비밀번호가 일치하지 않습니다.'); return; }
+
+    btn.disabled = true;
+    btn.textContent = '변경 중...';
+
+    const { error } = await supabase.auth.updateUser({ password: pw });
+    if (error) {
+      btn.disabled = false;
+      btn.textContent = '비밀번호 변경하기';
+      showErr(`변경 실패: ${error.message}`);
+      return;
+    }
+
+    overlay.remove();
+    showToast('비밀번호가 변경되었습니다. 새 비밀번호로 로그인해 주세요.', 'success', 5000);
+    // 변경 후 로그아웃 → 로그인 화면으로
+    await supabase.auth.signOut({ scope: 'local' });
+  });
 }
 
 // ─── 로그아웃 ─────────────────────────────────────────────────────────────────
