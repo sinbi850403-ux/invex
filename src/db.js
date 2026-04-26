@@ -17,6 +17,21 @@ let _cachedUserId = null;
 let _cachedUserIdAt = 0;
 
 /**
+ * 워크스페이스 오너 UID 오버라이드
+ * — 팀 멤버로 접속 시 오너의 user_id로 쿼리하기 위해 사용
+ * — main.js에서 로그인 후 setWorkspaceUserId() 호출로 주입
+ */
+let _workspaceUserId = null;
+
+export function setWorkspaceUserId(uid) {
+  _workspaceUserId = uid || null;
+}
+
+export function clearWorkspaceUserId() {
+  _workspaceUserId = null;
+}
+
+/**
  * 로그인 직후 uid를 캐시에 주입 — getUserId()의 getSession 재호출 타이밍 경쟁 방지
  */
 export function primeUserIdCache(uid) {
@@ -76,8 +91,11 @@ function generateClientUuid() {
 
 /**
  * 현재 로그인한 사용자 ID를 안전하게 가져오기
+ * — 팀 워크스페이스 소속 시 오너 UID 반환 (_workspaceUserId 우선)
  */
 async function getUserId() {
+  if (_workspaceUserId) return _workspaceUserId;
+
   if (_cachedUserId && Date.now() - _cachedUserIdAt < USER_ID_CACHE_TTL_MS) {
     return _cachedUserId;
   }

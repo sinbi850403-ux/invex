@@ -15,7 +15,8 @@ import { isAdmin } from './admin-auth.js';
 import { navigateTo, injectRouterCallbacks, PAGE_LOADERS, LAST_PAGE_KEY, renderQuickAccess } from './router.js';
 import { initGlobalSearch, toggleGlobalSearch } from './global-search.js';
 import { restoreState, getState, setupRealtimeSync, cleanupRealtimeSync } from './store.js';
-import { primeUserIdCache } from './db.js';
+import { primeUserIdCache, setWorkspaceUserId, clearWorkspaceUserId } from './db.js';
+import { getWorkspaceId } from './workspace.js';
 import { checkAndShowOnboarding } from './onboarding.js';
 import { initSidebarCustomize } from './sidebar-customize.js';
 import { isSupabaseConfigured, supabase } from './supabase-client.js';
@@ -830,6 +831,17 @@ async function initAppAfterAuth() {
     checkAndShowOnboarding(navigateTo);
     setupRealtimeSync();
 
+    // 팀 워크스페이스 소속 시 DB 쿼리를 오너 UID로 실행
+    const uid = getCurrentUser()?.uid;
+    if (uid) {
+      const wsId = await getWorkspaceId(uid);
+      if (wsId && wsId !== uid) {
+        setWorkspaceUserId(wsId); // 오너 UID로 쿼리 전환
+        await restoreState(wsId); // 오너 데이터로 재로드
+        await navigateTo(startPage); // 현재 페이지 갱신
+      }
+    }
+
     // TOKEN_REFRESHED가 initAppAfterAuth 실행 도중 도착했으면 여기서 재로드
     if (pendingTokenRefresh) {
       pendingTokenRefresh = false;
@@ -875,6 +887,7 @@ function updateUserUI(user, profile) {
       if (btn) btn.disabled = true;
       try {
         cleanupRealtimeSync();
+        clearWorkspaceUserId();
         await logout();
       } finally {
         if (btn) btn.disabled = false;
