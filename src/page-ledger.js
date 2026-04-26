@@ -258,6 +258,7 @@ function getLedgerRows(container, items, transactions, openingOverrides) {
 function renderLedgerHeader(field, sortState) {
   const classes = ['sortable-col'];
   if (field.align) classes.push(field.align);
+  if (field.key === 'itemName') classes.push('col-fill');
 
   return `
     <th class="${classes.join(' ')}">
@@ -278,7 +279,7 @@ function renderLedgerRow(row, index) {
   return `
     <tr>
       <td class="col-num">${index + 1}</td>
-      <td><strong>${row.itemName}</strong></td>
+      <td class="col-fill"><strong>${row.itemName}</strong></td>
       <td style="color:var(--text-muted); font-size:12px;">${row.itemCode || '-'}</td>
       <td>${row.unit || '-'}</td>
       <td class="text-right">${row.openingQty.toLocaleString('ko-KR')}</td>

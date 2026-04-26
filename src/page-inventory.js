@@ -873,7 +873,7 @@ export function renderInventoryPage(container, navigateTo) {
         <th class="col-num">#</th>
         ${activeFields.map(key => `
           <th
-            class="sortable-header ${ALL_FIELDS.find(f => f.key === key)?.numeric ? 'text-right' : ''} ${currentSort.key === key ? 'is-active' : ''}"
+            class="sortable-header ${key === 'itemName' ? 'col-fill' : ''} ${ALL_FIELDS.find(f => f.key === key)?.numeric ? 'text-right' : ''} ${currentSort.key === key ? 'is-active' : ''}"
             data-sort-key="${key}"
             title="클릭하여 정렬"
             aria-sort="${currentSort.key === key ? (currentSort.direction === 'asc' ? 'ascending' : currentSort.direction === 'desc' ? 'descending' : 'none') : 'none'}"
@@ -985,7 +985,7 @@ export function renderInventoryPage(container, navigateTo) {
             </td>
             <td class="col-num"></td>
             ${activeFields.map(key => `
-              <td class="editable-cell ${ALL_FIELDS.find(f => f.key === key)?.numeric ? 'text-right' : ''}"
+              <td class="editable-cell ${key === 'itemName' ? 'col-fill' : ''} ${ALL_FIELDS.find(f => f.key === key)?.numeric ? 'text-right' : ''}"
                   data-label="${FIELD_LABELS[key] || key}"
                   data-field="${key}" data-idx="${realIdx}">
                 ${key === 'itemName' && isLocked ? '<span title="잠금 품목 (수정 제한)" style="margin-right:4px;">🔒</span>' : ''}

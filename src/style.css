@@ -1411,6 +1411,10 @@ html.dark-mode .acc-item-btn.active {
   text-align: center;
 }
 
+.data-table .col-fill {
+  width: 100%;
+}
+
 .table-row-check {
   width: 14px;
   height: 14px;

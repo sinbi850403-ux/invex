@@ -348,7 +348,7 @@ export function renderInoutPage(container, navigateTo, mode = 'all') {
         ${sortableTh('date', '입고일자')}
         ${sortableTh('vendor', '거래처')}
         <th>상품코드</th>
-        ${sortableTh('itemName', '품명')}
+        ${sortableTh('itemName', '품명', 'col-fill')}
         <th>규격</th>
         <th>단위</th>
         ${sortableTh('quantity', '입고수량', 'text-right')}
@@ -365,7 +365,7 @@ export function renderInoutPage(container, navigateTo, mode = 'all') {
         ${sortableTh('date', '출고일자')}
         ${sortableTh('vendor', '거래처')}
         <th>상품코드</th>
-        ${sortableTh('itemName', '품명')}
+        ${sortableTh('itemName', '품명', 'col-fill')}
         <th>규격</th>
         <th>단위</th>
         ${sortableTh('quantity', '출고수량', 'text-right')}
@@ -386,7 +386,7 @@ export function renderInoutPage(container, navigateTo, mode = 'all') {
         <th class="col-num">#</th>
         ${sortableTh('type', '구분')}
         ${sortableTh('vendor', '거래처')}
-        ${sortableTh('itemName', '품목명')}
+        ${sortableTh('itemName', '품목명', 'col-fill')}
         <th>품목코드</th>
         ${sortableTh('quantity', '수량', 'text-right')}
         ${sortableTh('unitPrice', '원가', 'text-right')}
@@ -585,7 +585,7 @@ export function renderInoutPage(container, navigateTo, mode = 'all') {
             <td>${formatDate(tx.date)}</td>
             <td style="font-size:12px;">${tx.vendor ? escapeHtml(tx.vendor) : '<span style="color:var(--text-muted)">-</span>'}</td>
             <td style="font-size:12px; color:var(--text-muted);">${escapeHtml(tx.itemCode || it.itemCode || '-')}</td>
-            <td style="${indent}"><strong>${escapeHtml(tx.itemName || '-')}</strong></td>
+            <td class="col-fill" style="${indent}"><strong>${escapeHtml(tx.itemName || '-')}</strong></td>
             <td style="font-size:12px; color:var(--text-muted);">${escapeHtml(tx.spec || it.spec || '')}</td>
             <td style="font-size:12px;">${escapeHtml(tx.unit || it.unit || '')}</td>
             <td class="text-right type-in">+${qty.toLocaleString('ko-KR')}</td>
@@ -616,7 +616,7 @@ export function renderInoutPage(container, navigateTo, mode = 'all') {
             <td>${formatDate(tx.date)}</td>
             <td style="font-size:12px;">${tx.vendor ? escapeHtml(tx.vendor) : '<span style="color:var(--text-muted)">-</span>'}</td>
             <td style="font-size:12px; color:var(--text-muted);">${escapeHtml(tx.itemCode || it.itemCode || '-')}</td>
-            <td style="${indent}"><strong>${escapeHtml(tx.itemName || '-')}</strong></td>
+            <td class="col-fill" style="${indent}"><strong>${escapeHtml(tx.itemName || '-')}</strong></td>
             <td style="font-size:12px; color:var(--text-muted);">${escapeHtml(tx.spec || it.spec || '')}</td>
             <td style="font-size:12px;">${escapeHtml(tx.unit || it.unit || '')}</td>
             <td class="text-right type-out">${qty.toLocaleString('ko-KR')}</td>
@@ -640,7 +640,7 @@ export function renderInoutPage(container, navigateTo, mode = 'all') {
             <td class="col-num"></td>
             <td data-label="구분"><span class="${tx.type === 'in' ? 'type-in' : 'type-out'}">${tx.type === 'in' ? '입고' : '출고'}</span></td>
             <td data-label="거래처" style="font-size:12px; ${indent}">${tx.vendor ? escapeHtml(tx.vendor) : '<span style="color:var(--text-muted)">-</span>'}</td>
-            <td data-label="품목명" style="${indent}">
+            <td data-label="품목명" class="col-fill" style="${indent}">
               ${isChild ? `<span style="color:var(--text-muted); font-size:12px;">${escapeHtml(tx.itemName || '-')}</span>` : `<strong>${escapeHtml(tx.itemName || '-')}</strong>`}
             </td>
             <td data-label="품목코드" style="color:var(--text-muted); font-size:12px;">${escapeHtml(tx.itemCode || '-')}</td>
