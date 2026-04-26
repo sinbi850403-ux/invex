@@ -80,7 +80,7 @@ export function renderSummaryPage(container, navigateTo) {
           <table class="data-table">
             <thead>
               <tr>
-                <th>품목명</th>
+                <th class="col-fill">품목명</th>
                 <th class="text-right">현재 수량</th>
                 <th class="text-right">안전재고</th>
                 <th>상태</th>
@@ -89,7 +89,7 @@ export function renderSummaryPage(container, navigateTo) {
             <tbody>
               ${summary.warnings.map(w => `
                 <tr class="${w.qty === 0 ? 'row-danger' : 'row-warning'}">
-                  <td><strong>${w.name}</strong></td>
+                  <td class="col-fill"><strong>${w.name}</strong></td>
                   <td class="text-right">${w.qty.toLocaleString('ko-KR')}</td>
                   <td class="text-right">${w.min.toLocaleString('ko-KR')}</td>
                   <td>
@@ -228,7 +228,7 @@ export function renderSummaryPage(container, navigateTo) {
           <table class="data-table">
             <thead>
               <tr>
-                <th>거래처</th>
+                <th class="col-fill">거래처</th>
                 <th class="text-right">품목 수</th>
                 <th class="text-right">총 수량</th>
                 <th class="text-right">총 금액</th>
@@ -237,7 +237,7 @@ export function renderSummaryPage(container, navigateTo) {
             <tbody>
               ${summary.vendors.map(v => `
                 <tr>
-                  <td><strong>${v.name || '(미지정)'}</strong></td>
+                  <td class="col-fill"><strong>${v.name || '(미지정)'}</strong></td>
                   <td class="text-right">${v.count}</td>
                   <td class="text-right">${v.qty.toLocaleString('ko-KR')}</td>
                   <td class="text-right">${v.price > 0 ? '₩' + Math.round(v.price).toLocaleString('ko-KR') : '-'}</td>
@@ -292,7 +292,7 @@ export function renderSummaryPage(container, navigateTo) {
           <thead>
             <tr>
               <th style="width:40px;">순위</th>
-              <th>품목명</th>
+              <th class="col-fill">품목명</th>
               <th>분류</th>
               <th class="text-right">수량</th>
               <th class="text-right">단가</th>
@@ -305,7 +305,7 @@ export function renderSummaryPage(container, navigateTo) {
                 <td style="text-align:center; font-weight:700; color:var(--text-muted);">
                   ${i < 3 ? ['🥇','🥈','🥉'][i] : i + 1}
                 </td>
-                <td><strong>${item.itemName || '-'}</strong></td>
+                <td class="col-fill"><strong>${item.itemName || '-'}</strong></td>
                 <td style="color:var(--text-muted);">${item.category || '-'}</td>
                 <td class="text-right">${parseFloat(item.quantity || 0).toLocaleString('ko-KR')}</td>
                 <td class="text-right">${item.unitPrice ? '₩' + Math.round(parseFloat(item.unitPrice)).toLocaleString('ko-KR') : '-'}</td>

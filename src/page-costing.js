@@ -215,6 +215,7 @@ export function renderCostingPage(container, navigateTo) {
 function renderCostingHeader(field, sortState) {
   const classes = ['sortable-col'];
   if (field.align) classes.push(field.align);
+  if (field.key === 'itemName') classes.push('col-fill');
 
   return `
     <th class="${classes.join(' ')}">
@@ -239,7 +240,7 @@ function renderCostingRow(row, index, isChild = false) {
   return `
     <tr class="${rowClass}" style="${childStyle}">
       <td class="col-num">${index + 1}</td>
-      <td style="${isChild ? 'padding-left:24px;' : ''}"><strong>${row.itemName}</strong></td>
+      <td class="col-fill" style="${isChild ? 'padding-left:24px;' : ''}"><strong>${row.itemName}</strong></td>
       <td style="color:var(--text-muted); font-size:12px;">${row.itemCode || '-'}</td>
       <td class="text-right">${row.qty.toLocaleString('ko-KR')}</td>
       <td class="text-right">${formatCostMoney(row.unitCost)}</td>

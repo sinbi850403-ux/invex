@@ -234,7 +234,7 @@ function renderEntryTable(list, label, isSettled = false) {
           <tr>
             <th>구분</th>
             <th>거래처</th>
-            <th>적요</th>
+            <th class="col-fill">적요</th>
             <th class="text-right">금액</th>
             <th>발생일</th>
             <th>만기일</th>
@@ -256,7 +256,7 @@ function renderEntryTable(list, label, isSettled = false) {
                   </span>
                 </td>
                 <td><strong>${escapeHtml(e.vendorName||'-')}</strong></td>
-                <td style="font-size:12px;color:var(--text-muted);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(e.description||'-')}</td>
+                <td class="col-fill" style="font-size:12px;color:var(--text-muted);">${escapeHtml(e.description||'-')}</td>
                 <td class="text-right" style="font-weight:700;">₩${fmt(e.amount)}</td>
                 <td style="font-size:12px;">${e.date||'-'}</td>
                 <td style="font-size:12px;${isOverdue?'color:var(--danger);font-weight:600;':''}">${e.dueDate||'-'}</td>
@@ -314,7 +314,7 @@ function renderVendorSummary(entries) {
       <table class="data-table">
         <thead>
           <tr>
-            <th>거래처</th>
+            <th class="col-fill">거래처</th>
             <th class="text-right">미수금</th>
             <th class="text-right">미지급금</th>
             <th class="text-right">순 채권</th>
@@ -327,7 +327,7 @@ function renderVendorSummary(entries) {
             const net = d.receivable - d.payable;
             return `
               <tr>
-                <td><strong>${escapeHtml(name)}</strong></td>
+                <td class="col-fill"><strong>${escapeHtml(name)}</strong></td>
                 <td class="text-right" style="color:#16a34a;font-weight:600;">₩${fmt(d.receivable)}</td>
                 <td class="text-right" style="color:#ef4444;font-weight:600;">₩${fmt(d.payable)}</td>
                 <td class="text-right" style="font-weight:700;color:${net>=0?'#16a34a':'#ef4444'};">₩${fmt(net)}</td>
@@ -353,7 +353,7 @@ function renderInvoiceTable(invoices) {
           <tr>
             <th>구분</th>
             <th>계산서번호</th>
-            <th>거래처</th>
+            <th class="col-fill">거래처</th>
             <th>발행일</th>
             <th class="text-right">공급가</th>
             <th class="text-right">부가세</th>
@@ -370,7 +370,7 @@ function renderInvoiceTable(invoices) {
                 </span>
               </td>
               <td style="font-weight:600;font-family:monospace;">${escapeHtml(inv.invoiceNo)}</td>
-              <td>${escapeHtml(inv.customer || inv.vendor || '-')}</td>
+              <td class="col-fill">${escapeHtml(inv.customer || inv.vendor || '-')}</td>
               <td style="font-size:12px;">${inv.issueDate||'-'}</td>
               <td class="text-right">₩${fmt(inv.supply)}</td>
               <td class="text-right" style="color:var(--text-muted);">₩${fmt(inv.vat)}</td>

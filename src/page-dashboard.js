@@ -112,7 +112,7 @@ export function renderDashboardPage(container, navigateTo) {
             <tr>
               <th style="width:40px;">순위</th>
               <th>등급</th>
-              <th>품목명</th>
+              <th class="col-fill">품목명</th>
               <th>코드</th>
               <th class="text-right">수량</th>
               <th class="text-right">금액</th>
@@ -130,7 +130,7 @@ export function renderDashboardPage(container, navigateTo) {
                     ${d.grade}
                   </span>
                 </td>
-                <td><strong>${d.itemName}</strong></td>
+                <td class="col-fill"><strong>${d.itemName}</strong></td>
                 <td style="color:var(--text-muted);">${d.itemCode || '-'}</td>
                 <td class="text-right">${parseFloat(d.quantity || 0).toLocaleString('ko-KR')}</td>
                 <td class="text-right">${d.totalPrice > 0 ? '₩' + Math.round(d.totalPrice).toLocaleString('ko-KR') : '-'}</td>
@@ -155,7 +155,7 @@ export function renderDashboardPage(container, navigateTo) {
         <table class="data-table">
           <thead>
             <tr>
-              <th>품목명</th>
+              <th class="col-fill">품목명</th>
               <th>코드</th>
               <th class="text-right">현재 재고</th>
               <th class="text-right">30일 출고량</th>
@@ -166,7 +166,7 @@ export function renderDashboardPage(container, navigateTo) {
           <tbody>
             ${turnoverData.slice(0, 20).map(d => `
               <tr>
-                <td><strong>${d.itemName}</strong></td>
+                <td class="col-fill"><strong>${d.itemName}</strong></td>
                 <td style="color:var(--text-muted);">${d.itemCode || '-'}</td>
                 <td class="text-right">${d.currentQty.toLocaleString('ko-KR')}</td>
                 <td class="text-right">${d.outQty.toLocaleString('ko-KR')}</td>
@@ -222,7 +222,7 @@ export function renderDashboardPage(container, navigateTo) {
         <table class="data-table">
           <thead>
             <tr>
-              <th>품목명</th>
+              <th class="col-fill">품목명</th>
               <th>LOT</th>
               <th class="text-right">수량</th>
               <th>유통기한</th>
@@ -232,7 +232,7 @@ export function renderDashboardPage(container, navigateTo) {
           <tbody>
             ${expiryAlerts.map(e => `
               <tr class="${e.daysLeft <= 0 ? 'row-danger' : e.daysLeft <= 7 ? 'row-warning' : ''}">
-                <td><strong>${e.itemName}</strong></td>
+                <td class="col-fill"><strong>${e.itemName}</strong></td>
                 <td style="color:var(--text-muted);">${e.lotNumber || '-'}</td>
                 <td class="text-right">${parseFloat(e.quantity || 0).toLocaleString('ko-KR')}</td>
                 <td>${e.expiryDate}</td>

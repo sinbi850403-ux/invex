@@ -524,7 +524,7 @@ export function renderProfitPage(container, navigateTo) {
             <thead>
               <tr>
                 <th>#</th>
-                <th>품목명</th>
+                <th class="col-fill">품목명</th>
                 <th>분류</th>
                 <th class="text-right">수량</th>
                 <th class="text-right">원가</th>
@@ -555,7 +555,7 @@ export function renderProfitPage(container, navigateTo) {
                         return `
                 <tr class="${row.profit < 0 ? 'row-danger' : row.operatingProfitRate < 10 ? 'row-warning' : ''}">
                   <td class="col-num">${index + 1}</td>
-                  <td>
+                  <td class="col-fill">
                     <strong>${escapeHtml(row.name)}</strong>
                     ${row.code ? `<div style="font-size:11px; color:var(--text-muted);">${escapeHtml(row.code)}</div>` : ''}
                   </td>
@@ -641,7 +641,7 @@ export function renderProfitPage(container, navigateTo) {
             <thead>
               <tr>
                 <th>#</th>
-                <th>거래처</th>
+                <th class="col-fill">거래처</th>
                 <th class="text-right">거래 수</th>
                 <th class="text-right">매입</th>
                 <th class="text-right">매출</th>
@@ -665,7 +665,7 @@ export function renderProfitPage(container, navigateTo) {
                         return `
                 <tr>
                   <td class="col-num">${index + 1}</td>
-                  <td>${escapeHtml(row.name)}</td>
+                  <td class="col-fill">${escapeHtml(row.name)}</td>
                   <td class="text-right">${row.count.toLocaleString('ko-KR')}</td>
                   <td class="text-right">${formatMoney(row.totalIn)}</td>
                   <td class="text-right">${formatMoney(row.totalOut)}</td>

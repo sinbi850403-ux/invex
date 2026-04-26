@@ -138,7 +138,7 @@ export function renderWeeklyReportPage(container, navigateTo) {
         <div class="table-wrapper">
           <table class="data-table">
             <thead>
-              <tr><th>품목명</th><th class="text-right">현재고</th><th class="text-right">안전재고</th><th>상태</th></tr>
+              <tr><th class="col-fill">품목명</th><th class="text-right">현재고</th><th class="text-right">안전재고</th><th>상태</th></tr>
             </thead>
             <tbody>
               ${lowStockItems.slice(0, 10).map(it => {
@@ -146,7 +146,7 @@ export function renderWeeklyReportPage(container, navigateTo) {
                 const min = safetyStock[it.itemName];
                 return `
                   <tr>
-                    <td><strong>${it.itemName}</strong></td>
+                    <td class="col-fill"><strong>${it.itemName}</strong></td>
                     <td class="text-right" style="color:var(--danger); font-weight:700;">${qty}</td>
                     <td class="text-right">${min}</td>
                     <td style="color:var(--danger); font-size:12px;">
