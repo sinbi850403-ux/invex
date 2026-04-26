@@ -18,6 +18,7 @@ import {
   acceptInvite,
   rejectInvite,
   getFreePeriodInfo,
+  startWorkspaceSync,
 } from './workspace.js';
 import { escapeHtml } from './ux-toolkit.js';
 
@@ -320,8 +321,9 @@ export async function renderTeamPage(container, navigateTo) {
     btn.textContent = '처리 중...';
     const success = await acceptInvite();
     if (success) {
-      // workspaceId가 변경되었으므로 전체 재초기화 필요
-      window.location.reload();
+      // 로그아웃 유발하는 window.location.reload() 대신 워크스페이스 재연결 후 재렌더
+      await startWorkspaceSync(user.uid);
+      renderTeamPage(container, navigateTo);
     } else {
       btn.disabled = false;
       btn.textContent = '수락';
