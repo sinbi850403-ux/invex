@@ -133,17 +133,17 @@ CREATE TABLE IF NOT EXISTS transactions (
   type TEXT NOT NULL CHECK (type IN ('in', 'out')),
   item_name TEXT NOT NULL,
   item_id UUID REFERENCES items(id) ON DELETE SET NULL,
-  item_code TEXT,                        -- 상품코드 (비정규화 저장 → 조회 성능)
+  item_code TEXT,
   quantity NUMERIC NOT NULL DEFAULT 0,
-  unit_price NUMERIC DEFAULT 0,          -- 입고가/원가
-  supply_value NUMERIC DEFAULT 0,        -- 공급가액 (unit_price × quantity)
-  vat NUMERIC DEFAULT 0,                 -- 부가세 (supply_value × 0.1)
-  total_amount NUMERIC DEFAULT 0,        -- 합계금액 (supply_value + vat)
-  selling_price NUMERIC DEFAULT 0,       -- 출고단가 (판매가, 출고 시)
-  actual_selling_price NUMERIC DEFAULT 0,-- 실제 판매가 (할인 후 등)
-  spec TEXT,                             -- 규격
-  unit TEXT,                             -- 단위
-  category TEXT,                         -- 자산구분 (상품/원자재/비품 등)
+  unit_price NUMERIC DEFAULT 0,
+  supply_value NUMERIC DEFAULT 0,
+  vat NUMERIC DEFAULT 0,
+  total_amount NUMERIC DEFAULT 0,
+  selling_price NUMERIC DEFAULT 0,
+  actual_selling_price NUMERIC DEFAULT 0,
+  spec TEXT,
+  unit TEXT,
+  category TEXT,
   date TEXT,
   vendor TEXT,
   warehouse TEXT,
@@ -151,7 +151,10 @@ CREATE TABLE IF NOT EXISTS transactions (
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
--- 기존 DB 호환: 새 컬럼 ADD COLUMN IF NOT EXISTS
+-- 기존 DB 호환: 컬럼 누락 시 추가
+ALTER TABLE transactions ADD COLUMN IF NOT EXISTS supply_value NUMERIC DEFAULT 0;
+ALTER TABLE transactions ADD COLUMN IF NOT EXISTS vat NUMERIC DEFAULT 0;
+ALTER TABLE transactions ADD COLUMN IF NOT EXISTS total_amount NUMERIC DEFAULT 0;
 ALTER TABLE transactions ADD COLUMN IF NOT EXISTS selling_price NUMERIC DEFAULT 0;
 ALTER TABLE transactions ADD COLUMN IF NOT EXISTS actual_selling_price NUMERIC DEFAULT 0;
 ALTER TABLE transactions ADD COLUMN IF NOT EXISTS spec TEXT;

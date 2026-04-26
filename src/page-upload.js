@@ -8,42 +8,9 @@ import { readExcelFile } from './excel.js';
 import { setState, resetState, getState } from './store.js';
 import { showToast } from './toast.js';
 import { downloadTemplate, getTemplateList } from './excel-templates.js';
-
-// ERP 필드 정의 (page-mapping.js와 동일)
-const ERP_FIELDS = [
-  { key: 'itemName',   label: '품목명' },
-  { key: 'itemCode',   label: '품목코드' },
-  { key: 'category',   label: '분류' },
-  { key: 'spec',       label: '규격' },
-  { key: 'quantity',   label: '수량' },
-  { key: 'unit',       label: '단위' },
-  { key: 'unitPrice',  label: '단가' },
-  { key: 'salePrice',  label: '판매가(소가)' },
-  { key: 'supplyValue',label: '공급가액' },
-  { key: 'vat',        label: '부가세' },
-  { key: 'totalPrice', label: '합계금액' },
-  { key: 'warehouse',  label: '창고/위치' },
-  { key: 'note',       label: '비고' },
-  { key: 'safetyStock',label: '안전재고' },
-];
-
-// 자동 매핑용 키워드 사전
-const MAPPING_KEYWORDS = {
-  itemName:   ['품목', '품명', '제품명', '상품명', '이름', 'name', 'item', '자재명', '자재'],
-  itemCode:   ['코드', 'code', '품번', '품목코드', 'sku', '자재코드', '상품코드'],
-  category:   ['분류', '카테고리', 'category', '유형', '종류', '구분', '자산'],
-  spec:       ['규격', 'spec', '사양', '스펙'],
-  quantity:   ['수량', 'qty', 'quantity', '재고', '개수', '입고수량', '출고수량', '현재고'],
-  unit:       ['단위', 'unit', 'uom'],
-  unitPrice:  ['단가', 'price', '가격', '원가', '매입가'],
-  salePrice:  ['판매가', '소가', '판매단가', '소비자가', '출고단가', 'sale', 'selling', 'retail'],
-  supplyValue:['공급가액', '공급가', '금액'],
-  vat:        ['부가세', '세액', 'vat', 'tax'],
-  totalPrice: ['합계', 'total', '합계금액', '총액', '총금액'],
-  warehouse:  ['창고', '위치', 'warehouse', 'location', '보관', '저장위치'],
-  note:       ['비고', 'note', 'memo', '메모', '참고', '특이사항'],
-  safetyStock:['안전재고', '최소재고', '최소수량', 'safetystock'],
-};
+import { ERP_FIELDS, autoMap, buildMappedData } from './domain/excelFieldMap.js';
+import { applyAmountsAll } from './domain/inventoryAmount.js';
+import { buildUploadDiff } from './domain/uploadDiff.js';
 
 export function renderUploadPage(container, navigateTo) {
   const state = getState();
@@ -178,7 +145,7 @@ async function handleFile(file, navigateTo) {
     const headers = rawData[0];
     const dataRows = rawData.slice(1);
     const mapping = autoMap(headers);
-    const mappedData = buildMappedData(dataRows, mapping);
+    const mappedData = applyAmountsAll(buildMappedData(dataRows, mapping));
 
     // 매핑 결과 요약
     const mappedCount = Object.keys(mapping).length;
@@ -223,112 +190,3 @@ async function handleFile(file, navigateTo) {
 
 // === 자동 매핑 유틸 ===
 
-/**
- * 엑셀 헤더를 분석해 ERP 필드에 자동 매핑
- * @returns {object} { fieldKey: columnIndex, ... }
- */
-function buildUploadDiff(previousRows, nextRows, fileName = '') {
-  const previousMap = new Map();
-  previousRows.forEach((row, index) => {
-    previousMap.set(getUploadRowKey(row, index), row);
-  });
-
-  const touched = new Set();
-  let added = 0;
-  let updated = 0;
-  let unchanged = 0;
-
-  nextRows.forEach((row, index) => {
-    const key = getUploadRowKey(row, index);
-    const previous = previousMap.get(key);
-    if (!previous) {
-      added += 1;
-      return;
-    }
-
-    touched.add(key);
-    if (isUploadRowChanged(previous, row)) updated += 1;
-    else unchanged += 1;
-  });
-
-  const removed = previousRows.length - touched.size;
-
-  return {
-    fileName,
-    added,
-    updated,
-    unchanged,
-    removed: Math.max(0, removed),
-    at: new Date().toISOString(),
-  };
-}
-
-function getUploadRowKey(row, index) {
-  const code = String(row?.itemCode || '').trim();
-  const name = String(row?.itemName || '').trim();
-  if (code) return `code:${code}`;
-  if (name) return `name:${name}`;
-  return `row:${index}`;
-}
-
-function isUploadRowChanged(previousRow, nextRow) {
-  const compareKeys = [
-    'itemName',
-    'itemCode',
-    'category',
-    'quantity',
-    'unit',
-    'unitPrice',
-    'salePrice',
-    'supplyValue',
-    'vat',
-    'totalPrice',
-    'warehouse',
-    'note',
-    'safetyStock',
-  ];
-
-  return compareKeys.some((key) =>
-    String(previousRow?.[key] ?? '').trim() !== String(nextRow?.[key] ?? '').trim()
-  );
-}
-
-function autoMap(headers) {
-  const lower = headers.map(h => (h || '').toString().toLowerCase().trim());
-  const mapping = {};
-
-  ERP_FIELDS.forEach(field => {
-    const kws = MAPPING_KEYWORDS[field.key] || [];
-    const matchIdx = lower.findIndex(h => kws.some(kw => h.includes(kw)));
-    if (matchIdx >= 0) {
-      mapping[field.key] = matchIdx;
-    }
-  });
-
-  return mapping;
-}
-
-/**
- * 매핑 정보를 기반으로 원시 데이터를 ERP 형식으로 변환
- */
-function buildMappedData(dataRows, mapping) {
-  return dataRows
-    .filter(row => row.some(cell => cell !== '' && cell != null))
-    .map(row => {
-      const obj = {};
-      ERP_FIELDS.forEach(field => {
-        const ci = mapping[field.key];
-        let val = ci !== undefined ? (row[ci] ?? '') : '';
-        if (['quantity', 'unitPrice', 'salePrice', 'supplyValue', 'vat', 'totalPrice', 'safetyStock'].includes(field.key)) {
-          if (typeof val === 'string') {
-            const clean = val.replace(/,/g, '').trim();
-            if (clean !== '' && !isNaN(clean)) {
-              val = parseFloat(clean);
-            }
-          }
-        }
-        obj[field.key] = val;
-      });
-      return obj;
-    });
-}

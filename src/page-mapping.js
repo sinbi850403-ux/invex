@@ -7,26 +7,8 @@ import { getState, setState } from './store.js';
 import { showToast } from './toast.js';
 import { indexToCol } from './excel.js';
 import { escapeHtml } from './ux-toolkit.js';
-
-// ERP 필드 정의
-const ERP_FIELDS = [
-  { key: 'itemName', label: '품목명', required: true },
-  { key: 'itemCode', label: '품목코드', required: false },
-  { key: 'category', label: '분류', required: false },
-  { key: 'vendor', label: '거래처', required: false },
-  { key: 'quantity', label: '수량', required: true },
-  { key: 'unit', label: '단위', required: false },
-  { key: 'unitPrice', label: '매입가(원가)', required: false },
-  { key: 'salePrice', label: '판매가(소가)', required: false },
-  { key: 'supplyValue', label: '공급가액', required: false },
-  { key: 'vat', label: '부가세', required: false },
-  { key: 'totalPrice', label: '합계금액', required: false },
-  { key: 'warehouse', label: '창고/위치', required: false },
-  { key: 'expiryDate', label: '유통기한', required: false },
-  { key: 'lotNumber', label: 'LOT번호', required: false },
-  { key: 'note', label: '비고', required: false },
-  { key: 'safetyStock', label: '안전재고', required: false },
-];
+import { ERP_FIELDS, autoMap, buildMappedData } from './domain/excelFieldMap.js';
+import { applyAmountsAll } from './domain/inventoryAmount.js';
 
 export function renderMappingPage(container, navigateTo) {
   const state = getState();
@@ -214,7 +196,7 @@ export function renderMappingPage(container, navigateTo) {
       return;
     }
 
-    const mappedData = buildMappedData(dataRows, cur);
+    const mappedData = applyAmountsAll(buildMappedData(dataRows, cur));
     
     // 안전재고 전역 상태 반영
     const uploadSafetyStock = { ...getState().safetyStock };
@@ -254,40 +236,6 @@ function renderMappingRow(field, headers, mapping) {
   `;
 }
 
-function autoMap(headers, mapping, { fillMissingOnly = false } = {}) {
-  const lower = headers.map(h => (h || '').toString().toLowerCase().trim());
-  // 왜 usedIdx? → 하나의 엑셀 컬럼이 두 개 필드에 중복 매핑되는 것을 방지
-  const usedIdx = new Set(Object.values(mapping).filter((v) => Number.isInteger(v)));
-  const keywords = {
-    itemName: ['품목명', '품목', '품명', '제품명', '상품명', '이름', 'name', 'item', '자재명', '자재'],
-    itemCode: ['품목코드', '코드', 'code', '품번', 'sku', '자재코드'],
-    category: ['분류', '카테고리', 'category', '유형', '종류', '구분'],
-    quantity: ['수량', 'qty', 'quantity', '재고', '개수', '입고수량', '출고수량', '현재고'],
-    unit: ['단위', 'unit', 'uom'],
-    unitPrice: ['매입가', '원가', '단가', '매입단가', '입고단가', '입고가', '사입가', '도매가', 'cost', 'price'],
-    salePrice: ['판매가', '소가', '판매단가', '소비자가', '외상단가', '출고단가', '출고가', '매출단가', '매출가', '소매가', 'sale', 'selling'],
-    supplyValue: ['공급가액', '공급가'],
-    vat: ['부가세', '세액', 'vat', 'tax'],
-    totalPrice: ['합계금액', '총금액', '합계', 'total', '총액'],
-    warehouse: ['창고', '위치', 'warehouse', 'location', '보관', '저장위치'],
-    vendor: ['거래처', '업체', '업체명', '공급업체', '공급처', '매입처', 'vendor', 'supplier', '거래선'],
-    expiryDate: ['유통기한', '유효기한', '만료일', 'expiry', 'exp', '사용기한'],
-    lotNumber: ['lot', 'LOT', '로트', '로트번호', 'batch', '배치'],
-    note: ['비고', 'note', 'memo', '메모', '참고', '특이사항'],
-    safetyStock: ['안전재고', '최소재고', '최소수량', 'safetystock'],
-  };
-
-  ERP_FIELDS.forEach(field => {
-    if (fillMissingOnly && mapping[field.key] !== undefined) return;
-    const kws = keywords[field.key] || [];
-    // 이미 사용된 컬럼은 건너뛰고 다음 매칭 검색
-    const matchIdx = lower.findIndex((h, idx) => !usedIdx.has(idx) && kws.some(kw => h.includes(kw)));
-    if (matchIdx >= 0) {
-      mapping[field.key] = matchIdx;
-      usedIdx.add(matchIdx);
-    }
-  });
-}
 
 function updatePreviewHighlight(container, mapping, headers) {
   const table = container.querySelector('#preview-table');
@@ -303,36 +251,3 @@ function updatePreviewHighlight(container, mapping, headers) {
   });
 }
 
-function buildMappedData(dataRows, mapping) {
-  return dataRows
-    .filter(row => row.some(cell => cell !== '' && cell != null))
-    .map(row => {
-      const obj = {};
-      ERP_FIELDS.forEach(field => {
-        const ci = mapping[field.key];
-        let val = ci !== undefined ? (row[ci] ?? '') : '';
-        if (['quantity', 'unitPrice', 'salePrice', 'supplyValue', 'vat', 'totalPrice', 'safetyStock'].includes(field.key)) {
-          if (typeof val === 'string') {
-            const clean = val.replace(/,/g, '').trim();
-            if (clean !== '' && !isNaN(clean)) {
-              val = parseFloat(clean);
-            }
-          }
-        }
-        obj[field.key] = val;
-      });
-
-      // 왜 재계산? → 원본 엑셀의 공급가액/부가세/합계 값이 부정확할 수 있으므로
-      // 수량 × 단가(매입)를 기준으로 항상 일관되게 재계산
-      const qty = parseFloat(obj.quantity) || 0;
-      const unitPrice = parseFloat(obj.unitPrice) || 0;
-      const supply = qty * unitPrice;
-      const vat = Math.floor(supply * 0.1);
-
-      obj.supplyValue = supply;
-      obj.vat = vat;
-      obj.totalPrice = supply + vat;
-
-      return obj;
-    });
-}
