@@ -611,7 +611,7 @@ export function renderInoutPage(container, navigateTo, mode = 'all') {
           const outTotal = Math.round(outAmt * 1.1);
           const purchase = Math.round(cost * qty);
           const profit = outAmt - purchase;
-          const profitRate = purchase > 0 ? (profit / purchase * 100).toFixed(1) + '%' : '-';
+          const profitRate = outAmt > 0 ? (profit / outAmt * 100).toFixed(1) + '%' : '-';
           const costRate  = outAmt > 0   ? (purchase / outAmt * 100).toFixed(1) + '%'  : '-';
           const profitColor = profit > 0 ? 'var(--success)' : profit < 0 ? 'var(--danger)' : 'var(--text-muted)';
           return `<tr class="${selectedTxIds.has(tx.id) ? 'selected' : ''}" data-tx-id="${safeAttr(tx.id)}" style="${childStyle}">
@@ -1079,7 +1079,7 @@ export function renderInoutPage(container, navigateTo, mode = 'all') {
         const outAmt = Math.round(salePrice * qty);
         const purchase = Math.round(unitCost * qty);
         const profit = outAmt - purchase;
-        const profitRate = purchase > 0 ? (profit / purchase * 100).toFixed(1) + '%' : '';
+        const profitRate = outAmt > 0 ? (profit / outAmt * 100).toFixed(1) + '%' : '';
         const costRate  = outAmt > 0   ? (purchase / outAmt * 100).toFixed(1) + '%'  : '';
         return {
           '자산':       it.category || tx.category || '',
@@ -1842,7 +1842,7 @@ function openTxModal(container, navigateTo, type, items) {
         const outAmt = Math.round(salePrice * qty);
         const costAmt = Math.round(price * qty);
         const profit = outAmt - costAmt;
-        const profitRate = ((profit / costAmt) * 100).toFixed(1);
+        const profitRate = outAmt > 0 ? (profit / outAmt * 100).toFixed(1) : '0.0';
         const color = profit > 0 ? 'var(--success)' : profit < 0 ? 'var(--danger)' : 'var(--text-muted)';
         profitEl.innerHTML = `이익액 <strong style="color:${color};">₩${profit.toLocaleString('ko-KR')}</strong> &nbsp; 이익률 <strong style="color:${color};">${profit >= 0 ? '+' : ''}${profitRate}%</strong>`;
       } else if (profitEl) {
