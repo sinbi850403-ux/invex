@@ -79,7 +79,7 @@ export async function renderTeamPage(container, navigateTo) {
   const allMembers = meta?.members || [];
   const activeMembers = allMembers.filter(m => m.status !== 'pending');
   const pendingMembers = allMembers.filter(m => m.status === 'pending');
-  const isOwner = meta?.ownerId === user.uid;
+  const isOwner = (meta?.owner_id ?? meta?.ownerId) === user.uid;
   const freePeriod = getFreePeriodInfo(profile?.createdAt);
 
   // 역할 라벨
