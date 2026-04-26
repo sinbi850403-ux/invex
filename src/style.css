@@ -1325,6 +1325,7 @@ html.dark-mode .acc-item-btn.active {
 }
 .btn-icon:hover { color: var(--text-primary); background: var(--bg-main); }
 .btn-icon-danger:hover { color: var(--danger); background: var(--danger-light); }
+.data-table td .btn-icon { min-height: 0; min-width: 0; padding: 3px 6px; font-size: 12px; }
 
 /* --- 테이블 --- */
 .data-table {
