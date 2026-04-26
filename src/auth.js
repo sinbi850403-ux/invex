@@ -441,6 +441,15 @@ export function initAuth(callback) {
         showPasswordRecoveryModal();
         return;
       }
+
+      if (_event === 'TOKEN_REFRESHED') {
+        // 만료 토큰으로 인한 부트스트랩 차단을 초기화 — 이번에는 유효한 토큰
+        profileBootstrapBlocked = false;
+        try { localStorage.removeItem(_BS_BLOCKED_KEY); } catch (_) {}
+        // 데이터 재로드가 필요함을 main.js에 알림
+        window.dispatchEvent(new CustomEvent('invex:token-refreshed'));
+      }
+
       await applySession(session, applySessionSeq);
     } catch (err) {
       console.error('[Auth] onAuthStateChange handler error:', err);

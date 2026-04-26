@@ -14,7 +14,7 @@ import { showToast } from './toast.js';
 import { isAdmin } from './admin-auth.js';
 import { navigateTo, injectRouterCallbacks, PAGE_LOADERS, LAST_PAGE_KEY, renderQuickAccess } from './router.js';
 import { initGlobalSearch, toggleGlobalSearch } from './global-search.js';
-import { restoreState } from './store.js';
+import { restoreState, getState } from './store.js';
 import { primeUserIdCache } from './db.js';
 import { checkAndShowOnboarding } from './onboarding.js';
 import { initSidebarCustomize } from './sidebar-customize.js';
@@ -227,6 +227,20 @@ window.addEventListener('invex:idb-failed', () => {
 
 window.addEventListener('invex:profile-load-failed', () => {
   showToast('프로필 로드에 실패했습니다. 페이지를 새로고침하세요.', 'error');
+});
+
+// INITIAL_SESSION 시점에 토큰이 만료돼 0건이었던 경우, TOKEN_REFRESHED 후 재로드
+window.addEventListener('invex:token-refreshed', async () => {
+  if (!isAuthReady || isAppInitializing) return;
+  const { mappedData = [], transactions = [] } = getState();
+  if (mappedData.length === 0 && transactions.length === 0) {
+    const uid = getCurrentUser()?.uid || null;
+    primeUserIdCache(uid);
+    await restoreState(uid);
+    const lastPage = localStorage.getItem(LAST_PAGE_KEY);
+    const startPage = (lastPage && PAGE_LOADERS[lastPage]) ? lastPage : 'home';
+    await navigateTo(startPage);
+  }
 });
 
 const CARD_STATE_KEY = 'invex_card_state_v1';
