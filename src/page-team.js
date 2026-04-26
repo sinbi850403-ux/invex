@@ -79,7 +79,7 @@ export async function renderTeamPage(container, navigateTo) {
   const allMembers = meta?.members || [];
   const activeMembers = allMembers.filter(m => m.status !== 'pending');
   const pendingMembers = allMembers.filter(m => m.status === 'pending');
-  const isOwner = (meta?.owner_id ?? meta?.ownerId) === user.uid;
+  const isOwner = meta?.owner_id === user.uid;
   const myMember = allMembers.find(m => m.uid === user.uid || m.id === user.uid);
   const myRole = isOwner ? 'owner' : (myMember?.role || myMember?.roleId || profile?.role || 'staff');
   const freePeriod = getFreePeriodInfo(profile?.createdAt);

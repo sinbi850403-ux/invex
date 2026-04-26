@@ -172,19 +172,21 @@ export async function inviteMember(email, role = 'staff') {
 export async function getPendingInvite(userId) {
   if (!isConfigured || !userId) return null;
   try {
-    // 내가 속하지 않은 워크스페이스 중 pending 초대가 있는지 확인
     const myWsId = await db.settings.get('joined_workspace_id');
 
-    const { data: workspaces } = await supabase
+    // RLS가 이미 본인 관련 워크스페이스만 반환 + 이미 속한 워크스페이스 제외
+    let query = supabase
       .from('team_workspaces')
       .select('id, name, owner_id, members');
+    if (myWsId) query = query.neq('id', myWsId);
 
+    const { data: workspaces } = await query;
     if (!workspaces) return null;
 
     for (const ws of workspaces) {
-      if (ws.id === myWsId) continue; // 이미 속한 워크스페이스는 제외
-      const members = ws.members || [];
-      const myEntry = members.find(m => (m.uid === userId || m.id === userId) && m.status === 'pending');
+      const myEntry = (ws.members || []).find(
+        m => (m.uid === userId || m.id === userId) && m.status === 'pending'
+      );
       if (myEntry) {
         return {
           workspaceId: ws.id,
@@ -209,6 +211,13 @@ export async function acceptInvite() {
   if (!user || !isConfigured) return false;
 
   try {
+    // 이미 다른 워크스페이스에 소속된 경우 차단
+    const existingWsId = await db.settings.get('joined_workspace_id');
+    if (existingWsId && existingWsId !== user.uid) {
+      showToast('이미 다른 워크스페이스에 소속되어 있습니다. 먼저 탈퇴 후 수락해 주세요.', 'warning');
+      return false;
+    }
+
     const pendingInvite = await getPendingInvite(user.uid);
     if (!pendingInvite) {
       showToast('초대장을 찾을 수 없습니다.', 'error');
@@ -283,7 +292,7 @@ export async function cancelInvite(targetUid) {
   try {
     const meta = await getWorkspaceMeta(wsId);
     // 오너만 초대 취소 가능
-    if (!meta || (meta.owner_id ?? meta.ownerId) !== user.uid) {
+    if (!meta || meta.owner_id !== user.uid) {
       showToast('팀장만 초대를 취소할 수 있습니다.', 'error');
       return false;
     }
@@ -309,7 +318,7 @@ export async function removeMember(targetUid) {
   try {
     const meta = await getWorkspaceMeta(wsId);
     // 오너만 멤버 제거 가능
-    if (!meta || (meta.owner_id ?? meta.ownerId) !== user.uid) {
+    if (!meta || meta.owner_id !== user.uid) {
       showToast('팀장만 멤버를 제거할 수 있습니다.', 'error');
       return false;
     }
