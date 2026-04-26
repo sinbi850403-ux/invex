@@ -1,5 +1,5 @@
 /**
- * page-forecast.js - AI 수요 예측
+ * page-forecast.js - 수요 예측
  * 
  * 역할: 과거 출고 패턴을 분석하여 다음 달 예상 수요량을 품목별로 예측
  * 왜 필요? → "다음 달에 뭘 얼마나 준비해야 하지?"를 자동으로 답해주는 핵심 기능
@@ -101,7 +101,7 @@ export function renderForecastPage(container, navigateTo) {
   container.innerHTML = `
     <div class="page-header">
       <div>
-        <h1 class="page-title">AI 수요 예측</h1>
+        <h1 class="page-title">수요 예측</h1>
         <div class="page-desc">${nextYear}년 ${nextMonthLabel} 예상 수요량을 분석합니다. (최근 6개월 출고 패턴 기반)</div>
       </div>
     </div>
