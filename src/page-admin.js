@@ -197,7 +197,7 @@ export async function renderAdminPage(container, navigateTo) {
   const entUsers = allUsers.filter(u => u.plan === 'enterprise').length;
   const paidUsers = proUsers + entUsers;
   const conversionRate = totalUsers > 0 ? Math.round((paidUsers / totalUsers) * 100) : 0;
-  const monthlyRevenue = (proUsers * 290000) + (entUsers * 490000);
+  const monthlyRevenue = (proUsers * 29000) + (entUsers * 59000);
 
   // 최근 활동 (최근 로그인 기준 정렬)
   const recentUsers = [...allUsers]
