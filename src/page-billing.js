@@ -236,7 +236,7 @@ export function renderBillingPage(container, navigateTo) {
         const tossPayments = TossPayments(TOSS_CLIENT_KEY);
 
         const orderId = 'invex_' + Date.now().toString(36);
-        const amount = planId === 'pro' ? 290000 : 490000;
+        const amount = planId === 'pro' ? 29000 : 59000;
 
         // 결제 요청
         await tossPayments.requestPayment('카드', {
