@@ -984,7 +984,7 @@ html.dark-mode .acc-item-btn.active {
 #main-content {
   flex: 1;
   margin-left: 220px;
-  padding: calc(56px + var(--space-lg)) var(--space-xl) var(--space-lg);
+  padding: calc(56px + var(--space-lg)) 30px var(--space-lg);
   overflow-y: auto;
   min-height: 100vh;
 }
@@ -1425,6 +1425,12 @@ html.dark-mode .acc-item-btn.active {
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
 }
+
+.table-wrapper::-webkit-scrollbar { width: 8px; height: 8px; }
+.table-wrapper::-webkit-scrollbar-track { background: var(--bg-main); border-radius: 4px; }
+.table-wrapper::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+.table-wrapper::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+.table-wrapper::-webkit-scrollbar-corner { background: var(--bg-main); }
 
 .table-wrapper .data-table th:first-child { border-top-left-radius: var(--radius-lg); }
 .table-wrapper .data-table th:last-child { border-top-right-radius: var(--radius-lg); }
