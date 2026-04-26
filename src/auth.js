@@ -443,14 +443,17 @@ export function initAuth(callback) {
       }
 
       if (_event === 'TOKEN_REFRESHED') {
-        // 만료 토큰으로 인한 부트스트랩 차단을 초기화 — 이번에는 유효한 토큰
+        // 만료 토큰으로 인한 부트스트랩 차단 초기화 — 이번에는 유효한 토큰
         profileBootstrapBlocked = false;
         try { localStorage.removeItem(_BS_BLOCKED_KEY); } catch (_) {}
-        // 데이터 재로드가 필요함을 main.js에 알림
-        window.dispatchEvent(new CustomEvent('invex:token-refreshed'));
       }
 
       await applySession(session, applySessionSeq);
+
+      // applySession 완료 후 발행 — currentUser가 세팅된 시점에서 main.js가 받도록
+      if (_event === 'TOKEN_REFRESHED') {
+        window.dispatchEvent(new CustomEvent('invex:token-refreshed'));
+      }
     } catch (err) {
       console.error('[Auth] onAuthStateChange handler error:', err);
     }

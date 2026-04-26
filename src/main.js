@@ -229,9 +229,11 @@ window.addEventListener('invex:profile-load-failed', () => {
   showToast('프로필 로드에 실패했습니다. 페이지를 새로고침하세요.', 'error');
 });
 
-// INITIAL_SESSION 시점에 토큰이 만료돼 0건이었던 경우, TOKEN_REFRESHED 후 재로드
-window.addEventListener('invex:token-refreshed', async () => {
-  if (!isAuthReady || isAppInitializing) return;
+// INITIAL_SESSION 시점에 토큰이 만료돼 0건이었던 경우 TOKEN_REFRESHED 후 재로드
+// pendingTokenRefresh: TOKEN_REFRESHED가 initAppAfterAuth 실행 중/직전에 도착했을 때 플래그
+let pendingTokenRefresh = false;
+
+async function reloadDataIfEmpty() {
   const { mappedData = [], transactions = [] } = getState();
   if (mappedData.length === 0 && transactions.length === 0) {
     const uid = getCurrentUser()?.uid || null;
@@ -241,6 +243,15 @@ window.addEventListener('invex:token-refreshed', async () => {
     const startPage = (lastPage && PAGE_LOADERS[lastPage]) ? lastPage : 'home';
     await navigateTo(startPage);
   }
+}
+
+window.addEventListener('invex:token-refreshed', async () => {
+  if (!isAuthReady || isAppInitializing) {
+    // initAppAfterAuth가 아직 실행 중 or 아직 시작 전 — 끝난 뒤 처리하도록 플래그만 세팅
+    pendingTokenRefresh = true;
+    return;
+  }
+  await reloadDataIfEmpty();
 });
 
 const CARD_STATE_KEY = 'invex_card_state_v1';
@@ -812,6 +823,12 @@ async function initAppAfterAuth() {
     initSidebarCustomize();
     await navigateTo(startPage);
     checkAndShowOnboarding(navigateTo);
+
+    // TOKEN_REFRESHED가 initAppAfterAuth 실행 도중 도착했으면 여기서 재로드
+    if (pendingTokenRefresh) {
+      pendingTokenRefresh = false;
+      await reloadDataIfEmpty();
+    }
   } finally {
     isAppInitializing = false;
   }
