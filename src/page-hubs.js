@@ -167,7 +167,7 @@ export function renderHubOrder(container, navigateTo) {
       })}
       ${renderHubCard({
         icon: '📈',
-        title: 'AI 수요 예측',
+        title: '수요 예측',
         desc: '과거 흐름을 바탕으로 미래 수요를 예측합니다.',
         nav: 'forecast',
         color: '#7c3aed',
@@ -507,7 +507,7 @@ export const PAGE_LABELS = {
   vendors: '거래처 관리',
   orders: '발주 관리',
   sales: '수주 관리',
-  forecast: 'AI 수요 예측',
+  forecast: '수요 예측',
   summary: '요약 보고',
   'weekly-report': '주간 보고서',
   profit: '손익 분석',
