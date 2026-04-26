@@ -249,8 +249,10 @@ async function loadProfile(user) {
  */
 async function applySession(session, seq) {
   if (!session?.user) {
-    // 이미 미인증 상태이면 중복 콜백 방지
-    if (currentUser === null && !isLoggingIn) return;
+    // 이미 로그아웃 상태면 콜백 불필요 (loginWithEmail pre-signout 중에도 동일)
+    // isLoggingIn=true 상태에서 pre-signout이 null 콜백을 발생시키면
+    // isAuthReady가 false로 리셋되어 initAppAfterAuth가 중복 호출되는 버그 방지
+    if (currentUser === null) return;
     currentUser = null;
     userProfile = null;
     isLoggingIn = false;
