@@ -33,6 +33,7 @@ injectGetUserProfile(getUserProfileData);
 
 // 인증 초기화 후 로그인 상태에 따라 화면 제어
 let isAuthReady = false;
+let isAppInitializing = false;
 
 // === 인증 게이트 이벤트 ===
 function showAuthGate() {
@@ -760,37 +761,25 @@ injectRouterCallbacks({
 // ??珥덇린??(濡쒓렇???꾨즺 ???몄텧)
 // ??遺꾨━? ???몄쬆 ?뺤씤 ?꾩뿉 IndexedDB 蹂듭썝?섎㈃ 鍮??곗씠?곌? 濡쒕뱶?????덉쓬
 async function initAppAfterAuth() {
-  // Supabase health check는 백그라운드로 실행해 초기 화면 진입을 막지 않음
-  if (isSupabaseConfigured) {
-    Promise.race([
-      supabase.from('profiles').select('id').limit(1),
-      new Promise((_, rej) => setTimeout(() => rej(new Error('health check timeout')), 3000)),
-    ])
-      .then(({ error }) => {
-        if (error) throw error;
-      })
-      .catch((e) => {
-        console.warn('[Health] Supabase 연결 불안정:', e.message);
-        showToast('서버 연결이 불안정합니다. 일부 기능이 제한될 수 있습니다.', 'warning');
-      });
+  if (isAppInitializing) return;
+  isAppInitializing = true;
+  try {
+    await restoreState();
+    const profilePlan = getUserProfileData()?.plan;
+    if (profilePlan && PLANS[profilePlan]) {
+      setPlan(profilePlan);
+    }
+    const lastPage = localStorage.getItem(LAST_PAGE_KEY);
+    const startPage = (lastPage && PAGE_LOADERS[lastPage]) ? lastPage : 'home';
+    updateSidebarBadges();
+    renderQuickAccess();
+    updatePlanDisplay();
+    initSidebarCustomize();
+    await navigateTo(startPage);
+    checkAndShowOnboarding(navigateTo);
+  } finally {
+    isAppInitializing = false;
   }
-
-  await restoreState();
-  // restoreState가 로컬 캐시의 예전 currentPlan을 복원할 수 있으므로,
-  // 인증 프로필(plan)을 다시 우선 동기화한다.
-  const profilePlan = getUserProfileData()?.plan;
-  if (profilePlan && PLANS[profilePlan]) {
-    setPlan(profilePlan);
-  }
-  const lastPage = localStorage.getItem(LAST_PAGE_KEY);
-  const startPage = (lastPage && PAGE_LOADERS[lastPage]) ? lastPage : 'home';
-  updateSidebarBadges();
-  renderQuickAccess();
-  updatePlanDisplay();
-  initSidebarCustomize();
-  await navigateTo(startPage);
-  // 泥?濡쒓렇???ъ슜?먯뿉寃??⑤낫??留덈쾿???쒖떆
-  checkAndShowOnboarding(navigateTo);
 }
 
 // Supabase 미설정(로컬 개발) 시에는 게이트 자동 제거
