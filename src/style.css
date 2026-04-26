@@ -1329,8 +1329,7 @@ html.dark-mode .acc-item-btn.active {
 
 /* --- 테이블 --- */
 .data-table {
-  min-width: 100%;
-  width: max-content;
+  width: auto;
   border-collapse: collapse;
   font-size: var(--font-size-sm);
 }
@@ -1346,7 +1345,6 @@ html.dark-mode .acc-item-btn.active {
   text-transform: uppercase;
   letter-spacing: 0.3px;
   white-space: nowrap;
-  width: 1px;
   position: sticky;
   top: 0;
   z-index: 1;
@@ -1375,7 +1373,6 @@ html.dark-mode .acc-item-btn.active {
   padding: 6px 10px;
   vertical-align: middle;
   white-space: nowrap;
-  width: 1px;
 }
 
 .data-table tbody tr {

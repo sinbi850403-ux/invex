@@ -9,7 +9,7 @@ import { showToast } from './toast.js';
 import { downloadExcel } from './excel.js';
 import { generateInventoryPDF } from './pdf-generator.js';
 import { renderItemTimelineChart } from './charts.js';
-import { renderQuickFilterRow, escapeHtml } from './ux-toolkit.js';
+import { renderQuickFilterRow, escapeHtml, enableColumnResize } from './ux-toolkit.js';
 import { canAction } from './auth.js';
 import { handlePageError } from './error-monitor.js';
 import { showFieldError, clearAllFieldErrors, setSavingState } from './ux-toolkit.js';
@@ -889,6 +889,7 @@ export function renderInventoryPage(container, navigateTo) {
       </tr>
     `;
     attachSortHeaderEvents();
+    enableColumnResize(container.querySelector('#inventory-table'));
   }
 
   // === 상태 변수 ===
