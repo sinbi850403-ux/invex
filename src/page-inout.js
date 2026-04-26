@@ -357,7 +357,7 @@ export function renderInoutPage(container, navigateTo, mode = 'all') {
         <th class="text-right">부가세</th>
         <th class="text-right">합계금액</th>`;
     } else if (isOutMode) {
-      // 출고관리: 자산|출고일자|거래처|상품코드|품명|규격|단위|출고수량|출고단가|출고금액|출고합|공급가|부가세|공가합|매입원가|이익액|이익률|매출원가율
+      // 출고관리: 자산|출고일자|거래처|상품코드|품명|규격|단위|출고수량|출고단가|출고금액|출고합|매입원가|부가세|공가합|이익액|이익률|매출원가율
       cols = `
         <th style="width:40px; text-align:center;"><input type="checkbox" id="tx-select-all" /></th>
         <th class="col-num">#</th>
@@ -372,10 +372,9 @@ export function renderInoutPage(container, navigateTo, mode = 'all') {
         <th class="text-right">출고단가</th>
         <th class="text-right">출고금액</th>
         <th class="text-right">출고합</th>
-        <th class="text-right">공급가</th>
+        <th class="text-right">매입원가</th>
         <th class="text-right">부가세</th>
         <th class="text-right">공가합</th>
-        <th class="text-right">매입원가</th>
         <th class="text-right">이익액</th>
         <th class="text-right">이익률</th>
         <th class="text-right">매출원가율</th>`;
@@ -510,7 +509,7 @@ export function renderInoutPage(container, navigateTo, mode = 'all') {
 
     const tbody = container.querySelector('#tx-body');
     if (!tbody) return;
-    const totalColCount = isInMode ? 14 : isOutMode ? 22 : 13;
+    const totalColCount = isInMode ? 14 : isOutMode ? 21 : 13;
     if (sorted.length === 0) {
       tbody.innerHTML = `<tr><td colspan="${totalColCount}" style="text-align:center; padding:32px; color:var(--text-muted);">
         ${transactions.length === 0 ? '아직 입출고 기록이 없습니다. 위 버튼으로 먼저 등록해 주세요.' : '검색 결과가 없습니다.'}
@@ -626,7 +625,6 @@ export function renderInoutPage(container, navigateTo, mode = 'all') {
             <td class="text-right">${supply ? W(supply) : '-'}</td>
             <td class="text-right">${vat ? W(vat) : '-'}</td>
             <td class="text-right">${supply ? W(supply + vat) : '-'}</td>
-            <td class="text-right">${purchase ? W(purchase) : '-'}</td>
             <td class="text-right" style="color:${profitColor}; font-weight:600;">${purchase > 0 ? W(profit) : '-'}</td>
             <td class="text-right" style="color:${profitColor};">${profitRate}</td>
             <td class="text-right">${costRate}</td>
@@ -1053,10 +1051,9 @@ export function renderInoutPage(container, navigateTo, mode = 'all') {
           '출고단가':   salePrice,
           '출고금액':   outAmt,
           '출고합':     Math.round(outAmt * 1.1),
-          '공급가':     supply,
+          '매입원가':   supply,
           '부가세':     vat,
           '공가합':     supply + vat,
-          '매입원가':   purchase,
           '이익액':     profit,
           '이익률':     profitRate,
           '매출원가율': costRate,
