@@ -1329,7 +1329,8 @@ html.dark-mode .acc-item-btn.active {
 
 /* --- 테이블 --- */
 .data-table {
-  width: 100%;
+  min-width: 100%;
+  width: max-content;
   border-collapse: collapse;
   font-size: var(--font-size-sm);
 }
