@@ -13,6 +13,10 @@ import {
   getWorkspaceMeta,
   inviteMember,
   removeMember,
+  cancelInvite,
+  getPendingInvite,
+  acceptInvite,
+  rejectInvite,
   getFreePeriodInfo,
 } from './workspace.js';
 import { escapeHtml } from './ux-toolkit.js';
@@ -57,9 +61,13 @@ export async function renderTeamPage(container, navigateTo) {
     </div>
   `;
 
-  // 워크스페이스 정보 로드
+  // 워크스페이스 정보 + 내 초대장 병렬 로드
   const wsId = await getWorkspaceId(user.uid);
-  let meta = await getWorkspaceMeta(wsId);
+  const [metaResult, myPendingInvite] = await Promise.all([
+    getWorkspaceMeta(wsId),
+    getPendingInvite(user.uid),
+  ]);
+  let meta = metaResult;
 
   // 워크스페이스가 없으면 자동 생성
   if (!meta) {
@@ -67,7 +75,9 @@ export async function renderTeamPage(container, navigateTo) {
     meta = await getWorkspaceMeta(wsId);
   }
 
-  const members = meta?.members || [];
+  const allMembers = meta?.members || [];
+  const activeMembers = allMembers.filter(m => m.status !== 'pending');
+  const pendingMembers = allMembers.filter(m => m.status === 'pending');
   const isOwner = meta?.ownerId === user.uid;
   const freePeriod = getFreePeriodInfo(profile?.createdAt);
 
@@ -92,6 +102,30 @@ export async function renderTeamPage(container, navigateTo) {
       </div>
       ` : ''}
     </div>
+
+    <!-- 내 초대장 (비오너에게만 표시) -->
+    ${myPendingInvite ? `
+    <div class="card" style="border: 2px solid var(--accent); background: linear-gradient(135deg, rgba(37,99,235,0.05), rgba(139,92,246,0.05));">
+      <div style="display:flex; align-items:center; gap:16px; flex-wrap:wrap;">
+        <div style="font-size:36px;">📬</div>
+        <div style="flex:1; min-width:200px;">
+          <div style="font-size:16px; font-weight:700; margin-bottom:4px;">팀 초대장이 도착했습니다!</div>
+          <div style="font-size:13px; color:var(--text-muted); margin-bottom:2px;">
+            <strong>${escapeHtml(myPendingInvite.invitedBy)}</strong>님이
+            <strong>"${escapeHtml(myPendingInvite.workspaceName)}"</strong> 워크스페이스에 초대했습니다.
+          </div>
+          <div style="font-size:12px; color:var(--text-muted);">
+            배정 역할: <strong>${escapeHtml(myPendingInvite.role || 'staff')}</strong> &nbsp;|&nbsp;
+            초대일: ${new Date(myPendingInvite.invitedAt).toLocaleDateString('ko-KR')}
+          </div>
+        </div>
+        <div style="display:flex; gap:8px;">
+          <button class="btn btn-outline" id="btn-reject-invite" style="color:var(--danger); border-color:var(--danger);">거절</button>
+          <button class="btn btn-primary" id="btn-accept-invite">수락</button>
+        </div>
+      </div>
+    </div>
+    ` : ''}
 
     <!-- 무료 기간 안내 -->
     <div class="card" style="background: linear-gradient(135deg, rgba(37,99,235,0.1), rgba(139,92,246,0.1)); border: 1px solid rgba(37,99,235,0.2);">
@@ -123,8 +157,8 @@ export async function renderTeamPage(container, navigateTo) {
         <div class="stat-value" style="font-size:16px;">${escapeHtml(meta?.name || '-')}</div>
       </div>
       <div class="stat-card">
-        <div class="stat-label">총 팀원</div>
-        <div class="stat-value text-accent">${members.length}명</div>
+        <div class="stat-label">활성 팀원</div>
+        <div class="stat-value text-accent">${activeMembers.length}명</div>
       </div>
       <div class="stat-card">
         <div class="stat-label">내 역할</div>
@@ -136,9 +170,9 @@ export async function renderTeamPage(container, navigateTo) {
       </div>
     </div>
 
-    <!-- 팀원 목록 -->
+    <!-- 활성 팀원 목록 -->
     <div class="card">
-      <div class="card-title">👥 팀원 목록 <span class="card-subtitle">${members.length}명</span></div>
+      <div class="card-title">👥 팀원 목록 <span class="card-subtitle">${activeMembers.length}명</span></div>
       <div class="table-wrapper" style="border:none;">
         <table class="data-table">
           <thead>
@@ -152,7 +186,7 @@ export async function renderTeamPage(container, navigateTo) {
             </tr>
           </thead>
           <tbody>
-            ${members.map(m => {
+            ${activeMembers.map(m => {
               const rl = roleLabels[m.role] || roleLabels.staff;
               const isMe = m.uid === user.uid;
               const joinDate = m.joinedAt ? new Date(m.joinedAt).toLocaleDateString('ko-KR') : '-';
@@ -184,6 +218,50 @@ export async function renderTeamPage(container, navigateTo) {
         </table>
       </div>
     </div>
+
+    <!-- 초대 대기 중 멤버 (오너에게만 표시, 대기자 있을 때만) -->
+    ${isOwner && pendingMembers.length > 0 ? `
+    <div class="card" style="border-left: 3px solid var(--warning, #f59e0b);">
+      <div class="card-title">⏳ 초대 대기 중 <span class="card-subtitle">${pendingMembers.length}명</span></div>
+      <div class="table-wrapper" style="border:none;">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>이름</th>
+              <th>이메일</th>
+              <th>역할</th>
+              <th>초대일</th>
+              <th style="width:80px;">취소</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${pendingMembers.map(m => {
+              const rl = roleLabels[m.role] || roleLabels.staff;
+              const inviteDate = m.invitedAt ? new Date(m.invitedAt).toLocaleDateString('ko-KR') : '-';
+              return `
+                <tr style="opacity:0.75;">
+                  <td>
+                    <strong>${escapeHtml(m.name || '사용자')}</strong>
+                    <span style="font-size:10px; margin-left:6px; padding:2px 6px; border-radius:10px; background:rgba(245,158,11,0.15); color:var(--warning,#f59e0b); border:1px solid rgba(245,158,11,0.3);">초대 대기</span>
+                  </td>
+                  <td style="font-size:12px; color:var(--text-muted);">${escapeHtml(m.email || '-')}</td>
+                  <td>
+                    <span class="badge" style="background:${rl.color}20; color:${rl.color}; border:1px solid ${rl.color}40;">
+                      ${rl.text}
+                    </span>
+                  </td>
+                  <td style="font-size:12px;">${inviteDate}</td>
+                  <td>
+                    <button class="btn-icon btn-icon-danger btn-cancel-invite" data-uid="${safeAttr(m.uid)}" data-name="${safeAttr(m.name)}" title="초대 취소">✕</button>
+                  </td>
+                </tr>
+              `;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    ` : ''}
 
     <!-- 실시간 동기화 안내 -->
     <div class="card" style="border-left:3px solid var(--success);">
@@ -235,6 +313,34 @@ export async function renderTeamPage(container, navigateTo) {
 
   // === 이벤트 바인딩 ===
 
+  // 초대 수락
+  container.querySelector('#btn-accept-invite')?.addEventListener('click', async () => {
+    const btn = container.querySelector('#btn-accept-invite');
+    btn.disabled = true;
+    btn.textContent = '처리 중...';
+    const success = await acceptInvite();
+    if (success) {
+      // workspaceId가 변경되었으므로 전체 재초기화 필요
+      window.location.reload();
+    } else {
+      btn.disabled = false;
+      btn.textContent = '수락';
+    }
+  });
+
+  // 초대 거절
+  container.querySelector('#btn-reject-invite')?.addEventListener('click', async () => {
+    if (!confirm('초대를 거절하시겠습니까?')) return;
+    const btn = container.querySelector('#btn-reject-invite');
+    btn.disabled = true;
+    const success = await rejectInvite();
+    if (success) {
+      renderTeamPage(container, navigateTo);
+    } else {
+      btn.disabled = false;
+    }
+  });
+
   // 초대 모달 열기
   container.querySelector('#btn-invite')?.addEventListener('click', () => {
     container.querySelector('#invite-modal').style.display = 'flex';
@@ -258,12 +364,30 @@ export async function renderTeamPage(container, navigateTo) {
       return;
     }
 
+    const btn = container.querySelector('#invite-confirm');
+    btn.disabled = true;
+    btn.textContent = '처리 중...';
     const success = await inviteMember(email, role);
+    btn.disabled = false;
+    btn.textContent = '초대하기';
     if (success) {
       closeInviteModal();
-      // 페이지 새로고침
       renderTeamPage(container, navigateTo);
     }
+  });
+
+  // 초대 취소 (오너 — pending 멤버)
+  container.querySelectorAll('.btn-cancel-invite').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const uid = btn.dataset.uid;
+      const name = btn.dataset.name;
+      if (!confirm(`"${name}" 님에 대한 초대를 취소하시겠습니까?`)) return;
+
+      const success = await cancelInvite(uid);
+      if (success) {
+        renderTeamPage(container, navigateTo);
+      }
+    });
   });
 
   // 멤버 제거

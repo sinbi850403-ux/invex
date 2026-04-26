@@ -87,16 +87,16 @@ export async function createWorkspace(name) {
 
 /**
  * 팀 멤버 초대 (이메일로) — Supabase profiles 테이블에서 사용자 조회
+ * 초대된 멤버는 status: 'pending' 상태로 추가되며, 수락 시 'active'로 변경
  */
 export async function inviteMember(email, role = 'staff') {
   const user = getCurrentUser();
-  if (!user) return false;
+  if (!user || !isConfigured) return false;
 
   try {
     const { supabase } = await import('./supabase-client.js');
 
     // Supabase profiles 테이블에서 이메일로 사용자 조회
-    // (RLS: profiles_select_for_invite 정책으로 인증된 사용자는 모두 조회 가능)
     const { data: targetProfile, error } = await supabase
       .from('profiles')
       .select('id, name, email')
@@ -110,20 +110,21 @@ export async function inviteMember(email, role = 'staff') {
       return false;
     }
 
-    // 자기 자신은 초대 불가
     if (targetProfile.id === user.uid) {
       showToast('자기 자신은 초대할 수 없습니다.', 'warning');
       return false;
     }
 
-    // 이미 멤버인지 확인
-    const { members = [] } = getState();
-    if (members.some(m => m.email === email || m.id === targetProfile.id)) {
-      showToast('이미 팀에 속한 멤버입니다.', 'info');
+    // 워크스페이스 메타에서 기존 멤버 확인
+    const wsId = await getWorkspaceId(user.uid);
+    const meta = await getWorkspaceMeta(wsId);
+    const existingMembers = meta?.members || [];
+
+    if (existingMembers.some(m => m.email === email || m.uid === targetProfile.id)) {
+      showToast('이미 팀에 초대되었거나 속한 멤버입니다.', 'info');
       return false;
     }
 
-    // 멤버 목록에 추가 후 저장
     const newMember = {
       id: targetProfile.id,
       uid: targetProfile.id,
@@ -131,16 +132,160 @@ export async function inviteMember(email, role = 'staff') {
       email: targetProfile.email || email,
       roleId: role,
       role,
-      status: 'active',
-      joinedAt: new Date().toISOString(),
+      status: 'pending',
+      invitedAt: new Date().toISOString(),
     };
-    setState({ members: [...members, newMember] });
 
-    showToast(`${targetProfile.name || email}님을 팀에 초대했습니다!`, 'success');
+    // 워크스페이스 메타에 pending 멤버 추가
+    const metaRef = doc(db, 'workspaces', wsId, 'meta', 'info');
+    await updateDoc(metaRef, { members: [...existingMembers, newMember] });
+
+    // 초대받은 사용자의 users 문서에 초대 정보 저장 (수락/거절용)
+    await setDoc(doc(db, 'users', targetProfile.id), {
+      pendingInvite: {
+        workspaceId: wsId,
+        workspaceName: meta?.name || '워크스페이스',
+        invitedBy: user.displayName || user.email || '팀장',
+        role,
+        invitedAt: new Date().toISOString(),
+      },
+    }, { merge: true });
+
+    showToast(`${targetProfile.name || email}님께 초대장을 보냈습니다! 상대방이 수락하면 팀원으로 합류됩니다.`, 'success');
     return true;
   } catch (e) {
     console.error('[Team] 초대 실패:', e.message);
     showToast('초대 중 오류가 발생했습니다: ' + e.message, 'error');
+    return false;
+  }
+}
+
+/**
+ * 현재 사용자의 대기 중 초대장 조회
+ */
+export async function getPendingInvite(userId) {
+  if (!isConfigured || !userId) return null;
+  try {
+    const userDoc = await getDoc(doc(db, 'users', userId));
+    return userDoc.exists() ? (userDoc.data().pendingInvite || null) : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * 초대 수락 — 워크스페이스에 active 멤버로 합류
+ */
+export async function acceptInvite() {
+  const user = getCurrentUser();
+  if (!user || !isConfigured) return false;
+
+  try {
+    const userDoc = await getDoc(doc(db, 'users', user.uid));
+    const pendingInvite = userDoc.exists() ? userDoc.data().pendingInvite : null;
+
+    if (!pendingInvite) {
+      showToast('초대장을 찾을 수 없습니다.', 'error');
+      return false;
+    }
+
+    const { workspaceId, role } = pendingInvite;
+
+    // 워크스페이스 메타에서 멤버 상태 pending → active
+    const metaRef = doc(db, 'workspaces', workspaceId, 'meta', 'info');
+    const metaSnap = await getDoc(metaRef);
+    if (metaSnap.exists()) {
+      const members = (metaSnap.data().members || []).map(m =>
+        m.uid === user.uid
+          ? { ...m, status: 'active', joinedAt: new Date().toISOString() }
+          : m
+      );
+      await updateDoc(metaRef, { members });
+    }
+
+    // 사용자 문서: workspaceId 설정, pendingInvite 삭제
+    await updateDoc(doc(db, 'users', user.uid), {
+      workspaceId,
+      role: role || 'staff',
+      pendingInvite: deleteField(),
+    });
+
+    showToast('팀 초대를 수락했습니다! 이제 같은 워크스페이스에서 데이터를 공유합니다.', 'success');
+    return true;
+  } catch (e) {
+    console.error('[Team] 초대 수락 실패:', e.message);
+    showToast('수락 중 오류가 발생했습니다: ' + e.message, 'error');
+    return false;
+  }
+}
+
+/**
+ * 초대 거절 — 워크스페이스 멤버 목록에서 제거
+ */
+export async function rejectInvite() {
+  const user = getCurrentUser();
+  if (!user || !isConfigured) return false;
+
+  try {
+    const userDoc = await getDoc(doc(db, 'users', user.uid));
+    const pendingInvite = userDoc.exists() ? userDoc.data().pendingInvite : null;
+
+    if (!pendingInvite) {
+      showToast('초대장을 찾을 수 없습니다.', 'error');
+      return false;
+    }
+
+    const { workspaceId } = pendingInvite;
+
+    // 워크스페이스 메타에서 해당 멤버 제거
+    const metaRef = doc(db, 'workspaces', workspaceId, 'meta', 'info');
+    const metaSnap = await getDoc(metaRef);
+    if (metaSnap.exists()) {
+      const members = (metaSnap.data().members || []).filter(m => m.uid !== user.uid);
+      await updateDoc(metaRef, { members });
+    }
+
+    // 사용자 문서에서 pendingInvite 삭제
+    await updateDoc(doc(db, 'users', user.uid), {
+      pendingInvite: deleteField(),
+    });
+
+    showToast('초대를 거절했습니다.', 'info');
+    return true;
+  } catch (e) {
+    console.error('[Team] 초대 거절 실패:', e.message);
+    showToast('거절 중 오류가 발생했습니다: ' + e.message, 'error');
+    return false;
+  }
+}
+
+/**
+ * 초대 취소 (팀장 전용) — 수락 전에 초대 철회
+ */
+export async function cancelInvite(targetUid) {
+  const user = getCurrentUser();
+  if (!user || !isConfigured) return false;
+
+  const wsId = await getWorkspaceId(user.uid);
+
+  try {
+    // 워크스페이스 메타에서 pending 멤버 제거
+    const metaRef = doc(db, 'workspaces', wsId, 'meta', 'info');
+    const metaSnap = await getDoc(metaRef);
+    if (metaSnap.exists()) {
+      const members = (metaSnap.data().members || []).filter(m => m.uid !== targetUid);
+      await updateDoc(metaRef, { members });
+    }
+
+    // 초대받은 사용자 문서에서 pendingInvite 삭제
+    await updateDoc(doc(db, 'users', targetUid), {
+      pendingInvite: deleteField(),
+    });
+
+    showToast('초대를 취소했습니다.', 'info');
+    return true;
+  } catch (e) {
+    showToast('초대 취소 실패: ' + e.message, 'error');
     return false;
   }
 }
