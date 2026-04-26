@@ -7,6 +7,7 @@ import { destroyAllCharts, renderProfitTrendChart, renderVendorProfitChart } fro
 import { jsPDF } from 'jspdf';
 import { applyKoreanFont } from './pdf-font.js';
 import { enableLocalReportSort } from './report-local-sort.js';
+import { enableColumnResize } from './ux-toolkit.js';
 
 const PROFIT_MONTHS = Array.from({ length: 12 }, (_, idx) => idx + 1);
 
@@ -951,6 +952,7 @@ export function renderProfitPage(container, navigateTo) {
 
   container.querySelectorAll('.data-table').forEach((table) => {
     table.dataset.autoSort = 'off';
+    enableColumnResize(table);
   });
   enableLocalReportSort(container);
 }

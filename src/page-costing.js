@@ -6,7 +6,8 @@
 import { getState, setState } from './store.js';
 import { downloadExcel } from './excel.js';
 import { showToast } from './toast.js';
-import { escapeHtml } from './ux-toolkit.js';
+import { escapeHtml, enableColumnResize } from './ux-toolkit.js';
+import { getSalePrice } from './price-utils.js';
 
 const COSTING_TEXT_COLLATOR = new Intl.Collator('ko', { numeric: true, sensitivity: 'base' });
 const COSTING_SORT_FIELDS = [
@@ -210,6 +211,8 @@ export function renderCostingPage(container, navigateTo) {
     downloadExcel(exportRows, `원가분석_${new Date().toISOString().split('T')[0]}`);
     showToast('원가표를 내보냈습니다.', 'success');
   });
+
+  container.querySelectorAll('.data-table').forEach(enableColumnResize);
 }
 
 function renderCostingHeader(field, sortState) {
@@ -340,7 +343,7 @@ function calculateCosts(items, transactions, method) {
   return items.map(item => {
     const qty = parseFloat(item.quantity) || 0;
     const unitPrice = parseFloat(item.unitPrice) || 0;
-    const sellPrice = parseFloat(item.salePrice) || parseFloat(item.sellPrice) || unitPrice;
+    const sellPrice = getSalePrice(item) || unitPrice;
 
     const inTransactions = transactions
       .filter(tx => tx.type === 'in' && tx.itemName === item.itemName)

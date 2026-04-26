@@ -8,6 +8,7 @@ import { getState } from './store.js';
 import { showToast } from './toast.js';
 import { downloadExcel } from './excel.js';
 import { enableLocalReportSort } from './report-local-sort.js';
+import { enableColumnResize } from './ux-toolkit.js';
 
 /**
  * 怨좉툒 遺꾩꽍 ??쒕낫???뚮뜑留?
@@ -273,6 +274,7 @@ export function renderDashboardPage(container, navigateTo) {
 
   container.querySelectorAll('.data-table').forEach((table) => {
     table.dataset.autoSort = 'off';
+    enableColumnResize(table);
   });
   enableLocalReportSort(container);
 }

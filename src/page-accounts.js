@@ -14,6 +14,7 @@ import { showToast } from './toast.js';
 import { downloadExcel } from './excel.js';
 import { addAuditLog } from './audit-log.js';
 import { enableLocalReportSort } from './report-local-sort.js';
+import { enableColumnResize } from './ux-toolkit.js';
 
 let currentTab = 'receivable';
 
@@ -168,6 +169,7 @@ export function renderAccountsPage(container, navigateTo) {
   bindAccountActions(container, navigateTo);
   container.querySelectorAll('.data-table').forEach((table) => {
     table.dataset.autoSort = 'off';
+    enableColumnResize(table);
   });
   enableLocalReportSort(container);
 }

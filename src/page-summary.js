@@ -7,6 +7,7 @@ import { getState } from './store.js';
 import { showToast } from './toast.js';
 import { downloadExcel } from './excel.js';
 import { enableLocalReportSort } from './report-local-sort.js';
+import { enableColumnResize } from './ux-toolkit.js';
 
 /**
  * 요약 보고 페이지 렌더링
@@ -342,6 +343,7 @@ export function renderSummaryPage(container, navigateTo) {
 
   container.querySelectorAll('.data-table').forEach((table) => {
     table.dataset.autoSort = 'off';
+    enableColumnResize(table);
   });
   enableLocalReportSort(container);
 }

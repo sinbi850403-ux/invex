@@ -9,6 +9,7 @@ import { getState } from './store.js';
 import { showToast } from './toast.js';
 import { getSalePrice } from './price-utils.js';
 import { enableLocalReportSort } from './report-local-sort.js';
+import { enableColumnResize } from './ux-toolkit.js';
 
 export function renderWeeklyReportPage(container, navigateTo) {
   const state = getState();
@@ -176,6 +177,7 @@ export function renderWeeklyReportPage(container, navigateTo) {
 
   container.querySelectorAll('.data-table').forEach((table) => {
     table.dataset.autoSort = 'off';
+    enableColumnResize(table);
   });
   enableLocalReportSort(container);
 }
