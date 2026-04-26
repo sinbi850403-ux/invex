@@ -322,6 +322,8 @@ ALTER TABLE user_settings ENABLE ROW LEVEL SECURITY;
 -- profiles
 CREATE POLICY "profiles_select" ON profiles FOR SELECT USING (auth.uid() = id);
 CREATE POLICY "profiles_select_admin" ON profiles FOR SELECT USING (auth.jwt()->>'email' IN ('sinbi0214@naver.com', 'sinbi850403@gmail.com', 'admin@invex.io.kr'));
+-- 팀 초대: 인증된 사용자가 이메일로 다른 사용자 프로필 조회 허용
+CREATE POLICY "profiles_select_for_invite" ON profiles FOR SELECT USING (auth.uid() IS NOT NULL);
 CREATE POLICY "profiles_update" ON profiles FOR UPDATE USING (auth.uid() = id);
 
 -- items

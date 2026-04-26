@@ -86,61 +86,61 @@ export async function createWorkspace(name) {
 }
 
 /**
- * 팀 멤버 초대 (이메일로)
- * 왜? → 사용자가 속한 워크스페이스를 찾아야 데이터를 공유할 수 있음
+ * 팀 멤버 초대 (이메일로) — Supabase profiles 테이블에서 사용자 조회
  */
 export async function inviteMember(email, role = 'staff') {
   const user = getCurrentUser();
-  if (!user || !isConfigured) return false;
-
-  const wsId = await getWorkspaceId(user.uid);
+  if (!user) return false;
 
   try {
-    // 초대 대상 사용자 찾기
-    const usersRef = collection(db, 'users');
-    const q = query(usersRef, where('email', '==', email));
-    const snap = await getDocs(q);
+    const { supabase } = await import('./supabase-client.js');
 
-    if (snap.empty) {
+    // Supabase profiles 테이블에서 이메일로 사용자 조회
+    // (RLS: profiles_select_for_invite 정책으로 인증된 사용자는 모두 조회 가능)
+    const { data: targetProfile, error } = await supabase
+      .from('profiles')
+      .select('id, name, email')
+      .eq('email', email)
+      .maybeSingle();
+
+    if (error) throw error;
+
+    if (!targetProfile) {
       showToast('해당 이메일로 가입된 사용자가 없습니다. 먼저 가입을 안내해 주세요.', 'warning');
       return false;
     }
 
-    const targetUser = snap.docs[0];
-    const targetUid = targetUser.id;
-    const targetData = targetUser.data();
-
-    // 이미 같은 워크스페이스인지 확인
-    if (targetData.workspaceId === wsId) {
-      showToast('이미 같은 팀에 속한 멤버입니다.', 'info');
+    // 자기 자신은 초대 불가
+    if (targetProfile.id === user.uid) {
+      showToast('자기 자신은 초대할 수 없습니다.', 'warning');
       return false;
     }
 
-    // 대상 사용자의 워크스페이스를 내 것으로 변경
-    await updateDoc(doc(db, 'users', targetUid), {
-      workspaceId: wsId,
-      role: role,
-    });
-
-    // 메타 정보에 멤버 추가
-    const metaRef = doc(db, 'workspaces', wsId, 'meta', 'info');
-    const metaSnap = await getDoc(metaRef);
-    if (metaSnap.exists()) {
-      const members = metaSnap.data().members || [];
-      members.push({
-        uid: targetUid,
-        email: email,
-        name: targetData.name || '사용자',
-        role: role,
-        joinedAt: new Date().toISOString(),
-      });
-      await updateDoc(metaRef, { members });
+    // 이미 멤버인지 확인
+    const { members = [] } = getState();
+    if (members.some(m => m.email === email || m.id === targetProfile.id)) {
+      showToast('이미 팀에 속한 멤버입니다.', 'info');
+      return false;
     }
 
-    showToast(`${email} 님을 팀에 초대했습니다!`, 'success');
+    // 멤버 목록에 추가 후 저장
+    const newMember = {
+      id: targetProfile.id,
+      uid: targetProfile.id,
+      name: targetProfile.name || '사용자',
+      email: targetProfile.email || email,
+      roleId: role,
+      role,
+      status: 'active',
+      joinedAt: new Date().toISOString(),
+    };
+    setState({ members: [...members, newMember] });
+
+    showToast(`${targetProfile.name || email}님을 팀에 초대했습니다!`, 'success');
     return true;
   } catch (e) {
-    showToast('초대 실패: ' + e.message, 'error');
+    console.error('[Team] 초대 실패:', e.message);
+    showToast('초대 중 오류가 발생했습니다: ' + e.message, 'error');
     return false;
   }
 }
