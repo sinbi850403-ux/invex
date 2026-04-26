@@ -1,11 +1,8 @@
-﻿/**
+/**
  * page-mypage.js - 마이페이지
  * 왜 필요? → 사용자가 프로필 수정, 비밀번호 변경, 회원탈퇴를 할 수 있어야 함 (개인정보보호법 준수)
  */
 import { getCurrentUser, getUserProfileData } from './auth.js';
-import { getAuth, updatePassword, reauthenticateWithCredential, EmailAuthProvider, deleteUser } from './auth-bridge.js';
-import { doc, deleteDoc } from './backend-store.js';
-import { db, isConfigured } from './backend-config.js';
 import { supabase } from './supabase-client.js';
 import { showToast } from './toast.js';
 import { getCurrentPlan, PLANS } from './plan.js';
@@ -16,8 +13,8 @@ export function renderMyPage(container) {
   const plan = getCurrentPlan();
   const planInfo = PLANS[plan] || PLANS.free;
 
-  // 가입 경로 판별 — Google 로그인은 비밀번호 변경 불가
-  const isGoogleUser = user?.providerData?.[0]?.providerId === 'google.com';
+  // 가입 경로 판별 — Google 로그인은 비밀번호 변경 불가 (Supabase app_metadata.provider)
+  const isGoogleUser = user?._raw?.app_metadata?.provider === 'google';
   const joinDate = profile?.createdAt
     ? new Date(profile.createdAt.seconds ? profile.createdAt.seconds * 1000 : profile.createdAt).toLocaleDateString('ko-KR')
     : '-';
@@ -55,7 +52,7 @@ export function renderMyPage(container) {
         <div style="margin-bottom:16px;">
           <label style="font-size:12px; font-weight:600; color:var(--text-muted); display:block; margin-bottom:6px;">이름 (닉네임)</label>
           <div style="display:flex; gap:8px;">
-            <input id="my-name" type="text" value="${profile?.name || user?.displayName || ''}" 
+            <input id="my-name" type="text" value="${profile?.name || user?.displayName || ''}"
               class="input" style="flex:1;" />
             <button id="btn-update-name" class="btn btn-primary" style="white-space:nowrap;">변경</button>
           </div>
@@ -67,10 +64,10 @@ export function renderMyPage(container) {
         <h3 style="font-size:15px; font-weight:700; margin-bottom:16px;">🔒 비밀번호 변경</h3>
         ${isGoogleUser ? '<p style="font-size:12px; color:var(--text-muted);">Google 계정은 Google에서 비밀번호를 관리합니다.</p>' : `
         <div style="display:flex; flex-direction:column; gap:10px;">
-          <input id="my-current-pw" type="password" placeholder="현재 비밀번호" class="input" ${isGoogleUser ? 'disabled' : ''} />
-          <input id="my-new-pw" type="password" placeholder="새 비밀번호 (6자 이상)" class="input" ${isGoogleUser ? 'disabled' : ''} />
-          <input id="my-new-pw2" type="password" placeholder="새 비밀번호 확인" class="input" ${isGoogleUser ? 'disabled' : ''} />
-          <button id="btn-change-pw" class="btn btn-primary" ${isGoogleUser ? 'disabled' : ''}>비밀번호 변경</button>
+          <input id="my-current-pw" type="password" placeholder="현재 비밀번호" class="input" />
+          <input id="my-new-pw" type="password" placeholder="새 비밀번호 (6자 이상)" class="input" />
+          <input id="my-new-pw2" type="password" placeholder="새 비밀번호 확인" class="input" />
+          <button id="btn-change-pw" class="btn btn-primary">비밀번호 변경</button>
         </div>
         `}
       </div>
@@ -95,15 +92,11 @@ export function renderMyPage(container) {
     const btn = document.getElementById('btn-update-name');
     btn.disabled = true;
     try {
-      // auth user_metadata 업데이트 (RLS 불필요, 항상 동작)
       const { error: authErr } = await supabase.auth.updateUser({
         data: { name: newName, full_name: newName },
       });
       if (authErr) throw authErr;
-
-      // profiles 테이블도 업데이트 (INSERT 정책 추가 후 upsert 성공)
       await supabase.from('profiles').upsert({ id: user.uid, name: newName }, { onConflict: 'id' });
-
       showToast('이름이 변경되었습니다.', 'success');
     } catch (e) {
       showToast('이름 변경 실패: ' + e.message, 'error');
@@ -124,21 +117,23 @@ export function renderMyPage(container) {
       if (newPw !== newPw2) { showToast('새 비밀번호가 일치하지 않습니다.', 'warning'); return; }
 
       try {
-        const auth = getAuth();
-        const credential = EmailAuthProvider.credential(user.email, currentPw);
-        await reauthenticateWithCredential(auth.currentUser, credential);
-        await updatePassword(auth.currentUser, newPw);
+        // 현재 비밀번호 검증 — 임시 로그인 시도
+        const { error: signInErr } = await supabase.auth.signInWithPassword({
+          email: user.email,
+          password: currentPw,
+        });
+        if (signInErr) {
+          showToast('현재 비밀번호가 올바르지 않습니다.', 'error');
+          return;
+        }
+        const { error: updateErr } = await supabase.auth.updateUser({ password: newPw });
+        if (updateErr) throw updateErr;
         showToast('비밀번호가 변경되었습니다!', 'success');
-        // 입력 필드 초기화
         document.getElementById('my-current-pw').value = '';
         document.getElementById('my-new-pw').value = '';
         document.getElementById('my-new-pw2').value = '';
       } catch (e) {
-        if (e.code === 'auth/wrong-password') {
-          showToast('현재 비밀번호가 올바르지 않습니다.', 'error');
-        } else {
-          showToast('비밀번호 변경 실패: ' + e.message, 'error');
-        }
+        showToast('비밀번호 변경 실패: ' + e.message, 'error');
       }
     });
   }
@@ -151,20 +146,14 @@ export function renderMyPage(container) {
     if (doubleCheck !== '회원탈퇴') { showToast('탈퇴가 취소되었습니다.', 'info'); return; }
 
     try {
-      const auth = getAuth();
-      // 사용자 데이터 삭제
-      if (isConfigured && user) {
-        await deleteDoc(doc(db, 'users', user.uid));
-      }
-      // 인증 계정 삭제
-      await deleteUser(auth.currentUser);
-      showToast('회원 탈퇴가 완료되었습니다.', 'success');
+      // Supabase: 클라이언트에서 직접 계정 삭제는 불가 — 관리자 함수/서버 함수 필요
+      // 대안: 사용자 데이터 정리 + 로그아웃
+      const { clearAllUserData } = await import('./db.js');
+      await clearAllUserData();
+      await supabase.auth.signOut();
+      showToast('데이터가 삭제됐습니다. 계정 완전 삭제는 관리자에게 문의해 주세요.', 'info');
     } catch (e) {
-      if (e.code === 'auth/requires-recent-login') {
-        showToast('보안을 위해 다시 로그인 후 탈퇴해주세요.', 'warning');
-      } else {
-        showToast('탈퇴 실패: ' + e.message, 'error');
-      }
+      showToast('탈퇴 실패: ' + e.message, 'error');
     }
   });
 }

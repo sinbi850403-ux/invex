@@ -5,7 +5,7 @@
  */
 
 import { getCurrentUser, getUserProfileData } from './auth.js';
-import { isConfigured } from './backend-config.js';
+import { isSupabaseConfigured as isConfigured } from './supabase-client.js';
 import { showToast } from './toast.js';
 import {
   getWorkspaceId,

@@ -19,9 +19,6 @@ import { primeUserIdCache } from './db.js';
 import { checkAndShowOnboarding } from './onboarding.js';
 import { initSidebarCustomize } from './sidebar-customize.js';
 import { isSupabaseConfigured, supabase } from './supabase-client.js';
-// framework.js: html, on, createPage 유틸 (page-*.js에서 사용)
-// 여기서는 직접 사용하지 않으므로 import 불필요
-
 
 // 에러 모니터링 초기화
 initErrorMonitor();
