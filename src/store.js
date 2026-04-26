@@ -16,6 +16,11 @@ import * as db from './db.js';
 import { storeItemToDb } from './db.js';
 import { managedQuery, invalidateCache, getTrafficMetrics } from './traffic-manager.js';
 
+// TOKEN_REFRESHED 이벤트가 이미 발생했는지 추적
+// restoreState가 만료 JWT 감지 후 불필요한 6초 대기를 스킵하기 위해
+let _tokenWasRefreshed = false;
+window.addEventListener('invex:token-refreshed', () => { _tokenWasRefreshed = true; });
+
 // 기본 상태
 const DEFAULT_STATE = {
   rawData: [],          // 업로드된 원본 데이터
@@ -429,10 +434,32 @@ export async function restoreState(userId = null) {
       if (!hasSession) {
         // 로그인 안 된 상태는 정상 흐름 — 경고 출력하지 않음, IndexedDB 폴백으로 진행
       } else {
+        // JWT 만료 감지 → TOKEN_REFRESHED 이벤트 대기 (만료 토큰으로 쿼리하면 RLS가 0건 반환)
+        // _tokenWasRefreshed가 이미 true이면 이미 갱신됐으므로 대기 불필요
+        if (!_tokenWasRefreshed) {
+          try {
+            const raw = localStorage.getItem('invex-supabase-auth');
+            if (raw) {
+              const parsed = JSON.parse(raw);
+              const expiresAt = parsed?.expires_at; // Supabase v2: 초 단위 epoch
+              if (expiresAt && expiresAt * 1000 < Date.now() + 30_000) {
+                // 30초 이내 만료 또는 이미 만료 → TOKEN_REFRESHED 대기 (최대 6초)
+                console.log('[Store] JWT 만료 감지 → TOKEN_REFRESHED 대기 (최대 6초)');
+                await new Promise(resolve => {
+                  const timer = setTimeout(resolve, 6000);
+                  window.addEventListener('invex:token-refreshed', () => {
+                    clearTimeout(timer);
+                    resolve();
+                  }, { once: true });
+                });
+              }
+            }
+          } catch (_) { /* localStorage 파싱 오류 무시 */ }
+        }
+
         let cloudData = await managedQuery(() => db.loadAllData());
 
-        // 0건이면 만료 토큰으로 인한 RLS 차단일 수 있음 → 1.5초 후 1회 재시도
-        // (TOKEN_REFRESHED가 아직 처리되지 않았거나 네트워크 지연으로 세션 갱신이 늦는 경우 대응)
+        // 여전히 0건이면 1회 재시도 (네트워크 일시 오류 또는 토큰 전파 지연 대응)
         if (
           (cloudData.mappedData?.length ?? 0) === 0 &&
           (cloudData.transactions?.length ?? 0) === 0

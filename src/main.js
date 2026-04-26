@@ -18,6 +18,7 @@ import { restoreState, getState } from './store.js';
 import { primeUserIdCache } from './db.js';
 import { checkAndShowOnboarding } from './onboarding.js';
 import { initSidebarCustomize } from './sidebar-customize.js';
+import { isSupabaseConfigured, supabase } from './supabase-client.js';
 // framework.js: html, on, createPage 유틸 (page-*.js에서 사용)
 // 여기서는 직접 사용하지 않으므로 import 불필요
 
@@ -167,6 +168,13 @@ initAuth((user, profile) => {
     isAuthReady = false;
   }
 });
+
+// Supabase 미설정(로컬 개발) 시에는 게이트 자동 제거
+if (!isSupabaseConfigured) {
+  const gate = document.getElementById('auth-gate');
+  if (gate) gate.style.display = 'none';
+  initAppAfterAuth();
+}
 // pageLoaders는 router.js의 PAGE_LOADERS로 이전됨
 
 
@@ -832,137 +840,6 @@ async function initAppAfterAuth() {
   } finally {
     isAppInitializing = false;
   }
-}
-
-[
-  'landing-goto-login',
-  'landing-cta-signup',
-  'landing-cta-bottom',
-  'landing-pricing-free',
-  'landing-pricing-pro',
-  'landing-pricing-enterprise',
-].forEach(id => {
-  document.getElementById(id)?.addEventListener('click', showAuthGate);
-});
-
-document.getElementById('landing-cta-demo')?.addEventListener('click', () => {
-  document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' });
-});
-
-document.getElementById('tab-login')?.addEventListener('click', () => {
-  document.getElementById('form-login').style.display = 'block';
-  document.getElementById('form-signup').style.display = 'none';
-  const tabLogin = document.getElementById('tab-login');
-  const tabSignup = document.getElementById('tab-signup');
-  tabLogin.classList.add('active');
-  tabLogin.classList.remove('active-signup');
-  tabSignup.classList.remove('active', 'active-signup');
-});
-
-document.getElementById('tab-signup')?.addEventListener('click', () => {
-  document.getElementById('form-login').style.display = 'none';
-  document.getElementById('form-signup').style.display = 'block';
-  const tabLogin = document.getElementById('tab-login');
-  const tabSignup = document.getElementById('tab-signup');
-  tabSignup.classList.add('active', 'active-signup');
-  tabLogin.classList.remove('active', 'active-signup');
-});
-
-document.getElementById('gate-email-login')?.addEventListener('click', async () => {
-  const email = document.getElementById('login-email').value.trim();
-  const password = document.getElementById('login-password').value;
-  if (!email || !password) { showToast('이메일과 비밀번호를 입력해 주세요.', 'warning'); return; }
-  await loginWithEmail(email, password);
-});
-
-['login-email', 'login-password'].forEach(id => {
-  document.getElementById(id)?.addEventListener('focusin', () => {
-    document.getElementById('login-error-msg')?.remove();
-  });
-});
-
-document.getElementById('login-password')?.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter') document.getElementById('gate-email-login')?.click();
-});
-
-document.getElementById('gate-email-signup')?.addEventListener('click', async () => {
-  const name = document.getElementById('signup-name').value.trim();
-  const email = document.getElementById('signup-email').value.trim();
-  const pw = document.getElementById('signup-password').value;
-  const pw2 = document.getElementById('signup-password2').value;
-  const agreed = document.getElementById('signup-agree')?.checked;
-  if (!name) { showToast('이름을 입력해 주세요.', 'warning'); return; }
-  if (!email) { showToast('이메일을 입력해 주세요.', 'warning'); return; }
-  if (pw.length < 6) { showToast('비밀번호는 6자 이상이어야 합니다.', 'warning'); return; }
-  if (pw !== pw2) { showToast('비밀번호가 일치하지 않습니다.', 'warning'); return; }
-  if (!agreed) { showToast('이용약관 및 개인정보처리방침에 동의해 주세요.', 'warning'); return; }
-  await signupWithEmail(email, pw, name);
-});
-
-document.getElementById('signup-password2')?.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter') document.getElementById('gate-email-signup')?.click();
-});
-
-document.getElementById('btn-forgot-pw')?.addEventListener('click', async (e) => {
-  e.preventDefault();
-  const email = document.getElementById('login-email').value.trim();
-  if (!email) { showToast('이메일 주소를 먼저 입력해 주세요.', 'warning'); return; }
-  await resetPassword(email);
-});
-
-document.getElementById('gate-google-login')?.addEventListener('click', async () => {
-  const loadingEl = document.getElementById('gate-loading');
-  if (loadingEl) loadingEl.style.display = 'block';
-  const user = await loginWithGoogle();
-  if (!user && loadingEl) loadingEl.style.display = 'none';
-});
-
-initAuth((user, profile) => {
-  const gate = document.getElementById('auth-gate');
-  
-  if (user) {
-    // DB 프로필의 요금제를 앱 런타임 상태에 동기화
-    const profilePlan = profile?.plan;
-    if (profilePlan && PLANS[profilePlan]) {
-      setPlan(profilePlan);
-    }
-
-    const landing = document.getElementById('landing-page');
-    if (landing) landing.style.display = 'none';
-    if (gate) {
-      gate.style.opacity = '0';
-      setTimeout(() => { gate.style.display = 'none'; }, 300);
-    }
-    updateUserUI(user, profile);
-    setMonitorUser(user.uid, user.email);
-    
-    const adminBtn = document.querySelector('[data-page="admin"]');
-    const posBtn = document.querySelector('[data-page="pos"]');
-    if (adminBtn) adminBtn.style.display = isAdmin() ? '' : 'none';
-    if (posBtn) posBtn.style.display = isAdmin() ? '' : 'none';
-    
-    if (!isAuthReady) {
-      isAuthReady = true;
-      initAppAfterAuth();
-    }
-  } else {
-    updateUserUI(null, null);
-    clearMonitorUser();
-    const gateIsOpen = gate && gate.style.display === 'flex';
-    if (!gateIsOpen) {
-      if (gate) gate.style.display = 'none';
-      const landing = document.getElementById('landing-page');
-      if (landing) landing.style.display = 'block';
-    }
-    isAuthReady = false;
-  }
-});
-// Supabase 미설정(로컬 개발) 시에는 게이트 자동 제거
-import { isSupabaseConfigured, supabase } from './supabase-client.js';
-if (!isSupabaseConfigured) {
-  const gate = document.getElementById('auth-gate');
-  if (gate) gate.style.display = 'none';
-  initAppAfterAuth();
 }
 
 initNavigationShortcuts();
