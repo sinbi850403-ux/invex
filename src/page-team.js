@@ -80,6 +80,8 @@ export async function renderTeamPage(container, navigateTo) {
   const activeMembers = allMembers.filter(m => m.status !== 'pending');
   const pendingMembers = allMembers.filter(m => m.status === 'pending');
   const isOwner = (meta?.owner_id ?? meta?.ownerId) === user.uid;
+  const myMember = allMembers.find(m => m.uid === user.uid || m.id === user.uid);
+  const myRole = isOwner ? 'owner' : (myMember?.role || myMember?.roleId || profile?.role || 'staff');
   const freePeriod = getFreePeriodInfo(profile?.createdAt);
 
   // 역할 라벨
@@ -163,7 +165,7 @@ export async function renderTeamPage(container, navigateTo) {
       </div>
       <div class="stat-card">
         <div class="stat-label">내 역할</div>
-        <div class="stat-value" style="font-size:16px;">${roleLabels[profile?.role]?.icon || '👤'} ${roleLabels[profile?.role]?.text || '멤버'}</div>
+        <div class="stat-value" style="font-size:16px;">${roleLabels[myRole]?.icon || '👤'} ${roleLabels[myRole]?.text || '멤버'}</div>
       </div>
       <div class="stat-card">
         <div class="stat-label">요금제</div>
