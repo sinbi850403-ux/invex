@@ -7,10 +7,9 @@
 import { getState, setState, addTransaction, addTransactionsBulk, deleteTransaction, restoreTransaction, updateTransactionPrices } from './store.js';
 import { showToast } from './toast.js';
 import { downloadExcel, downloadExcelSheets, readExcelFile } from './excel.js';
-import { escapeHtml, renderQuickFilterRow, enableColumnResize } from './ux-toolkit.js';
+import { escapeHtml, renderQuickFilterRow, enableColumnResize, showFieldError, clearAllFieldErrors, setSavingState } from './ux-toolkit.js';
 import { canAction } from './auth.js';
 import { handlePageError } from './error-monitor.js';
-import { showFieldError, clearAllFieldErrors, setSavingState } from './ux-toolkit.js';
 
 const PAGE_SIZE = 15;
 const BULK_INOUT_TEMPLATE_HEADERS = ['자산', '입고일자', '거래처', '상품코드', '품명', '규격', '단위', '입고수량', '단가'];
@@ -502,9 +501,7 @@ export function renderInoutPage(container, navigateTo, mode = 'all') {
       if (filter.date && tx.date !== filter.date) return false;
       // 거래처 필터: 트랜잭션에 직접 기록된 거래처로 필터링
       //   같은 품목을 여러 거래처에서 입고할 수 있으므로 트랜잭션 기준이 정확
-      //   같은 품목을 여러 거래처에서 입고할 수 있으므로 트랜잭션 기준이 정확
       if (filter.vendor && tx.vendor !== filter.vendor) return false;
-      //   같은 품목을 여러 거래처에서 입고할 수 있으므로 트랜잭션 기준이 정확
       if (filter.itemCode && tx.itemCode !== filter.itemCode) return false;
       if (filter.quick === 'today' && tx.date !== todayKey) return false;
       if (filter.quick === 'in' && tx.type !== 'in') return false;
@@ -525,7 +522,9 @@ export function renderInoutPage(container, navigateTo, mode = 'all') {
     if (filter.vendor) chips.push(`거래처: ${filter.vendor}`);
     if (filter.itemCode) chips.push(`품목코드: ${filter.itemCode}`);
     if (filter.date) chips.push(`날짜: ${filter.date}`);
-    chips.push(`정렬: ${getSortOptionLabel(sort)}`);
+    if (sort.key !== defaultSort.key || sort.direction !== defaultSort.direction) {
+      chips.push(`정렬: ${getSortOptionLabel(sort)}`);
+    }
 
     summaryEl.innerHTML = `
       <div class="filter-summary-row">
@@ -781,7 +780,6 @@ export function renderInoutPage(container, navigateTo, mode = 'all') {
 
     renderFilterSummary(sorted.length);
 
-    //   같은 품목을 여러 거래처에서 입고할 수 있으므로 트랜잭션 기준이 정확
     const pagEl = container.querySelector('#tx-pagination');
     if (!pagEl) return;
     const pageStart = sorted.length === 0 ? 0 : start + 1;
@@ -1140,12 +1138,11 @@ export function renderInoutPage(container, navigateTo, mode = 'all') {
     }
   });
 
-  // ?묒? ?쇨큵 ?깅줉
+  // 일괄 업로드 버튼
   container.querySelector('#btn-bulk-upload').addEventListener('click', () => {
     openBulkUploadModal(container, navigateTo, items, isInMode ? 'in' : isOutMode ? 'out' : null);
   });
 
-  //   같은 품목을 여러 거래처에서 입고할 수 있으므로 트랜잭션 기준이 정확
   container.querySelector('#tx-search').value = filter.keyword;
   container.querySelector('#tx-type-filter').value = filter.type;
   container.querySelector('#tx-vendor-filter').value = filter.vendor;
@@ -1169,9 +1166,8 @@ export function renderInoutPage(container, navigateTo, mode = 'all') {
 }
 
 /**
- * 입출고 관리 페이지 렌더링
- * 왜 필요? → 건별 등록은 수십 건 이상일 때 비효율적.
- * 왜 필요? → 건별 등록은 수십 건 이상일 때 비효율적.
+ * 일괄 입출고 업로드 모달
+ * 왜 필요? → 건별 등록은 수십 건 이상일 때 비효율적. 엑셀로 한 번에 처리.
  */
 function openBulkUploadModal(container, navigateTo, items, modeDefault = null) {
   const modalTitle = modeDefault === 'in' ? '엑셀 일괄 입고 등록'
@@ -1271,7 +1267,6 @@ function openBulkUploadModal(container, navigateTo, items, modeDefault = null) {
 
 /**
  * 업로드된 엑셀 파일을 파싱하여 미리보기 + 일괄 등록
- * 입출고 관리 페이지 렌더링
  */
 async function processUploadedFile(file, overlay, container, navigateTo, items, closeModal, modeDefault = null) {
   const previewEl = overlay.querySelector('#bulk-preview');
@@ -2028,7 +2023,7 @@ function openTxModal(container, navigateTo, type, items) {
   }, 100);
 }
 
-// === ?좏떥 ===
+// === 유틸 함수 ===
 
 function countToday(transactions, type) {
   const today = new Date().toISOString().split('T')[0];
@@ -2036,9 +2031,8 @@ function countToday(transactions, type) {
 }
 
 /**
- * 입출고 관리 페이지 렌더링
- * 왜 트랜잭션과 품목 모두에서? → 기존 트랜잭션에 vendor가 없을 수 있으므로
- * 왜 트랜잭션과 품목 모두에서? → 기존 트랜잭션에 vendor가 없을 수 있으므로
+ * 거래처 옵션 목록 생성 — 트랜잭션과 품목 모두에서 수집
+ * 왜 두 곳에서? → 기존 트랜잭션에 vendor가 없을 수 있으므로 품목 마스터도 참조
  */
 function getVendorOptions(transactions, items) {
   const fromTx = transactions.map(tx => tx.vendor).filter(Boolean);

@@ -513,8 +513,8 @@ async function syncToSupabase() {
 }
 
 /**
- * 디바운스된 Supabase 동기화 트리거
- * 왜 2초? → setState가 0.1초 간격으로 연속 호출될 수 있어서 묶어서 처리
+ * 디바운스된 Supabase 동기화 트리거 (500ms)
+ * setState가 0.1초 간격으로 연속 호출될 수 있어서 묶어서 처리
  */
 function scheduleSyncToSupabase(changedKeys) {
   changedKeys.forEach(k => _dirtyKeys.add(k));
