@@ -719,6 +719,42 @@ export function InoutPage({ mode = 'all' }) {
         const bSp = parseFloat(b.sellingPrice || bItem.salePrice) || 0;
         av = (aSp - aUp) * aQty;
         bv = (bSp - bUp) * bQty;
+      } else if (sort.key === 'vat') {
+        const aUp = parseFloat(a.unitPrice || aItem.unitPrice) || 0;
+        const bUp = parseFloat(b.unitPrice || bItem.unitPrice) || 0;
+        av = Math.floor(aUp * (parseFloat(a.quantity) || 0) * 0.1);
+        bv = Math.floor(bUp * (parseFloat(b.quantity) || 0) * 0.1);
+      } else if (sort.key === 'totalPrice') {
+        const aUp = parseFloat(a.unitPrice || aItem.unitPrice) || 0;
+        const bUp = parseFloat(b.unitPrice || bItem.unitPrice) || 0;
+        const aSupply = Math.round(aUp * (parseFloat(a.quantity) || 0));
+        const bSupply = Math.round(bUp * (parseFloat(b.quantity) || 0));
+        av = aSupply + Math.floor(aSupply * 0.1);
+        bv = bSupply + Math.floor(bSupply * 0.1);
+      } else if (sort.key === 'profitMargin') {
+        const aQty = parseFloat(a.quantity) || 0;
+        const bQty = parseFloat(b.quantity) || 0;
+        const aUp = parseFloat(a.unitPrice || aItem.unitPrice) || 0;
+        const bUp = parseFloat(b.unitPrice || bItem.unitPrice) || 0;
+        const aSp = parseFloat(a.sellingPrice || aItem.salePrice) || 0;
+        const bSp = parseFloat(b.sellingPrice || bItem.salePrice) || 0;
+        const aSupply = aUp * aQty; const aOut = aSp * aQty;
+        const bSupply = bUp * bQty; const bOut = bSp * bQty;
+        av = aSupply > 0 && aOut > 0 ? (aOut - aSupply) / aSupply * 100 : 0;
+        bv = bSupply > 0 && bOut > 0 ? (bOut - bSupply) / bSupply * 100 : 0;
+      } else if (sort.key === 'cogsMargin') {
+        const aQty = parseFloat(a.quantity) || 0;
+        const bQty = parseFloat(b.quantity) || 0;
+        const aUp = parseFloat(a.unitPrice || aItem.unitPrice) || 0;
+        const bUp = parseFloat(b.unitPrice || bItem.unitPrice) || 0;
+        const aSp = parseFloat(a.sellingPrice || aItem.salePrice) || 0;
+        const bSp = parseFloat(b.sellingPrice || bItem.salePrice) || 0;
+        const aOut = aSp * aQty; const bOut = bSp * bQty;
+        av = aOut > 0 ? aUp * aQty / aOut * 100 : 0;
+        bv = bOut > 0 ? bUp * bQty / bOut * 100 : 0;
+      } else if (sort.key === 'note') {
+        av = (a.note || '').toLowerCase();
+        bv = (b.note || '').toLowerCase();
       } else if (sort.key === 'itemName') {
         av = (a.itemName || '').toLowerCase();
         bv = (b.itemName || '').toLowerCase();
@@ -1098,15 +1134,15 @@ export function InoutPage({ mode = 'all' }) {
                       <SortTh sortKey="quantity" className="text-right">입고수량</SortTh>
                       <SortTh sortKey="unitPrice" className="text-right">단가</SortTh>
                       <SortTh sortKey="supply" className="text-right">공급가액</SortTh>
-                      <th className="text-right">부가세</th>
-                      <th className="text-right">합계금액</th>
+                      <SortTh sortKey="vat" className="text-right">부가세</SortTh>
+                      <SortTh sortKey="totalPrice" className="text-right">합계금액</SortTh>
                       <SortTh sortKey="sellingPrice" className="text-right">출고단가</SortTh>
                       <SortTh sortKey="quantity" className="text-right">출고수량</SortTh>
                       <SortTh sortKey="outAmt" className="text-right">출고금액</SortTh>
                       <SortTh sortKey="supply" className="text-right">매입원가</SortTh>
                       <SortTh sortKey="profit" className="text-right">이익액</SortTh>
-                      <th className="text-right">이익율</th>
-                      <th className="text-right">매출원가율</th>
+                      <SortTh sortKey="profitMargin" className="text-right">이익율</SortTh>
+                      <SortTh sortKey="cogsMargin" className="text-right">매출원가율</SortTh>
                     </>
                   ) : isInMode ? (
                     <>
@@ -1120,8 +1156,8 @@ export function InoutPage({ mode = 'all' }) {
                       <SortTh sortKey="quantity" className="text-right">입고수량</SortTh>
                       <SortTh sortKey="unitPrice" className="text-right">단가</SortTh>
                       <SortTh sortKey="supply" className="text-right">공급가액</SortTh>
-                      <th className="text-right">부가세</th>
-                      <th className="text-right">합계금액</th>
+                      <SortTh sortKey="vat" className="text-right">부가세</SortTh>
+                      <SortTh sortKey="totalPrice" className="text-right">합계금액</SortTh>
                     </>
                   ) : (
                     <>
@@ -1130,9 +1166,9 @@ export function InoutPage({ mode = 'all' }) {
                       <SortTh sortKey="itemName" className="col-fill">품목명</SortTh>
                       <SortTh sortKey="quantity" className="text-right">수량</SortTh>
                       <SortTh sortKey="unitPrice" className="text-right">원가</SortTh>
-                      <th className="text-right">판매가</th>
-                      <th className="text-right">금액</th>
-                      <th>비고</th>
+                      <SortTh sortKey="sellingPrice" className="text-right">판매가</SortTh>
+                      <SortTh sortKey="supply" className="text-right">금액</SortTh>
+                      <SortTh sortKey="note">비고</SortTh>
                     </>
                   )}
                   <th>관리</th>
