@@ -1805,9 +1805,16 @@ export function renderInventoryPage(container, navigateTo) {
 
   // 입출고 변경 시 재고 현황 즉시 자동 반영
   // renderTable은 클로저 내 data를 쓰므로 전체 페이지를 재렌더링
+  // ★ 재렌더 전후 스크롤 위치 복원 — 정렬 후 Supabase 동기화(~2초)로 스크롤이 최상단으로
+  //   튀는 현상 방지 (container.innerHTML 교체 시 scrollTop이 0으로 초기화됨)
   setSyncCallback(() => {
     if (container.dataset.page !== 'inventory') return;
+    const savedScrollTop = container.scrollTop;
     renderInventoryPage(container, navigateTo);
+    // 재렌더 후 DOM이 안정되면 스크롤 복원
+    requestAnimationFrame(() => {
+      container.scrollTop = savedScrollTop;
+    });
   });
 
   if (sessionStorage.getItem('invex:quick-open-item') === '1') {
