@@ -101,43 +101,51 @@ function computeData(rawData, transactions) {
   (transactions || []).forEach(tx => {
     const k = tx.itemName;
     if (!k) return;
-    if (!txAgg[k]) txAgg[k] = { inQty: 0, outQty: 0, outAmt: 0, costAmt: 0 };
+    if (!txAgg[k]) txAgg[k] = { inQty: 0, inAmt: 0, outQty: 0, outAmt: 0, costAmt: 0 };
     const qty = parseFloat(tx.quantity) || 0;
     if (tx.type === 'in') {
       txAgg[k].inQty += qty;
+      txAgg[k].inAmt += Math.round((parseFloat(tx.unitPrice) || 0) * qty); // 실제 입고금액 누계
     } else {
       txAgg[k].outQty += qty;
       const sp = parseFloat(tx.actualSellingPrice || tx.sellingPrice) || 0;
       const cp = parseFloat(tx.unitPrice) || 0;
       txAgg[k].outAmt  += Math.round(sp * qty);
-      txAgg[k].costAmt += Math.round(cp * qty);
+      txAgg[k].costAmt += Math.round(cp * qty); // 실제 출고원가 누계
     }
   });
   return (rawData || []).map(item => {
     const agg = txAgg[item.itemName] || {};
     const inQty     = agg.inQty  || 0;
+    const inAmt     = agg.inAmt  || 0; // 실제 입고금액 합계 (tx.unitPrice 기반)
     const outQty    = agg.outQty || 0;
     const outAmt    = agg.outAmt || 0;
     const unitPrice = parseFloat(item.unitPrice) || 0;
     const qty       = parseFloat(item.quantity)  || 0;
 
-    // 공급가액·부가세·합계금액: 입고수량 기준으로 fresh 계산
-    // (recalcItemAmounts가 현재수량 기준으로 덮어쓰므로 저장값 사용 불가)
-    const storedSv   = parseFloat(item.supplyValue) || 0;
-    const storedVat  = parseFloat(item.vat) || 0;
-    // 기존 VAT 비율 추론 (면세품은 0%, 일반 10%)
-    const vatRate    = storedSv > 0 && storedVat / storedSv < 0.05 ? 0 : 0.1;
-    const supplyValue = inQty > 0 && unitPrice > 0
-      ? Math.round(inQty * unitPrice)
-      : storedSv;
+    // 가중평균 단가: 실제 거래 기반 우선, 없으면 품목 마스터 단가
+    const weightedAvgCost = inAmt > 0 && inQty > 0 ? inAmt / inQty : unitPrice;
+
+    // 공급가액: 실제 거래 inAmt 우선 (입고관리와 일치), 없으면 마스터 단가 × 입고수량
+    const storedSv  = parseFloat(item.supplyValue) || 0;
+    const storedVat = parseFloat(item.vat) || 0;
+    const vatRate   = storedSv > 0 && storedVat / storedSv < 0.05 ? 0 : 0.1;
+    const supplyValue = inAmt > 0
+      ? inAmt
+      : (inQty > 0 && unitPrice > 0 ? Math.round(inQty * unitPrice) : storedSv);
     const vat        = Math.floor(supplyValue * vatRate);
     const totalPrice = supplyValue + vat;
 
     const masterSalePrice = parseFloat(item.salePrice) || 0;
     const calcSalePrice   = outQty > 0 ? Math.round(outAmt / outQty) : 0;
     const salePrice       = masterSalePrice > 0 ? masterSalePrice : calcSalePrice;
-    const costAmt  = unitPrice > 0 ? Math.round(unitPrice * outQty) : (agg.costAmt || 0);
-    const profit   = outAmt - costAmt;
+
+    // 매입원가: 실제 출고 거래 costAmt 우선, 없으면 가중평균 단가 × 출고수량
+    const costAmt = agg.costAmt > 0
+      ? agg.costAmt
+      : (outQty > 0 ? Math.round(weightedAvgCost * outQty) : 0);
+    const profit  = outAmt - costAmt;
+
     return {
       ...item,
       supplyValue:          supplyValue || '',
@@ -151,7 +159,7 @@ function computeData(rawData, transactions) {
       profit:               outAmt > 0 ? profit : '',
       profitMargin:         costAmt > 0 && outAmt > 0 ? ((profit / costAmt) * 100).toFixed(1) + '%' : '',
       cogsMargin:           outAmt > 0 ? ((costAmt / outAmt) * 100).toFixed(1) + '%' : '',
-      endingInventoryValue: qty > 0 && unitPrice > 0 ? Math.round(qty * unitPrice) : '',
+      endingInventoryValue: qty > 0 ? Math.round(qty * (weightedAvgCost || unitPrice)) : '',
     };
   });
 }

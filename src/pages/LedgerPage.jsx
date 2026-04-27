@@ -31,15 +31,24 @@ function buildLedger(items, transactions, from, to, itemFilter, openingOverrides
   const targetItems = itemFilter ? items.filter(i => i.itemName === itemFilter) : items;
   return targetItems.map(item => {
     const currentQty = parseFloat(item.quantity) || 0;
-    const unitPrice = parseFloat(item.unitPrice) || 0;
-    let periodInQty = 0, periodOutQty = 0, openingQty = currentQty, primaryVendor = '';
+    const unitPrice  = parseFloat(item.unitPrice)  || 0;
+    let periodInQty = 0, periodInAmt = 0;
+    let periodOutQty = 0, periodOutAmt = 0, periodCostAmt = 0;
+    let openingQty = currentQty, primaryVendor = '';
     transactions.forEach(tx => {
       if (tx.itemName !== item.itemName) return;
       const qty = parseFloat(tx.quantity) || 0;
       if (tx.date >= from) { if (tx.type === 'in') openingQty -= qty; else openingQty += qty; }
       if (tx.date >= from && tx.date <= to) {
-        if (tx.type === 'in') { periodInQty += qty; if (tx.vendor) primaryVendor = tx.vendor; }
-        else periodOutQty += qty;
+        if (tx.type === 'in') {
+          periodInQty += qty;
+          periodInAmt += Math.round((parseFloat(tx.unitPrice) || 0) * qty);
+          if (tx.vendor) primaryVendor = tx.vendor;
+        } else {
+          periodOutQty += qty;
+          periodOutAmt  += Math.round((parseFloat(tx.sellingPrice) || 0) * qty);
+          periodCostAmt += Math.round((parseFloat(tx.unitPrice)    || 0) * qty);
+        }
       }
     });
     const override = openingOverrides[item.itemName];
@@ -47,12 +56,18 @@ function buildLedger(items, transactions, from, to, itemFilter, openingOverrides
       ? Math.max(0, parseFloat(override) || 0)
       : Math.max(0, openingQty);
     const closingQty = Math.max(0, finalOpeningQty + periodInQty - periodOutQty);
+    // 가중평균 단가: 실제 거래 기반 우선, 없으면 품목 마스터 단가
+    const weightedAvgCost = periodInAmt > 0 && periodInQty > 0
+      ? periodInAmt / periodInQty
+      : unitPrice;
     return {
       itemName: item.itemName, itemCode: item.itemCode || '',
       unit: item.unit || '', vendor: primaryVendor, unitPrice,
       sellingPrice: parseFloat(item.sellingPrice || item.salePrice) || 0,
       openingQty: Math.max(0, openingQty), inQty: periodInQty, outQty: periodOutQty,
-      closingQty, closingValue: closingQty * unitPrice,
+      inAmt: periodInAmt, outAmt: periodOutAmt, costAmt: periodCostAmt,
+      weightedAvgCost,
+      closingQty, closingValue: Math.round(closingQty * (weightedAvgCost || unitPrice)),
     };
   }).filter(r => r.openingQty > 0 || r.inQty > 0 || r.outQty > 0 || r.closingQty > 0);
 }
@@ -173,10 +188,13 @@ export default function LedgerPage() {
   const handleExcelExport = () => {
     if (!rows.length) { showToast('내보낼 데이터가 없습니다.', 'warning'); return; }
     const exportRows = rows.map(row => {
-      const supply = Math.round((row.unitPrice || 0) * (row.inQty || 0));
+      // 공급가액: 실제 거래 금액 우선, 없으면 마스터 단가 × 입고수량
+      const supply = row.inAmt > 0 ? row.inAmt : Math.round((row.unitPrice || 0) * (row.inQty || 0));
       const vat = Math.floor(supply * 0.1);
-      const outAmt = Math.round((row.sellingPrice || 0) * (row.outQty || 0));
-      const purchase = Math.round((row.unitPrice || 0) * (row.outQty || 0));
+      // 출고금액: 실제 거래 금액 우선, 없으면 판매가 × 출고수량
+      const outAmt = row.outAmt > 0 ? row.outAmt : Math.round((row.sellingPrice || 0) * (row.outQty || 0));
+      // 매입원가: 실제 거래 원가 우선, 없으면 가중평균 단가 × 출고수량
+      const purchase = row.costAmt > 0 ? row.costAmt : Math.round((row.weightedAvgCost || row.unitPrice || 0) * (row.outQty || 0));
       const profit = outAmt - purchase;
       return {
         '품목명': row.itemName, '상품코드': row.itemCode, '단위': row.unit,
