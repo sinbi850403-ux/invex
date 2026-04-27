@@ -808,9 +808,7 @@ export function InoutPage({ mode = 'all' }) {
     });
   }, [filtered, sort, itemMap, wacMap]);
 
-  const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
-  const safePage = Math.min(page, totalPages);
-  const pageData = sorted.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+  const pageData = sorted;
 
   // 입고 합계 (필터링된 전체 기준)
   const inTotals = useMemo(() => {
@@ -1280,7 +1278,7 @@ export function InoutPage({ mode = 'all' }) {
               </thead>
               <tbody>
                 {pageData.map((tx, i) => {
-                  const rowNum = (safePage - 1) * PAGE_SIZE + i + 1;
+                  const rowNum = i + 1;
                   const qty = parseFloat(tx.quantity) || 0;
                   const itemData = itemMap.get(tx.itemName) || {};
                   const unitPrice = parseFloat(tx.unitPrice || itemData.unitPrice) || 0;
@@ -1438,31 +1436,9 @@ export function InoutPage({ mode = 'all' }) {
           </div>
         )}
 
-        {/* 페이지네이션 */}
         {sorted.length > 0 && (
-          <div className="pagination">
-            <span>
-              {sorted.length}건 중 {(safePage - 1) * PAGE_SIZE + 1}~{Math.min(safePage * PAGE_SIZE, sorted.length)}
-            </span>
-            <div className="pagination-btns">
-              <button
-                className="page-btn"
-                disabled={safePage <= 1}
-                onClick={() => setPage(p => p - 1)}
-              >
-                이전
-              </button>
-              <span style={{ padding: '4px 8px', color: 'var(--text-muted)', fontSize: '13px' }}>
-                {safePage} / {totalPages}
-              </span>
-              <button
-                className="page-btn"
-                disabled={safePage >= totalPages}
-                onClick={() => setPage(p => p + 1)}
-              >
-                다음
-              </button>
-            </div>
+          <div style={{ padding: '8px 4px', color: 'var(--text-muted)', fontSize: '13px' }}>
+            총 {sorted.length.toLocaleString()}건
           </div>
         )}
       </div>
