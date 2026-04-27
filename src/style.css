@@ -5360,3 +5360,35 @@ html.font-scale-2 .card-title { font-size: 17.5px !important; }
 html.font-scale-2 .hub-card-title { font-size: 18px !important; }
 html.font-scale-2 .hub-card-desc { font-size: 15px !important; }
 html.font-scale-2 body { font-size: 15.5px !important; }
+
+/* ── 출고관리 컬럼 그룹 색상 ── */
+.col-group-head {
+  text-align: center !important;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 4px 8px !important;
+  border-bottom: 2px solid var(--border) !important;
+}
+.col-group-sale,
+.col-group-sale.sortable-header { background-color: rgba(59, 130, 246, 0.07); }
+.col-group-purchase,
+.col-group-purchase.sortable-header { background-color: rgba(245, 158, 11, 0.07); }
+.col-group-profit,
+.col-group-profit.sortable-header { background-color: rgba(34, 197, 94, 0.07); }
+
+.col-group-head.col-group-sale { background-color: rgba(59, 130, 246, 0.14); color: #3b82f6; }
+.col-group-head.col-group-purchase { background-color: rgba(245, 158, 11, 0.14); color: #f59e0b; }
+.col-group-head.col-group-profit { background-color: rgba(34, 197, 94, 0.14); color: #22c55e; }
+
+html.dark-mode .col-group-sale,
+html.dark-mode .col-group-sale.sortable-header { background-color: rgba(59, 130, 246, 0.1); }
+html.dark-mode .col-group-purchase,
+html.dark-mode .col-group-purchase.sortable-header { background-color: rgba(245, 158, 11, 0.1); }
+html.dark-mode .col-group-profit,
+html.dark-mode .col-group-profit.sortable-header { background-color: rgba(34, 197, 94, 0.1); }
+
+html.dark-mode .col-group-head.col-group-sale { background-color: rgba(59, 130, 246, 0.2); }
+html.dark-mode .col-group-head.col-group-purchase { background-color: rgba(245, 158, 11, 0.2); }
+html.dark-mode .col-group-head.col-group-profit { background-color: rgba(34, 197, 94, 0.2); }

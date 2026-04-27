@@ -357,27 +357,35 @@ export function renderInoutPage(container, navigateTo, mode = 'all') {
         <th class="text-right">부가세</th>
         <th class="text-right">합계금액</th>`;
     } else if (isOutMode) {
-      // 출고관리: 자산|출고일자|거래처|상품코드|품명|규격|단위|출고수량|출고단가|출고금액|출고합|매입원가|부가세|공가합|이익액|이익률|매출원가율
-      cols = `
-        <th style="width:40px; text-align:center;"><input type="checkbox" id="tx-select-all" /></th>
-        <th class="col-num">#</th>
-        <th>자산</th>
-        ${sortableTh('date', '출고일자')}
-        ${sortableTh('vendor', '거래처')}
-        <th>상품코드</th>
-        ${sortableTh('itemName', '품명', 'col-fill')}
-        <th>규격</th>
-        <th>단위</th>
-        ${sortableTh('quantity', '출고수량', 'text-right')}
-        <th class="text-right">출고단가</th>
-        <th class="text-right">출고금액</th>
-        <th class="text-right">출고합</th>
-        <th class="text-right">매입원가</th>
-        <th class="text-right">부가세</th>
-        <th class="text-right">공가합</th>
-        <th class="text-right">이익액</th>
-        <th class="text-right">이익률</th>
-        <th class="text-right">매출원가율</th>`;
+      // 출고관리: 2행 헤더 (그룹: 판매/매입/이익 분석)
+      thead.innerHTML = `
+        <tr>
+          <th rowspan="2" style="width:40px; text-align:center;"><input type="checkbox" id="tx-select-all" /></th>
+          <th rowspan="2" class="col-num">#</th>
+          <th rowspan="2">자산</th>
+          ${sortableTh('date', '출고일자').replace('<th ', '<th rowspan="2" ')}
+          ${sortableTh('vendor', '거래처').replace('<th ', '<th rowspan="2" ')}
+          <th rowspan="2">상품코드</th>
+          ${sortableTh('itemName', '품명', 'col-fill').replace('<th ', '<th rowspan="2" ')}
+          <th rowspan="2">규격</th>
+          <th rowspan="2">단위</th>
+          ${sortableTh('quantity', '출고수량', 'text-right').replace('<th ', '<th rowspan="2" ')}
+          <th colspan="3" class="col-group-head col-group-sale">판매</th>
+          <th colspan="3" class="col-group-head col-group-purchase">매입</th>
+          <th colspan="3" class="col-group-head col-group-profit">이익 분석</th>
+        </tr>
+        <tr>
+          <th class="text-right col-group-sale">출고단가</th>
+          <th class="text-right col-group-sale">출고금액</th>
+          <th class="text-right col-group-sale">출고합</th>
+          <th class="text-right col-group-purchase">매입원가</th>
+          <th class="text-right col-group-purchase">부가세</th>
+          <th class="text-right col-group-purchase">공가합</th>
+          <th class="text-right col-group-profit">이익액</th>
+          <th class="text-right col-group-profit">이익률</th>
+          <th class="text-right col-group-profit">매출원가율</th>
+        </tr>`;
+      return;
     } else {
       // 전체(all) 모드
       cols = `
@@ -619,15 +627,15 @@ export function renderInoutPage(container, navigateTo, mode = 'all') {
             <td style="font-size:12px; color:var(--text-muted);">${escapeHtml(tx.spec || it.spec || '')}</td>
             <td style="font-size:12px;">${escapeHtml(tx.unit || it.unit || '')}</td>
             <td class="text-right type-out">${qty.toLocaleString('ko-KR')}</td>
-            <td class="text-right">${salePrice ? W(salePrice) : '-'}</td>
-            <td class="text-right">${outAmt ? W(outAmt) : '-'}</td>
-            <td class="text-right">${outTotal ? W(outTotal) : '-'}</td>
-            <td class="text-right">${supply ? W(supply) : '-'}</td>
-            <td class="text-right">${vat ? W(vat) : '-'}</td>
-            <td class="text-right">${supply ? W(supply + vat) : '-'}</td>
-            <td class="text-right" style="color:${profitColor}; font-weight:600;">${purchase > 0 ? W(profit) : '-'}</td>
-            <td class="text-right" style="color:${profitColor};">${profitRate}</td>
-            <td class="text-right">${costRate}</td>
+            <td class="text-right col-group-sale">${salePrice ? W(salePrice) : '-'}</td>
+            <td class="text-right col-group-sale">${outAmt ? W(outAmt) : '-'}</td>
+            <td class="text-right col-group-sale">${outTotal ? W(outTotal) : '-'}</td>
+            <td class="text-right col-group-purchase">${supply ? W(supply) : '-'}</td>
+            <td class="text-right col-group-purchase">${vat ? W(vat) : '-'}</td>
+            <td class="text-right col-group-purchase">${supply ? W(supply + vat) : '-'}</td>
+            <td class="text-right col-group-profit" style="color:${profitColor}; font-weight:600;">${purchase > 0 ? W(profit) : '-'}</td>
+            <td class="text-right col-group-profit" style="color:${profitColor};">${profitRate}</td>
+            <td class="text-right col-group-profit">${costRate}</td>
           </tr>`;
         }
 
