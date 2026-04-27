@@ -18,7 +18,7 @@ const REACT_PAGES = {
   backup:          lazy(() => import('../../pages/BackupPage.jsx')),
   mypage:          lazy(() => import('../../pages/MyPage.jsx')),
   support:         lazy(() => import('../../pages/SupportPage.jsx')),
-  // 2차 변환 (허브·보고서·예측)
+  // 2차 변환 (허브·보고서·예측·HR)
   'hub-inventory': lazy(() => import('../../pages/HubsPage.jsx').then(m => ({ default: m.HubInventoryPage }))),
   'hub-warehouse': lazy(() => import('../../pages/HubsPage.jsx').then(m => ({ default: m.HubWarehousePage }))),
   'hub-order':     lazy(() => import('../../pages/HubsPage.jsx').then(m => ({ default: m.HubOrderPage }))),
@@ -32,6 +32,44 @@ const REACT_PAGES = {
   forecast:        lazy(() => import('../../pages/ForecastPage.jsx')),
   home:            lazy(() => import('../../pages/HomePage.jsx')),
   summary:         lazy(() => import('../../pages/SummaryPage.jsx')),
+  // 3차 변환 (결제·팀·감사)
+  billing:         lazy(() => import('../../pages/BillingPage.jsx')),
+  team:            lazy(() => import('../../pages/TeamPage.jsx')),
+  auditlog:        lazy(() => import('../../pages/AuditLogPage.jsx')),
+  // 4차 변환 (창고이동·라벨·실사·창고관리)
+  transfer:        lazy(() => import('../../pages/TransferPage.jsx')),
+  labels:          lazy(() => import('../../pages/LabelsPage.jsx')),
+  stocktake:       lazy(() => import('../../pages/StocktakePage.jsx')),
+  warehouses:      lazy(() => import('../../pages/WarehousesPage.jsx')),
+  // 5차 변환 (거래처·발주)
+  vendors:         lazy(() => import('../../pages/VendorsPage.jsx')),
+  orders:          lazy(() => import('../../pages/OrdersPage.jsx')),
+  // 6차 변환 (업로드·매핑·스캐너·일괄·고급분석)
+  upload:          lazy(() => import('../../pages/UploadPage.jsx')),
+  mapping:         lazy(() => import('../../pages/MappingPage.jsx')),
+  scanner:         lazy(() => import('../../pages/ScannerPage.jsx')),
+  bulk:            lazy(() => import('../../pages/BulkPage.jsx')),
+  dashboard:       lazy(() => import('../../pages/DashboardPage.jsx')),
+  // 7차 변환 (수불부·원가·장부·권한)
+  ledger:          lazy(() => import('../../pages/LedgerPage.jsx')),
+  costing:         lazy(() => import('../../pages/CostingPage.jsx')),
+  accounts:        lazy(() => import('../../pages/AccountsPage.jsx')),
+  roles:           lazy(() => import('../../pages/RolesPage.jsx')),
+  // 8차 변환 (API·문서·세무·손익)
+  api:             lazy(() => import('../../pages/ApiPage.jsx')),
+  documents:       lazy(() => import('../../pages/DocumentsPage.jsx')),
+  'tax-reports':   lazy(() => import('../../pages/TaxReportsPage.jsx')),
+  profit:          lazy(() => import('../../pages/ProfitPage.jsx')),
+  // 9차 변환 (POS·관리자)
+  pos:             lazy(() => import('../../pages/PosPage.jsx')),
+  admin:           lazy(() => import('../../pages/AdminPage.jsx')),
+  // 10차 변환 (HR: 직원·근태·급여·휴가·퇴직금·연말정산)
+  employees:       lazy(() => import('../../pages/EmployeesPage.jsx')),
+  attendance:      lazy(() => import('../../pages/AttendancePage.jsx')),
+  payroll:         lazy(() => import('../../pages/PayrollPage.jsx')),
+  leaves:          lazy(() => import('../../pages/LeavesPage.jsx')),
+  severance:       lazy(() => import('../../pages/SeverancePage.jsx')),
+  'yearend-settlement': lazy(() => import('../../pages/YearendSettlementPage.jsx')),
 };
 
 // React 페이지는 네이티브 컴포넌트로, 나머지는 LegacyPage 래퍼로 생성

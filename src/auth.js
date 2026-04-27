@@ -135,12 +135,12 @@ async function loadProfile(user) {
   const fallback = createFallbackProfile(user);
 
   try {
-    // SELECT 시도 — 8초 타임아웃, 실패 시 한 번만 재시도
+    // SELECT 시도 — 4초 타임아웃, 실패 시 한 번만 재시도
     let result;
     try {
       result = await withTimeout(
         supabase.from('profiles').select('*').eq('id', user.uid).maybeSingle(),
-        8000,
+        4000,
         'load-profile',
       );
     } catch (firstErr) {
@@ -381,7 +381,7 @@ export function initAuth(callback) {
       console.warn('[Auth] INITIAL_SESSION timeout — showing login screen');
       applySession(null, applySessionSeq);
     }
-  }, 8000);
+  }, 3000); // 8000 → 3000ms (AuthContext에도 2초 fallback 있으므로 충분)
 
   // onAuthStateChange만으로 초기 세션 + 이후 변경 모두 처리
   // (별도 getSession() 호출 시 Supabase 내부 initialize lock과 충돌 → 5초 지연 발생)
