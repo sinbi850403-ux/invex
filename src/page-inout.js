@@ -293,17 +293,56 @@ export function renderInoutPage(container, navigateTo, mode = 'all') {
   }
 
   function getComparableTxValue(tx, key) {
-    const raw = tx[key];
+    const it = itemMap.get(tx.itemName) || {};
+    const qty = parseFloat(tx.quantity) || 0;
+
     if (key === 'date') {
       const source = tx.date || tx.createdAt;
       if (!source) return 0;
       const ts = new Date(source).getTime();
       return Number.isNaN(ts) ? 0 : ts;
     }
-    if (key === 'quantity' || key === 'unitPrice') {
-      const num = parseFloat(raw);
-      return Number.isNaN(num) ? 0 : num;
+    if (key === 'quantity')  return qty;
+    if (key === 'unitPrice') return parseFloat(tx.unitPrice) || 0;
+    if (key === 'itemCode')  return (tx.itemCode || it.itemCode || '').toLowerCase();
+    if (key === 'spec')      return (tx.spec  || it.spec  || '').toLowerCase();
+    if (key === 'unit')      return (tx.unit  || it.unit  || '').toLowerCase();
+
+    // ── 입고 계산 필드 ──────────────────────────────
+    const inCost   = parseFloat(tx.unitPrice) || 0;
+    const inSupply = Math.round(inCost * qty);
+    const inVat    = Math.floor(inSupply * 0.1);
+    if (key === 'supplyValue')   return inSupply;
+    if (key === 'vatValue')      return inVat;
+    if (key === 'totalAmount')   return inSupply + inVat;
+
+    // ── 출고 계산 필드 ──────────────────────────────
+    const outCost     = parseFloat(it.unitPrice || tx.unitPrice) || 0;
+    const purchaseAmt = Math.round(outCost * qty);
+    const purchaseVat = Math.floor(purchaseAmt * 0.1);
+    const saleUnit    = parseFloat(tx.actualSellingPrice || tx.sellingPrice || it.sellingPrice) || 0;
+    const outAmt      = Math.round(saleUnit * qty);
+    const outTotal    = Math.round(outAmt * 1.1);
+    const profit      = outAmt - purchaseAmt;
+    if (key === 'sellingPrice')   return saleUnit;
+    if (key === 'outAmt')         return outAmt;
+    if (key === 'outTotal')       return outTotal;
+    if (key === 'purchaseAmt')    return purchaseAmt;
+    if (key === 'purchaseVat')    return purchaseVat;
+    if (key === 'purchaseTotal')  return purchaseAmt + purchaseVat;
+    if (key === 'profitAmt')      return profit;
+    if (key === 'profitRate')     return outAmt > 0 ? profit / outAmt * 100 : 0;
+    if (key === 'costRate')       return outAmt > 0 ? purchaseAmt / outAmt * 100 : 0;
+
+    // ── 전체 모드: 이익률 = (실판매가 - 원가) / 원가 ──
+    if (key === 'marginRate') {
+      const actualSell = parseFloat(tx.actualSellingPrice) || 0;
+      const unitCost   = parseFloat(tx.unitPrice) || 0;
+      return (unitCost > 0 && actualSell > 0) ? (actualSell - unitCost) / unitCost * 100 : 0;
     }
+    if (key === 'actualSellingPrice') return parseFloat(tx.actualSellingPrice) || 0;
+
+    const raw = tx[key];
     if (!raw) return '';
     return String(raw).toLowerCase();
   }
@@ -345,17 +384,17 @@ export function renderInoutPage(container, navigateTo, mode = 'all') {
         <th style="width:40px; text-align:center;"><input type="checkbox" id="tx-select-all" /></th>
         <th class="col-num">#</th>
         <th>자산</th>
-        ${sortableTh('date', '입고일자')}
-        ${sortableTh('vendor', '거래처')}
-        <th>상품코드</th>
-        ${sortableTh('itemName', '품명', 'col-fill')}
-        <th>규격</th>
-        <th>단위</th>
-        ${sortableTh('quantity', '입고수량', 'text-right')}
-        ${sortableTh('unitPrice', '단가', 'text-right')}
-        <th class="text-right">공급가액</th>
-        <th class="text-right">부가세</th>
-        <th class="text-right">합계금액</th>`;
+        ${sortableTh('date',        '입고일자')}
+        ${sortableTh('vendor',      '거래처')}
+        ${sortableTh('itemCode',    '상품코드')}
+        ${sortableTh('itemName',    '품명', 'col-fill')}
+        ${sortableTh('spec',        '규격')}
+        ${sortableTh('unit',        '단위')}
+        ${sortableTh('quantity',    '입고수량',  'text-right')}
+        ${sortableTh('unitPrice',   '단가',      'text-right')}
+        ${sortableTh('supplyValue', '공급가액',  'text-right')}
+        ${sortableTh('vatValue',    '부가세',    'text-right')}
+        ${sortableTh('totalAmount', '합계금액',  'text-right')}`;
     } else if (isOutMode) {
       // 출고관리: 2행 헤더 (그룹: 판매/매입/이익 분석)
       thead.innerHTML = `
@@ -363,27 +402,27 @@ export function renderInoutPage(container, navigateTo, mode = 'all') {
           <th rowspan="2" style="width:40px; text-align:center;"><input type="checkbox" id="tx-select-all" /></th>
           <th rowspan="2" class="col-num">#</th>
           <th rowspan="2">자산</th>
-          ${sortableTh('date', '출고일자').replace('<th ', '<th rowspan="2" ')}
-          ${sortableTh('vendor', '거래처').replace('<th ', '<th rowspan="2" ')}
-          <th rowspan="2">상품코드</th>
-          ${sortableTh('itemName', '품명', 'col-fill').replace('<th ', '<th rowspan="2" ')}
-          <th rowspan="2">규격</th>
-          <th rowspan="2">단위</th>
+          ${sortableTh('date',     '출고일자'              ).replace('<th ', '<th rowspan="2" ')}
+          ${sortableTh('vendor',   '거래처'                ).replace('<th ', '<th rowspan="2" ')}
+          ${sortableTh('itemCode', '상품코드'              ).replace('<th ', '<th rowspan="2" ')}
+          ${sortableTh('itemName', '품명', 'col-fill'      ).replace('<th ', '<th rowspan="2" ')}
+          ${sortableTh('spec',     '규격'                  ).replace('<th ', '<th rowspan="2" ')}
+          ${sortableTh('unit',     '단위'                  ).replace('<th ', '<th rowspan="2" ')}
           ${sortableTh('quantity', '출고수량', 'text-right').replace('<th ', '<th rowspan="2" ')}
           <th colspan="3" class="col-group-head col-group-sale">판매</th>
           <th colspan="3" class="col-group-head col-group-purchase">매입</th>
           <th colspan="3" class="col-group-head col-group-profit">이익 분석</th>
         </tr>
         <tr>
-          <th class="text-right col-group-sale">출고단가</th>
-          <th class="text-right col-group-sale">판매가</th>
-          <th class="text-right col-group-sale">출고합</th>
-          <th class="text-right col-group-purchase">매입원가</th>
-          <th class="text-right col-group-purchase">부가세</th>
-          <th class="text-right col-group-purchase">공가합</th>
-          <th class="text-right col-group-profit">이익액</th>
-          <th class="text-right col-group-profit">이익률</th>
-          <th class="text-right col-group-profit">매출원가율</th>
+          ${sortableTh('sellingPrice',  '출고단가',   'text-right col-group-sale')}
+          ${sortableTh('outAmt',        '판매가',     'text-right col-group-sale')}
+          ${sortableTh('outTotal',      '출고합',     'text-right col-group-sale')}
+          ${sortableTh('purchaseAmt',   '매입원가',   'text-right col-group-purchase')}
+          ${sortableTh('purchaseVat',   '부가세',     'text-right col-group-purchase')}
+          ${sortableTh('purchaseTotal', '공가합',     'text-right col-group-purchase')}
+          ${sortableTh('profitAmt',     '이익액',     'text-right col-group-profit')}
+          ${sortableTh('profitRate',    '이익률',     'text-right col-group-profit')}
+          ${sortableTh('costRate',      '매출원가율', 'text-right col-group-profit')}
         </tr>`;
       return;
     } else {
@@ -391,16 +430,16 @@ export function renderInoutPage(container, navigateTo, mode = 'all') {
       cols = `
         <th style="width:40px; text-align:center;"><input type="checkbox" id="tx-select-all" /></th>
         <th class="col-num">#</th>
-        ${sortableTh('type', '구분')}
-        ${sortableTh('vendor', '거래처')}
-        ${sortableTh('itemName', '품목명', 'col-fill')}
-        <th>품목코드</th>
-        ${sortableTh('quantity', '수량', 'text-right')}
-        ${sortableTh('unitPrice', '원가', 'text-right')}
-        <th class="text-right">판매가</th>
-        <th class="text-right">실판매가</th>
-        <th class="text-right">이익률</th>
-        ${sortableTh('date', '날짜')}
+        ${sortableTh('type',               '구분')}
+        ${sortableTh('vendor',             '거래처')}
+        ${sortableTh('itemName',           '품목명',  'col-fill')}
+        ${sortableTh('itemCode',           '품목코드')}
+        ${sortableTh('quantity',           '수량',    'text-right')}
+        ${sortableTh('unitPrice',          '원가',    'text-right')}
+        ${sortableTh('sellingPrice',       '판매가',  'text-right')}
+        ${sortableTh('actualSellingPrice', '실판매가','text-right')}
+        ${sortableTh('marginRate',         '이익률',  'text-right')}
+        ${sortableTh('date',               '날짜')}
         <th>비고</th>`;
     }
 
