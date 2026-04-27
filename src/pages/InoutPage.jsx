@@ -1210,9 +1210,9 @@ export function InoutPage({ mode = 'all' }) {
                       <SortTh sortKey="spec" rowSpan={2} style={{ position: 'sticky', top: 0, zIndex: 4 }}>규격</SortTh>
                       <SortTh sortKey="unit" rowSpan={2} style={{ position: 'sticky', top: 0, zIndex: 4 }}>단위</SortTh>
                       <SortTh sortKey="quantity" className="text-right" rowSpan={2} style={{ position: 'sticky', top: 0, zIndex: 4 }}>출고수량</SortTh>
-                      <th colSpan={3} style={{ textAlign: 'center', background: 'var(--primary,#2563eb)', color: '#fff', fontWeight: 700, padding: '6px', position: 'sticky', top: 0, zIndex: 4 }}>판매</th>
-                      <th colSpan={3} style={{ textAlign: 'center', background: '#7c5e2e', color: '#fff', fontWeight: 700, padding: '6px', position: 'sticky', top: 0, zIndex: 4 }}>매입</th>
-                      <th colSpan={3} style={{ textAlign: 'center', background: '#2a6b4a', color: '#fff', fontWeight: 700, padding: '6px', position: 'sticky', top: 0, zIndex: 4 }}>이익 분석</th>
+                      <th colSpan={3} style={{ textAlign: 'center', background: '#1d3d6b', color: '#fff', fontWeight: 700, padding: '6px', position: 'sticky', top: 0, zIndex: 4 }}>판매</th>
+                      <th colSpan={3} style={{ textAlign: 'center', background: '#4a2e14', color: '#fff', fontWeight: 700, padding: '6px', position: 'sticky', top: 0, zIndex: 4 }}>매입</th>
+                      <th colSpan={3} style={{ textAlign: 'center', background: '#163526', color: '#fff', fontWeight: 700, padding: '6px', position: 'sticky', top: 0, zIndex: 4 }}>이익 분석</th>
                       <th rowSpan={2} style={{ verticalAlign: 'middle', position: 'sticky', top: 0, zIndex: 4, textTransform: 'none', fontSize: '13px' }}>관리</th>
                     </tr>
                     <tr>
@@ -1227,7 +1227,7 @@ export function InoutPage({ mode = 'all' }) {
                         { key: 'profitMargin', label: '이익율',     grp: 'prof' },
                         { key: 'cogsMargin',   label: '원가율',     grp: 'prof' },
                       ].map(({ key, label, grp }) => {
-                        const bg = grp === 'sale' ? '#3b6fd4' : grp === 'buy' ? '#7a5c2e' : '#2d6e4a';
+                        const bg = grp === 'sale' ? '#264d84' : grp === 'buy' ? '#5c3820' : '#1e4530';
                         return (
                           <SortTh key={key} sortKey={key} className="text-right" style={{
                             position: 'sticky', top: outRow1H, zIndex: 3,
@@ -1325,19 +1325,19 @@ export function InoutPage({ mode = 'all' }) {
                             {qty ? qty.toLocaleString('ko-KR') : '-'}
                           </td>
                           {/* 판매 그룹 */}
-                          <td className="text-right" style={{ background: 'rgba(37,99,235,0.07)' }}>{salePrice ? W(salePrice) : '-'}</td>
-                          <td className="text-right" style={{ background: 'rgba(37,99,235,0.07)' }}>{outAmt ? W(outAmt) : '-'}</td>
-                          <td className="text-right" style={{ background: 'rgba(37,99,235,0.07)' }}>{outAmt ? W(Math.round(outAmt * 1.1)) : '-'}</td>
+                          <td className="text-right" style={{ background: 'rgba(29,61,107,0.1)' }}>{salePrice ? W(salePrice) : '-'}</td>
+                          <td className="text-right" style={{ background: 'rgba(29,61,107,0.1)' }}>{outAmt ? W(outAmt) : '-'}</td>
+                          <td className="text-right" style={{ background: 'rgba(29,61,107,0.1)' }}>{outAmt ? W(Math.round(outAmt * 1.1)) : '-'}</td>
                           {/* 매입 그룹 */}
-                          <td className="text-right" style={{ background: 'rgba(124,94,46,0.1)' }}>{wacSupply ? W(wacSupply) : '-'}</td>
-                          <td className="text-right" style={{ background: 'rgba(124,94,46,0.1)' }}>{wacSupply ? W(wacVat) : '-'}</td>
-                          <td className="text-right" style={{ background: 'rgba(124,94,46,0.1)' }}>{wacSupply ? W(wacTotal) : '-'}</td>
+                          <td className="text-right" style={{ background: 'rgba(74,46,20,0.12)' }}>{wacSupply ? W(wacSupply) : '-'}</td>
+                          <td className="text-right" style={{ background: 'rgba(74,46,20,0.12)' }}>{wacSupply ? W(wacVat) : '-'}</td>
+                          <td className="text-right" style={{ background: 'rgba(74,46,20,0.12)' }}>{wacSupply ? W(wacTotal) : '-'}</td>
                           {/* 이익 분석 그룹 */}
-                          <td className="text-right" style={{ background: 'rgba(42,107,74,0.09)', color: profit > 0 ? 'var(--success)' : profit < 0 ? 'var(--danger)' : '' }}>
+                          <td className="text-right" style={{ background: 'rgba(22,53,38,0.12)', color: profit > 0 ? 'var(--success)' : profit < 0 ? 'var(--danger)' : '' }}>
                             {outAmt ? W(profit) : '-'}
                           </td>
-                          <td className="text-right" style={{ background: 'rgba(42,107,74,0.09)' }}>{profitMargin || '-'}</td>
-                          <td className="text-right" style={{ background: 'rgba(42,107,74,0.09)' }}>{cogsMargin || '-'}</td>
+                          <td className="text-right" style={{ background: 'rgba(22,53,38,0.12)' }}>{profitMargin || '-'}</td>
+                          <td className="text-right" style={{ background: 'rgba(22,53,38,0.12)' }}>{cogsMargin || '-'}</td>
                         </>
                       ) : isInMode ? (
                         <>
@@ -1418,17 +1418,17 @@ export function InoutPage({ mode = 'all' }) {
                       <td colSpan={10} className="text-right" style={{ ...S, color: 'var(--text-muted)', fontSize: '12px' }}>
                         합계 ({sorted.length.toLocaleString()}건)
                       </td>
-                      <td className="text-right" style={{ ...S, background: 'rgba(37,99,235,0.1)' }}>-</td>
-                      <td className="text-right" style={{ ...S, background: 'rgba(37,99,235,0.1)' }}>{W(outTotals.totOutAmt)}</td>
-                      <td className="text-right" style={{ ...S, background: 'rgba(37,99,235,0.1)' }}>{W(outTotals.totOutTotal)}</td>
-                      <td className="text-right" style={{ ...S, background: 'rgba(124,94,46,0.12)' }}>{W(outTotals.totWacSupply)}</td>
-                      <td className="text-right" style={{ ...S, background: 'rgba(124,94,46,0.12)' }}>{W(outTotals.totWacVat)}</td>
-                      <td className="text-right" style={{ ...S, background: 'rgba(124,94,46,0.12)' }}>{W(outTotals.totWacTotal)}</td>
-                      <td className="text-right" style={{ ...S, background: 'rgba(42,107,74,0.12)', color: outTotals.totProfit > 0 ? 'var(--success)' : outTotals.totProfit < 0 ? 'var(--danger)' : '' }}>
+                      <td className="text-right" style={{ ...S, background: 'rgba(29,61,107,0.15)' }}>-</td>
+                      <td className="text-right" style={{ ...S, background: 'rgba(29,61,107,0.15)' }}>{W(outTotals.totOutAmt)}</td>
+                      <td className="text-right" style={{ ...S, background: 'rgba(29,61,107,0.15)' }}>{W(outTotals.totOutTotal)}</td>
+                      <td className="text-right" style={{ ...S, background: 'rgba(74,46,20,0.18)' }}>{W(outTotals.totWacSupply)}</td>
+                      <td className="text-right" style={{ ...S, background: 'rgba(74,46,20,0.18)' }}>{W(outTotals.totWacVat)}</td>
+                      <td className="text-right" style={{ ...S, background: 'rgba(74,46,20,0.18)' }}>{W(outTotals.totWacTotal)}</td>
+                      <td className="text-right" style={{ ...S, background: 'rgba(22,53,38,0.18)', color: outTotals.totProfit > 0 ? 'var(--success)' : outTotals.totProfit < 0 ? 'var(--danger)' : '' }}>
                         {W(outTotals.totProfit)}
                       </td>
-                      <td className="text-right" style={{ ...S, background: 'rgba(42,107,74,0.12)' }}>{outTotals.totProfitMargin}</td>
-                      <td className="text-right" style={{ ...S, background: 'rgba(42,107,74,0.12)' }}>{outTotals.totCogsMargin}</td>
+                      <td className="text-right" style={{ ...S, background: 'rgba(22,53,38,0.18)' }}>{outTotals.totProfitMargin}</td>
+                      <td className="text-right" style={{ ...S, background: 'rgba(22,53,38,0.18)' }}>{outTotals.totCogsMargin}</td>
                       <td style={S}></td>
                     </tr>
                   </tfoot>
