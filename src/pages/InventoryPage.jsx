@@ -114,10 +114,24 @@ function computeData(rawData, transactions) {
   });
   return (rawData || []).map(item => {
     const agg = txAgg[item.itemName] || {};
+    const inQty     = agg.inQty  || 0;
     const outQty    = agg.outQty || 0;
     const outAmt    = agg.outAmt || 0;
     const unitPrice = parseFloat(item.unitPrice) || 0;
     const qty       = parseFloat(item.quantity)  || 0;
+
+    // 공급가액·부가세·합계금액: 입고수량 기준으로 fresh 계산
+    // (recalcItemAmounts가 현재수량 기준으로 덮어쓰므로 저장값 사용 불가)
+    const storedSv   = parseFloat(item.supplyValue) || 0;
+    const storedVat  = parseFloat(item.vat) || 0;
+    // 기존 VAT 비율 추론 (면세품은 0%, 일반 10%)
+    const vatRate    = storedSv > 0 && storedVat / storedSv < 0.05 ? 0 : 0.1;
+    const supplyValue = inQty > 0 && unitPrice > 0
+      ? Math.round(inQty * unitPrice)
+      : storedSv;
+    const vat        = Math.floor(supplyValue * vatRate);
+    const totalPrice = supplyValue + vat;
+
     const masterSalePrice = parseFloat(item.salePrice) || 0;
     const calcSalePrice   = outQty > 0 ? Math.round(outAmt / outQty) : 0;
     const salePrice       = masterSalePrice > 0 ? masterSalePrice : calcSalePrice;
@@ -125,8 +139,11 @@ function computeData(rawData, transactions) {
     const profit   = outAmt - costAmt;
     return {
       ...item,
+      supplyValue:          supplyValue || '',
+      vat:                  vat || '',
+      totalPrice:           totalPrice || '',
       salePrice:            salePrice || '',
-      inQty:                agg.inQty || 0,
+      inQty,
       outQty:               outQty || '',
       outTotalPrice:        outAmt  || '',
       purchaseCost:         costAmt || '',
