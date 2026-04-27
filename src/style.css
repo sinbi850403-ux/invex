@@ -1355,17 +1355,26 @@ html.dark-mode .acc-item-btn.active {
   position: absolute;
   right: 0;
   top: 0;
-  width: 6px;
+  width: 8px;
   height: 100%;
   cursor: col-resize;
   z-index: 2;
-  background: var(--border);
-  opacity: 0.6;
+  background: transparent;
 }
-.col-resize-handle:hover,
-.col-resize-handle:active {
-  background: var(--accent);
-  opacity: 0.8;
+.col-resize-handle::after {
+  content: '';
+  position: absolute;
+  right: 2px;
+  top: 20%;
+  width: 2px;
+  height: 60%;
+  border-radius: 2px;
+  background: transparent;
+  transition: background 0.15s;
+}
+.col-resize-handle:hover::after,
+.col-resize-handle:active::after {
+  background: rgba(255,255,255,0.35);
 }
 
 .data-table td {
