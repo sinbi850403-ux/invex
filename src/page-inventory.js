@@ -874,9 +874,24 @@ export function renderInventoryPage(container, navigateTo) {
 
         persistInventoryPrefs();
         currentPageNum = 1;
-        // ★ thead 전체 재작성 대신 상태만 갱신 → 깜빡임 제거
+
+        // ★ 깜빡임 방지 3단계:
+        // 1) 정렬 헤더 표시 즉시 갱신 (thead 재작성 없음)
         updateSortHeaderState();
+        // 2) 레이아웃 고정: 필터 요약 & 테이블 래퍼 높이를 잠가 레이아웃 시프트 차단
+        const _filterSummary = container.querySelector('#inventory-filter-summary');
+        const _tableWrapper = container.querySelector('.table-wrapper');
+        const _summaryH = _filterSummary ? _filterSummary.offsetHeight : 0;
+        const _wrapperH = _tableWrapper ? _tableWrapper.offsetHeight : 0;
+        if (_filterSummary && _summaryH) _filterSummary.style.minHeight = _summaryH + 'px';
+        if (_tableWrapper && _wrapperH) _tableWrapper.style.minHeight = _wrapperH + 'px';
+        // 3) 테이블 바디 갱신
         renderTable();
+        // 4) 고정 해제 (다음 프레임에서 자연스럽게 레이아웃 복원)
+        requestAnimationFrame(() => {
+          if (_filterSummary) _filterSummary.style.minHeight = '';
+          if (_tableWrapper) _tableWrapper.style.minHeight = '';
+        });
       });
 
       header.addEventListener('keydown', event => {
@@ -968,6 +983,10 @@ export function renderInventoryPage(container, navigateTo) {
 
     const start = (currentPageNum - 1) * PAGE_SIZE;
     const pageData = sorted.slice(start, start + PAGE_SIZE);
+
+    // ★ 필터 요약을 tbody 갱신 전에 먼저 업데이트
+    // → 정렬 칩 추가/변경으로 생기는 레이아웃 시프트가 tbody 리페인트와 겹치지 않도록 순서를 앞으로
+    renderFilterSummary(sorted.length, data.length);
 
     const tbody = container.querySelector('#inventory-body');
     if (sorted.length === 0) {
@@ -1064,8 +1083,6 @@ export function renderInventoryPage(container, navigateTo) {
       });
       tbody.innerHTML = invHtml;
     }
-
-    renderFilterSummary(sorted.length, data.length);
 
     // 재고 그룹 헤더 클릭 → 펼치기/접기
     container.querySelectorAll('.inv-group-header').forEach(row => {
