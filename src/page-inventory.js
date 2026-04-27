@@ -1300,9 +1300,14 @@ export function renderInventoryPage(container, navigateTo) {
 
     container.querySelectorAll('#inventory-body tr[data-row-key]').forEach(rowEl => {
       rowEl.addEventListener('click', (event) => {
-        if (event.target.closest('button, input, select, a, label, .editable-cell')) return;
+        // 편집 중인 input, 버튼 등은 무시 (더블클릭 편집과 충돌 방지)
+        if (event.target.closest('button, input, select, a, label')) return;
         focusedItemKey = rowEl.dataset.rowKey || focusedItemKey;
-        renderTable();
+        renderItemTimelinePanel(sortRows(getFilteredData()));
+        // 포커스 행 하이라이트 갱신
+        container.querySelectorAll('#inventory-body tr[data-row-key]').forEach(r => {
+          r.classList.toggle('row-focused', r.dataset.rowKey === focusedItemKey);
+        });
       });
     });
 
