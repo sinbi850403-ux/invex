@@ -402,6 +402,16 @@ export const transactions = {
     return data || [];
   },
 
+  async update(txId, updates) {
+    const userId = await getUserId();
+    const { error } = await supabase
+      .from('transactions')
+      .update(updates)
+      .eq('id', txId)
+      .eq('user_id', userId);
+    handleError(error, '입출고 수정');
+  },
+
   async remove(txId) {
     const userId = await getUserId();
     const { error } = await supabase
@@ -450,6 +460,14 @@ export const vendors = {
       .single();
     handleError(error, '거래처 수정');
     return data;
+  },
+
+  async upsert(vendor) {
+    const userId = await getUserId();
+    const { error } = await supabase
+      .from('vendors')
+      .upsert({ ...vendor, user_id: userId }, { onConflict: 'user_id,name' });
+    handleError(error, '거래처 저장');
   },
 
   async remove(vendorId) {
@@ -1002,9 +1020,15 @@ export const salaryItems = {
 export async function loadAllData() {
   const labels = ['items', 'transactions', 'vendors', 'transfers', 'stocktakes',
     'auditLogs', 'accountEntries', 'purchaseOrders', 'posSales', 'customFields', 'settings'];
+
+  // Supabase PostgREST 기본 상한(1000행) 해제
+  // — limit(N) 미지정 시 1000건에서 잘려 데이터 누락이 발생하는 것을 방지
+  // — 품목·트랜잭션이 수만 건이어도 전부 로드 (성능 이슈가 생기면 페이지네이션으로 전환)
+  const ALL_ROWS = { limit: 1_000_000 };
+
   const results = await Promise.allSettled([
-    items.list(),
-    transactions.list(),
+    items.list(ALL_ROWS),
+    transactions.list(ALL_ROWS),
     vendors.list(),
     transfers.list(),
     stocktakes.list(),
