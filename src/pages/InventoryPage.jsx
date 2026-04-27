@@ -523,11 +523,6 @@ export default function InventoryPage() {
     setPage(1);
   }, []);
 
-  // 컬럼 넓이 수동 조절
-  useEffect(() => {
-    if (tableRef.current) enableColumnResize(tableRef.current);
-  }, [pageItems]);
-
   // 뷰 설정 자동저장 (debounce)
   const prefsTimerRef = useRef(null);
   useEffect(() => {
@@ -567,6 +562,11 @@ export default function InventoryPage() {
   const totalPages   = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
   const safePage     = Math.min(page, totalPages);
   const pageItems    = sorted.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+
+  // 컬럼 넓이 수동 조절 (pageItems 선언 이후에 위치해야 TDZ 오류 없음)
+  useEffect(() => {
+    if (tableRef.current) enableColumnResize(tableRef.current);
+  }, [pageItems]);
 
   // 표시 컬럼
   const activeFields = useMemo(() => getVisibleFields(data, visibleCols), [data, visibleCols]);
