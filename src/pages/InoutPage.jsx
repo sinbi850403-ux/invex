@@ -812,6 +812,23 @@ export function InoutPage({ mode = 'all' }) {
   const safePage = Math.min(page, totalPages);
   const pageData = sorted.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
 
+  // 입고 합계 (필터링된 전체 기준)
+  const inTotals = useMemo(() => {
+    if (!isInMode) return null;
+    let totQty = 0, totSupply = 0, totVat = 0, totTotal = 0;
+    sorted.forEach(tx => {
+      const q = parseFloat(tx.quantity) || 0;
+      const itd = itemMap.get(tx.itemName) || {};
+      const cost = parseFloat(tx.unitPrice || itd.unitPrice) || 0;
+      const sup = Math.round(cost * q);
+      totQty += q;
+      totSupply += sup;
+      totVat += Math.floor(sup * 0.1);
+      totTotal += sup + Math.floor(sup * 0.1);
+    });
+    return { totQty, totSupply, totVat, totTotal };
+  }, [sorted, isInMode, itemMap]);
+
   // 출고 합계 (필터링된 전체 기준)
   const outTotals = useMemo(() => {
     if (!isOutMode) return null;
@@ -967,7 +984,7 @@ export function InoutPage({ mode = 'all' }) {
         rowSpan={rowSpan}
         colSpan={colSpan}
         className={`sortable-header ${isActive ? 'is-active' : ''} ${className}`}
-        style={{ cursor: 'pointer', userSelect: 'none', verticalAlign: 'middle', ...style }}
+        style={{ cursor: 'pointer', userSelect: 'none', verticalAlign: 'middle', textTransform: 'none', fontSize: '13px', ...style }}
         onClick={() => toggleSort(sortKey)}
       >
         {children} <span className="sort-indicator" style={{ fontSize: '10px', opacity: 0.6 }}>{indicator}</span>
@@ -1181,10 +1198,10 @@ export function InoutPage({ mode = 'all' }) {
                 {isOutMode ? (
                   <>
                     <tr ref={outRow1Ref}>
-                      <th rowSpan={2} style={{ width: '40px', textAlign: 'center', verticalAlign: 'middle', position: 'sticky', top: 0, zIndex: 4 }}>
+                      <th rowSpan={2} style={{ width: '40px', textAlign: 'center', verticalAlign: 'middle', position: 'sticky', top: 0, zIndex: 4, textTransform: 'none' }}>
                         <input type="checkbox" checked={allOnPageSelected} onChange={toggleSelectAll} />
                       </th>
-                      <th rowSpan={2} className="col-num" style={{ verticalAlign: 'middle', position: 'sticky', top: 0, zIndex: 4 }}>#</th>
+                      <th rowSpan={2} className="col-num" style={{ verticalAlign: 'middle', position: 'sticky', top: 0, zIndex: 4, textTransform: 'none', fontSize: '13px' }}>#</th>
                       <SortTh sortKey="category" rowSpan={2} style={{ position: 'sticky', top: 0, zIndex: 4 }}>자산</SortTh>
                       <SortTh sortKey="date" rowSpan={2} style={{ position: 'sticky', top: 0, zIndex: 4 }}>출고일자</SortTh>
                       <SortTh sortKey="vendor" rowSpan={2} style={{ position: 'sticky', top: 0, zIndex: 4 }}>거래처</SortTh>
@@ -1196,7 +1213,7 @@ export function InoutPage({ mode = 'all' }) {
                       <th colSpan={3} style={{ textAlign: 'center', background: 'var(--primary,#2563eb)', color: '#fff', fontWeight: 700, padding: '6px', position: 'sticky', top: 0, zIndex: 4 }}>판매</th>
                       <th colSpan={3} style={{ textAlign: 'center', background: '#7c5e2e', color: '#fff', fontWeight: 700, padding: '6px', position: 'sticky', top: 0, zIndex: 4 }}>매입</th>
                       <th colSpan={3} style={{ textAlign: 'center', background: '#2a6b4a', color: '#fff', fontWeight: 700, padding: '6px', position: 'sticky', top: 0, zIndex: 4 }}>이익 분석</th>
-                      <th rowSpan={2} style={{ verticalAlign: 'middle', position: 'sticky', top: 0, zIndex: 4 }}>관리</th>
+                      <th rowSpan={2} style={{ verticalAlign: 'middle', position: 'sticky', top: 0, zIndex: 4, textTransform: 'none', fontSize: '13px' }}>관리</th>
                     </tr>
                     <tr>
                       {[
@@ -1225,39 +1242,39 @@ export function InoutPage({ mode = 'all' }) {
                   </>
                 ) : (
                   <tr>
-                    <th style={{ width: '40px', textAlign: 'center' }}>
+                    <th style={{ width: '40px', textAlign: 'center', textTransform: 'none' }}>
                       <input type="checkbox" checked={allOnPageSelected} onChange={toggleSelectAll} />
                     </th>
-                    <th className="col-num">#</th>
+                    <th className="col-num" style={{ textTransform: 'none', fontSize: '13px' }}>#</th>
                     {!isInMode && !isOutMode && <SortTh sortKey="type">구분</SortTh>}
                     {isInMode ? (
                       <>
-                        <SortTh sortKey="category">자산</SortTh>
+                        <SortTh sortKey="category" style={{ color: 'var(--text-muted)' }}>자산</SortTh>
                         <SortTh sortKey="date">입고일자</SortTh>
                         <SortTh sortKey="vendor">거래처</SortTh>
-                        <SortTh sortKey="itemCode">상품코드</SortTh>
+                        <SortTh sortKey="itemCode" style={{ color: 'var(--text-muted)' }}>상품코드</SortTh>
                         <SortTh sortKey="itemName" className="col-fill">품명</SortTh>
-                        <SortTh sortKey="spec">규격</SortTh>
-                        <SortTh sortKey="unit">단위</SortTh>
-                        <SortTh sortKey="quantity" className="text-right">입고수량</SortTh>
+                        <SortTh sortKey="spec" style={{ color: 'var(--text-muted)' }}>규격</SortTh>
+                        <SortTh sortKey="unit" style={{ color: 'var(--text-muted)' }}>단위</SortTh>
+                        <SortTh sortKey="quantity" className="text-right" style={{ color: 'var(--success)', fontWeight: 700 }}>입고수량</SortTh>
                         <SortTh sortKey="unitPrice" className="text-right">단가</SortTh>
-                        <SortTh sortKey="supply" className="text-right">공급가액</SortTh>
-                        <SortTh sortKey="vat" className="text-right">부가세</SortTh>
-                        <SortTh sortKey="totalPrice" className="text-right">합계금액</SortTh>
+                        <SortTh sortKey="supply" className="text-right" style={{ color: 'var(--success)', fontWeight: 700 }}>공급가액</SortTh>
+                        <SortTh sortKey="vat" className="text-right" style={{ color: 'var(--text-muted)' }}>부가세</SortTh>
+                        <SortTh sortKey="totalPrice" className="text-right" style={{ color: 'var(--success)', fontWeight: 700 }}>합계금액</SortTh>
                       </>
                     ) : (
                       <>
                         <SortTh sortKey="date">날짜</SortTh>
                         <SortTh sortKey="vendor">거래처</SortTh>
                         <SortTh sortKey="itemName" className="col-fill">품목명</SortTh>
-                        <SortTh sortKey="quantity" className="text-right">수량</SortTh>
+                        <SortTh sortKey="quantity" className="text-right" style={{ color: 'var(--danger)', fontWeight: 700 }}>수량</SortTh>
                         <SortTh sortKey="unitPrice" className="text-right">원가</SortTh>
-                        <SortTh sortKey="sellingPrice" className="text-right">판매가</SortTh>
-                        <SortTh sortKey="supply" className="text-right">금액</SortTh>
-                        <SortTh sortKey="note">비고</SortTh>
+                        <SortTh sortKey="sellingPrice" className="text-right" style={{ color: 'var(--success)', fontWeight: 700 }}>판매가</SortTh>
+                        <SortTh sortKey="supply" className="text-right" style={{ fontWeight: 700 }}>금액</SortTh>
+                        <SortTh sortKey="note" style={{ color: 'var(--text-muted)' }}>비고</SortTh>
                       </>
                     )}
-                    <th>관리</th>
+                    <th style={{ textTransform: 'none', fontSize: '13px' }}>관리</th>
                   </tr>
                 )}
               </thead>
@@ -1324,20 +1341,20 @@ export function InoutPage({ mode = 'all' }) {
                         </>
                       ) : isInMode ? (
                         <>
-                          <td style={{ fontSize: '12px' }}>{category || '-'}</td>
-                          <td style={{ fontSize: '12px' }}>{formatDate(tx.date)}</td>
-                          <td style={{ fontSize: '12px' }}>{tx.vendor || '-'}</td>
-                          <td style={{ fontSize: '12px' }}>{itemCode || '-'}</td>
+                          <td style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{category || '-'}</td>
+                          <td style={{ fontSize: '13px' }}>{formatDate(tx.date)}</td>
+                          <td style={{ fontSize: '13px' }}>{tx.vendor || '-'}</td>
+                          <td style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{itemCode || '-'}</td>
                           <td className="col-fill"><strong>{tx.itemName || '-'}</strong></td>
-                          <td style={{ fontSize: '12px' }}>{spec || '-'}</td>
-                          <td style={{ fontSize: '12px' }}>{unit || '-'}</td>
-                          <td className="text-right" style={{ color: '#16a34a', fontWeight: 600 }}>
+                          <td style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{spec || '-'}</td>
+                          <td style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{unit || '-'}</td>
+                          <td className="text-right" style={{ color: 'var(--success)', fontWeight: 700, fontSize: '13px' }}>
                             +{qty ? qty.toLocaleString('ko-KR') : '-'}
                           </td>
-                          <td className="text-right">{unitPrice ? W(unitPrice) : '-'}</td>
-                          <td className="text-right">{supply ? W(supply) : '-'}</td>
-                          <td className="text-right">{supply ? W(vat) : '-'}</td>
-                          <td className="text-right">{supply ? W(totalPrice) : '-'}</td>
+                          <td className="text-right" style={{ fontSize: '13px' }}>{unitPrice ? W(unitPrice) : '-'}</td>
+                          <td className="text-right" style={{ background: 'rgba(22,163,74,0.08)', fontSize: '13px' }}>{supply ? W(supply) : '-'}</td>
+                          <td className="text-right" style={{ background: 'rgba(22,163,74,0.06)', color: 'var(--text-muted)', fontSize: '12px' }}>{supply ? W(vat) : '-'}</td>
+                          <td className="text-right" style={{ background: 'rgba(22,163,74,0.14)', fontWeight: 700, color: 'var(--success)', fontSize: '13px' }}>{supply ? W(totalPrice) : '-'}</td>
                         </>
                       ) : (
                         <>
@@ -1373,6 +1390,26 @@ export function InoutPage({ mode = 'all' }) {
                   );
                 })}
               </tbody>
+              {isInMode && inTotals && sorted.length > 0 && (() => {
+                const S = { fontWeight: 700, padding: '8px 12px', borderTop: '2px solid var(--border-color,#333)' };
+                return (
+                  <tfoot>
+                    <tr style={{ background: 'var(--bg-lighter)', fontWeight: 700 }}>
+                      <td colSpan={9} className="text-right" style={{ ...S, color: 'var(--text-muted)', fontSize: '12px' }}>
+                        합계 ({sorted.length.toLocaleString()}건)
+                      </td>
+                      <td className="text-right" style={{ ...S, color: 'var(--success)', fontSize: '13px' }}>
+                        +{inTotals.totQty.toLocaleString('ko-KR')}
+                      </td>
+                      <td className="text-right" style={S}>-</td>
+                      <td className="text-right" style={{ ...S, background: 'rgba(22,163,74,0.08)' }}>{W(inTotals.totSupply)}</td>
+                      <td className="text-right" style={{ ...S, background: 'rgba(22,163,74,0.06)', color: 'var(--text-muted)' }}>{W(inTotals.totVat)}</td>
+                      <td className="text-right" style={{ ...S, background: 'rgba(22,163,74,0.14)', color: 'var(--success)' }}>{W(inTotals.totTotal)}</td>
+                      <td style={S}></td>
+                    </tr>
+                  </tfoot>
+                );
+              })()}
               {isOutMode && outTotals && sorted.length > 0 && (() => {
                 const S = { fontWeight: 700, padding: '8px 12px', borderTop: '2px solid var(--border-color,#333)' };
                 return (
