@@ -126,13 +126,17 @@ function computeData(rawData, transactions) {
     // 가중평균 단가: 실제 거래 기반 우선, 없으면 품목 마스터 단가
     const weightedAvgCost = inAmt > 0 && inQty > 0 ? inAmt / inQty : unitPrice;
 
-    // 공급가액: 실제 거래 inAmt 우선 (입고관리와 일치), 없으면 마스터 단가 × 입고수량
-    const storedSv  = parseFloat(item.supplyValue) || 0;
+    // 공급가액: 실제 거래 inAmt 우선 → 거래기록 없으면 현재재고 × 단가 (stale storedSv 사용 안 함)
     const storedVat = parseFloat(item.vat) || 0;
+    const storedSv  = parseFloat(item.supplyValue) || 0;
     const vatRate   = storedSv > 0 && storedVat / storedSv < 0.05 ? 0 : 0.1;
     const supplyValue = inAmt > 0
       ? inAmt
-      : (inQty > 0 && unitPrice > 0 ? Math.round(inQty * unitPrice) : storedSv);
+      : inQty > 0 && unitPrice > 0
+        ? Math.round(inQty * unitPrice)
+        : qty > 0 && unitPrice > 0
+          ? Math.round(qty * unitPrice)  // 거래 없는 품목: 현재수량 × 단가
+          : 0;
     const vat        = Math.floor(supplyValue * vatRate);
     const totalPrice = supplyValue + vat;
 
