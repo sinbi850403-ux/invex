@@ -810,6 +810,32 @@ export function InoutPage({ mode = 'all' }) {
   const safePage = Math.min(page, totalPages);
   const pageData = sorted.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
 
+  // 출고 합계 (필터링된 전체 기준)
+  const outTotals = useMemo(() => {
+    if (!isOutMode) return null;
+    let totQty = 0, totOutAmt = 0, totOutTotal = 0, totWacSupply = 0, totWacVat = 0, totWacTotal = 0, totProfit = 0;
+    sorted.forEach(tx => {
+      const q = parseFloat(tx.quantity) || 0;
+      const itd = itemMap.get(tx.itemName) || {};
+      const sp = parseFloat(tx.sellingPrice || itd.salePrice) || 0;
+      const oa = Math.round(sp * q);
+      const wac = wacMap[tx.itemName] || (parseFloat(tx.unitPrice || itd.unitPrice) || 0);
+      const ws = Math.round(wac * q);
+      totQty += q;
+      totOutAmt += oa;
+      totOutTotal += Math.round(oa * 1.1);
+      totWacSupply += ws;
+      totWacVat += Math.floor(ws * 0.1);
+      totWacTotal += ws + Math.floor(ws * 0.1);
+      totProfit += oa - ws;
+    });
+    return {
+      totQty, totOutAmt, totOutTotal, totWacSupply, totWacVat, totWacTotal, totProfit,
+      totProfitMargin: totOutAmt > 0 ? (totProfit / totOutAmt * 100).toFixed(1) + '%' : '-',
+      totCogsMargin:   totOutAmt > 0 ? (totWacSupply / totOutAmt * 100).toFixed(1) + '%' : '-',
+    };
+  }, [sorted, isOutMode, itemMap, wacMap]);
+
   // ── 선택 ───────────────────────────────────────────────────────────────────
   const allOnPageSelected = pageData.length > 0 && pageData.every(tx => selectedIds.has(tx.id));
 
@@ -1145,33 +1171,33 @@ export function InoutPage({ mode = 'all' }) {
                 {isOutMode ? (
                   <>
                     <tr>
-                      <th rowSpan={2} style={{ width: '40px', textAlign: 'center', verticalAlign: 'middle' }}>
+                      <th rowSpan={2} style={{ width: '40px', textAlign: 'center', verticalAlign: 'middle', position: 'sticky', top: 0, zIndex: 4 }}>
                         <input type="checkbox" checked={allOnPageSelected} onChange={toggleSelectAll} />
                       </th>
-                      <th rowSpan={2} className="col-num" style={{ verticalAlign: 'middle' }}>#</th>
-                      <SortTh sortKey="category" rowSpan={2}>자산</SortTh>
-                      <SortTh sortKey="date" rowSpan={2}>출고일자</SortTh>
-                      <SortTh sortKey="vendor" rowSpan={2}>거래처</SortTh>
-                      <SortTh sortKey="itemCode" rowSpan={2}>상품코드</SortTh>
-                      <SortTh sortKey="itemName" className="col-fill" rowSpan={2}>품명</SortTh>
-                      <SortTh sortKey="spec" rowSpan={2}>규격</SortTh>
-                      <SortTh sortKey="unit" rowSpan={2}>단위</SortTh>
-                      <SortTh sortKey="quantity" className="text-right" rowSpan={2}>출고수량</SortTh>
-                      <th colSpan={3} style={{ textAlign: 'center', background: 'var(--primary,#2563eb)', color: '#fff', fontWeight: 700, padding: '6px' }}>판매</th>
-                      <th colSpan={3} style={{ textAlign: 'center', background: '#7c5e2e', color: '#fff', fontWeight: 700, padding: '6px' }}>매입</th>
-                      <th colSpan={3} style={{ textAlign: 'center', background: '#2a6b4a', color: '#fff', fontWeight: 700, padding: '6px' }}>이익 분석</th>
-                      <th rowSpan={2} style={{ verticalAlign: 'middle' }}>관리</th>
+                      <th rowSpan={2} className="col-num" style={{ verticalAlign: 'middle', position: 'sticky', top: 0, zIndex: 4 }}>#</th>
+                      <SortTh sortKey="category" rowSpan={2} style={{ position: 'sticky', top: 0, zIndex: 4 }}>자산</SortTh>
+                      <SortTh sortKey="date" rowSpan={2} style={{ position: 'sticky', top: 0, zIndex: 4 }}>출고일자</SortTh>
+                      <SortTh sortKey="vendor" rowSpan={2} style={{ position: 'sticky', top: 0, zIndex: 4 }}>거래처</SortTh>
+                      <SortTh sortKey="itemCode" rowSpan={2} style={{ position: 'sticky', top: 0, zIndex: 4 }}>상품코드</SortTh>
+                      <SortTh sortKey="itemName" className="col-fill" rowSpan={2} style={{ position: 'sticky', top: 0, zIndex: 4 }}>품명</SortTh>
+                      <SortTh sortKey="spec" rowSpan={2} style={{ position: 'sticky', top: 0, zIndex: 4 }}>규격</SortTh>
+                      <SortTh sortKey="unit" rowSpan={2} style={{ position: 'sticky', top: 0, zIndex: 4 }}>단위</SortTh>
+                      <SortTh sortKey="quantity" className="text-right" rowSpan={2} style={{ position: 'sticky', top: 0, zIndex: 4 }}>출고수량</SortTh>
+                      <th colSpan={3} style={{ textAlign: 'center', background: 'var(--primary,#2563eb)', color: '#fff', fontWeight: 700, padding: '6px', position: 'sticky', top: 0, zIndex: 4 }}>판매</th>
+                      <th colSpan={3} style={{ textAlign: 'center', background: '#7c5e2e', color: '#fff', fontWeight: 700, padding: '6px', position: 'sticky', top: 0, zIndex: 4 }}>매입</th>
+                      <th colSpan={3} style={{ textAlign: 'center', background: '#2a6b4a', color: '#fff', fontWeight: 700, padding: '6px', position: 'sticky', top: 0, zIndex: 4 }}>이익 분석</th>
+                      <th rowSpan={2} style={{ verticalAlign: 'middle', position: 'sticky', top: 0, zIndex: 4 }}>관리</th>
                     </tr>
                     <tr>
-                      <SortTh sortKey="sellingPrice" className="text-right" style={{ background: 'rgba(37,99,235,0.18)', color: 'inherit' }}>출고단가</SortTh>
-                      <SortTh sortKey="outAmt" className="text-right" style={{ background: 'rgba(37,99,235,0.18)', color: 'inherit' }}>판매가</SortTh>
-                      <SortTh sortKey="outTotal" className="text-right" style={{ background: 'rgba(37,99,235,0.18)', color: 'inherit' }}>출고합</SortTh>
-                      <SortTh sortKey="supply" className="text-right" style={{ background: 'rgba(124,94,46,0.25)', color: 'inherit' }}>매입원가</SortTh>
-                      <SortTh sortKey="vat" className="text-right" style={{ background: 'rgba(124,94,46,0.25)', color: 'inherit' }}>부가세</SortTh>
-                      <SortTh sortKey="totalPrice" className="text-right" style={{ background: 'rgba(124,94,46,0.25)', color: 'inherit' }}>공가합</SortTh>
-                      <SortTh sortKey="profit" className="text-right" style={{ background: 'rgba(42,107,74,0.22)', color: 'inherit' }}>이익액</SortTh>
-                      <SortTh sortKey="profitMargin" className="text-right" style={{ background: 'rgba(42,107,74,0.22)', color: 'inherit' }}>이익율</SortTh>
-                      <SortTh sortKey="cogsMargin" className="text-right" style={{ background: 'rgba(42,107,74,0.22)', color: 'inherit' }}>매출원가율</SortTh>
+                      <SortTh sortKey="sellingPrice" className="text-right" style={{ background: 'rgba(37,99,235,0.18)', color: 'inherit', top: '36px', zIndex: 3 }}>출고단가</SortTh>
+                      <SortTh sortKey="outAmt" className="text-right" style={{ background: 'rgba(37,99,235,0.18)', color: 'inherit', top: '36px', zIndex: 3 }}>판매가</SortTh>
+                      <SortTh sortKey="outTotal" className="text-right" style={{ background: 'rgba(37,99,235,0.18)', color: 'inherit', top: '36px', zIndex: 3 }}>출고합</SortTh>
+                      <SortTh sortKey="supply" className="text-right" style={{ background: 'rgba(124,94,46,0.25)', color: 'inherit', top: '36px', zIndex: 3 }}>매입원가</SortTh>
+                      <SortTh sortKey="vat" className="text-right" style={{ background: 'rgba(124,94,46,0.25)', color: 'inherit', top: '36px', zIndex: 3 }}>부가세</SortTh>
+                      <SortTh sortKey="totalPrice" className="text-right" style={{ background: 'rgba(124,94,46,0.25)', color: 'inherit', top: '36px', zIndex: 3 }}>공가합</SortTh>
+                      <SortTh sortKey="profit" className="text-right" style={{ background: 'rgba(42,107,74,0.22)', color: 'inherit', top: '36px', zIndex: 3 }}>이익액</SortTh>
+                      <SortTh sortKey="profitMargin" className="text-right" style={{ background: 'rgba(42,107,74,0.22)', color: 'inherit', top: '36px', zIndex: 3 }}>이익율</SortTh>
+                      <SortTh sortKey="cogsMargin" className="text-right" style={{ background: 'rgba(42,107,74,0.22)', color: 'inherit', top: '36px', zIndex: 3 }}>매출원가율</SortTh>
                     </tr>
                   </>
                 ) : (
@@ -1324,6 +1350,30 @@ export function InoutPage({ mode = 'all' }) {
                   );
                 })}
               </tbody>
+              {isOutMode && outTotals && sorted.length > 0 && (() => {
+                const S = { fontWeight: 700, padding: '8px 12px', borderTop: '2px solid var(--border-color,#333)' };
+                return (
+                  <tfoot>
+                    <tr style={{ background: 'var(--bg-lighter)', fontWeight: 700 }}>
+                      <td colSpan={10} className="text-right" style={{ ...S, color: 'var(--text-muted)', fontSize: '12px' }}>
+                        합계 ({sorted.length.toLocaleString()}건)
+                      </td>
+                      <td className="text-right" style={{ ...S, background: 'rgba(37,99,235,0.1)' }}>-</td>
+                      <td className="text-right" style={{ ...S, background: 'rgba(37,99,235,0.1)' }}>{W(outTotals.totOutAmt)}</td>
+                      <td className="text-right" style={{ ...S, background: 'rgba(37,99,235,0.1)' }}>{W(outTotals.totOutTotal)}</td>
+                      <td className="text-right" style={{ ...S, background: 'rgba(124,94,46,0.12)' }}>{W(outTotals.totWacSupply)}</td>
+                      <td className="text-right" style={{ ...S, background: 'rgba(124,94,46,0.12)' }}>{W(outTotals.totWacVat)}</td>
+                      <td className="text-right" style={{ ...S, background: 'rgba(124,94,46,0.12)' }}>{W(outTotals.totWacTotal)}</td>
+                      <td className="text-right" style={{ ...S, background: 'rgba(42,107,74,0.12)', color: outTotals.totProfit > 0 ? 'var(--success)' : outTotals.totProfit < 0 ? 'var(--danger)' : '' }}>
+                        {W(outTotals.totProfit)}
+                      </td>
+                      <td className="text-right" style={{ ...S, background: 'rgba(42,107,74,0.12)' }}>{outTotals.totProfitMargin}</td>
+                      <td className="text-right" style={{ ...S, background: 'rgba(42,107,74,0.12)' }}>{outTotals.totCogsMargin}</td>
+                      <td style={S}></td>
+                    </tr>
+                  </tfoot>
+                );
+              })()}
             </table>
           </div>
         )}
