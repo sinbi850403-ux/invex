@@ -376,7 +376,7 @@ export function renderInoutPage(container, navigateTo, mode = 'all') {
         </tr>
         <tr>
           <th class="text-right col-group-sale">출고단가</th>
-          <th class="text-right col-group-sale">판매단가</th>
+          <th class="text-right col-group-sale">판매가</th>
           <th class="text-right col-group-sale">출고합</th>
           <th class="text-right col-group-purchase">매입원가</th>
           <th class="text-right col-group-purchase">부가세</th>
@@ -1057,7 +1057,7 @@ export function renderInoutPage(container, navigateTo, mode = 'all') {
           '단위':       tx.unit || it.unit || '',
           '출고수량':   qty,
           '출고단가':   salePrice,
-          '판매단가':   outAmt,
+          '판매가':     outAmt,
           '출고합':     Math.round(outAmt * 1.1),
           '매입원가':   supply,
           '부가세':     vat,
