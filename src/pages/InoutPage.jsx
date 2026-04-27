@@ -1256,11 +1256,11 @@ export function InoutPage({ mode = 'all' }) {
                         <SortTh sortKey="itemName" className="col-fill">품명</SortTh>
                         <SortTh sortKey="spec" style={{ color: 'var(--text-muted)' }}>규격</SortTh>
                         <SortTh sortKey="unit" style={{ color: 'var(--text-muted)' }}>단위</SortTh>
-                        <SortTh sortKey="quantity" className="text-right" style={{ color: 'var(--success)', fontWeight: 700 }}>입고수량</SortTh>
+                        <SortTh sortKey="quantity" className="text-right">입고수량</SortTh>
                         <SortTh sortKey="unitPrice" className="text-right">단가</SortTh>
-                        <SortTh sortKey="supply" className="text-right" style={{ color: 'var(--success)', fontWeight: 700 }}>공급가액</SortTh>
-                        <SortTh sortKey="vat" className="text-right" style={{ color: 'var(--text-muted)' }}>부가세</SortTh>
-                        <SortTh sortKey="totalPrice" className="text-right" style={{ color: 'var(--success)', fontWeight: 700 }}>합계금액</SortTh>
+                        <SortTh sortKey="supply" className="text-right">공급가액</SortTh>
+                        <SortTh sortKey="vat" className="text-right">부가세</SortTh>
+                        <SortTh sortKey="totalPrice" className="text-right">합계금액</SortTh>
                       </>
                     ) : (
                       <>
@@ -1348,13 +1348,13 @@ export function InoutPage({ mode = 'all' }) {
                           <td className="col-fill"><strong>{tx.itemName || '-'}</strong></td>
                           <td style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{spec || '-'}</td>
                           <td style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{unit || '-'}</td>
-                          <td className="text-right" style={{ color: 'var(--success)', fontWeight: 700, fontSize: '13px' }}>
+                          <td className="text-right" style={{ fontWeight: 600, fontSize: '13px' }}>
                             +{qty ? qty.toLocaleString('ko-KR') : '-'}
                           </td>
                           <td className="text-right" style={{ fontSize: '13px' }}>{unitPrice ? W(unitPrice) : '-'}</td>
-                          <td className="text-right" style={{ background: 'rgba(22,163,74,0.08)', fontSize: '13px' }}>{supply ? W(supply) : '-'}</td>
-                          <td className="text-right" style={{ background: 'rgba(22,163,74,0.06)', color: 'var(--text-muted)', fontSize: '12px' }}>{supply ? W(vat) : '-'}</td>
-                          <td className="text-right" style={{ background: 'rgba(22,163,74,0.14)', fontWeight: 700, color: 'var(--success)', fontSize: '13px' }}>{supply ? W(totalPrice) : '-'}</td>
+                          <td className="text-right" style={{ fontSize: '13px' }}>{supply ? W(supply) : '-'}</td>
+                          <td className="text-right" style={{ color: 'var(--text-muted)', fontSize: '12px' }}>{supply ? W(vat) : '-'}</td>
+                          <td className="text-right" style={{ fontWeight: 700, fontSize: '13px' }}>{supply ? W(totalPrice) : '-'}</td>
                         </>
                       ) : (
                         <>
@@ -1398,13 +1398,13 @@ export function InoutPage({ mode = 'all' }) {
                       <td colSpan={9} className="text-right" style={{ ...S, color: 'var(--text-muted)', fontSize: '12px' }}>
                         합계 ({sorted.length.toLocaleString()}건)
                       </td>
-                      <td className="text-right" style={{ ...S, color: 'var(--success)', fontSize: '13px' }}>
+                      <td className="text-right" style={{ ...S, fontSize: '13px' }}>
                         +{inTotals.totQty.toLocaleString('ko-KR')}
                       </td>
                       <td className="text-right" style={S}>-</td>
-                      <td className="text-right" style={{ ...S, background: 'rgba(22,163,74,0.08)' }}>{W(inTotals.totSupply)}</td>
-                      <td className="text-right" style={{ ...S, background: 'rgba(22,163,74,0.06)', color: 'var(--text-muted)' }}>{W(inTotals.totVat)}</td>
-                      <td className="text-right" style={{ ...S, background: 'rgba(22,163,74,0.14)', color: 'var(--success)' }}>{W(inTotals.totTotal)}</td>
+                      <td className="text-right" style={S}>{W(inTotals.totSupply)}</td>
+                      <td className="text-right" style={{ ...S, color: 'var(--text-muted)' }}>{W(inTotals.totVat)}</td>
+                      <td className="text-right" style={S}>{W(inTotals.totTotal)}</td>
                       <td style={S}></td>
                     </tr>
                   </tfoot>
