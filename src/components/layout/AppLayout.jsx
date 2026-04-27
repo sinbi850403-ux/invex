@@ -11,12 +11,25 @@ import { showToast } from '../../toast.js';
 
 // 네이티브 React 컴포넌트로 변환된 페이지
 const REACT_PAGES = {
-  guide:    lazy(() => import('../../pages/GuidePage.jsx')),
-  referral: lazy(() => import('../../pages/ReferralPage.jsx')),
-  settings: lazy(() => import('../../pages/SettingsPage.jsx')),
-  backup:   lazy(() => import('../../pages/BackupPage.jsx')),
-  mypage:   lazy(() => import('../../pages/MyPage.jsx')),
-  support:  lazy(() => import('../../pages/SupportPage.jsx')),
+  // 1차 변환 (정적/단순 페이지)
+  guide:           lazy(() => import('../../pages/GuidePage.jsx')),
+  referral:        lazy(() => import('../../pages/ReferralPage.jsx')),
+  settings:        lazy(() => import('../../pages/SettingsPage.jsx')),
+  backup:          lazy(() => import('../../pages/BackupPage.jsx')),
+  mypage:          lazy(() => import('../../pages/MyPage.jsx')),
+  support:         lazy(() => import('../../pages/SupportPage.jsx')),
+  // 2차 변환 (허브·보고서·예측)
+  'hub-inventory': lazy(() => import('../../pages/HubsPage.jsx').then(m => ({ default: m.HubInventoryPage }))),
+  'hub-warehouse': lazy(() => import('../../pages/HubsPage.jsx').then(m => ({ default: m.HubWarehousePage }))),
+  'hub-order':     lazy(() => import('../../pages/HubsPage.jsx').then(m => ({ default: m.HubOrderPage }))),
+  'hub-report':    lazy(() => import('../../pages/HubsPage.jsx').then(m => ({ default: m.HubReportPage }))),
+  'hub-documents': lazy(() => import('../../pages/HubsPage.jsx').then(m => ({ default: m.HubDocumentsPage }))),
+  'hub-settings':  lazy(() => import('../../pages/HubsPage.jsx').then(m => ({ default: m.HubSettingsPage }))),
+  'hub-hr':        lazy(() => import('../../pages/HubsPage.jsx').then(m => ({ default: m.HubHrPage }))),
+  'hub-support':   lazy(() => import('../../pages/HubsPage.jsx').then(m => ({ default: m.HubSupportPage }))),
+  'weekly-report': lazy(() => import('../../pages/WeeklyReportPage.jsx')),
+  'hr-dashboard':  lazy(() => import('../../pages/HrDashboardPage.jsx')),
+  forecast:        lazy(() => import('../../pages/ForecastPage.jsx')),
 };
 
 // React 페이지는 네이티브 컴포넌트로, 나머지는 LegacyPage 래퍼로 생성
