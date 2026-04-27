@@ -30,6 +30,8 @@ const REACT_PAGES = {
   'weekly-report': lazy(() => import('../../pages/WeeklyReportPage.jsx')),
   'hr-dashboard':  lazy(() => import('../../pages/HrDashboardPage.jsx')),
   forecast:        lazy(() => import('../../pages/ForecastPage.jsx')),
+  home:            lazy(() => import('../../pages/HomePage.jsx')),
+  summary:         lazy(() => import('../../pages/SummaryPage.jsx')),
 };
 
 // React 페이지는 네이티브 컴포넌트로, 나머지는 LegacyPage 래퍼로 생성
