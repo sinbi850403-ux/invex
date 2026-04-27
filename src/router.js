@@ -188,7 +188,12 @@ function getPageLabel(pageId) {
 
 async function resolveRenderer(pageName) {
   // 한 번 로드한 렌더러는 캐싱해서 재로딩 방지
-  if (!_cache[pageName]) _cache[pageName] = PAGE_LOADERS[pageName]();
+  // ★ 실패한 Promise는 캐시에 저장하지 않음 — 재시도 가능하도록
+  if (!_cache[pageName]) {
+    const promise = PAGE_LOADERS[pageName]();
+    _cache[pageName] = promise;
+    promise.catch(() => { delete _cache[pageName]; });
+  }
   return _cache[pageName];
 }
 
@@ -289,6 +294,27 @@ export async function navigateTo(pageName) {
     syncExternalNotifications();
   } catch (err) {
     console.error('[Router] 페이지 로드 실패:', pageName, err);
+
+    // ★ 스테일 캐시 자동 복구
+    // 배포 후 브라우저가 오래된 main.js(캐시)를 사용하면 새 배포의 청크 해시와 불일치.
+    // "Failed to fetch dynamically imported module" 또는 "text/html MIME type" 오류가 발생.
+    // → 이 경우 페이지를 강제 리로드해서 새 index.html + 새 main.js를 받아오게 함.
+    const msg = err?.message || '';
+    const isStaleChunk = msg.includes('Failed to fetch') || msg.includes('dynamically imported')
+      || msg.includes('MIME type') || msg.includes('Importing a module script failed');
+    if (isStaleChunk) {
+      console.warn('[Router] 스테일 청크 감지 — 페이지를 자동으로 리로드합니다.');
+      // 무한 리로드 방지: 최근 10초 안에 이미 리로드했으면 중단
+      const RELOAD_KEY = 'invex_stale_reload_ts';
+      const lastReload = parseInt(sessionStorage.getItem(RELOAD_KEY) || '0', 10);
+      if (Date.now() - lastReload > 10_000) {
+        sessionStorage.setItem(RELOAD_KEY, String(Date.now()));
+        window.location.reload();
+        return;
+      }
+      console.error('[Router] 연속 리로드 차단 — 서버 또는 네트워크 오류일 수 있습니다.');
+    }
+
     const main = document.getElementById('main-content');
     if (main) {
       main.innerHTML = `
@@ -296,6 +322,7 @@ export async function navigateTo(pageName) {
           <div class="empty-state" style="padding:32px 20px;">
             <div class="msg">페이지를 불러오지 못했습니다.</div>
             <div class="sub">${err?.message || '잠시 후 다시 시도해 주세요.'}</div>
+            ${isStaleChunk ? `<button class="btn btn-primary" style="margin-top:12px;" onclick="location.reload()">새로고침</button>` : ''}
           </div>
         </div>
       `;
