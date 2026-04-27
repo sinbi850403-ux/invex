@@ -58,6 +58,7 @@ BEGIN
 END $$;
 
 -- 프로필 자동 생성 트리거: 가입 시 자동으로 profiles 행 생성
+-- [HF2] SECURITY DEFINER 함수 search_path 고정 (schema injection 방어)
 CREATE OR REPLACE FUNCTION handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -74,7 +75,7 @@ BEGIN
   );
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_catalog, pg_temp;
 
 -- 기존 트리거 삭제 후 재생성 (멱등성)
 DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
@@ -322,7 +323,14 @@ ALTER TABLE user_settings ENABLE ROW LEVEL SECURITY;
 -- profiles
 CREATE POLICY "profiles_select" ON profiles FOR SELECT USING (auth.uid() = id);
 CREATE POLICY "profiles_select_admin" ON profiles FOR SELECT USING (auth.jwt()->>'email' IN ('sinbi0214@naver.com', 'sinbi850403@gmail.com', 'admin@invex.io.kr'));
-CREATE POLICY "profiles_update" ON profiles FOR UPDATE USING (auth.uid() = id);
+-- [HF1] role 자가 에스컬레이션 방지: WITH CHECK으로 role 변경 차단
+-- 사용자는 자기 행만 UPDATE 가능하되, role 값을 직접 높일 수 없음
+CREATE POLICY "profiles_update" ON profiles FOR UPDATE
+  USING (auth.uid() = id)
+  WITH CHECK (
+    auth.uid() = id
+    AND role = (SELECT p.role FROM profiles p WHERE p.id = auth.uid())
+  );
 
 -- items
 CREATE POLICY "items_all" ON items FOR ALL USING (auth.uid() = user_id);
@@ -339,8 +347,13 @@ CREATE POLICY "transfers_all" ON transfers FOR ALL USING (auth.uid() = user_id);
 -- stocktakes
 CREATE POLICY "stocktakes_all" ON stocktakes FOR ALL USING (auth.uid() = user_id);
 
--- audit_logs
-CREATE POLICY "audit_all" ON audit_logs FOR ALL USING (auth.uid() = user_id);
+-- audit_logs [HF3] FOR ALL → INSERT + SELECT 분리 (UPDATE/DELETE 차단으로 변조 방지)
+-- SECURITY DEFINER 함수(decrypt_rrn 등)는 RLS 우회하므로 함수 내부 INSERT는 그대로 작동
+CREATE POLICY "audit_insert" ON audit_logs FOR INSERT
+  WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "audit_select" ON audit_logs FOR SELECT
+  USING (auth.uid() = user_id);
+-- UPDATE / DELETE 정책 없음 → 기본 거부 (감사 로그 변조 불가)
 
 -- account_entries
 CREATE POLICY "accounts_all" ON account_entries FOR ALL USING (auth.uid() = user_id);
@@ -513,13 +526,14 @@ CREATE POLICY "salary_items_all" ON salary_items FOR ALL USING (auth.uid() = use
 
 -- 주민번호 암호화/복호화 RPC (서버 비밀키 사용 — Supabase Vault)
 -- 왜 RPC로? → 클라이언트에 AES 키 노출 방지 + 평문 조회 시 감사로그 기록 강제
+-- [HF2] SECURITY DEFINER 함수 3종 search_path 고정
 CREATE OR REPLACE FUNCTION encrypt_rrn(plain TEXT)
 RETURNS BYTEA AS $$
 BEGIN
   -- 프로덕션에서는 Supabase Vault 시크릿 사용 권장
   RETURN pgp_sym_encrypt(plain, current_setting('app.rrn_key', true));
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_catalog, pg_temp;
 
 -- 특정 직원의 주민번호 암호화 저장 (insert/update 이후 별도 호출)
 -- 왜 분리? → 클라이언트가 bytea를 직접 다루지 않도록
@@ -535,7 +549,7 @@ BEGIN
      WHERE id = emp_id AND user_id = auth.uid();
   END IF;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_catalog, pg_temp;
 
 CREATE OR REPLACE FUNCTION decrypt_rrn(emp_id UUID)
 RETURNS TEXT AS $$
@@ -552,7 +566,7 @@ BEGIN
     VALUES (auth.uid(), 'employee.viewRRN', emp_id::text, '주민번호 평문 조회');
   RETURN plain_rrn;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_catalog, pg_temp;
 
 -- ============================================================
 -- 14. updated_at 자동 갱신 트리거
@@ -579,3 +593,24 @@ BEGIN
   END LOOP;
 END;
 $$;
+
+-- ============================================================
+-- 16. 성능 보강 인덱스 (DB 감사 권고 — 2026-04)
+-- ============================================================
+
+-- [PERF-01] transactions 복합 인덱스: type 필터 + 날짜 정렬 쿼리 최적화
+-- 기존 idx_tx_date(user_id, date DESC)는 type 필터 추가 시 Bitmap Scan 발생
+CREATE INDEX IF NOT EXISTS idx_tx_composite
+  ON transactions(user_id, date DESC, type);
+
+-- [PERF-02] payrolls 확인자 조회 인덱스 (급여 확정자·지급 현황 조회)
+CREATE INDEX IF NOT EXISTS idx_payroll_status
+  ON payrolls(user_id, status);
+
+-- [PERF-03] attendance 월별 집계 (특정 직원 + 연월 범위)
+CREATE INDEX IF NOT EXISTS idx_att_emp_month
+  ON attendance(user_id, employee_id, work_date);
+
+-- [PERF-04] leaves 직원별 승인 상태 조회
+CREATE INDEX IF NOT EXISTS idx_leave_status
+  ON leaves(user_id, status, start_date DESC);
