@@ -625,8 +625,8 @@ export function renderInoutPage(container, navigateTo, mode = 'all') {
             <td class="text-right type-out">${qty.toLocaleString('ko-KR')}</td>
             <td class="text-right">${outAmt ? W(outAmt) : '-'}</td>
             <td class="text-right">${purchase ? W(purchase) : '-'}</td>
-            <td class="text-right" style="color:${profitColor}; font-weight:600;">${profit ? W(profit) : '-'}</td>
-            <td class="text-right" style="color:${profitColor};">${profitRate}</td>
+            <td class="text-right" style="font-weight:600;">${profit ? W(profit) : '-'}</td>
+            <td class="text-right">${profitRate}</td>
             <td class="text-right">${costRate}</td>
             ${del}
           </tr>`;
