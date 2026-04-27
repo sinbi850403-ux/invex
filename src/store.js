@@ -200,6 +200,8 @@ let _waitingAuthResume = false;
 let _authResumeSubscription = null;
 let _syncRetryCount = 0;
 const MAX_SYNC_RETRIES = 5;
+// 삭제된 미동기화 트랜잭션 ID — syncToSupabase에서 재생성 방지
+const _deletedTxIds = new Set();
 
 function getErrorMessage(error) {
   if (!error) return '';
@@ -272,8 +274,11 @@ async function syncToSupabase() {
             if (Array.isArray(savedItems) && savedItems.length > 0) {
               savedItems.forEach(saved => {
                 const storeItem = state.mappedData.find(m =>
-                  (saved.item_name && m.itemName === saved.item_name) ||
-                  (m._id && m._id === saved.id)
+                  // _id가 이미 있으면 UUID로 정확히 매칭
+                  (m._id && m._id === saved.id) ||
+                  // 신규 품목: item_name + warehouse 복합키로 매핑 (동명이품 오매핑 방지)
+                  (saved.item_name && m.itemName === saved.item_name &&
+                    (saved.warehouse || null) === (m.warehouse || null))
                 );
                 if (storeItem) storeItem._id = saved.id;
               });
@@ -291,7 +296,7 @@ async function syncToSupabase() {
     // 입출고 동기화 — 새로 추가된 건만
     if (keysToSync.has('transactions')) {
       const newTxs = (state.transactions || [])
-        .filter(tx => !tx._synced)
+        .filter(tx => !tx._synced && !_deletedTxIds.has(tx.id))
         .map(tx => ({
           id: tx.id,            // ★ 클라이언트 UUID → Supabase와 동일 ID 공유 (upsert 멱등성 보장)
           type: tx.type,
@@ -386,6 +391,7 @@ async function syncToSupabase() {
       setTimeout(() => syncToSupabase(), 10_000);
     } else {
       _syncRetryCount = 0;
+      _deletedTxIds.clear();
     }
     // 쓰기 완료 후 타임스탬프 기록 — Realtime 이벤트 억제 창을 정확하게 유지
     _lastLocalSyncTime = Date.now();
@@ -842,7 +848,9 @@ export function deleteTransaction(id) {
   }
 
   // Supabase에서도 삭제
-  if (isSupabaseConfigured && target._synced) {
+  // _synced:false여도 sync 도중 생성될 수 있으므로 항상 remove 시도 (no-op이면 무해)
+  if (isSupabaseConfigured) {
+    _deletedTxIds.add(target.id); // syncToSupabase에서 재생성 방지
     db.transactions.remove(target.id).catch(err =>
       console.warn('[Store] 입출고 삭제 동기화 실패:', err.message)
     );
@@ -916,21 +924,42 @@ export function deleteItem(index) {
     } else if (deleted?.itemName) {
       // ★ 같은 세션 내 _id 미설정 시 item_name으로 폴백 삭제
       // (bulkUpsert UUID가 아직 반영되기 전에 삭제하는 경우)
+      // item_name + warehouse 복합 조건으로 동명이품 일괄 삭제 방지
       supabase.auth.getSession().then(({ data: { session } }) => {
         const uid = session?.user?.id;
         if (!uid) return;
-        supabase.from('items')
+        let q = supabase.from('items')
           .delete()
           .eq('user_id', uid)
-          .eq('item_name', deleted.itemName)
-          .then(({ error }) => {
-            if (error) console.warn('[Store] 품목 삭제 동기화 실패(item_name):', error.message);
-          });
+          .eq('item_name', deleted.itemName);
+        if (deleted.warehouse) q = q.eq('warehouse', deleted.warehouse);
+        q.then(({ error }) => {
+          if (error) console.warn('[Store] 품목 삭제 동기화 실패(item_name):', error.message);
+        });
       });
     }
     scheduleSyncToSupabase(['mappedData']);
   }
   return { deleted, index };
+}
+
+/**
+ * 거래처 삭제 — Supabase에도 즉시 반영
+ */
+export function deleteVendor(index) {
+  const deleted = state.vendorMaster[index];
+  if (!deleted) return null;
+  state.vendorMaster.splice(index, 1);
+  saveToDB();
+  if (isSupabaseConfigured) {
+    if (deleted._id) {
+      db.vendors.remove(deleted._id).catch(err =>
+        console.warn('[Store] 거래처 삭제 동기화 실패:', err.message)
+      );
+    }
+    scheduleSyncToSupabase(['vendorMaster']);
+  }
+  return deleted;
 }
 
 /**
