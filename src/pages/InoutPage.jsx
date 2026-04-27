@@ -740,8 +740,8 @@ export function InoutPage({ mode = 'all' }) {
         const bSp = parseFloat(b.sellingPrice || bItem.salePrice) || 0;
         const aSupply = aUp * aQty; const aOut = aSp * aQty;
         const bSupply = bUp * bQty; const bOut = bSp * bQty;
-        av = aSupply > 0 && aOut > 0 ? (aOut - aSupply) / aSupply * 100 : 0;
-        bv = bSupply > 0 && bOut > 0 ? (bOut - bSupply) / bSupply * 100 : 0;
+        av = aOut > 0 ? (aOut - aSupply) / aOut * 100 : 0;
+        bv = bOut > 0 ? (bOut - bSupply) / bOut * 100 : 0;
       } else if (sort.key === 'cogsMargin') {
         const aQty = parseFloat(a.quantity) || 0;
         const bQty = parseFloat(b.quantity) || 0;
@@ -1131,7 +1131,6 @@ export function InoutPage({ mode = 'all' }) {
                       <SortTh sortKey="itemName" className="col-fill">품명</SortTh>
                       <SortTh sortKey="spec">규격</SortTh>
                       <SortTh sortKey="unit">단위</SortTh>
-                      <SortTh sortKey="quantity" className="text-right">입고수량</SortTh>
                       <SortTh sortKey="unitPrice" className="text-right">단가</SortTh>
                       <SortTh sortKey="supply" className="text-right">공급가액</SortTh>
                       <SortTh sortKey="vat" className="text-right">부가세</SortTh>
@@ -1187,7 +1186,7 @@ export function InoutPage({ mode = 'all' }) {
                   const outAmt = Math.round(salePrice * qty);
                   const purchaseCost = supply;
                   const profit = outAmt - purchaseCost;
-                  const profitMargin = purchaseCost > 0 && outAmt > 0 ? (profit / purchaseCost * 100).toFixed(1) + '%' : '';
+                  const profitMargin = outAmt > 0 ? (profit / outAmt * 100).toFixed(1) + '%' : '';
                   const cogsMargin = outAmt > 0 ? (purchaseCost / outAmt * 100).toFixed(1) + '%' : '';
                   const category = tx.category || itemData.category || '';
                   const itemCode = tx.itemCode || itemData.itemCode || '';
@@ -1212,7 +1211,6 @@ export function InoutPage({ mode = 'all' }) {
                           <td className="col-fill"><strong>{tx.itemName || '-'}</strong></td>
                           <td style={{ fontSize: '12px' }}>{spec || '-'}</td>
                           <td style={{ fontSize: '12px' }}>{unit || '-'}</td>
-                          <td className="text-right">{qty ? qty.toLocaleString('ko-KR') : '-'}</td>
                           <td className="text-right">{unitPrice ? W(unitPrice) : '-'}</td>
                           <td className="text-right">{supply ? W(supply) : '-'}</td>
                           <td className="text-right">{supply ? W(vat) : '-'}</td>

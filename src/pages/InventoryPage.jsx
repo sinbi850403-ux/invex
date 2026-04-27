@@ -161,7 +161,7 @@ function computeData(rawData, transactions) {
       outTotalPrice:        outAmt  || '',
       purchaseCost:         costAmt || '',
       profit:               outAmt > 0 ? profit : '',
-      profitMargin:         costAmt > 0 && outAmt > 0 ? ((profit / costAmt) * 100).toFixed(1) + '%' : '',
+      profitMargin:         outAmt > 0 ? ((profit / outAmt) * 100).toFixed(1) + '%' : '',
       cogsMargin:           outAmt > 0 ? ((costAmt / outAmt) * 100).toFixed(1) + '%' : '',
       endingInventoryValue: qty > 0 ? Math.round(qty * (weightedAvgCost || unitPrice)) : '',
     };

@@ -21,7 +21,7 @@ const SORT_FIELDS = [
   { key: 'inQty',        label: '입고',      numeric: true, align: 'text-right' },
   { key: 'outQty',       label: '출고',      numeric: true, align: 'text-right' },
   { key: 'closingQty',   label: '기말재고',  numeric: true, align: 'text-right' },
-  { key: 'unitPrice',    label: '단가',      numeric: true, align: 'text-right' },
+  { key: 'weightedAvgCost', label: '단가',   numeric: true, align: 'text-right' },
   { key: 'closingValue', label: '재고금액',  numeric: true, align: 'text-right' },
 ];
 
@@ -198,7 +198,7 @@ export default function LedgerPage() {
       const profit = outAmt - purchase;
       return {
         '품목명': row.itemName, '상품코드': row.itemCode, '단위': row.unit,
-        '입고수량': row.inQty, '단가': row.unitPrice,
+        '입고수량': row.inQty, '단가': Math.round(row.weightedAvgCost || row.unitPrice),
         '공급가액': supply, '부가세': vat, '합계금액': supply + vat,
         '출고수량': row.outQty, '출고금액': outAmt, '매입원가': purchase,
         '이익액': profit,
@@ -228,7 +228,7 @@ export default function LedgerPage() {
           i + 1, row.itemName, row.itemCode || '-', row.unit || '-',
           row.openingQty, row.inQty > 0 ? `+${row.inQty}` : '-',
           row.outQty > 0 ? `-${row.outQty}` : '-', row.closingQty,
-          row.unitPrice > 0 ? fmt(row.unitPrice) : '-',
+          row.weightedAvgCost > 0 ? fmt(row.weightedAvgCost) : '-',
           row.closingValue > 0 ? fmt(row.closingValue) : '-',
         ]),
         theme: 'grid',
@@ -332,7 +332,7 @@ export default function LedgerPage() {
                       <td className="text-right type-in">{row.inQty > 0 ? `+${row.inQty.toLocaleString('ko-KR')}` : '-'}</td>
                       <td className="text-right type-out">{row.outQty > 0 ? `-${row.outQty.toLocaleString('ko-KR')}` : '-'}</td>
                       <td className="text-right" style={{ fontWeight: 700 }}>{row.closingQty.toLocaleString('ko-KR')}</td>
-                      <td className="text-right">{row.unitPrice > 0 ? fmt(row.unitPrice) : '-'}</td>
+                      <td className="text-right">{row.weightedAvgCost > 0 ? fmt(row.weightedAvgCost) : '-'}</td>
                       <td className="text-right">{row.closingValue > 0 ? fmt(row.closingValue) : '-'}</td>
                     </tr>
                   ))}
