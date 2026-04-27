@@ -61,7 +61,13 @@ export function AuthProvider({ children }) {
       return;
     }
 
+    // ── 최대 대기 타이머 ─────────────────────────────────────────────────────
+    // Supabase cold-start(2~5초) 대응: initAuth 콜백이 늦게 오더라도
+    // 최대 2초 후에는 반드시 ready 상태로 전환 (로그인 화면 표시)
+    const readyFallback = setTimeout(() => setIsReady(true), 2000);
+
     initAuth(async (newUser, newProfile) => {
+      clearTimeout(readyFallback);
       if (newUser) {
         setMonitorUser(newUser.uid, newUser.email);
         const profilePlan = newProfile?.plan;
@@ -79,6 +85,7 @@ export function AuthProvider({ children }) {
         setIsReady(true);
       }
     });
+    return () => clearTimeout(readyFallback);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const logout = useCallback(async () => {
