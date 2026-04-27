@@ -424,7 +424,7 @@ export function renderInoutPage(container, navigateTo, mode = 'all') {
           ${sortableTh('profitRate',    '이익률',     'text-right col-group-profit')}
           ${sortableTh('costRate',      '매출원가율', 'text-right col-group-profit')}
         </tr>`;
-      return;
+      // ★ return 제거 — 이벤트 바인딩 코드가 실행돼야 정렬이 동작함
     } else {
       // 전체(all) 모드
       cols = `
@@ -443,7 +443,10 @@ export function renderInoutPage(container, navigateTo, mode = 'all') {
         <th>비고</th>`;
     }
 
-    thead.innerHTML = `<tr>${cols}</tr>`;
+    // 출고 모드는 위에서 thead.innerHTML을 직접 설정했으므로 덮어쓰지 않음
+    if (!isOutMode) {
+      thead.innerHTML = `<tr>${cols}</tr>`;
+    }
 
     const applySortByKey = (key) => {
       if (!key) return;

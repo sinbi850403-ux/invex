@@ -834,6 +834,25 @@ export function renderInventoryPage(container, navigateTo) {
     `;
   }
 
+  /**
+   * 정렬 헤더 상태만 갱신 (DOM 재작성 없음 → 깜빡임 방지)
+   * thead 전체를 innerHTML로 교체하지 않고 각 th의 클래스·지시자만 업데이트
+   */
+  function updateSortHeaderState() {
+    container.querySelectorAll('.sortable-header[data-sort-key]').forEach(th => {
+      const key = th.dataset.sortKey;
+      const isActive = currentSort.key === key;
+      th.classList.toggle('is-active', isActive);
+      const dir = isActive ? currentSort.direction : '';
+      th.setAttribute('aria-sort',
+        dir === 'asc' ? 'ascending' : dir === 'desc' ? 'descending' : 'none');
+      const indicator = th.querySelector('.sort-indicator');
+      if (indicator) {
+        indicator.textContent = dir === 'asc' ? '↑' : dir === 'desc' ? '↓' : '↕';
+      }
+    });
+  }
+
   function attachSortHeaderEvents() {
     container.querySelectorAll('.sortable-header[data-sort-key]').forEach(header => {
       header.setAttribute('tabindex', '0');
@@ -855,7 +874,8 @@ export function renderInventoryPage(container, navigateTo) {
 
         persistInventoryPrefs();
         currentPageNum = 1;
-        renderTableHeader();
+        // ★ thead 전체 재작성 대신 상태만 갱신 → 깜빡임 제거
+        updateSortHeaderState();
         renderTable();
       });
 
