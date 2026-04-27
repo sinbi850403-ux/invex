@@ -12,7 +12,7 @@ export const PLANS = {
   free: {
     id: 'free',
     name: 'Free',
-    icon: '🆓',
+    icon: '',
     color: '#6b7280',
     price: '₩0',
     period: '영구 무료',
@@ -54,7 +54,7 @@ export const PLANS = {
   enterprise: {
     id: 'enterprise',
     name: 'Enterprise',
-    icon: '🏢',
+    icon: '',
     color: '#8b5cf6',
     price: '₩59,000',
     period: '월',
@@ -221,7 +221,7 @@ export function showUpgradeModal(pageId) {
   modal.innerHTML = `
     <div class="modal" style="max-width:440px; text-align:center;">
       <div style="padding:32px 24px;">
-        <div style="font-size:48px; margin-bottom:12px;">🔒</div>
+        <div style="font-size:48px; margin-bottom:12px;"></div>
         <h3 style="font-size:20px; font-weight:800; margin-bottom:8px;">
           ${plan.name} 요금제 기능입니다
         </h3>

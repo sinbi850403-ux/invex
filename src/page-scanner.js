@@ -28,20 +28,20 @@ export function renderScannerPage(container, navigateTo) {
     <!-- 스캔 모드 선택 -->
     <div class="scan-mode-bar">
       <button class="scan-mode-btn active" id="scan-mode-in" data-type="in">
-        📥 입고 모드
+         입고 모드
       </button>
       <button class="scan-mode-btn" id="scan-mode-out" data-type="out">
-        📤 출고 모드
+         출고 모드
       </button>
     </div>
 
     <div style="display:grid; grid-template-columns: 1fr 1fr; gap:16px;">
       <!-- 카메라 영역 -->
       <div class="card">
-        <div class="card-title">📷 카메라 스캔</div>
+        <div class="card-title"> 카메라 스캔</div>
         <div id="scanner-region" style="width:100%; min-height:300px; background:#000; border-radius:8px; overflow:hidden;"></div>
         <div style="display:flex; gap:8px; margin-top:12px;">
-          <button class="btn btn-primary" id="btn-start-scan">📷 스캔 시작</button>
+          <button class="btn btn-primary" id="btn-start-scan"> 스캔 시작</button>
           <button class="btn btn-outline" id="btn-stop-scan" disabled>⏹ 스캔 중지</button>
         </div>
         <div style="margin-top:12px;">
@@ -56,16 +56,16 @@ export function renderScannerPage(container, navigateTo) {
       <!-- 스캔 결과 & 등록 -->
       <div>
         <div class="card" id="scan-result-card" style="display:none;">
-          <div class="card-title">🔍 스캔 결과</div>
+          <div class="card-title"> 스캔 결과</div>
           <div id="scan-result-body"></div>
         </div>
 
         <!-- 최근 스캔 이력 -->
         <div class="card">
-          <div class="card-title">📋 최근 스캔 이력 <span class="card-subtitle" id="scan-history-count">(0건)</span></div>
+          <div class="card-title"> 최근 스캔 이력 <span class="card-subtitle" id="scan-history-count">(0건)</span></div>
           <div id="scan-history-list">
             <div class="empty-state" style="padding:24px;">
-              <div class="icon" style="font-size:32px;">📷</div>
+              <div class="icon" style="font-size:32px;"></div>
               <div class="msg" style="font-size:13px;">스캔한 이력이 없습니다</div>
             </div>
           </div>
@@ -75,7 +75,7 @@ export function renderScannerPage(container, navigateTo) {
 
     ${items.length === 0 ? `
       <div class="alert alert-warning" style="margin-top:12px;">
-        ⚠️ 등록된 품목이 없습니다. 먼저 재고 현황에서 품목을 등록하거나 파일을 업로드해 주세요.
+         등록된 품목이 없습니다. 먼저 재고 현황에서 품목을 등록하거나 파일을 업로드해 주세요.
         바코드 스캔 시 품목코드로 매칭됩니다.
       </div>
     ` : ''}
@@ -91,7 +91,7 @@ export function renderScannerPage(container, navigateTo) {
       container.querySelectorAll('.scan-mode-btn').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       scanType = btn.dataset.type;
-      showToast(`${scanType === 'in' ? '📥 입고' : '📤 출고'} 모드로 전환`, 'info');
+      showToast(`${scanType === 'in' ? ' 입고' : ' 출고'} 모드로 전환`, 'info');
     });
   });
 
@@ -168,7 +168,7 @@ export function renderScannerPage(container, navigateTo) {
     if (!matchedItem) {
       resultBody.innerHTML = `
         <div class="alert alert-warning" style="margin:0;">
-          ❌ 코드 "${code}"에 해당하는 품목을 찾지 못했습니다.
+           코드 "${code}"에 해당하는 품목을 찾지 못했습니다.
           <br><small>품목코드가 정확한지 확인해 주세요.</small>
         </div>
       `;
@@ -186,7 +186,7 @@ export function renderScannerPage(container, navigateTo) {
             <div style="color:var(--text-muted); font-size:13px;">코드: ${matchedItem.itemCode} | 분류: ${matchedItem.category || '-'}</div>
           </div>
           <span class="badge ${scanType === 'in' ? 'badge-success' : 'badge-danger'}" style="font-size:13px; padding:4px 12px;">
-            ${scanType === 'in' ? '📥 입고' : '📤 출고'}
+            ${scanType === 'in' ? ' 입고' : ' 출고'}
           </span>
         </div>
 
@@ -217,7 +217,7 @@ export function renderScannerPage(container, navigateTo) {
         </div>
 
         <button class="btn ${scanType === 'in' ? 'btn-success' : 'btn-danger'} btn-lg" id="btn-scan-register" style="width:100%;">
-          ${scanType === 'in' ? '📥 입고' : '📤 출고'}
+          ${scanType === 'in' ? ' 입고' : ' 출고'}
         </button>
       </div>
     `;
@@ -297,7 +297,7 @@ export function renderScannerPage(container, navigateTo) {
     if (scanHistory.length === 0) {
       listEl.innerHTML = `
         <div class="empty-state" style="padding:24px;">
-          <div class="icon" style="font-size:32px;">📷</div>
+          <div class="icon" style="font-size:32px;"></div>
           <div class="msg" style="font-size:13px;">스캔한 이력이 없습니다</div>
         </div>
       `;
@@ -307,7 +307,7 @@ export function renderScannerPage(container, navigateTo) {
     listEl.innerHTML = scanHistory.slice(0, 20).map(h => `
       <div style="display:flex; align-items:center; gap:10px; padding:8px 0; border-bottom:1px solid var(--border-light);">
         <span class="${h.type === 'in' ? 'type-in' : 'type-out'}" style="font-size:16px;">
-          ${h.type === 'in' ? '📥' : '📤'}
+          ${h.type === 'in' ? '' : ''}
         </span>
         <div style="flex:1;">
           <div style="font-weight:500; font-size:13px;">${h.name}</div>
@@ -331,7 +331,7 @@ export function renderScannerPage(container, navigateTo) {
       <div class="modal" style="max-width:520px;">
         <div class="modal-header">
           <h3 class="modal-title">스캔 등록 확인</h3>
-          <button class="modal-close" data-scan-close>✕</button>
+          <button class="modal-close" data-scan-close></button>
         </div>
         <div class="modal-body">
           <div style="display:grid; gap:10px;">

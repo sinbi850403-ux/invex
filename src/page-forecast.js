@@ -129,7 +129,7 @@ export function renderForecastPage(container, navigateTo) {
     ${forecasts.length === 0 ? `
       <div class="card">
         <div class="empty-state">
-          <div class="icon">🔮</div>
+          <div class="icon"></div>
           <div class="msg">예측할 데이터가 아직 없습니다</div>
           <div class="sub">출고 이력이 쌓이면 자동으로 수요를 예측합니다.<br/>입출고 관리에서 출고를 기록해주세요.</div>
         </div>
@@ -137,7 +137,7 @@ export function renderForecastPage(container, navigateTo) {
     ` : `
       <!-- 예측 테이블 -->
       <div class="card">
-        <div class="card-title">🔮 ${nextYear}년 ${nextMonthLabel} 수요 예측
+        <div class="card-title"> ${nextYear}년 ${nextMonthLabel} 수요 예측
           <span class="card-subtitle">${forecasts.length}개 품목</span>
         </div>
         <div class="table-wrapper">
@@ -201,7 +201,7 @@ export function renderForecastPage(container, navigateTo) {
 
       <!-- 예측 설명 -->
       <div class="card" style="border-left:3px solid var(--accent);">
-        <div class="card-title">💡 예측 알고리즘 설명</div>
+        <div class="card-title"> 예측 알고리즘 설명</div>
         <div style="font-size:13px; color:var(--text-muted); line-height:1.8;">
           <ul style="margin:0; padding-left:16px;">
             <li><strong>가중 이동평균</strong>: 최근 6개월 출고량에 가중치를 부여 (최근일수록 높은 가중치)</li>

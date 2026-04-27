@@ -46,8 +46,8 @@ export function renderLedgerPage(container, navigateTo) {
       </div>
       <div class="page-actions">
         <button class="btn btn-outline" id="btn-ledger-opening">기초재고 입력</button>
-        <button class="btn btn-outline" id="btn-ledger-excel">📊 엑셀 다운로드</button>
-        <button class="btn btn-primary" id="btn-ledger-pdf">📄 PDF 다운로드</button>
+        <button class="btn btn-outline" id="btn-ledger-excel"> 엑셀 다운로드</button>
+        <button class="btn btn-primary" id="btn-ledger-pdf"> PDF 다운로드</button>
       </div>
     </div>
 
@@ -195,7 +195,7 @@ export function renderLedgerPage(container, navigateTo) {
 
     tableArea.innerHTML = `
       <div style="padding:16px 20px; border-bottom:1px solid var(--border); background:var(--bg-card);">
-        <strong>📒 수불대장</strong>
+        <strong> 수불대장</strong>
         <span style="color:var(--text-muted); font-size:13px; margin-left:8px;">${from} ~ ${to} (${rows.length}개 품목)</span>
         <span style="color:var(--text-muted); font-size:12px; margin-left:8px;">정렬: ${getLedgerSortSummary(ledgerSortState)}</span>
       </div>
@@ -303,7 +303,7 @@ function openOpeningModal(container, items, openingOverrides, onComplete) {
     <div class="modal" style="max-width:760px;">
       <div class="modal-header">
         <h3 class="modal-title">기초재고 입력</h3>
-        <button class="modal-close" data-ledger-close>✕</button>
+        <button class="modal-close" data-ledger-close></button>
       </div>
       <div class="modal-body">
         <div style="display:flex; gap:12px; align-items:center; margin-bottom:12px;">

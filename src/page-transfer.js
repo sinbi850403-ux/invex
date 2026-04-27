@@ -25,7 +25,7 @@ export function renderTransferPage(container, navigateTo) {
     </div>
 
     <div class="card">
-      <div class="card-title">📦 재고 이동 등록</div>
+      <div class="card-title"> 재고 이동 등록</div>
       <div style="display:grid; grid-template-columns: 1fr auto 1fr; gap:16px; align-items:end; margin-bottom:16px;">
         <div class="form-group" style="margin:0;">
           <label class="form-label">출발 창고 <span class="required">*</span></label>
@@ -65,11 +65,11 @@ export function renderTransferPage(container, navigateTo) {
         <input class="form-input" id="tf-note" placeholder="이동 사유 (선택)" />
       </div>
 
-      <button class="btn btn-primary btn-lg" id="btn-transfer">🏭 재고 이동 실행</button>
+      <button class="btn btn-primary btn-lg" id="btn-transfer"> 재고 이동 실행</button>
     </div>
 
     <div class="card">
-      <div class="card-title">📋 이동 이력 <span class="card-subtitle">(${transfers.length}건)</span></div>
+      <div class="card-title"> 이동 이력 <span class="card-subtitle">(${transfers.length}건)</span></div>
       ${transfers.length > 0 ? `
         <div class="table-wrapper" style="border:none;">
           <table class="data-table">

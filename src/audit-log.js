@@ -74,7 +74,7 @@ export function renderAuditLogPage(container, navigateTo) {
     <div class="card card-compact" style="margin-bottom:12px;">
       <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
         <div style="flex:1; min-width:180px;">
-          <input class="form-input" id="audit-search" placeholder="🔍 대상, 행위 검색..." />
+          <input class="form-input" id="audit-search" placeholder=" 대상, 행위 검색..." />
         </div>
         <select class="form-select" id="audit-action-filter" style="width:auto;">
           <option value="">전체 행위</option>
@@ -145,7 +145,7 @@ function renderAuditList(logs) {
 
   return Object.entries(groups).map(([date, items]) => `
     <div style="padding:8px 16px; background:var(--bg-main); font-size:12px; font-weight:600; color:var(--text-muted); border-bottom:1px solid var(--border-light);">
-      📅 ${date} (${items.length}건)
+       ${date} (${items.length}건)
     </div>
     ${items.slice(0, 50).map(l => {
       const time = new Date(l.timestamp).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
@@ -172,11 +172,11 @@ function renderAuditList(logs) {
 
 function getActionIcon(action) {
   const map = {
-    '입고': '📥', '출고': '📤', '삭제': '🗑️', '수정': '✏️', '등록': '➕',
-    '재고조정': '🔧', '이동': '🏭', '발주': '📄', '백업': '💾', '복원': '📥',
-    '설정변경': '⚙️', '거래처등록': '🤝', '거래처삭제': '🗑️',
+    '입고': '', '출고': '', '삭제': '', '수정': '', '등록': '',
+    '재고조정': '', '이동': '', '발주': '', '백업': '', '복원': '',
+    '설정변경': '', '거래처등록': '', '거래처삭제': '',
   };
-  return map[action] || '📋';
+  return map[action] || '';
 }
 
 function formatDetail(detail) {

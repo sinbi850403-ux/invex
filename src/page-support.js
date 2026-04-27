@@ -90,7 +90,7 @@ async function loadMyTickets(container, user) {
     if (tickets.length === 0) {
       listEl.innerHTML = `
         <div style="text-align:center; padding:60px 20px;">
-          <div style="font-size:36px; margin-bottom:12px; opacity:0.4;">📭</div>
+          <div style="font-size:36px; margin-bottom:12px; opacity:0.4;"></div>
           <div style="color:var(--text-muted); font-size:14px;">아직 문의 내역이 없습니다.</div>
           <div style="color:var(--text-muted); font-size:12px; margin-top:4px;">궁금한 점이 있으시면 문의를 남겨주세요.</div>
         </div>
@@ -245,7 +245,7 @@ function renderDetailView(container, ticketId, data) {
       ${data.reply ? `
       <div class="card" style="padding:24px; border-left:3px solid #10b981;">
         <div style="display:flex; align-items:center; gap:8px; margin-bottom:12px;">
-          <span style="font-size:13px; font-weight:700;">💬 관리자 답변</span>
+          <span style="font-size:13px; font-weight:700;"> 관리자 답변</span>
           <span style="font-size:11px; color:var(--text-muted);">${replyDate}</span>
         </div>
         <div style="font-size:13px; line-height:1.8; white-space:pre-wrap; color:var(--text-secondary);">${escapeHtml(data.reply)}</div>

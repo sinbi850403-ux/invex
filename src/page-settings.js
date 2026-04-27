@@ -22,7 +22,7 @@ export function renderSettingsPage(container, navigateTo) {
 
     <!-- 사용성 설정 -->
     <div class="card">
-      <div class="card-title">🧭 사용성 설정</div>
+      <div class="card-title"> 사용성 설정</div>
       <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap;">
         <div style="min-width:220px;">
           <div style="font-size:14px; font-weight:600; color:var(--text-primary);">초보자 도움 모드</div>
@@ -40,11 +40,11 @@ export function renderSettingsPage(container, navigateTo) {
 
     <!-- 데이터 관리 -->
     <div class="card">
-      <div class="card-title">🔧 데이터 관리</div>
+      <div class="card-title"> 데이터 관리</div>
       <div style="display:flex; gap:8px; flex-wrap:wrap;">
-        <button class="btn btn-outline" id="btn-clear-tx">🗑️ 입출고 기록 초기화</button>
-        <button class="btn btn-outline" id="btn-clear-transfers">🗑️ 이동 이력 초기화</button>
-        <button class="btn btn-danger" id="btn-clear-all">⚠️ 전체 데이터 초기화</button>
+        <button class="btn btn-outline" id="btn-clear-tx"> 입출고 기록 초기화</button>
+        <button class="btn btn-outline" id="btn-clear-transfers"> 이동 이력 초기화</button>
+        <button class="btn btn-danger" id="btn-clear-all"> 전체 데이터 초기화</button>
       </div>
     </div>
   `;
@@ -86,7 +86,7 @@ export function renderSettingsPage(container, navigateTo) {
   });
 
   container.querySelector('#btn-clear-all').addEventListener('click', async () => {
-    if (!confirm('⚠️ 모든 데이터(품목, 거래, 설정)를 초기화하시겠습니까?\n이 작업은 되돌릴 수 없습니다.')) return;
+    if (!confirm(' 모든 데이터(품목, 거래, 설정)를 초기화하시겠습니까?\n이 작업은 되돌릴 수 없습니다.')) return;
     if (!confirm('정말로 전체 초기화하시겠습니까? (최종 확인)')) return;
     const clearButton = container.querySelector('#btn-clear-all');
     const originalLabel = clearButton?.textContent || '데이터 전체초기화';

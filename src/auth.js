@@ -316,7 +316,7 @@ function renderInlineLoginError(loginBtn, email, errorMsg, showResetAction) {
   if (errorMsg.includes('지연') || errorMsg.includes('불안정') || errorMsg.includes('오프라인') || errorMsg.includes('재시도')) {
     const retryBtn = document.createElement('button');
     retryBtn.style.cssText = 'width:100%; margin-top:8px; padding:10px 16px; background:linear-gradient(135deg, #3b82f6, #6366f1); color:white; border:none; border-radius:8px; cursor:pointer; font-size:13px; font-weight:600;';
-    retryBtn.textContent = '🔄 다시 시도';
+    retryBtn.textContent = ' 다시 시도';
     retryBtn.addEventListener('click', () => {
       document.getElementById('login-error-msg')?.remove();
       document.getElementById('gate-email-login')?.click();
@@ -745,7 +745,7 @@ function showPasswordRecoveryModal() {
                 border-radius:16px; padding:40px 32px; width:100%; max-width:400px;
                 box-shadow:0 24px 80px rgba(0,0,0,0.5); font-family:inherit;">
       <div style="text-align:center; margin-bottom:24px;">
-        <div style="font-size:40px; margin-bottom:10px;">🔑</div>
+        <div style="font-size:40px; margin-bottom:10px;"></div>
         <h2 style="font-size:18px; font-weight:800; color:var(--text,#f0f4f8); margin-bottom:6px;">새 비밀번호 설정</h2>
         <p style="font-size:13px; color:var(--text-muted,#94a3b8);">사용할 새 비밀번호를 입력해 주세요.</p>
       </div>

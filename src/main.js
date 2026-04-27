@@ -448,7 +448,7 @@ function mountPinManagerButton(container, pageName, cards) {
   const triggerBtn = document.createElement('button');
   triggerBtn.type = 'button';
   triggerBtn.className = 'btn btn-outline';
-  triggerBtn.textContent = '⚙️ 보기 설정';
+  triggerBtn.textContent = ' 보기 설정';
   triggerBtn.addEventListener('click', (e) => {
     e.stopPropagation();
     menu.classList.toggle('is-open');
@@ -457,9 +457,9 @@ function mountPinManagerButton(container, pageName, cards) {
   const menu = document.createElement('div');
   menu.className = 'view-settings-menu';
   menu.innerHTML = `
-    <button class="btn btn-ghost btn-sm" data-action="summary">${isSummary ? '📖 설명 펼치기' : '📋 요약만 보기'}</button>
-    <button class="btn btn-ghost btn-sm" data-action="fold-reset">🔄 접기 초기화</button>
-    <button class="btn btn-ghost btn-sm" data-action="pin-manager">📌 고정 관리</button>
+    <button class="btn btn-ghost btn-sm" data-action="summary">${isSummary ? ' 설명 펼치기' : ' 요약만 보기'}</button>
+    <button class="btn btn-ghost btn-sm" data-action="fold-reset"> 접기 초기화</button>
+    <button class="btn btn-ghost btn-sm" data-action="pin-manager"> 고정 관리</button>
   `;
 
   menu.querySelector('[data-action="summary"]').addEventListener('click', () => {
@@ -468,7 +468,7 @@ function mountPinManagerButton(container, pageName, cards) {
     container.classList.toggle('summary-mode', nextMode);
     map[pageName] = nextMode;
     writeStorageMap(SUMMARY_MODE_KEY, map);
-    menu.querySelector('[data-action="summary"]').textContent = nextMode ? '📖 설명 펼치기' : '📋 요약만 보기';
+    menu.querySelector('[data-action="summary"]').textContent = nextMode ? ' 설명 펼치기' : ' 요약만 보기';
     menu.classList.remove('is-open');
   });
 
@@ -494,7 +494,7 @@ function mountPinManagerButton(container, pageName, cards) {
       if (toggle) { toggle.textContent = '접기 ▲'; toggle.setAttribute('aria-expanded', 'true'); }
     });
     container.querySelectorAll('details.fold-card, details.smart-details').forEach(d => { d.open = true; });
-    menu.querySelector('[data-action="summary"]').textContent = '📋 요약만 보기';
+    menu.querySelector('[data-action="summary"]').textContent = ' 요약만 보기';
     menu.classList.remove('is-open');
   });
 
@@ -525,7 +525,7 @@ function openPinManagerModal(container, pageName, cards) {
     <div class="modal" style="max-width:560px;">
       <div class="modal-header">
         <h3 class="modal-title">고정 카드 관리</h3>
-        <button class="modal-close" data-pin-close>✕</button>
+        <button class="modal-close" data-pin-close></button>
       </div>
       <div class="modal-body" id="pin-manager-body"></div>
     </div>
@@ -535,7 +535,7 @@ function openPinManagerModal(container, pageName, cards) {
   if (!pinnedList.length) {
     body.innerHTML = `
       <div class="empty-state" style="padding:24px;">
-        <div class="icon">📌</div>
+        <div class="icon"></div>
         <div class="msg">고정된 카드가 없습니다.</div>
       </div>
     `;
@@ -630,7 +630,7 @@ document.getElementById('plan-display')?.addEventListener('click', () => {
   modal.innerHTML = `
     <div class="modal" style="max-width:600px;">
       <div class="modal-header">
-        <h3>📦 요금제 선택</h3>
+        <h3> 요금제 선택</h3>
         <button class="btn btn-ghost btn-sm" id="plan-pick-close">닫기</button>
       </div>
       <div class="modal-body">
@@ -725,7 +725,7 @@ document.getElementById('btn-theme-toggle')?.addEventListener('click', () => {
   toggleTheme();
   const isDark = document.documentElement.classList.contains('dark-mode');
   const btn = document.getElementById('btn-theme-toggle');
-  if (btn) btn.textContent = isDark ? '☀️' : '🌙';
+  if (btn) btn.textContent = isDark ? '' : '';
   btn?.setAttribute('title', isDark ? '라이트 모드' : '다크 모드');
 });
 

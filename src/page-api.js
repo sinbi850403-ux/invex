@@ -44,8 +44,8 @@ export function renderApiPage(container, navigateTo) {
     <!-- API 키 관리 -->
     <div class="card" style="margin-bottom:20px;">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
-        <div class="card-title" style="margin:0;">🔑 API 키</div>
-        <button class="btn btn-primary btn-sm" id="btn-gen-key">➕ 새 API 키 생성</button>
+        <div class="card-title" style="margin:0;"> API 키</div>
+        <button class="btn btn-primary btn-sm" id="btn-gen-key"> 새 API 키 생성</button>
       </div>
 
       ${apiKeys.length > 0 ? `
@@ -68,9 +68,9 @@ export function renderApiPage(container, navigateTo) {
                       ${k.visible ? escapeHtml(k.key) : `${escapeHtml(k.key.substring(0, 10))}${'•'.repeat(22)}`}
                     </code>
                     <button class="btn btn-ghost btn-sm btn-toggle-key" data-key-id="${escapeHtml(k.id)}" title="키 표시/숨김" style="margin-left:4px;">
-                      ${k.visible ? '🙈' : '👁️'}
+                      ${k.visible ? '' : ''}
                     </button>
-                    <button class="btn btn-ghost btn-sm btn-copy-key" data-key="${escapeHtml(k.key)}" title="복사" style="margin-left:2px;">📋</button>
+                    <button class="btn btn-ghost btn-sm btn-copy-key" data-key="${escapeHtml(k.key)}" title="복사" style="margin-left:2px;"></button>
                   </td>
                   <td><span class="badge ${k.scope === 'full' ? 'badge-warning' : k.scope === 'read' ? 'badge-info' : 'badge-success'}">${k.scope === 'full' ? '전체' : k.scope === 'read' ? '읽기' : '쓰기'}</span></td>
                   <td style="font-size:12px; color:var(--text-muted);">${formatDate(k.createdAt)}</td>
@@ -85,7 +85,7 @@ export function renderApiPage(container, navigateTo) {
         </div>
       ` : `
         <div style="text-align:center; padding:32px; color:var(--text-muted);">
-          <div style="font-size:28px; margin-bottom:8px;">🔑</div>
+          <div style="font-size:28px; margin-bottom:8px;"></div>
           <div>아직 생성된 API 키가 없습니다.</div>
         </div>
       `}
@@ -94,8 +94,8 @@ export function renderApiPage(container, navigateTo) {
     <!-- Webhook 설정 -->
     <div class="card" style="margin-bottom:20px;">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
-        <div class="card-title" style="margin:0;">🔔 Webhook</div>
-        <button class="btn btn-accent btn-sm" id="btn-add-webhook">➕ Webhook 추가</button>
+        <div class="card-title" style="margin:0;"> Webhook</div>
+        <button class="btn btn-accent btn-sm" id="btn-add-webhook"> Webhook 추가</button>
       </div>
 
       ${webhooks.length > 0 ? `
@@ -119,7 +119,7 @@ export function renderApiPage(container, navigateTo) {
                       ${wh.active ? '활성' : '비활성'}
                     </span>
                   </td>
-                  <td><button class="btn btn-ghost btn-sm btn-delete-webhook" data-wh-id="${escapeHtml(wh.id)}">🗑️</button></td>
+                  <td><button class="btn btn-ghost btn-sm btn-delete-webhook" data-wh-id="${escapeHtml(wh.id)}"></button></td>
                 </tr>
               `).join('')}
             </tbody>
@@ -127,7 +127,7 @@ export function renderApiPage(container, navigateTo) {
         </div>
       ` : `
         <div style="text-align:center; padding:32px; color:var(--text-muted);">
-          <div style="font-size:28px; margin-bottom:8px;">🔔</div>
+          <div style="font-size:28px; margin-bottom:8px;"></div>
           <div>등록된 Webhook이 없습니다.</div>
           <div style="font-size:12px; margin-top:4px;">재고 변동, 입출고 발생 등의 이벤트를 외부로 알릴 수 있습니다.</div>
         </div>
@@ -136,7 +136,7 @@ export function renderApiPage(container, navigateTo) {
 
     <!-- API 문서 (간략) -->
     <div class="card">
-      <div class="card-title">📖 API 레퍼런스</div>
+      <div class="card-title"> API 레퍼런스</div>
       <div style="font-size:13px; color:var(--text-muted); margin-bottom:16px;">
         INVEX API를 사용하여 외부 시스템과 재고 데이터를 연동하세요.
       </div>
@@ -144,7 +144,7 @@ export function renderApiPage(container, navigateTo) {
       <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
         <!-- 재고 API -->
         <div style="background:var(--bg-secondary); border-radius:8px; padding:16px;">
-          <div style="font-weight:700; margin-bottom:8px;">📦 재고 관리</div>
+          <div style="font-weight:700; margin-bottom:8px;"> 재고 관리</div>
           <div class="api-endpoint">
             <span class="badge badge-success" style="font-size:10px; min-width:36px; text-align:center;">GET</span>
             <code>/api/v1/items</code>
@@ -169,7 +169,7 @@ export function renderApiPage(container, navigateTo) {
 
         <!-- 입출고 API -->
         <div style="background:var(--bg-secondary); border-radius:8px; padding:16px;">
-          <div style="font-weight:700; margin-bottom:8px;">🔄 입출고</div>
+          <div style="font-weight:700; margin-bottom:8px;"> 입출고</div>
           <div class="api-endpoint">
             <span class="badge badge-success" style="font-size:10px; min-width:36px; text-align:center;">GET</span>
             <code>/api/v1/transactions</code>
@@ -189,7 +189,7 @@ export function renderApiPage(container, navigateTo) {
 
         <!-- 창고 API -->
         <div style="background:var(--bg-secondary); border-radius:8px; padding:16px;">
-          <div style="font-weight:700; margin-bottom:8px;">🏢 창고</div>
+          <div style="font-weight:700; margin-bottom:8px;"> 창고</div>
           <div class="api-endpoint">
             <span class="badge badge-success" style="font-size:10px; min-width:36px; text-align:center;">GET</span>
             <code>/api/v1/warehouses</code>
@@ -204,7 +204,7 @@ export function renderApiPage(container, navigateTo) {
 
         <!-- 거래처 API -->
         <div style="background:var(--bg-secondary); border-radius:8px; padding:16px;">
-          <div style="font-weight:700; margin-bottom:8px;">🤝 거래처</div>
+          <div style="font-weight:700; margin-bottom:8px;"> 거래처</div>
           <div class="api-endpoint">
             <span class="badge badge-success" style="font-size:10px; min-width:36px; text-align:center;">GET</span>
             <code>/api/v1/vendors</code>
@@ -220,7 +220,7 @@ export function renderApiPage(container, navigateTo) {
 
       <!-- 인증 예시 -->
       <div style="margin-top:20px; background:var(--bg-secondary); border-radius:8px; padding:16px;">
-        <div style="font-weight:700; margin-bottom:8px;">🔐 인증 방식</div>
+        <div style="font-weight:700; margin-bottom:8px;"> 인증 방식</div>
         <div style="font-size:13px; color:var(--text-muted); margin-bottom:8px;">
           모든 API 요청에 <code>Authorization</code> 헤더를 포함해야 합니다.
         </div>
@@ -231,7 +231,7 @@ export function renderApiPage(container, navigateTo) {
 
       <!-- 응답 예시 -->
       <div style="margin-top:12px; background:var(--bg-secondary); border-radius:8px; padding:16px;">
-        <div style="font-weight:700; margin-bottom:8px;">📋 응답 예시</div>
+        <div style="font-weight:700; margin-bottom:8px;"> 응답 예시</div>
         <pre style="background:var(--bg-primary); padding:12px; border-radius:6px; font-size:12px; overflow-x:auto; color:var(--text-primary);"><code>{
   "success": true,
   "data": [
@@ -254,8 +254,8 @@ export function renderApiPage(container, navigateTo) {
     <div id="key-modal" class="modal-overlay" style="display:none;">
       <div class="modal" style="max-width:450px;">
         <div class="modal-header">
-          <h3>🔑 API 키 생성</h3>
-          <button class="btn btn-ghost btn-sm" id="key-modal-close">✕</button>
+          <h3> API 키 생성</h3>
+          <button class="btn btn-ghost btn-sm" id="key-modal-close"></button>
         </div>
         <div class="modal-body">
           <div class="form-group">
@@ -265,13 +265,13 @@ export function renderApiPage(container, navigateTo) {
           <div class="form-group">
             <label class="form-label">권한 범위</label>
             <select class="form-select" id="key-scope">
-              <option value="read">📖 읽기 전용 (조회만 가능)</option>
-              <option value="write">✏️ 읽기/쓰기 (조회 + 등록/수정)</option>
-              <option value="full">👑 전체 (삭제 포함)</option>
+              <option value="read"> 읽기 전용 (조회만 가능)</option>
+              <option value="write"> 읽기/쓰기 (조회 + 등록/수정)</option>
+              <option value="full"> 전체 (삭제 포함)</option>
             </select>
           </div>
           <div style="background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.2); border-radius:6px; padding:10px; font-size:12px; color:var(--danger);">
-            ⚠️ API 키 생성 후에는 키 값을 다시 확인할 수 없습니다. 반드시 안전한 곳에 보관하세요.
+             API 키 생성 후에는 키 값을 다시 확인할 수 없습니다. 반드시 안전한 곳에 보관하세요.
           </div>
         </div>
         <div class="modal-footer" style="display:flex; gap:8px; justify-content:flex-end;">
@@ -285,8 +285,8 @@ export function renderApiPage(container, navigateTo) {
     <div id="webhook-modal" class="modal-overlay" style="display:none;">
       <div class="modal" style="max-width:500px;">
         <div class="modal-header">
-          <h3>🔔 Webhook 추가</h3>
-          <button class="btn btn-ghost btn-sm" id="webhook-modal-close">✕</button>
+          <h3> Webhook 추가</h3>
+          <button class="btn btn-ghost btn-sm" id="webhook-modal-close"></button>
         </div>
         <div class="modal-body">
           <div class="form-group">

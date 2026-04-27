@@ -39,25 +39,25 @@ export function renderStocktakePage(container, navigateTo) {
   container.innerHTML = `
     <div class="page-header">
       <div>
-        <h1 class="page-title"><span class="title-icon">📏</span> 재고 실사</h1>
+        <h1 class="page-title"> 재고 실사</h1>
         <div class="page-desc">실제 재고와 시스템 재고를 비교하고 차이를 조정합니다.</div>
       </div>
       <div class="page-actions">
-        <button class="btn btn-outline" id="btn-stocktake-history">🕓 실사 이력 (${stocktakeHistory.length}건)</button>
-        <button class="btn btn-primary" id="btn-start-stocktake">📏 새 실사 시작</button>
+        <button class="btn btn-outline" id="btn-stocktake-history"> 실사 이력 (${stocktakeHistory.length}건)</button>
+        <button class="btn btn-primary" id="btn-start-stocktake"> 새 실사 시작</button>
       </div>
     </div>
     <div id="stocktake-area">
       ${items.length === 0 ? `
         <div class="card">
           <div class="empty-state">
-            <div class="icon">📏</div>
+            <div class="icon"></div>
             <div class="msg">등록된 품목이 없습니다</div>
           </div>
         </div>
       ` : `
         <div class="card">
-          <div class="card-title">🧾 재고 실사표</div>
+          <div class="card-title"> 재고 실사표</div>
           <div style="display:flex; gap:12px; margin-bottom:16px; align-items:center;">
             <div class="form-group" style="margin:0;">
               <label class="form-label">실사일자</label>
@@ -102,8 +102,8 @@ export function renderStocktakePage(container, navigateTo) {
             </div>
           </div>
           <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:16px;">
-            <button class="btn btn-outline" id="btn-st-export">📤 실사표 내보내기</button>
-            <button class="btn btn-danger" id="btn-st-adjust" ${!canAdjust ? 'disabled title="매니저 이상만 재고 조정이 가능합니다." style="opacity:0.4;cursor:not-allowed;"' : ''}>🧮 재고 조정 반영</button>
+            <button class="btn btn-outline" id="btn-st-export"> 실사표 내보내기</button>
+            <button class="btn btn-danger" id="btn-st-adjust" ${!canAdjust ? 'disabled title="매니저 이상만 재고 조정이 가능합니다." style="opacity:0.4;cursor:not-allowed;"' : ''}> 재고 조정 반영</button>
           </div>
         </div>
       `}

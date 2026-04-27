@@ -104,8 +104,8 @@ export function renderVendorsPage(container, navigateTo) {
         <div class="page-desc">공급처·고객사 마스터 데이터를 관리합니다. 발주서·거래명세서·세금계산서에 자동 연동됩니다.</div>
       </div>
       <div class="page-actions">
-        <button class="btn btn-outline" id="btn-vendor-import">📂 엑셀 가져오기</button>
-        <button class="btn btn-outline" id="btn-vendor-export">📥 내보내기</button>
+        <button class="btn btn-outline" id="btn-vendor-import"> 엑셀 가져오기</button>
+        <button class="btn btn-outline" id="btn-vendor-export"> 내보내기</button>
         <button class="btn btn-primary" id="btn-add-vendor">+ 거래처 등록</button>
       </div>
     </div>
@@ -148,7 +148,7 @@ export function renderVendorsPage(container, navigateTo) {
             </button>
           `).join('')}
         </div>
-        <input class="form-input" id="vendor-search" placeholder="🔍 거래처명·코드·담당자·사업자번호 검색..."
+        <input class="form-input" id="vendor-search" placeholder=" 거래처명·코드·담당자·사업자번호 검색..."
           value="${safeAttr(currentKeyword)}" style="flex:1; min-width:200px;" />
       </div>
     </div>
@@ -173,7 +173,7 @@ export function renderVendorsPage(container, navigateTo) {
       <div class="modal" style="max-width:680px; width:95vw;">
         <div class="modal-header">
           <h2 class="modal-title" id="vendor-modal-title">거래처 등록</h2>
-          <button class="modal-close" id="vendor-modal-close">✕</button>
+          <button class="modal-close" id="vendor-modal-close"></button>
         </div>
         <div class="modal-body" id="vendor-modal-body"></div>
       </div>
@@ -258,7 +258,7 @@ function renderVendorTable(vendors, txs, statsMap) {
 
   if (!filtered.length) {
     return `<div class="card" style="padding:48px; text-align:center; color:var(--text-muted);">
-      <div style="font-size:40px; margin-bottom:12px;">🤝</div>
+      <div style="font-size:40px; margin-bottom:12px;"></div>
       <div style="font-size:15px;">${kw ? '검색 결과가 없습니다.' : '등록된 거래처가 없습니다.'}</div>
       ${!kw ? '<div style="margin-top:8px; font-size:13px;">위 [+ 거래처 등록] 버튼을 눌러 추가하세요.</div>' : ''}
     </div>`;
@@ -347,7 +347,7 @@ function openDetail(container, vendor, txs, navigateTo) {
         <h2 style="font-size:20px; font-weight:700; margin:0 0 2px;">${escapeHtml(vendor.name)}</h2>
         ${vendor.ceoName ? `<div style="font-size:13px; color:var(--text-muted);">대표: ${escapeHtml(vendor.ceoName)}</div>` : ''}
       </div>
-      <button id="detail-close" style="background:none; border:none; font-size:20px; cursor:pointer; color:var(--text-muted);">✕</button>
+      <button id="detail-close" style="background:none; border:none; font-size:20px; cursor:pointer; color:var(--text-muted);"></button>
     </div>
 
     <!-- 요약 수치 -->

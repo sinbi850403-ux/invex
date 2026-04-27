@@ -101,7 +101,7 @@ export function renderWeeklyReportPage(container, navigateTo) {
     <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:16px;">
       <!-- TOP 5 출고 -->
       <div class="card">
-        <div class="card-title">📤 이번 주 출고 TOP 5</div>
+        <div class="card-title"> 이번 주 출고 TOP 5</div>
         ${topOutItems.length === 0 ? '<div style="color:var(--text-muted); font-size:13px; padding:12px;">이번 주 출고 내역이 없습니다.</div>' : `
           <div style="display:flex; flex-direction:column; gap:8px;">
             ${topOutItems.map(([name, qty], i) => `
@@ -117,7 +117,7 @@ export function renderWeeklyReportPage(container, navigateTo) {
 
       <!-- TOP 5 입고 -->
       <div class="card">
-        <div class="card-title">📥 이번 주 입고 TOP 5</div>
+        <div class="card-title"> 이번 주 입고 TOP 5</div>
         ${topInItems.length === 0 ? '<div style="color:var(--text-muted); font-size:13px; padding:12px;">이번 주 입고 내역이 없습니다.</div>' : `
           <div style="display:flex; flex-direction:column; gap:8px;">
             ${topInItems.map(([name, qty], i) => `
@@ -135,7 +135,7 @@ export function renderWeeklyReportPage(container, navigateTo) {
     <!-- 재고 부족 알림 -->
     ${lowStockItems.length > 0 ? `
       <div class="card" style="margin-top:16px; border-left:3px solid var(--danger);">
-        <div class="card-title">⚠️ 재고 부족 품목 (${lowStockItems.length}건)</div>
+        <div class="card-title"> 재고 부족 품목 (${lowStockItems.length}건)</div>
         <div class="table-wrapper">
           <table class="data-table">
             <thead>
@@ -151,7 +151,7 @@ export function renderWeeklyReportPage(container, navigateTo) {
                     <td class="text-right" style="color:var(--danger); font-weight:700;">${qty}</td>
                     <td class="text-right">${min}</td>
                     <td style="color:var(--danger); font-size:12px;">
-                      ${qty === 0 ? '🚨 재고 없음' : '⚠️ 부족'}
+                      ${qty === 0 ? ' 재고 없음' : ' 부족'}
                     </td>
                   </tr>
                 `;
@@ -164,13 +164,13 @@ export function renderWeeklyReportPage(container, navigateTo) {
 
     <!-- 요약 -->
     <div class="card" style="margin-top:16px; border-left:3px solid var(--accent);">
-      <div class="card-title">💡 이번 주 인사이트</div>
+      <div class="card-title"> 이번 주 인사이트</div>
       <ul style="font-size:13px; color:var(--text-muted); line-height:2; margin:0; padding-left:16px;">
         ${thisWeekTx.length === 0 ? '<li>이번 주에 등록된 거래가 없습니다. 입출고를 기록해보세요!</li>' : ''}
-        ${salesChange > 20 ? '<li style="color:var(--success);">📈 이번 주 매출이 전주 대비 크게 증가했습니다!</li>' : ''}
-        ${salesChange < -20 ? '<li style="color:var(--danger);">📉 이번 주 매출이 전주 대비 크게 감소했습니다. 원인을 확인해보세요.</li>' : ''}
-        ${lowStockItems.length > 0 ? `<li style="color:var(--danger);">⚠️ ${lowStockItems.length}개 품목의 재고가 부족합니다. 발주를 검토하세요.</li>` : '<li style="color:var(--success);">✅ 재고 부족 품목이 없습니다.</li>'}
-        ${topOutItems.length > 0 ? `<li>🏆 이번 주 가장 많이 출고된 품목: <strong>${topOutItems[0][0]}</strong> (${topOutItems[0][1]}개)</li>` : ''}
+        ${salesChange > 20 ? '<li style="color:var(--success);"> 이번 주 매출이 전주 대비 크게 증가했습니다!</li>' : ''}
+        ${salesChange < -20 ? '<li style="color:var(--danger);"> 이번 주 매출이 전주 대비 크게 감소했습니다. 원인을 확인해보세요.</li>' : ''}
+        ${lowStockItems.length > 0 ? `<li style="color:var(--danger);"> ${lowStockItems.length}개 품목의 재고가 부족합니다. 발주를 검토하세요.</li>` : '<li style="color:var(--success);"> 재고 부족 품목이 없습니다.</li>'}
+        ${topOutItems.length > 0 ? `<li> 이번 주 가장 많이 출고된 품목: <strong>${topOutItems[0][0]}</strong> (${topOutItems[0][1]}개)</li>` : ''}
       </ul>
     </div>
   `;

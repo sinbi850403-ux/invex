@@ -34,7 +34,7 @@ export function renderTaxReportsPage(container, navigateTo) {
 
     <!-- 기간 선택 -->
     <div class="card">
-      <div class="card-title">📅 기간 설정</div>
+      <div class="card-title"> 기간 설정</div>
       <div style="display:flex; gap:16px; flex-wrap:wrap; align-items:flex-end;">
         <div class="form-group" style="margin-bottom:0;">
           <label class="form-label">연도</label>
@@ -70,7 +70,7 @@ export function renderTaxReportsPage(container, navigateTo) {
       <!-- 1. 월마감 보고서 -->
       <div class="card" style="border-top:3px solid var(--accent);">
         <div style="display:flex; align-items:center; gap:10px; margin-bottom:12px;">
-          <span style="font-size:28px;">📊</span>
+          <span style="font-size:28px;"></span>
           <div>
             <div style="font-weight:700; font-size:15px;">월마감 보고서</div>
             <div style="font-size:12px; color:var(--text-muted);">월별 입출고 요약 · 재고 현황 · 매입매출 집계</div>
@@ -82,14 +82,14 @@ export function renderTaxReportsPage(container, navigateTo) {
           <li>거래처별 매입/매출 집계</li>
         </ul>
         <button class="btn btn-primary" style="width:100%;" id="btn-monthly-report">
-          📥 월마감 보고서 다운로드
+           월마감 보고서 다운로드
         </button>
       </div>
 
       <!-- 2. 매입매출장 -->
       <div class="card" style="border-top:3px solid var(--success);">
         <div style="display:flex; align-items:center; gap:10px; margin-bottom:12px;">
-          <span style="font-size:28px;">📒</span>
+          <span style="font-size:28px;"></span>
           <div>
             <div style="font-weight:700; font-size:15px;">매입매출장</div>
             <div style="font-size:12px; color:var(--text-muted);">일자별 매입·매출 내역 (세무사 제출용)</div>
@@ -101,14 +101,14 @@ export function renderTaxReportsPage(container, navigateTo) {
           <li>월합계 자동 계산</li>
         </ul>
         <button class="btn btn-success" style="width:100%;" id="btn-purchase-sales">
-          📥 매입매출장 다운로드
+           매입매출장 다운로드
         </button>
       </div>
 
       <!-- 3. 부가세 기초자료 -->
       <div class="card" style="border-top:3px solid #8b5cf6;">
         <div style="display:flex; align-items:center; gap:10px; margin-bottom:12px;">
-          <span style="font-size:28px;">🧾</span>
+          <span style="font-size:28px;"></span>
           <div>
             <div style="font-weight:700; font-size:15px;">부가세 신고 기초자료</div>
             <div style="font-size:12px; color:var(--text-muted);">매입처별·매출처별 세금계산서 합계표</div>
@@ -120,14 +120,14 @@ export function renderTaxReportsPage(container, navigateTo) {
           <li>부가세 예상 납부세액 자동 계산</li>
         </ul>
         <button class="btn" style="width:100%; background:#8b5cf6; color:#fff;" id="btn-vat-report">
-          📥 부가세 기초자료 다운로드
+           부가세 기초자료 다운로드
         </button>
       </div>
 
       <!-- 4. 재고자산 평가표 -->
       <div class="card" style="border-top:3px solid var(--warning, #d29922);">
         <div style="display:flex; align-items:center; gap:10px; margin-bottom:12px;">
-          <span style="font-size:28px;">📦</span>
+          <span style="font-size:28px;"></span>
           <div>
             <div style="font-weight:700; font-size:15px;">재고자산 평가표</div>
             <div style="font-size:12px; color:var(--text-muted);">기말 재고 가치 평가 (원가법 기준)</div>
@@ -139,14 +139,14 @@ export function renderTaxReportsPage(container, navigateTo) {
           <li>총 재고자산 가치 합계</li>
         </ul>
         <button class="btn" style="width:100%; background:var(--warning, #d29922); color:#fff;" id="btn-inventory-valuation">
-          📥 재고자산 평가표 다운로드
+           재고자산 평가표 다운로드
         </button>
       </div>
 
       <!-- 5. 거래처 원장 -->
       <div class="card" style="border-top:3px solid var(--info, #58a6ff);">
         <div style="display:flex; align-items:center; gap:10px; margin-bottom:12px;">
-          <span style="font-size:28px;">🤝</span>
+          <span style="font-size:28px;"></span>
           <div>
             <div style="font-weight:700; font-size:15px;">거래처 원장</div>
             <div style="font-size:12px; color:var(--text-muted);">거래처별 거래 내역 · 잔액 조회</div>
@@ -158,14 +158,14 @@ export function renderTaxReportsPage(container, navigateTo) {
           <li>미결제·미수금 파악용</li>
         </ul>
         <button class="btn" style="width:100%; background:var(--info, #58a6ff); color:#fff;" id="btn-vendor-ledger">
-          📥 거래처 원장 다운로드
+           거래처 원장 다운로드
         </button>
       </div>
 
       <!-- 6. 전체 서류 일괄 다운로드 -->
       <div class="card" style="border-top:3px solid var(--danger); background:linear-gradient(135deg, rgba(248,81,73,0.05), rgba(139,92,246,0.05));">
         <div style="display:flex; align-items:center; gap:10px; margin-bottom:12px;">
-          <span style="font-size:28px;">📁</span>
+          <span style="font-size:28px;"></span>
           <div>
             <div style="font-weight:700; font-size:15px;">전체 서류 일괄 다운로드</div>
             <div style="font-size:12px; color:var(--text-muted);">위 서류를 모두 포함한 통합 엑셀 파일</div>
@@ -176,7 +176,7 @@ export function renderTaxReportsPage(container, navigateTo) {
           모든 서류를 시트별로 나눈 엑셀 파일을 생성합니다.
         </div>
         <button class="btn btn-danger btn-lg" style="width:100%;" id="btn-all-reports">
-          📥 전체 서류 통합 다운로드
+           전체 서류 통합 다운로드
         </button>
       </div>
     </div>

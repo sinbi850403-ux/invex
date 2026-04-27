@@ -53,7 +53,7 @@ export async function renderLeavesPage(container, navigateTo) {
   emps.forEach(e => empMap[e.id] = e);
 
   container.querySelector('#lv-table').innerHTML = list.length === 0
-    ? '<div class="empty-state"><div class="icon">🏖️</div><div class="msg">신청된 휴가가 없습니다</div></div>'
+    ? '<div class="empty-state"><div class="icon"></div><div class="msg">신청된 휴가가 없습니다</div></div>'
     : `
     <div class="table-wrapper">
       <table class="data-table">
@@ -74,10 +74,10 @@ export async function renderLeavesPage(container, navigateTo) {
               </td>
               <td>
                 ${l.status === '신청' ? `
-                  <button class="btn-icon lv-approve" title="승인">✓</button>
-                  <button class="btn-icon btn-icon-danger lv-reject" title="반려">✕</button>
+                  <button class="btn-icon lv-approve" title="승인"></button>
+                  <button class="btn-icon btn-icon-danger lv-reject" title="반려"></button>
                 ` : ''}
-                <button class="btn-icon btn-icon-danger lv-del" title="삭제">🗑️</button>
+                <button class="btn-icon btn-icon-danger lv-del" title="삭제"></button>
               </td>
             </tr>`;
           }).join('')}
@@ -134,7 +134,7 @@ function openLeaveModal(container, emps) {
   overlay.className = 'modal-overlay';
   overlay.innerHTML = `
     <div class="modal" style="max-width:480px;">
-      <div class="modal-header"><h3>휴가 신청</h3><button class="btn-close">✕</button></div>
+      <div class="modal-header"><h3>휴가 신청</h3><button class="btn-close"></button></div>
       <div class="modal-body">
         <div class="form-group">
           <label>직원 *</label>

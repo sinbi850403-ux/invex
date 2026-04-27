@@ -52,7 +52,7 @@ function openCustomizeModal() {
     <div class="modal sidebar-customize-modal">
       <div class="modal-header">
         <h3 class="modal-title">사이드바 편집</h3>
-        <button class="btn-close" id="sc-close">✕</button>
+        <button class="btn-close" id="sc-close"></button>
       </div>
       <div class="modal-body">
         <p class="sc-desc">표시할 메뉴를 선택하세요. 해제하면 사이드바에서 숨겨집니다.</p>

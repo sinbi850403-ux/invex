@@ -18,7 +18,7 @@ export function renderMappingPage(container, navigateTo) {
       const previewRows = state.mappedData.slice(0, 100);
       container.innerHTML = `
         <div class="page-header">
-          <h1 class="page-title"><span class="title-icon">📋</span> 데이터 확인</h1>
+          <h1 class="page-title"> 데이터 확인</h1>
         </div>
         <div class="alert alert-info">
           업로드 원본(rawData)이 없어 저장된 데이터 기준으로 표시합니다.
@@ -77,7 +77,7 @@ export function renderMappingPage(container, navigateTo) {
       </div>
       <div class="card">
         <div class="empty-state">
-          <div class="icon">📂</div>
+          <div class="icon"></div>
           <div class="msg">먼저 파일을 업로드해 주세요</div>
           <div class="sub">엑셀 파일을 올리면 자동으로 이 화면에서 데이터를 확인할 수 있습니다.</div>
           <br/>
@@ -109,13 +109,13 @@ export function renderMappingPage(container, navigateTo) {
     </div>
 
     <div class="steps">
-      <div class="step done"><span class="step-num">✓</span> 파일 올리기</div>
+      <div class="step done"><span class="step-num"></span> 파일 올리기</div>
       <div class="step active"><span class="step-num">2</span> 컬럼 매핑</div>
       <div class="step"><span class="step-num">3</span> 확인 완료</div>
     </div>
 
     <div class="alert alert-info">
-      📄 <strong>${state.fileName}</strong> | ${dataRows.length}건의 데이터
+       <strong>${state.fileName}</strong> | ${dataRows.length}건의 데이터
       ${state.sheetNames.length > 1 ? `
         | 시트:
         <select id="sheet-select" class="filter-select" style="margin-left:4px;">
@@ -157,7 +157,7 @@ export function renderMappingPage(container, navigateTo) {
 
     <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:16px;">
       <button class="btn btn-outline" id="btn-back">← 다시 업로드</button>
-      <button class="btn btn-success btn-lg" id="btn-confirm">✓ 매핑 확인 완료</button>
+      <button class="btn btn-success btn-lg" id="btn-confirm"> 매핑 확인 완료</button>
     </div>
   `;
 

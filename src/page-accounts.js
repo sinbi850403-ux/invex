@@ -63,7 +63,7 @@ export function renderAccountsPage(container, navigateTo) {
         <div class="page-desc">판매 미수금과 구매 미지급금을 통합 관리하고 정산 처리합니다.</div>
       </div>
       <div class="page-actions">
-        <button class="btn btn-outline" id="btn-accounts-export">📥 내보내기</button>
+        <button class="btn btn-outline" id="btn-accounts-export"> 내보내기</button>
         <button class="btn btn-primary" id="btn-add-account">+ 수동 전표</button>
       </div>
     </div>
@@ -73,12 +73,12 @@ export function renderAccountsPage(container, navigateTo) {
       <div class="stat-card">
         <div class="stat-label">미수금 (받을 돈)</div>
         <div class="stat-value text-success">₩${fmt(totalReceivable)}</div>
-        <div class="stat-sub">${overdueR.length ? `<span style="color:var(--danger);">⚠️ 연체 ${overdueR.length}건</span>` : '연체 없음'}</div>
+        <div class="stat-sub">${overdueR.length ? `<span style="color:var(--danger);"> 연체 ${overdueR.length}건</span>` : '연체 없음'}</div>
       </div>
       <div class="stat-card">
         <div class="stat-label">미지급금 (줄 돈)</div>
         <div class="stat-value text-danger">₩${fmt(totalPayable)}</div>
-        <div class="stat-sub">${overdueP.length ? `<span style="color:var(--danger);">⚠️ 연체 ${overdueP.length}건</span>` : '연체 없음'}</div>
+        <div class="stat-sub">${overdueP.length ? `<span style="color:var(--danger);"> 연체 ${overdueP.length}건</span>` : '연체 없음'}</div>
       </div>
       <div class="stat-card">
         <div class="stat-label">순 채권 (미수 − 미지급)</div>
@@ -115,7 +115,7 @@ export function renderAccountsPage(container, navigateTo) {
       <div class="modal" style="max-width:520px;">
         <div class="modal-header">
           <h2 class="modal-title">수동 전표 등록</h2>
-          <button class="modal-close" id="account-modal-close">✕</button>
+          <button class="modal-close" id="account-modal-close"></button>
         </div>
         <div class="modal-body" id="account-modal-body"></div>
       </div>
@@ -126,7 +126,7 @@ export function renderAccountsPage(container, navigateTo) {
       <div class="modal" style="max-width:440px;">
         <div class="modal-header">
           <h2 class="modal-title" id="settle-modal-title">정산 처리</h2>
-          <button class="modal-close" id="settle-modal-close">✕</button>
+          <button class="modal-close" id="settle-modal-close"></button>
         </div>
         <div class="modal-body" id="settle-modal-body"></div>
       </div>
@@ -190,7 +190,7 @@ function renderAgingSummary(receivables, payables) {
 
   return `
     <div class="card" style="margin-bottom:0;">
-      <div class="card-title">📊 미수금 에이징 분석</div>
+      <div class="card-title"> 미수금 에이징 분석</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
         ${buckets.map((b, i) => {
           const items = pending.filter(b.fn);
@@ -223,7 +223,7 @@ function renderEntryTable(list, label, isSettled = false) {
 
   if (!sorted.length) return `
     <div class="empty-state">
-      <div class="icon">✅</div>
+      <div class="icon"></div>
       <div class="msg">${label} 내역이 없습니다</div>
     </div>
   `;
@@ -269,7 +269,7 @@ function renderEntryTable(list, label, isSettled = false) {
                 </td>
                 <td>
                   ${e.settled
-                    ? `<div style="font-size:11px;color:#16a34a;">✅ ${e.settledDate||''}<br/><span style="color:var(--text-muted);">${e.paymentMethod||''}</span></div>`
+                    ? `<div style="font-size:11px;color:#16a34a;"> ${e.settledDate||''}<br/><span style="color:var(--text-muted);">${e.paymentMethod||''}</span></div>`
                     : `<span style="color:var(--danger);font-size:11px;font-weight:600;">미정산</span>`}
                 </td>
                 <td>
@@ -309,7 +309,7 @@ function renderVendorSummary(entries) {
 
   const rows = Object.entries(byVendor).sort((a, b) => (b[1].receivable + b[1].payable) - (a[1].receivable + a[1].payable));
 
-  if (!rows.length) return `<div class="empty-state"><div class="icon">📊</div><div class="msg">집계할 데이터가 없습니다</div></div>`;
+  if (!rows.length) return `<div class="empty-state"><div class="icon"></div><div class="msg">집계할 데이터가 없습니다</div></div>`;
 
   return `
     <div class="table-wrapper">
@@ -345,7 +345,7 @@ function renderVendorSummary(entries) {
 }
 
 function renderInvoiceTable(invoices) {
-  if (!invoices.length) return `<div class="empty-state"><div class="icon">📄</div><div class="msg">세금계산서가 없습니다</div></div>`;
+  if (!invoices.length) return `<div class="empty-state"><div class="icon"></div><div class="msg">세금계산서가 없습니다</div></div>`;
 
   const sorted = [...invoices].sort((a, b) => (b.issueDate||'').localeCompare(a.issueDate||''));
   return `
@@ -399,7 +399,7 @@ function renderInvoiceTable(invoices) {
 function openSettleModal(container, entry, navigateTo) {
   const modal = container.querySelector('#settle-modal');
   const body  = container.querySelector('#settle-modal-body');
-  container.querySelector('#settle-modal-title').textContent = entry.type === 'receivable' ? '💰 미수금 정산' : '💸 미지급금 정산';
+  container.querySelector('#settle-modal-title').textContent = entry.type === 'receivable' ? ' 미수금 정산' : ' 미지급금 정산';
 
   body.innerHTML = `
     <div style="margin-bottom:16px;padding:12px;background:var(--bg-input,#1e2635);border-radius:8px;font-size:13px;">
@@ -431,7 +431,7 @@ function openSettleModal(container, entry, navigateTo) {
 
     <div style="display:flex;justify-content:flex-end;gap:8px;">
       <button class="btn btn-outline" id="settle-cancel-btn">취소</button>
-      <button class="btn btn-primary" id="settle-confirm-btn">✅ 정산 완료</button>
+      <button class="btn btn-primary" id="settle-confirm-btn"> 정산 완료</button>
     </div>
   `;
 

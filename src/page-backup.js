@@ -53,7 +53,7 @@ export function renderBackupPage(container, navigateTo) {
       <!-- 백업 -->
       <div class="card" style="border-top:3px solid var(--success);">
         <div style="text-align:center; padding:16px 0;">
-          <div style="font-size:48px; margin-bottom:12px;">📤</div>
+          <div style="font-size:48px; margin-bottom:12px;"></div>
           <h3 style="font-size:18px; font-weight:700; margin-bottom:8px;">데이터 백업</h3>
           <p style="font-size:13px; color:var(--text-muted); margin-bottom:20px;">
             현재 모든 데이터를 JSON 파일로 다운로드합니다.<br/>
@@ -67,7 +67,7 @@ export function renderBackupPage(container, navigateTo) {
           ` : ''}
 
           <button class="btn btn-success btn-lg" style="width:100%;" id="btn-backup">
-            📥 전체 백업 다운로드
+             전체 백업 다운로드
           </button>
           
           <div style="margin-top:12px;">
@@ -81,18 +81,18 @@ export function renderBackupPage(container, navigateTo) {
       <!-- 복원 -->
       <div class="card" style="border-top:3px solid var(--accent);">
         <div style="text-align:center; padding:16px 0;">
-          <div style="font-size:48px; margin-bottom:12px;">📥</div>
+          <div style="font-size:48px; margin-bottom:12px;"></div>
           <h3 style="font-size:18px; font-weight:700; margin-bottom:8px;">데이터 복원</h3>
           <p style="font-size:13px; color:var(--text-muted); margin-bottom:20px;">
             이전에 백업한 JSON 파일을 업로드하여 데이터를 복원합니다.<br/>
-            <strong style="color:var(--danger);">⚠️ 복원 시 현재 데이터가 대체됩니다.</strong>
+            <strong style="color:var(--danger);"> 복원 시 현재 데이터가 대체됩니다.</strong>
           </p>
 
           <div id="drop-zone" style="
             border:2px dashed var(--border); border-radius:12px; padding:32px 16px;
             cursor:pointer; transition:all 0.2s; margin-bottom:16px;
           ">
-            <div style="font-size:24px; margin-bottom:8px;">📂</div>
+            <div style="font-size:24px; margin-bottom:8px;"></div>
             <div style="font-size:13px; color:var(--text-muted);">
               백업 파일을 여기에 드래그하거나<br/>클릭하여 선택하세요
             </div>
@@ -105,7 +105,7 @@ export function renderBackupPage(container, navigateTo) {
 
     <!-- 백업 팁 -->
     <div class="card" style="border-left:3px solid var(--accent);">
-      <div class="card-title">💡 백업 가이드</div>
+      <div class="card-title"> 백업 가이드</div>
       <div style="font-size:13px; color:var(--text-muted); line-height:1.8;">
         <ul style="margin:0; padding-left:16px;">
           <li>매주 1회 이상 정기 백업을 권장합니다</li>
@@ -215,7 +215,7 @@ function restoreFromFile(file, container, navigateTo) {
       const txCount = (data.transactions || []).length;
       const summary = `품목 ${itemCount}건, 거래이력 ${txCount}건`;
 
-      if (!confirm(`다음 데이터를 복원하시겠습니까?\n\n${summary}\n\n⚠️ 현재 데이터가 대체됩니다.`)) return;
+      if (!confirm(`다음 데이터를 복원하시겠습니까?\n\n${summary}\n\n 현재 데이터가 대체됩니다.`)) return;
 
       setState(data);
       showToast(`복원 완료! (${summary})`, 'success');

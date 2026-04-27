@@ -94,7 +94,7 @@ function renderTable(container, all) {
 
   const wrap = container.querySelector('#emp-table-wrap');
   if (rows.length === 0) {
-    wrap.innerHTML = `<div class="empty-state"><div class="icon">👥</div><div class="msg">등록된 직원이 없습니다</div></div>`;
+    wrap.innerHTML = `<div class="empty-state"><div class="icon"></div><div class="msg">등록된 직원이 없습니다</div></div>`;
     return;
   }
 
@@ -124,11 +124,11 @@ function renderTable(container, all) {
               <td class="text-right">${fmtWon(e.baseSalary)}</td>
               <td style="font-family:monospace; font-size:12px;">
                 ${e.rrnMask || '-'}
-                ${e.rrnMask ? `<button class="btn-icon emp-view-rrn" data-id="${safeAttr(e.id)}" title="평문 조회(admin)">🔓</button>` : ''}
+                ${e.rrnMask ? `<button class="btn-icon emp-view-rrn" data-id="${safeAttr(e.id)}" title="평문 조회(admin)"></button>` : ''}
               </td>
               <td>
-                <button class="btn-icon emp-edit" data-id="${safeAttr(e.id)}">✏️</button>
-                <button class="btn-icon btn-icon-danger emp-del" data-id="${safeAttr(e.id)}">✕</button>
+                <button class="btn-icon emp-edit" data-id="${safeAttr(e.id)}"></button>
+                <button class="btn-icon btn-icon-danger emp-del" data-id="${safeAttr(e.id)}"></button>
               </td>
             </tr>
           `).join('')}
@@ -176,7 +176,7 @@ function openModal(container, emp) {
     <div class="modal" style="max-width:680px;">
       <div class="modal-header">
         <h3>${isEdit ? '직원 수정' : '직원 추가'}</h3>
-        <button class="btn-close">✕</button>
+        <button class="btn-close"></button>
       </div>
       <div class="modal-body">
         <div class="form-row">

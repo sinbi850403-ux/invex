@@ -159,7 +159,7 @@ export async function renderAdminPage(container, navigateTo) {
     container.innerHTML = `
       <div style="display:flex; align-items:center; justify-content:center; min-height:60vh; text-align:center;">
         <div>
-          <div style="font-size:64px; margin-bottom:16px;">🚫</div>
+          <div style="font-size:64px; margin-bottom:16px;"></div>
           <h2 style="font-size:20px; font-weight:700; margin-bottom:8px;">접근 권한이 없습니다</h2>
           <p style="color:var(--text-muted);">총관리자만 접근할 수 있는 페이지입니다.</p>
         </div>
@@ -172,7 +172,7 @@ export async function renderAdminPage(container, navigateTo) {
   container.innerHTML = `
     <div style="display:flex; align-items:center; justify-content:center; min-height:40vh;">
       <div style="text-align:center;">
-        <div style="font-size:32px; animation:spin 1s linear infinite;">⚙️</div>
+        <div style="font-size:32px; animation:spin 1s linear infinite;"></div>
         <p style="margin-top:12px; color:var(--text-muted);">관리자 데이터를 불러오는 중...</p>
       </div>
     </div>
@@ -217,25 +217,25 @@ export async function renderAdminPage(container, navigateTo) {
     <div class="page-header" style="margin-bottom:20px;">
       <div>
         <h1 class="page-title" style="display:flex; align-items:center; gap:10px;">
-          <span style="background:linear-gradient(135deg,#f59e0b,#ef4444); padding:8px; border-radius:10px; font-size:20px; line-height:1;">👑</span>
+          <span style="background:linear-gradient(135deg,#f59e0b,#ef4444); padding:8px; border-radius:10px; font-size:20px; line-height:1;"></span>
           총관리자 대시보드
         </h1>
         <div class="page-desc">INVEX 서비스 전체 관리 · ${user?.email || ''}</div>
       </div>
       <div style="display:flex; gap:8px; align-items:center;">
         <span style="font-size:11px; color:var(--text-muted);">마지막 새로고침: ${new Date().toLocaleTimeString('ko-KR')}</span>
-        <button class="btn btn-ghost btn-sm" id="btn-admin-refresh" style="gap:4px;">🔄 새로고침</button>
+        <button class="btn btn-ghost btn-sm" id="btn-admin-refresh" style="gap:4px;"> 새로고침</button>
       </div>
     </div>
 
     <!-- KPI 카드 (6열) -->
     <div style="display:grid; grid-template-columns:repeat(6, 1fr); gap:12px; margin-bottom:20px;">
-      ${kpiCard('👥', '전체 사용자', totalUsers, '명', '#3b82f6', `오늘 +${todaySignups}`)}
-      ${kpiCard('🟢', '활성 사용자', activeUsers, '명 (7일)', '#22c55e', `${totalUsers > 0 ? Math.round((activeUsers/totalUsers)*100) : 0}% 활동`)}
-      ${kpiCard('💎', '유료 전환율', conversionRate, '%', '#8b5cf6', `Pro ${proUsers} / ENT ${entUsers}`)}
-      ${kpiCard('💰', '예상 월 매출', '₩' + monthlyRevenue.toLocaleString(), '', '#f59e0b', '월간')}
-      ${kpiCard('📦', '등록 품목', totalItems.toLocaleString(), '건', '#06b6d4', '전체')}
-      ${kpiCard('📋', '총 거래', totalTransactions.toLocaleString(), '건', '#ec4899', '누적')}
+      ${kpiCard('', '전체 사용자', totalUsers, '명', '#3b82f6', `오늘 +${todaySignups}`)}
+      ${kpiCard('', '활성 사용자', activeUsers, '명 (7일)', '#22c55e', `${totalUsers > 0 ? Math.round((activeUsers/totalUsers)*100) : 0}% 활동`)}
+      ${kpiCard('', '유료 전환율', conversionRate, '%', '#8b5cf6', `Pro ${proUsers} / ENT ${entUsers}`)}
+      ${kpiCard('', '예상 월 매출', '₩' + monthlyRevenue.toLocaleString(), '', '#f59e0b', '월간')}
+      ${kpiCard('', '등록 품목', totalItems.toLocaleString(), '건', '#06b6d4', '전체')}
+      ${kpiCard('', '총 거래', totalTransactions.toLocaleString(), '건', '#ec4899', '누적')}
     </div>
 
     <!-- 메인 2단 레이아웃 -->
@@ -245,18 +245,18 @@ export async function renderAdminPage(container, navigateTo) {
       <div class="card" style="padding:0; overflow:hidden;">
         <div style="padding:16px 20px; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border);">
           <div style="display:flex; align-items:center; gap:10px;">
-            <span style="font-size:16px;">👥</span>
+            <span style="font-size:16px;"></span>
             <div>
               <div style="font-weight:700; font-size:14px;">사용자 관리</div>
               <div style="font-size:11px; color:var(--text-muted);">총 ${totalUsers}명 등록</div>
             </div>
           </div>
-          <input class="form-input" id="admin-user-search" placeholder="🔍 이름 / 이메일 검색" style="width:200px; font-size:12px; padding:6px 10px; border-radius:6px;" />
+          <input class="form-input" id="admin-user-search" placeholder=" 이름 / 이메일 검색" style="width:200px; font-size:12px; padding:6px 10px; border-radius:6px;" />
         </div>
         <div style="max-height:500px; overflow-y:auto; padding:12px; display:flex; flex-direction:column; gap:8px;" id="admin-user-cards">
           ${allUsers.length > 0 ? allUsers.map(u => renderUserCard(u)).join('') : `
             <div style="text-align:center; padding:48px; color:var(--text-muted);">
-              <div style="font-size:36px; margin-bottom:12px;">👥</div>
+              <div style="font-size:36px; margin-bottom:12px;"></div>
               <div style="font-size:14px; font-weight:600;">아직 가입된 사용자가 없습니다</div>
             </div>
           `}
@@ -270,7 +270,7 @@ export async function renderAdminPage(container, navigateTo) {
         <!-- 요금제 분포 차트 -->
         <div class="card">
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
-            <div style="font-weight:700; font-size:14px;">📊 요금제 분포</div>
+            <div style="font-weight:700; font-size:14px;"> 요금제 분포</div>
           </div>
           ${totalUsers > 0 ? `
             <div style="display:flex; gap:6px; height:12px; border-radius:6px; overflow:hidden; margin-bottom:14px;">
@@ -279,9 +279,9 @@ export async function renderAdminPage(container, navigateTo) {
               ${entUsers > 0 ? `<div style="flex:${entUsers}; background:#8b5cf6;" title="Enterprise ${entUsers}명"></div>` : ''}
             </div>
             <div style="display:flex; flex-direction:column; gap:8px; font-size:12px;">
-              ${planRow('🆓', 'Free', freeUsers, totalUsers, '#64748b')}
+              ${planRow('', 'Free', freeUsers, totalUsers, '#64748b')}
               ${planRow('⭐', 'Pro', proUsers, totalUsers, '#3b82f6')}
-              ${planRow('🏢', 'Enterprise', entUsers, totalUsers, '#8b5cf6')}
+              ${planRow('', 'Enterprise', entUsers, totalUsers, '#8b5cf6')}
             </div>
           ` : `
             <div style="text-align:center; padding:20px; color:var(--text-muted); font-size:12px;">데이터 없음</div>
@@ -290,12 +290,12 @@ export async function renderAdminPage(container, navigateTo) {
 
         <!-- 최근 활동 -->
         <div class="card">
-          <div style="font-weight:700; font-size:14px; margin-bottom:14px;">🕐 최근 활동</div>
+          <div style="font-weight:700; font-size:14px; margin-bottom:14px;"> 최근 활동</div>
           <div style="display:flex; flex-direction:column; gap:2px; max-height:220px; overflow-y:auto;">
             ${recentUsers.length > 0 ? recentUsers.map(u => `
               <div style="display:flex; align-items:center; gap:8px; padding:8px 0; border-bottom:1px solid var(--border); font-size:12px;">
                 <div style="width:28px; height:28px; border-radius:50%; background:var(--bg-secondary); display:flex; align-items:center; justify-content:center; font-size:11px; flex-shrink:0;">
-                  ${u.photoURL ? `<img src="${u.photoURL}" style="width:28px; height:28px; border-radius:50%;" />` : u.name?.charAt(0) || '👤'}
+                  ${u.photoURL ? `<img src="${u.photoURL}" style="width:28px; height:28px; border-radius:50%;" />` : u.name?.charAt(0) || ''}
                 </div>
                 <div style="flex:1; min-width:0;">
                   <div style="font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${u.name || '사용자'}</div>
@@ -317,7 +317,7 @@ export async function renderAdminPage(container, navigateTo) {
       <!-- 공지사항 -->
       <div class="card">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
-          <div style="font-weight:700; font-size:14px;">📢 공지사항</div>
+          <div style="font-weight:700; font-size:14px;"> 공지사항</div>
           <button class="btn btn-ghost btn-sm" id="btn-add-notice" style="font-size:11px;">+ 작성</button>
         </div>
         ${notices.length > 0 ? notices.slice(0, 4).map(n => `
@@ -337,7 +337,7 @@ export async function renderAdminPage(container, navigateTo) {
 
       <!-- 최근 결제 -->
       <div class="card">
-        <div style="font-weight:700; font-size:14px; margin-bottom:14px;">💳 최근 결제</div>
+        <div style="font-weight:700; font-size:14px; margin-bottom:14px;"> 최근 결제</div>
         ${paymentHistory.length > 0 ? paymentHistory.slice(0, 5).map(p => `
           <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid var(--border); font-size:12px;">
             <div>
@@ -356,7 +356,7 @@ export async function renderAdminPage(container, navigateTo) {
 
       <!-- 시스템 정보 -->
       <div class="card">
-        <div style="font-weight:700; font-size:14px; margin-bottom:14px;">🖥️ 시스템 정보</div>
+        <div style="font-weight:700; font-size:14px; margin-bottom:14px;"> 시스템 정보</div>
         <div style="font-size:12px; line-height:2;">
           ${sysRow('도메인', '<a href="https://invex.io.kr" target="_blank" style="color:var(--accent);">invex.io.kr</a>')}
           ${sysRow('호스팅', 'Vercel Edge')}
@@ -373,13 +373,13 @@ export async function renderAdminPage(container, navigateTo) {
     <div class="card" style="padding:0; overflow:hidden; margin-bottom:20px;">
       <div style="padding:16px 20px; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border);">
         <div style="display:flex; align-items:center; gap:10px;">
-          <span style="font-size:16px;">💬</span>
+          <span style="font-size:16px;"></span>
           <div>
             <div style="font-weight:700; font-size:14px;">고객 문의 관리</div>
             <div style="font-size:11px; color:var(--text-muted);">접수된 문의에 답변하세요</div>
           </div>
         </div>
-        <button class="btn btn-ghost btn-sm" id="btn-load-tickets">🔄 새로고침</button>
+        <button class="btn btn-ghost btn-sm" id="btn-load-tickets"> 새로고침</button>
       </div>
       <div id="admin-tickets-area" style="max-height:500px; overflow-y:auto; padding:16px;">
         <div style="text-align:center; padding:20px; color:var(--text-muted); font-size:13px;">불러오는 중...</div>
@@ -495,7 +495,7 @@ function renderUserRow(u) {
       </td>
       <td>
         <div style="font-size:11px; ${isOnline ? 'color:#22c55e; font-weight:600;' : 'color:var(--text-muted);'}">
-          ${isOnline ? '🟢 온라인' : timeAgo(u.lastLogin)}
+          ${isOnline ? ' 온라인' : timeAgo(u.lastLogin)}
         </div>
       </td>
       <td>
@@ -509,8 +509,8 @@ function renderUserRow(u) {
       </td>
       <td style="text-align:center;">
         <div style="display:flex; gap:2px; justify-content:center;">
-          <button class="btn btn-ghost btn-sm" onclick="window._invexAdminAction(this)" data-action="detail" data-uid="${u.id}" title="상세 보기" style="font-size:12px; padding:4px 6px;">👁️</button>
-          <button class="btn btn-ghost btn-sm" onclick="window._invexAdminAction(this)" data-action="plan" data-uid="${u.id}" title="요금제 변경" style="font-size:12px; padding:4px 6px;">💎</button>
+          <button class="btn btn-ghost btn-sm" onclick="window._invexAdminAction(this)" data-action="detail" data-uid="${u.id}" title="상세 보기" style="font-size:12px; padding:4px 6px;"></button>
+          <button class="btn btn-ghost btn-sm" onclick="window._invexAdminAction(this)" data-action="plan" data-uid="${u.id}" title="요금제 변경" style="font-size:12px; padding:4px 6px;"></button>
           <button class="btn btn-ghost btn-sm" onclick="window._invexAdminAction(this)" data-action="suspend" data-uid="${u.id}" data-status="${u.status || 'active'}" title="${isActive ? '정지' : '활성화'}" style="font-size:12px; padding:4px 6px;">
             ${isActive ? '● 활성' : '● 정지'}
           </button>
@@ -553,7 +553,7 @@ function renderUserCard(u) {
         <div style="display:flex; align-items:center; gap:6px; margin-top:4px;">
           <span style="font-size:10px; padding:1px 6px; border-radius:4px; background:${planInfo.color}15; color:${planInfo.color}; font-weight:600;">${planInfo.icon} ${planId.toUpperCase()}</span>
           <span style="font-size:10px; padding:1px 6px; border-radius:4px; background:${isActive ? '#22c55e15' : '#ef444415'}; color:${isActive ? '#22c55e' : '#ef4444'}; font-weight:600;">${isActive ? '● 활성' : '● 정지'}</span>
-          ${isOnline ? `<span style="font-size:10px; color:#22c55e;">🟢 온라인</span>` : `<span style="font-size:10px; color:var(--text-muted);">${timeAgo(u.lastLogin)}</span>`}
+          ${isOnline ? `<span style="font-size:10px; color:#22c55e;"> 온라인</span>` : `<span style="font-size:10px; color:var(--text-muted);">${timeAgo(u.lastLogin)}</span>`}
         </div>
       </div>
 
@@ -561,13 +561,13 @@ function renderUserCard(u) {
       <div style="display:flex; gap:6px; flex-shrink:0;">
         <button type="button" onclick="window._invexAdminAction(this)" data-action="detail" data-uid="${u.id}"
           style="padding:6px 10px; border-radius:6px; border:1px solid var(--border); background:var(--bg-primary); cursor:pointer; font-size:12px; color:var(--text-primary); white-space:nowrap;"
-          title="상세 보기">👁 상세</button>
+          title="상세 보기"> 상세</button>
         <button type="button" onclick="window._invexAdminAction(this)" data-action="plan" data-uid="${u.id}"
           style="padding:6px 10px; border-radius:6px; border:1px solid var(--border); background:var(--bg-primary); cursor:pointer; font-size:12px; color:var(--text-primary); white-space:nowrap;"
-          title="요금제 변경">💎 요금제</button>
+          title="요금제 변경"> 요금제</button>
         <button type="button" onclick="window._invexAdminAction(this)" data-action="suspend" data-uid="${u.id}" data-status="${u.status || 'active'}"
           style="padding:6px 10px; border-radius:6px; border:1px solid ${isActive ? '#ef444430' : '#22c55e30'}; background:${isActive ? '#ef444410' : '#22c55e10'}; cursor:pointer; font-size:12px; color:${isActive ? '#ef4444' : '#22c55e'}; white-space:nowrap;"
-          title="${isActive ? '정지' : '활성화'}">${isActive ? '🚫 정지' : '✅ 활성화'}</button>
+          title="${isActive ? '정지' : '활성화'}">${isActive ? ' 정지' : ' 활성화'}</button>
       </div>
     </div>
   `;
@@ -611,7 +611,7 @@ function showUserDetailModal(u) {
             <div style="font-size:12px; color:var(--text-muted);">${u.email || '-'}</div>
           </div>
         </div>
-        <button class="btn btn-ghost btn-sm modal-close">✕</button>
+        <button class="btn btn-ghost btn-sm modal-close"></button>
       </div>
       <div class="modal-body" style="padding:20px;">
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; font-size:13px;">
@@ -621,11 +621,11 @@ function showUserDetailModal(u) {
           </div>
           <div style="padding:12px; background:var(--bg-secondary); border-radius:8px;">
             <div style="font-size:10px; color:var(--text-muted); margin-bottom:4px;">상태</div>
-            <div style="font-weight:700; color:${u.status === 'suspended' ? '#ef4444' : '#22c55e'};">${u.status === 'suspended' ? '🚫 정지' : '✅ 활성'}</div>
+            <div style="font-weight:700; color:${u.status === 'suspended' ? '#ef4444' : '#22c55e'};">${u.status === 'suspended' ? ' 정지' : ' 활성'}</div>
           </div>
           <div style="padding:12px; background:var(--bg-secondary); border-radius:8px;">
             <div style="font-size:10px; color:var(--text-muted); margin-bottom:4px;">역할</div>
-            <div style="font-weight:700;">${u.role === 'admin' ? '👑 관리자' : u.role === 'manager' ? '📋 매니저' : '👤 일반'}</div>
+            <div style="font-weight:700;">${u.role === 'admin' ? ' 관리자' : u.role === 'manager' ? ' 매니저' : ' 일반'}</div>
           </div>
           <div style="padding:12px; background:var(--bg-secondary); border-radius:8px;">
             <div style="font-size:10px; color:var(--text-muted); margin-bottom:4px;">UID</div>
@@ -643,7 +643,7 @@ function showUserDetailModal(u) {
           </div>
           <div style="display:flex; justify-content:space-between;">
             <span style="color:var(--text-muted);">접속 방법</span>
-            <strong>${u.photoURL ? '🌐 Google' : '📧 이메일'}</strong>
+            <strong>${u.photoURL ? ' Google' : ' 이메일'}</strong>
           </div>
         </div>
       </div>
@@ -664,8 +664,8 @@ function showPlanChangeModal(user, container, navigateTo) {
   modal.innerHTML = `
     <div class="modal" style="max-width:500px;">
       <div class="modal-header">
-        <h3>💎 요금제 변경 — ${user.name || '사용자'}</h3>
-        <button class="btn btn-ghost btn-sm modal-close">✕</button>
+        <h3> 요금제 변경 — ${user.name || '사용자'}</h3>
+        <button class="btn btn-ghost btn-sm modal-close"></button>
       </div>
       <div class="modal-body">
         <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:12px;">
@@ -679,7 +679,7 @@ function showPlanChangeModal(user, container, navigateTo) {
               <div style="font-size:24px;">${p.icon}</div>
               <div style="font-size:13px; font-weight:700; margin:4px 0;">${p.name}</div>
               <div style="font-size:15px; font-weight:800; color:${p.color};">${p.price}</div>
-              ${(user.plan || 'free') === p.id ? '<div style="font-size:10px; color:var(--success); margin-top:4px;">✓ 현재</div>' : ''}
+              ${(user.plan || 'free') === p.id ? '<div style="font-size:10px; color:var(--success); margin-top:4px;"> 현재</div>' : ''}
             </div>
           `).join('')}
         </div>
@@ -723,8 +723,8 @@ function showNoticeModal(container, navigateTo) {
   modal.innerHTML = `
     <div class="modal" style="max-width:450px;">
       <div class="modal-header">
-        <h3>📢 공지사항 작성</h3>
-        <button class="btn btn-ghost btn-sm modal-close">✕</button>
+        <h3> 공지사항 작성</h3>
+        <button class="btn btn-ghost btn-sm modal-close"></button>
       </div>
       <div class="modal-body">
         <div class="form-group">
@@ -738,7 +738,7 @@ function showNoticeModal(container, navigateTo) {
       </div>
       <div class="modal-footer" style="display:flex; gap:8px; justify-content:flex-end;">
         <button class="btn btn-ghost modal-close">취소</button>
-        <button class="btn btn-primary" id="notice-save">📢 게시</button>
+        <button class="btn btn-primary" id="notice-save"> 게시</button>
       </div>
     </div>
   `;
@@ -832,7 +832,7 @@ function showReplyModal(ticketId, data, container) {
   modal.innerHTML = `
     <div class="modal" style="max-width:560px;">
       <div class="modal-header">
-        <h3>💬 문의 답변</h3>
+        <h3> 문의 답변</h3>
         <button class="modal-close" id="reply-close">×</button>
       </div>
       <div class="modal-body" style="padding:20px;">

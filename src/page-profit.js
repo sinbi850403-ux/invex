@@ -271,7 +271,7 @@ export function renderProfitPage(container, navigateTo) {
       salePriceRate < 70
         ? `
       <div class="alert alert-warning">
-        <span>⚠️</span>
+        <span></span>
         <span>
           판매가 입력률이 <strong>${formatPercent(salePriceRate)}</strong> 입니다.
           정확한 손익 분석을 위해 재고 화면에서 판매가를 보완해 주세요.
@@ -329,7 +329,7 @@ export function renderProfitPage(container, navigateTo) {
 
     <details class="card card-compact" style="margin-top:12px;">
       <summary style="cursor:pointer; font-weight:700; list-style:none;">
-        📘 계산식 보기 (이익률/원가율 기준)
+         계산식 보기 (이익률/원가율 기준)
       </summary>
       <div style="margin-top:10px; font-size:13px; color:var(--text-secondary); line-height:1.8;">
         <div>매출금액 = (판매단가 × 수량) - 할인금액</div>

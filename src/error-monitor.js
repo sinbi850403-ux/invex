@@ -16,7 +16,7 @@
 import * as Sentry from '@sentry/browser';
 import { showToast } from './toast.js';
 
-// ⚠️ Sentry 프로젝트 DSN을 여기에 입력하세요
+//  Sentry 프로젝트 DSN을 여기에 입력하세요
 // 예시: 'https://abcdef1234567890@o123456.ingest.sentry.io/1234567'
 const SENTRY_DSN = '';
 

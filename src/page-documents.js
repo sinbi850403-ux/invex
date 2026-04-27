@@ -47,18 +47,18 @@ export function renderDocumentsPage(container, navigateTo) {
 
     <div class="stat-grid" style="grid-template-columns: repeat(3, 1fr);">
       <div class="card doc-type-card active" data-doc="purchase" style="cursor:pointer;">
-        <div style="font-size:28px; margin-bottom:8px;">🧾</div>
+        <div style="font-size:28px; margin-bottom:8px;"></div>
         <div style="font-weight:600; margin-bottom:4px;">발주서</div>
         <div style="font-size:12px; color:var(--text-muted);">부족 품목을 기준으로 자동 추천합니다.</div>
         ${lowStockItems.length > 0 ? `<span class="badge badge-danger" style="margin-top:6px;">${lowStockItems.length}건 부족</span>` : ''}
       </div>
       <div class="card doc-type-card" data-doc="quote" style="cursor:pointer;">
-        <div style="font-size:28px; margin-bottom:8px;">📄</div>
+        <div style="font-size:28px; margin-bottom:8px;"></div>
         <div style="font-weight:600; margin-bottom:4px;">견적서</div>
         <div style="font-size:12px; color:var(--text-muted);">품목을 선택해 바로 금액을 계산합니다.</div>
       </div>
       <div class="card doc-type-card" data-doc="statement" style="cursor:pointer;">
-        <div style="font-size:28px; margin-bottom:8px;">📋</div>
+        <div style="font-size:28px; margin-bottom:8px;"></div>
         <div style="font-weight:600; margin-bottom:4px;">거래명세서</div>
         <div style="font-size:12px; color:var(--text-muted);">입출고 기록을 기준으로 문서를 만듭니다.</div>
       </div>
@@ -116,7 +116,7 @@ function renderPurchaseOrder(el, items, lowStockItems, vendors, safetyStock, doc
   const purchaseVendors = [...new Set([...vendors, draftVendor].filter(Boolean))];
 
   el.innerHTML = `
-    <div class="card-title">📋 발주서 작성</div>
+    <div class="card-title"> 발주서 작성</div>
 
     ${draftItems.length > 0 ? `
       <div class="alert alert-info" style="margin-bottom:16px;">
@@ -124,7 +124,7 @@ function renderPurchaseOrder(el, items, lowStockItems, vendors, safetyStock, doc
       </div>
     ` : lowStockItems.length > 0 ? `
       <div class="alert alert-warning" style="margin-bottom:16px;">
-        ⚠️ 안전재고 부족 품목이 <strong>${lowStockItems.length}건</strong> 있습니다. 자동으로 추천합니다.
+         안전재고 부족 품목이 <strong>${lowStockItems.length}건</strong> 있습니다. 자동으로 추천합니다.
       </div>
     ` : ''}
 
@@ -197,7 +197,7 @@ function renderPurchaseOrder(el, items, lowStockItems, vendors, safetyStock, doc
     </div>
 
     <div style="display:flex; gap:8px; justify-content:flex-end;">
-      <button class="btn btn-primary btn-lg" id="btn-generate-po">📋 발주서 PDF 생성</button>
+      <button class="btn btn-primary btn-lg" id="btn-generate-po"> 발주서 PDF 생성</button>
     </div>
   `;
 
@@ -248,7 +248,7 @@ function renderQuote(el, items) {
   const today = new Date().toISOString().split('T')[0];
 
   el.innerHTML = `
-    <div class="card-title">📄 견적서 작성</div>
+    <div class="card-title"> 견적서 작성</div>
 
     <div class="form-row" style="margin-bottom:16px;">
       <div class="form-group">
@@ -310,7 +310,7 @@ function renderQuote(el, items) {
     </div>
 
     <div style="display:flex; gap:8px; justify-content:flex-end;">
-      <button class="btn btn-primary btn-lg" id="btn-generate-qt">📄 견적서 PDF 생성</button>
+      <button class="btn btn-primary btn-lg" id="btn-generate-qt"> 견적서 PDF 생성</button>
     </div>
   `;
 
@@ -346,7 +346,7 @@ function renderQuote(el, items) {
           <td class="text-right"><input type="number" class="form-input qt-qty" data-idx="${i}" value="${item.qty}" min="1" style="width:60px; padding:3px 6px; text-align:right;" /></td>
           <td class="text-right">₩${price.toLocaleString('ko-KR')}</td>
           <td class="text-right">₩${subtotal.toLocaleString('ko-KR')}</td>
-          <td class="text-center"><button class="btn-icon btn-icon-danger qt-del" data-idx="${i}">🗑️</button></td>
+          <td class="text-center"><button class="btn-icon btn-icon-danger qt-del" data-idx="${i}"></button></td>
         </tr>
       `;
     }).join('');
@@ -398,7 +398,7 @@ function renderStatement(el, items, transactions) {
   const fromDate = monthAgo.toISOString().split('T')[0];
 
   el.innerHTML = `
-    <div class="card-title">📋 거래명세서 작성</div>
+    <div class="card-title"> 거래명세서 작성</div>
 
     <div class="form-row" style="margin-bottom:16px;">
       <div class="form-group">
@@ -428,7 +428,7 @@ function renderStatement(el, items, transactions) {
     </div>
 
     <div style="display:flex; gap:8px; justify-content:flex-end;">
-      <button class="btn btn-primary btn-lg" id="btn-generate-st">📋 거래명세서 PDF 생성</button>
+      <button class="btn btn-primary btn-lg" id="btn-generate-st"> 거래명세서 PDF 생성</button>
     </div>
   `;
 

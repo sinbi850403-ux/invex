@@ -36,10 +36,10 @@ function getWarehouseTypeLabel(type) {
  */
 function getWarehouseIcon(type) {
   const icons = {
-    main: '🏢', branch: '🏪', factory: '🏭',
-    temp: '📦', returns: '↩️', other: '🗄️',
+    main: '', branch: '', factory: '',
+    temp: '', returns: '↩', other: '',
   };
-  return icons[type] || '🏢';
+  return icons[type] || '';
 }
 
 /**
@@ -98,8 +98,8 @@ export function renderWarehousesPage(container, navigateTo) {
         <div class="page-desc">Enterprise — 창고별 재고 현황을 한눈에 관리합니다.</div>
       </div>
       <div style="display:flex; gap:8px;">
-        <button class="btn btn-primary" id="btn-add-warehouse">➕ 창고 추가</button>
-        <button class="btn btn-ghost" id="btn-assign-items" title="미배정 품목을 창고에 배정">📋 미배정 품목 (${unassignedItems})</button>
+        <button class="btn btn-primary" id="btn-add-warehouse"> 창고 추가</button>
+        <button class="btn btn-ghost" id="btn-assign-items" title="미배정 품목을 창고에 배정"> 미배정 품목 (${unassignedItems})</button>
       </div>
     </div>
 
@@ -132,11 +132,11 @@ export function renderWarehousesPage(container, navigateTo) {
               <div style="font-size:24px; margin-bottom:4px;">${getWarehouseIcon(wh.type)}</div>
               <div style="font-size:16px; font-weight:700;">${wh.name}</div>
               <div style="font-size:12px; color:var(--text-muted);">${getWarehouseTypeLabel(wh.type)}${wh.manager ? ' · ' + wh.manager : ''}</div>
-              ${wh.address ? `<div style="font-size:11px; color:var(--text-muted); margin-top:2px;">📍 ${wh.address}</div>` : ''}
+              ${wh.address ? `<div style="font-size:11px; color:var(--text-muted); margin-top:2px;"> ${wh.address}</div>` : ''}
             </div>
             <div style="display:flex; gap:4px;">
-              <button class="btn btn-ghost btn-sm btn-edit-wh" data-wh-id="${wh.id}" title="수정">✏️</button>
-              ${wh.type !== 'main' ? `<button class="btn btn-ghost btn-sm btn-delete-wh" data-wh-id="${wh.id}" title="삭제">🗑️</button>` : ''}
+              <button class="btn btn-ghost btn-sm btn-edit-wh" data-wh-id="${wh.id}" title="수정"></button>
+              ${wh.type !== 'main' ? `<button class="btn btn-ghost btn-sm btn-delete-wh" data-wh-id="${wh.id}" title="삭제"></button>` : ''}
             </div>
           </div>
 
@@ -161,7 +161,7 @@ export function renderWarehousesPage(container, navigateTo) {
 
           ${wh.lowStockCount > 0 ? `
             <div style="background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.2); border-radius:6px; padding:8px; font-size:12px; color:var(--danger);">
-              ⚠️ 재고 부족 ${wh.lowStockCount}건
+               재고 부족 ${wh.lowStockCount}건
             </div>
           ` : ''}
 
@@ -194,7 +194,7 @@ export function renderWarehousesPage(container, navigateTo) {
       <div class="modal" style="max-width:500px;">
         <div class="modal-header">
           <h3 id="wh-modal-title">창고 추가</h3>
-          <button class="btn btn-ghost btn-sm" id="wh-modal-close">✕</button>
+          <button class="btn btn-ghost btn-sm" id="wh-modal-close"></button>
         </div>
         <div class="modal-body">
           <input type="hidden" id="wh-edit-id" />
@@ -205,12 +205,12 @@ export function renderWarehousesPage(container, navigateTo) {
           <div class="form-group">
             <label class="form-label">창고 유형</label>
             <select class="form-select" id="wh-type">
-              <option value="main">🏢 본사 창고</option>
-              <option value="branch">🏪 지점 창고</option>
-              <option value="factory">🏭 공장/생산</option>
-              <option value="temp">📦 임시 보관</option>
-              <option value="returns">↩️ 반품 창고</option>
-              <option value="other">🗄️ 기타</option>
+              <option value="main"> 본사 창고</option>
+              <option value="branch"> 지점 창고</option>
+              <option value="factory"> 공장/생산</option>
+              <option value="temp"> 임시 보관</option>
+              <option value="returns">↩ 반품 창고</option>
+              <option value="other"> 기타</option>
             </select>
           </div>
           <div class="form-group">
@@ -237,8 +237,8 @@ export function renderWarehousesPage(container, navigateTo) {
     <div id="assign-modal" class="modal-overlay" style="display:none;">
       <div class="modal" style="max-width:700px;">
         <div class="modal-header">
-          <h3>📋 미배정 품목 일괄 배정</h3>
-          <button class="btn btn-ghost btn-sm" id="assign-modal-close">✕</button>
+          <h3> 미배정 품목 일괄 배정</h3>
+          <button class="btn btn-ghost btn-sm" id="assign-modal-close"></button>
         </div>
         <div class="modal-body" style="max-height:400px; overflow-y:auto;">
           <div class="form-group" style="margin-bottom:12px;">

@@ -14,7 +14,7 @@ import { downloadExcelSheets } from './excel.js';
 // 핵심: 사용자가 입력하는 컬럼만 포함 (자동계산 컬럼 제거)
 const TEMPLATES = {
   general: {
-    name: '📦 일반 재고 관리',
+    name: ' 일반 재고 관리',
     desc: '사무용품, 비품, 소모품 등 범용 재고 관리',
     // 입고관리 양식과 동일한 컬럼 구조
     headers: ['자산', '입고일자', '상품코드', '거래처', '품명', '규격', '단위', '입고수량', '단가', '공급가액', '부가세', '합계금액'],
@@ -41,9 +41,9 @@ export function downloadTemplate(templateKey) {
 
   // 안내 시트 (사용법 설명 - 초보자 최적화)
   const guideData = [
-    ['📌 INVEX 입고관리 엑셀 양식 사용 안내'],
+    [' INVEX 입고관리 엑셀 양식 사용 안내'],
     [''],
-    ['✅ 이 엑셀 파일을 작성해서 INVEX에 업로드하면 자동으로 재고에 등록됩니다.'],
+    [' 이 엑셀 파일을 작성해서 INVEX에 업로드하면 자동으로 재고에 등록됩니다.'],
     [''],
     ['━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'],
     ['■ 컬럼 설명'],
@@ -73,7 +73,7 @@ export function downloadTemplate(templateKey) {
     ['  - .xls (Excel 97-2003)'],
     ['  - .csv (쉼표 구분)'],
     [''],
-    ['📎 자세한 사용법: https://invex.io.kr'],
+    [' 자세한 사용법: https://invex.io.kr'],
   ];
   const fileName = `INVEX_${tpl.name.replace(/[^\w가-힣]/g, '')}_양식`;
   downloadExcelSheets(

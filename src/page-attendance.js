@@ -120,7 +120,7 @@ function renderAttendanceTable(container, recs, lastDay) {
   container.querySelector('#att-table-wrap').innerHTML = `
     <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
       <div style="color:var(--text-muted); font-size:12px;">시간 입력 후 "일괄 저장"을 누르면 연장/야간/휴일 근무가 자동 분류됩니다.</div>
-      <button class="btn btn-primary" id="btn-att-save">💾 일괄 저장</button>
+      <button class="btn btn-primary" id="btn-att-save"> 일괄 저장</button>
     </div>
     <div class="table-wrapper">
       <table class="data-table">

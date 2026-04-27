@@ -38,7 +38,7 @@ export function renderUploadPage(container, navigateTo) {
 
     <div class="card">
       <div id="upload-zone" class="upload-zone">
-        <div class="icon">📁</div>
+        <div class="icon"></div>
         <div class="label">엑셀 파일을 여기에 끌어다 놓거나 클릭하세요</div>
         <div class="hint">.xlsx, .xls, .csv 파일 지원 · 업로드 즉시 자동 매핑됩니다</div>
         <input type="file" id="file-input" accept=".xlsx,.xls,.csv" style="display:none" />
@@ -51,7 +51,7 @@ export function renderUploadPage(container, navigateTo) {
 
     <!-- 엑셀 양식 다운로드 -->
     <div class="card" style="margin-top:24px;">
-      <h3 style="font-size:16px; font-weight:700; margin-bottom:4px;">📋 엑셀 양식 다운로드</h3>
+      <h3 style="font-size:16px; font-weight:700; margin-bottom:4px;"> 엑셀 양식 다운로드</h3>
       <p style="font-size:13px; color:var(--text-muted); margin-bottom:16px;">
         업종에 맞는 양식을 다운받아 데이터를 입력하고 업로드하세요. 샘플 데이터가 포함되어 있습니다.
       </p>
@@ -68,7 +68,7 @@ export function renderUploadPage(container, navigateTo) {
 
     ${state.fileName ? `
       <div class="alert alert-info" style="margin-top:16px;">
-        📄 현재 불러온 파일: <strong>${state.fileName}</strong>
+         현재 불러온 파일: <strong>${state.fileName}</strong>
         (${(state.mappedData || []).length}건 등록됨)
         <button class="btn btn-outline btn-sm" id="btn-clear" style="margin-left:12px;">
           새 파일로 교체
@@ -110,7 +110,7 @@ export function renderUploadPage(container, navigateTo) {
     btn.addEventListener('click', () => {
       const key = btn.dataset.template;
       downloadTemplate(key);
-      showToast('엑셀 양식을 다운로드합니다 📥', 'success');
+      showToast('엑셀 양식을 다운로드합니다 ', 'success');
     });
   });
 

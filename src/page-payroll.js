@@ -66,8 +66,8 @@ export async function renderPayrollPage(container, navigateTo) {
 
     <div id="payroll-action-wrap" style="display:none; margin-top:12px;">
       <div class="card" style="display:flex; gap:8px;">
-        <button id="payroll-confirm-btn" class="btn btn-primary" style="flex:1;">✓ 급여 확정</button>
-        <button id="payroll-export-btn" class="btn btn-ghost" style="flex:1;">📄 명세서 다운로드</button>
+        <button id="payroll-confirm-btn" class="btn btn-primary" style="flex:1;"> 급여 확정</button>
+        <button id="payroll-export-btn" class="btn btn-ghost" style="flex:1;"> 명세서 다운로드</button>
       </div>
     </div>
   `;
@@ -224,11 +224,11 @@ export async function renderPayrollPage(container, navigateTo) {
       });
 
       showToast(`${currentPayrolls.length}명의 급여가 확정되었습니다`, 'success');
-      confirmBtn.textContent = '✓ 확정 완료';
+      confirmBtn.textContent = ' 확정 완료';
     } catch (e) {
       showToast('확정 실패: ' + e.message, 'error');
       confirmBtn.disabled = false;
-      confirmBtn.textContent = '✓ 급여 확정';
+      confirmBtn.textContent = ' 급여 확정';
     }
   });
 
@@ -247,7 +247,7 @@ function renderPayrollTable(container, payrolls, year, month) {
   const actionWrap = container.querySelector('#payroll-action-wrap');
 
   if (payrolls.length === 0) {
-    wrap.innerHTML = `<div class="empty-state"><div class="icon">👥</div><div class="msg">대상 직원이 없습니다</div></div>`;
+    wrap.innerHTML = `<div class="empty-state"><div class="icon"></div><div class="msg">대상 직원이 없습니다</div></div>`;
     summaryWrap.style.display = 'none';
     actionWrap.style.display = 'none';
     return;
@@ -334,7 +334,7 @@ function showPayrollDetailModal(payroll, year, month) {
     <div class="modal" style="max-width:700px;">
       <div class="modal-header">
         <h3>${escapeHtml(payroll.name)} (${escapeHtml(payroll.empNo)}) - ${year}년 ${month}월</h3>
-        <button class="btn-close">✕</button>
+        <button class="btn-close"></button>
       </div>
       <div class="modal-body">
         <h4 style="margin-bottom:12px; font-size:14px;">【지급항목】</h4>
@@ -376,7 +376,7 @@ function showPayrollDetailModal(payroll, year, month) {
         </table>
       </div>
       <div class="modal-footer" style="display:flex; gap:8px; justify-content:flex-end;">
-        <button class="btn btn-ghost btn-pdf-slip">📄 PDF 출력</button>
+        <button class="btn btn-ghost btn-pdf-slip"> PDF 출력</button>
         <button class="btn btn-primary btn-close">닫기</button>
       </div>
     </div>

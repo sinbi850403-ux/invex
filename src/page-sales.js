@@ -115,8 +115,8 @@ export function renderSalesPage(container, navigateTo) {
     <div class="modal-overlay" id="sales-modal" style="display:none;">
       <div class="modal" style="max-width:760px; max-height:92vh; overflow-y:auto;">
         <div class="modal-header">
-          <h2 class="modal-title" id="sales-modal-title">📋 견적/수주 작성</h2>
-          <button class="modal-close" id="sales-modal-close">✕</button>
+          <h2 class="modal-title" id="sales-modal-title"> 견적/수주 작성</h2>
+          <button class="modal-close" id="sales-modal-close"></button>
         </div>
         <div class="modal-body" id="sales-modal-body"></div>
       </div>
@@ -126,8 +126,8 @@ export function renderSalesPage(container, navigateTo) {
     <div class="modal-overlay" id="ship-modal" style="display:none;">
       <div class="modal" style="max-width:640px;">
         <div class="modal-header">
-          <h2 class="modal-title" id="ship-modal-title">📦 출고 처리</h2>
-          <button class="modal-close" id="ship-modal-close">✕</button>
+          <h2 class="modal-title" id="ship-modal-title"> 출고 처리</h2>
+          <button class="modal-close" id="ship-modal-close"></button>
         </div>
         <div class="modal-body" id="ship-modal-body"></div>
       </div>
@@ -162,7 +162,7 @@ function renderSalesTable(orders) {
   if (currentTab === 'complete')  filtered = orders.filter(o => o.status === 'complete');
   if (currentTab === 'cancelled') filtered = orders.filter(o => o.status === 'cancelled');
 
-  if (!filtered.length) return `<div class="empty-state"><div class="icon">🛒</div><div class="msg">수주 내역이 없습니다</div><div class="sub">오른쪽 상단 '견적/수주 작성'으로 시작하세요.</div></div>`;
+  if (!filtered.length) return `<div class="empty-state"><div class="icon"></div><div class="msg">수주 내역이 없습니다</div><div class="sub">오른쪽 상단 '견적/수주 작성'으로 시작하세요.</div></div>`;
 
   const today = new Date().toISOString().slice(0, 10);
 
@@ -235,7 +235,7 @@ function openSalesModal(container, editOrder, navigateTo) {
   const isEdit = !!editOrder;
 
   const body = container.querySelector('#sales-modal-body');
-  container.querySelector('#sales-modal-title').textContent = isEdit ? `📋 수주 수정 - ${e.orderNo}` : '📋 견적/수주 작성';
+  container.querySelector('#sales-modal-title').textContent = isEdit ? ` 수주 수정 - ${e.orderNo}` : ' 견적/수주 작성';
 
   body.innerHTML = `
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
@@ -298,7 +298,7 @@ function openSalesModal(container, editOrder, navigateTo) {
 
     <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:20px;">
       <button class="btn btn-outline" id="sm-cancel">취소</button>
-      <button class="btn btn-primary" id="sm-save">💾 저장</button>
+      <button class="btn btn-primary" id="sm-save"> 저장</button>
     </div>
   `;
 
@@ -417,7 +417,7 @@ function renderSalesItemRow(it, idx) {
       </td>
       <td class="text-right sm-amt" style="font-weight:600;">-</td>
       <td>
-        <button class="btn btn-xs btn-outline sm-remove-item" style="color:var(--danger);border-color:var(--danger);">✕</button>
+        <button class="btn btn-xs btn-outline sm-remove-item" style="color:var(--danger);border-color:var(--danger);"></button>
       </td>
     </tr>
   `;
@@ -454,7 +454,7 @@ function bindSalesItemEvents(body, recalc, items) {
 function openShipModal(container, order, navigateTo) {
   const modal = container.querySelector('#ship-modal');
   const body  = container.querySelector('#ship-modal-body');
-  container.querySelector('#ship-modal-title').textContent = `📦 출고 처리 - ${order.orderNo}`;
+  container.querySelector('#ship-modal-title').textContent = ` 출고 처리 - ${order.orderNo}`;
 
   const shipped = order.shippedItems || {};
 
@@ -510,7 +510,7 @@ function openShipModal(container, order, navigateTo) {
 
     <div style="display:flex;justify-content:flex-end;gap:8px;">
       <button class="btn btn-outline" id="ship-cancel-btn">취소</button>
-      <button class="btn btn-primary" id="ship-confirm-btn">📦 출고 처리</button>
+      <button class="btn btn-primary" id="ship-confirm-btn"> 출고 처리</button>
     </div>
   `;
 
@@ -657,7 +657,7 @@ function openSalesDetail(container, order) {
           <h2 style="font-size:20px;font-weight:700;margin:6px 0 2px;">${escapeHtml(order.orderNo)}</h2>
           <div style="font-size:13px;color:var(--text-muted);">발행일: ${order.orderDate || '-'}</div>
         </div>
-        <button id="sales-detail-close" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--text-muted);">✕</button>
+        <button id="sales-detail-close" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--text-muted);"></button>
       </div>
 
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px;font-size:13px;">
@@ -704,8 +704,8 @@ function openSalesDetail(container, order) {
         </table>
       </div>
 
-      ${order.taxInvoiceId ? `<div style="padding:8px 12px;background:rgba(124,58,237,0.1);border-radius:6px;font-size:12px;color:#7c3aed;margin-bottom:12px;">✅ 세금계산서 발행 완료 (TI-${order.orderNo})</div>` : ''}
-      ${order.receivableEntryId ? `<div style="padding:8px 12px;background:rgba(22,163,74,0.1);border-radius:6px;font-size:12px;color:#16a34a;margin-bottom:12px;">✅ 미수금 등록 완료</div>` : ''}
+      ${order.taxInvoiceId ? `<div style="padding:8px 12px;background:rgba(124,58,237,0.1);border-radius:6px;font-size:12px;color:#7c3aed;margin-bottom:12px;"> 세금계산서 발행 완료 (TI-${order.orderNo})</div>` : ''}
+      ${order.receivableEntryId ? `<div style="padding:8px 12px;background:rgba(22,163,74,0.1);border-radius:6px;font-size:12px;color:#16a34a;margin-bottom:12px;"> 미수금 등록 완료</div>` : ''}
     </div>
   `;
 

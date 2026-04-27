@@ -82,7 +82,7 @@ export function renderPosPage(container, navigateTo) {
         <h1 class="page-title">접근 제한</h1>
       </div>
       <div class="alert alert-danger" style="margin-top:16px;">
-        ⛔ 이 기능은 관리자만 사용할 수 있습니다.
+         이 기능은 관리자만 사용할 수 있습니다.
       </div>
     `;
     return;
@@ -99,10 +99,10 @@ export function renderPosPage(container, navigateTo) {
       </div>
       <div class="page-actions">
         ${posData.length > 0 ? `
-          <button class="btn btn-outline" id="btn-pos-export">📥 내보내기</button>
-          <button class="btn btn-outline" id="btn-pos-clear">🗑️ 데이터 초기화</button>
+          <button class="btn btn-outline" id="btn-pos-export"> 내보내기</button>
+          <button class="btn btn-outline" id="btn-pos-clear"> 데이터 초기화</button>
         ` : ''}
-        <button class="btn btn-primary" id="btn-pos-upload">📂 POS 엑셀 업로드</button>
+        <button class="btn btn-primary" id="btn-pos-upload"> POS 엑셀 업로드</button>
       </div>
     </div>
 
@@ -137,14 +137,14 @@ export function renderPosPage(container, navigateTo) {
 function renderPosEmpty() {
   return `
     <div class="card" style="text-align:center; padding:60px 20px;">
-      <div style="font-size:48px; margin-bottom:16px;">🏪</div>
+      <div style="font-size:48px; margin-bottom:16px;"></div>
       <h3 style="margin-bottom:8px;">POS 매출 데이터를 업로드해 주세요</h3>
       <p style="color:var(--text-muted); font-size:13px; margin-bottom:24px;">
         POS 시스템에서 엑셀로 내보낸 매출 데이터를 업로드하면<br/>
         자동으로 헤더를 인식하고 매출 현황을 분석합니다.
       </p>
       <div class="alert alert-info" style="max-width:500px; margin:0 auto; text-align:left; font-size:12px;">
-        <strong>💡 지원되는 POS 헤더:</strong><br/>
+        <strong> 지원되는 POS 헤더:</strong><br/>
         판매일자, 매장명, 구분, 총매출액, 매출금액, 부가세, 카드, 현금, 포인트 등<br/>
         → 헤더 이름이 조금 달라도 자동으로 인식합니다!
       </div>
@@ -235,23 +235,23 @@ function renderPosDashboard(posData) {
 
     <!-- 결제 수단 비율 바 -->
     <div class="card" style="margin-bottom:16px;">
-      <div class="card-title">💳 결제 수단 비율</div>
+      <div class="card-title"> 결제 수단 비율</div>
       <div style="display:flex; height:32px; border-radius:8px; overflow:hidden; margin-bottom:8px;">
         ${totalCard > 0 ? `<div style="width:${cardPct}%; background:linear-gradient(135deg, #3b82f6, #2563eb); display:flex; align-items:center; justify-content:center; color:#fff; font-size:11px; font-weight:600;">카드 ${cardPct}%</div>` : ''}
         ${totalCash > 0 ? `<div style="width:${cashPct}%; background:linear-gradient(135deg, #22c55e, #16a34a); display:flex; align-items:center; justify-content:center; color:#fff; font-size:11px; font-weight:600;">현금 ${cashPct}%</div>` : ''}
         ${totalPoint > 0 ? `<div style="width:${pointPct}%; background:linear-gradient(135deg, #f59e0b, #d97706); display:flex; align-items:center; justify-content:center; color:#fff; font-size:11px; font-weight:600;">포인트 ${pointPct}%</div>` : ''}
       </div>
       <div style="display:flex; gap:16px; font-size:12px; color:var(--text-muted);">
-        <span>💳 카드: ${fmt(totalCard)}</span>
-        <span>💵 현금: ${fmt(totalCash)}</span>
-        <span>🎯 포인트: ${fmt(totalPoint)}</span>
+        <span> 카드: ${fmt(totalCard)}</span>
+        <span> 현금: ${fmt(totalCash)}</span>
+        <span> 포인트: ${fmt(totalPoint)}</span>
       </div>
     </div>
 
     <div style="display:grid; grid-template-columns: 1fr 1fr; gap:16px; margin-bottom:16px;">
       <!-- 일자별 매출 추이 -->
       <div class="card">
-        <div class="card-title">📅 일자별 매출 추이</div>
+        <div class="card-title"> 일자별 매출 추이</div>
         ${dateTrend.length > 0 ? `
           <div style="max-height:300px; overflow-y:auto;">
             ${dateTrend.map(([date, amount]) => {
@@ -275,7 +275,7 @@ function renderPosDashboard(posData) {
       <div>
         ${storeRanking.length > 1 ? `
         <div class="card" style="margin-bottom:16px;">
-          <div class="card-title">🏪 매장별 매출</div>
+          <div class="card-title"> 매장별 매출</div>
           ${storeRanking.slice(0, 10).map(([name, amount], i) => `
             <div style="display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px solid var(--border-light); font-size:13px;">
               <span><span style="color:var(--text-muted); margin-right:4px;">${i + 1}</span> ${name}</span>
@@ -287,7 +287,7 @@ function renderPosDashboard(posData) {
         
         ${catRanking.length > 0 ? `
         <div class="card">
-          <div class="card-title">📂 구분별 매출</div>
+          <div class="card-title"> 구분별 매출</div>
           ${catRanking.slice(0, 10).map(([name, amount], i) => `
             <div style="display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px solid var(--border-light); font-size:13px;">
               <span><span style="color:var(--text-muted); margin-right:4px;">${i + 1}</span> ${name}</span>
@@ -301,7 +301,7 @@ function renderPosDashboard(posData) {
 
     <!-- 상세 데이터 테이블 -->
     <div class="card card-flush">
-      <div class="card-title" style="padding:12px 16px;">📋 상세 데이터 <span class="card-subtitle">${posData.length}건</span></div>
+      <div class="card-title" style="padding:12px 16px;"> 상세 데이터 <span class="card-subtitle">${posData.length}건</span></div>
       <div class="table-wrapper" style="border:none; max-height:400px; overflow-y:auto;">
         <table class="data-table" style="font-size:12px;">
           <thead>
@@ -363,21 +363,21 @@ function openPosUploadModal(container, navigateTo) {
   overlay.innerHTML = `
     <div class="modal" style="max-width:800px;">
       <div class="modal-header">
-        <h3 class="modal-title">🏪 POS 매출 데이터 업로드</h3>
-        <button class="modal-close" id="pos-modal-close">✕</button>
+        <h3 class="modal-title"> POS 매출 데이터 업로드</h3>
+        <button class="modal-close" id="pos-modal-close"></button>
       </div>
       <div class="modal-body">
         <div class="alert alert-info" style="margin-bottom:16px; font-size:12px;">
-          <strong>📌 사용 방법:</strong><br/>
+          <strong> 사용 방법:</strong><br/>
           ① 아래 '양식 다운로드'로 POS 엑셀 양식을 받으세요<br/>
           ② POS 시스템 데이터를 양식에 맞게 붙여넣거나 직접 업로드하세요<br/>
           ③ 매핑 결과를 확인하고 '등록' 버튼을 누르세요
         </div>
         <div style="margin-bottom:16px;">
-          <button class="btn btn-outline" id="btn-pos-template">📋 POS 양식 다운로드</button>
+          <button class="btn btn-outline" id="btn-pos-template"> POS 양식 다운로드</button>
         </div>
         <div style="border:2px dashed var(--border); border-radius:8px; padding:40px; text-align:center; cursor:pointer; transition:border-color 0.2s;" id="pos-dropzone">
-          <div style="font-size:36px; margin-bottom:8px;">📂</div>
+          <div style="font-size:36px; margin-bottom:8px;"></div>
           <div style="font-size:14px; font-weight:500;">POS 엑셀 파일을 여기에 드래그하거나 클릭</div>
           <div style="font-size:12px; color:var(--text-muted); margin-top:4px;">.xlsx, .xls 파일 지원</div>
           <input type="file" id="pos-file-input" accept=".xlsx,.xls,.csv" style="display:none;" />
@@ -427,7 +427,7 @@ function openPosUploadModal(container, navigateTo) {
 async function processPosFile(file, overlay, container, navigateTo, closeModal) {
   const previewEl = overlay.querySelector('#pos-preview');
   previewEl.style.display = 'block';
-  previewEl.innerHTML = '<div style="text-align:center; padding:20px; color:var(--text-muted);">📊 파일 분석 중...</div>';
+  previewEl.innerHTML = '<div style="text-align:center; padding:20px; color:var(--text-muted);"> 파일 분석 중...</div>';
 
   try {
     const { sheets, sheetNames } = await readExcelFile(file);
@@ -483,14 +483,14 @@ async function processPosFile(file, overlay, container, navigateTo, closeModal) 
 
     previewEl.innerHTML = `
       <div class="alert alert-success" style="margin-bottom:12px;">
-        ✅ <strong>${rows.length}건</strong> 인식 완료 | 
+         <strong>${rows.length}건</strong> 인식 완료 | 
         매핑된 필드: <strong>${mappedCount}/${headers.length}</strong> |
         총 매출: <strong>${fmt(totalSales)}</strong>
       </div>
 
       <!-- 매핑 결과 -->
       <div style="margin-bottom:12px;">
-        <strong style="font-size:13px;">🔗 자동 매핑 결과:</strong>
+        <strong style="font-size:13px;"> 자동 매핑 결과:</strong>
         <div style="display:flex; flex-wrap:wrap; gap:6px; margin-top:6px;">
           ${POS_FIELDS.map(field => {
             const idx = mapping[field.key];
@@ -502,7 +502,7 @@ async function processPosFile(file, overlay, container, navigateTo, closeModal) 
         </div>
         ${mappedCount < headers.length ? `
           <div style="margin-top:6px; font-size:11px; color:var(--text-muted);">
-            ⚠️ 매핑 안 된 컬럼: ${headers.filter((h, i) => !Object.values(mapping).includes(i)).join(', ')}
+             매핑 안 된 컬럼: ${headers.filter((h, i) => !Object.values(mapping).includes(i)).join(', ')}
           </div>
         ` : ''}
       </div>
@@ -534,7 +534,7 @@ async function processPosFile(file, overlay, container, navigateTo, closeModal) 
 
       <div style="display:flex; gap:8px; justify-content:flex-end;">
         <button class="btn btn-outline" id="pos-cancel">취소</button>
-        <button class="btn btn-primary" id="pos-confirm">✅ ${rows.length}건 등록</button>
+        <button class="btn btn-primary" id="pos-confirm"> ${rows.length}건 등록</button>
       </div>
     `;
 
@@ -547,7 +547,7 @@ async function processPosFile(file, overlay, container, navigateTo, closeModal) 
       const state = getState();
       const existing = state.posData || [];
       setState({ posData: [...existing, ...rows] });
-      showToast(`✅ POS 매출 ${rows.length}건 등록 완료! (총 매출: ${fmt(totalSales)})`, 'success');
+      showToast(` POS 매출 ${rows.length}건 등록 완료! (총 매출: ${fmt(totalSales)})`, 'success');
       closeModal();
       renderPosPage(container, navigateTo);
     });
@@ -585,9 +585,9 @@ function downloadPosTemplate() {
 
   // 안내 시트
   const guideData = [
-    ['📌 INVEX POS 매출 양식 사용 안내'],
+    [' INVEX POS 매출 양식 사용 안내'],
     [''],
-    ['✅ 이 양식에 POS 매출 데이터를 작성하여 INVEX에 업로드하세요.'],
+    [' 이 양식에 POS 매출 데이터를 작성하여 INVEX에 업로드하세요.'],
     [''],
     ['━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'],
     ['■ 작성 방법'],
@@ -623,7 +623,7 @@ function downloadPosTemplate() {
     ['  현금:   현금, 현금금액, 현금매출'],
     ['  부가세: 부가세, 세액, 부가가치세'],
     [''],
-    ['📎 자세한 사용법: https://invex.io.kr'],
+    [' 자세한 사용법: https://invex.io.kr'],
   ];
   downloadExcelSheets(
     [

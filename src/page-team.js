@@ -42,7 +42,7 @@ export async function renderTeamPage(container, navigateTo) {
       </div>
       <div class="card">
         <div class="empty-state">
-          <div class="icon">🔒</div>
+          <div class="icon"></div>
           <div class="msg">로그인이 필요합니다</div>
           <div class="sub">팀 기능을 사용하려면 먼저 로그인해 주세요.</div>
         </div>
@@ -110,7 +110,7 @@ export async function renderTeamPage(container, navigateTo) {
     ${myPendingInvite ? `
     <div class="card" style="border: 2px solid var(--accent); background: linear-gradient(135deg, rgba(37,99,235,0.05), rgba(139,92,246,0.05));">
       <div style="display:flex; align-items:center; gap:16px; flex-wrap:wrap;">
-        <div style="font-size:36px;">📬</div>
+        <div style="font-size:36px;"></div>
         <div style="flex:1; min-width:200px;">
           <div style="font-size:16px; font-weight:700; margin-bottom:4px;">팀 초대장이 도착했습니다!</div>
           <div style="font-size:13px; color:var(--text-muted); margin-bottom:2px;">
@@ -135,7 +135,7 @@ export async function renderTeamPage(container, navigateTo) {
       <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:16px;">
         <div>
           <div style="font-size:16px; font-weight:700; margin-bottom:4px;">
-            🎁 1년 무료 이용 중
+             1년 무료 이용 중
           </div>
           <div style="font-size:13px; color:var(--text-muted);">
             가입일: ${freePeriod.startDate} → 무료 종료: ${freePeriod.endDate}
@@ -165,17 +165,17 @@ export async function renderTeamPage(container, navigateTo) {
       </div>
       <div class="stat-card">
         <div class="stat-label">내 역할</div>
-        <div class="stat-value" style="font-size:16px;">${roleLabels[myRole]?.icon || '👤'} ${roleLabels[myRole]?.text || '멤버'}</div>
+        <div class="stat-value" style="font-size:16px;">${roleLabels[myRole]?.icon || ''} ${roleLabels[myRole]?.text || '멤버'}</div>
       </div>
       <div class="stat-card">
         <div class="stat-label">요금제</div>
-        <div class="stat-value" style="font-size:16px;">🎁 무료</div>
+        <div class="stat-value" style="font-size:16px;"> 무료</div>
       </div>
     </div>
 
     <!-- 활성 팀원 목록 -->
     <div class="card">
-      <div class="card-title">👥 팀원 목록 <span class="card-subtitle">${activeMembers.length}명</span></div>
+      <div class="card-title"> 팀원 목록 <span class="card-subtitle">${activeMembers.length}명</span></div>
       <div class="table-wrapper" style="border:none;">
         <table class="data-table">
           <thead>
@@ -210,7 +210,7 @@ export async function renderTeamPage(container, navigateTo) {
                   ${isOwner ? `
                     <td>
                       ${!isMe && m.role !== 'owner' ? `
-                        <button class="btn-icon btn-icon-danger btn-remove-member" data-uid="${safeAttr(m.uid)}" data-name="${safeAttr(m.name)}" title="제거">🗑️</button>
+                        <button class="btn-icon btn-icon-danger btn-remove-member" data-uid="${safeAttr(m.uid)}" data-name="${safeAttr(m.name)}" title="제거"></button>
                       ` : ''}
                     </td>
                   ` : ''}
@@ -255,7 +255,7 @@ export async function renderTeamPage(container, navigateTo) {
                   </td>
                   <td style="font-size:12px;">${inviteDate}</td>
                   <td>
-                    <button class="btn-icon btn-icon-danger btn-cancel-invite" data-uid="${safeAttr(m.uid)}" data-name="${safeAttr(m.name)}" title="초대 취소">✕</button>
+                    <button class="btn-icon btn-icon-danger btn-cancel-invite" data-uid="${safeAttr(m.uid)}" data-name="${safeAttr(m.name)}" title="초대 취소"></button>
                   </td>
                 </tr>
               `;
@@ -269,7 +269,7 @@ export async function renderTeamPage(container, navigateTo) {
     <!-- 실시간 동기화 안내 -->
     <div class="card" style="border-left:3px solid var(--success);">
       <div style="display:flex; align-items:center; gap:12px;">
-        <span style="font-size:24px;">🔄</span>
+        <span style="font-size:24px;"></span>
         <div>
           <div style="font-weight:600; margin-bottom:2px;">실시간 데이터 공유</div>
           <div style="font-size:13px; color:var(--text-muted);">
@@ -284,8 +284,8 @@ export async function renderTeamPage(container, navigateTo) {
     <div class="modal-overlay" id="invite-modal" style="display:none;">
       <div class="modal" style="max-width:440px;">
         <div class="modal-header">
-          <h3 class="modal-title">👥 팀원 초대</h3>
-          <button class="modal-close" id="invite-close">✕</button>
+          <h3 class="modal-title"> 팀원 초대</h3>
+          <button class="modal-close" id="invite-close"></button>
         </div>
         <div class="modal-body">
           <div class="alert alert-info" style="margin-bottom:16px; font-size:13px;">
@@ -299,10 +299,10 @@ export async function renderTeamPage(container, navigateTo) {
           <div class="form-group">
             <label class="form-label">역할</label>
             <select class="form-select" id="invite-role">
-              <option value="staff">👤 직원 — 입출고 등록, 재고 조회</option>
-              <option value="manager">📋 매니저 — 직원 권한 + 보고서, 거래처 관리</option>
-              <option value="admin">⚙️ 관리자 — 모든 기능 사용 가능</option>
-              <option value="viewer">👁️ 열람자 — 조회만 가능</option>
+              <option value="staff"> 직원 — 입출고 등록, 재고 조회</option>
+              <option value="manager"> 매니저 — 직원 권한 + 보고서, 거래처 관리</option>
+              <option value="admin"> 관리자 — 모든 기능 사용 가능</option>
+              <option value="viewer"> 열람자 — 조회만 가능</option>
             </select>
           </div>
           <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:16px;">

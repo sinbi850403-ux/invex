@@ -36,7 +36,7 @@ export function renderReferralPage(container, navigateTo) {
 
     <!-- 보상 배너 -->
     <div class="card" style="background:linear-gradient(135deg, rgba(37,99,235,0.15), rgba(124,58,237,0.15)); border:1px solid rgba(37,99,235,0.3); padding:32px; text-align:center;">
-      <div style="font-size:48px; margin-bottom:12px;">🎁</div>
+      <div style="font-size:48px; margin-bottom:12px;"></div>
       <h2 style="font-size:22px; font-weight:800; margin:0 0 8px;">친구 1명 초대 = Pro 1개월 무료!</h2>
       <p style="color:var(--text-muted); font-size:14px; margin:0 0 20px;">
         추천 코드를 공유하세요. 친구가 가입하면<br/>
@@ -51,9 +51,9 @@ export function renderReferralPage(container, navigateTo) {
 
       <!-- 공유 버튼들 -->
       <div style="display:flex; gap:8px; justify-content:center; margin-top:16px; flex-wrap:wrap;">
-        <button class="btn btn-primary" id="btn-copy-code">📋 코드 복사</button>
-        <button class="btn btn-outline" id="btn-copy-link">🔗 링크 복사</button>
-        <button class="btn btn-outline" id="btn-share-kakao" style="background:#FEE500; color:#3C1E1E; border-color:#FEE500;">💬 카카오톡</button>
+        <button class="btn btn-primary" id="btn-copy-code"> 코드 복사</button>
+        <button class="btn btn-outline" id="btn-copy-link"> 링크 복사</button>
+        <button class="btn btn-outline" id="btn-share-kakao" style="background:#FEE500; color:#3C1E1E; border-color:#FEE500;"> 카카오톡</button>
       </div>
     </div>
 
@@ -79,7 +79,7 @@ export function renderReferralPage(container, navigateTo) {
 
     <!-- 추천 코드 입력 (내가 초대 받은 경우) -->
     <div class="card" style="margin-top:16px;">
-      <div class="card-title">🎫 추천 코드 입력</div>
+      <div class="card-title"> 추천 코드 입력</div>
       <p style="font-size:13px; color:var(--text-muted); margin-bottom:12px;">
         친구에게 받은 추천 코드가 있으신가요?
       </p>
@@ -87,7 +87,7 @@ export function renderReferralPage(container, navigateTo) {
         <input class="form-input" id="input-ref-code" placeholder="추천 코드 입력 (예: INV-A1B2C3)" 
                value="${data.appliedCode || ''}" ${data.appliedCode ? 'disabled' : ''} />
         <button class="btn btn-primary" id="btn-apply-code" ${data.appliedCode ? 'disabled' : ''}>
-          ${data.appliedCode ? '✅ 적용됨' : '적용'}
+          ${data.appliedCode ? ' 적용됨' : '적용'}
         </button>
       </div>
     </div>
@@ -95,7 +95,7 @@ export function renderReferralPage(container, navigateTo) {
     <!-- 초대 이력 -->
     ${invited.length > 0 ? `
       <div class="card" style="margin-top:16px;">
-        <div class="card-title">📋 초대 이력</div>
+        <div class="card-title"> 초대 이력</div>
         <div class="table-wrapper">
           <table class="data-table">
             <thead>
@@ -115,7 +115,7 @@ export function renderReferralPage(container, navigateTo) {
                     <span style="padding:2px 10px; border-radius:10px; font-size:11px; font-weight:600;
                       background:${inv.status === 'joined' ? 'rgba(63,185,80,0.15)' : 'rgba(139,148,158,0.15)'};
                       color:${inv.status === 'joined' ? 'var(--success)' : 'var(--text-muted)'};">
-                      ${inv.status === 'joined' ? '✅ 가입완료' : '⏳ 대기중'}
+                      ${inv.status === 'joined' ? ' 가입완료' : '⏳ 대기중'}
                     </span>
                   </td>
                   <td style="font-weight:600; color:${inv.status === 'joined' ? 'var(--success)' : 'var(--text-muted)'};">
@@ -131,7 +131,7 @@ export function renderReferralPage(container, navigateTo) {
 
     <!-- 안내 -->
     <div class="card" style="margin-top:16px; border-left:3px solid var(--accent);">
-      <div class="card-title">💡 이용 안내</div>
+      <div class="card-title"> 이용 안내</div>
       <ul style="font-size:13px; color:var(--text-muted); line-height:2; margin:0; padding-left:16px;">
         <li>초대받은 친구가 <strong>회원가입을 완료</strong>하면 보상이 지급됩니다.</li>
         <li>나도, 친구도 각각 <strong>Pro 1개월 무료</strong>를 받습니다.</li>
@@ -183,7 +183,7 @@ export function renderReferralPage(container, navigateTo) {
     if (current.appliedCode) { showToast('이미 추천 코드를 적용했습니다.', 'warning'); return; }
 
     setState({ referralData: { ...current, appliedCode: code } });
-    showToast('추천 코드가 적용되었습니다! Pro 1개월 보상이 지급됩니다. 🎉', 'success');
+    showToast('추천 코드가 적용되었습니다! Pro 1개월 보상이 지급됩니다. ', 'success');
     renderReferralPage(container, navigateTo);
   });
 }

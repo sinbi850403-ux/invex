@@ -45,7 +45,7 @@ export function renderCostingPage(container, navigateTo) {
         <div class="page-desc">매입 원가와 예상 마진을 한눈에 정리합니다.</div>
       </div>
       <div class="page-actions">
-        <button class="btn btn-outline" id="btn-cost-export">📊 원가표 내보내기</button>
+        <button class="btn btn-outline" id="btn-cost-export"> 원가표 내보내기</button>
       </div>
     </div>
 
@@ -88,7 +88,7 @@ export function renderCostingPage(container, navigateTo) {
 
     <details class="card card-compact" style="margin-top:12px;">
       <summary style="cursor:pointer; font-weight:700; list-style:none;">
-        📘 계산식 보기 (이익률/원가 계산 기준)
+         계산식 보기 (이익률/원가 계산 기준)
       </summary>
       <div style="margin-top:10px; font-size:13px; color:var(--text-secondary); line-height:1.8;">
         <div>총 매입원가 = Σ(현재수량 × 단위원가)</div>
@@ -104,7 +104,7 @@ export function renderCostingPage(container, navigateTo) {
 
     <div class="card card-flush">
       <div style="padding:12px 16px; border-bottom:1px solid var(--border); background:var(--bg-card);">
-        <strong>🧮 품목별 원가 분석</strong>
+        <strong> 품목별 원가 분석</strong>
         <span style="color:var(--text-muted); font-size:12px; margin-left:8px;">(${sortedCostData.length}개 품목)</span>
         <span style="color:var(--text-muted); font-size:12px; margin-left:8px;">정렬: ${getCostSortSummary(costingSortState)}</span>
       </div>

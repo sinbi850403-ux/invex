@@ -21,7 +21,7 @@ export function renderMyPage(container) {
 
   container.innerHTML = `
     <div style="max-width:700px; margin:0 auto; padding:24px;">
-      <h2 style="font-size:22px; font-weight:800; margin-bottom:24px;">👤 마이페이지</h2>
+      <h2 style="font-size:22px; font-weight:800; margin-bottom:24px;"> 마이페이지</h2>
 
       <!-- 프로필 카드 -->
       <div class="card" style="padding:24px; margin-bottom:20px;">
@@ -33,7 +33,7 @@ export function renderMyPage(container) {
             <div style="font-size:18px; font-weight:700;">${profile?.name || user?.displayName || '사용자'}</div>
             <div style="font-size:13px; color:var(--text-muted); margin-top:2px;">${user?.email || '-'}</div>
             <div style="font-size:11px; color:var(--text-muted); margin-top:4px;">
-              가입일: ${joinDate} · ${isGoogleUser ? '🔵 Google 계정' : '📧 이메일 가입'}
+              가입일: ${joinDate} · ${isGoogleUser ? ' Google 계정' : ' 이메일 가입'}
             </div>
           </div>
         </div>
@@ -61,7 +61,7 @@ export function renderMyPage(container) {
 
       <!-- 비밀번호 변경 -->
       <div class="card" style="padding:24px; margin-bottom:20px; ${isGoogleUser ? 'opacity:0.5;' : ''}">
-        <h3 style="font-size:15px; font-weight:700; margin-bottom:16px;">🔒 비밀번호 변경</h3>
+        <h3 style="font-size:15px; font-weight:700; margin-bottom:16px;"> 비밀번호 변경</h3>
         ${isGoogleUser ? '<p style="font-size:12px; color:var(--text-muted);">Google 계정은 Google에서 비밀번호를 관리합니다.</p>' : `
         <div style="display:flex; flex-direction:column; gap:10px;">
           <input id="my-current-pw" type="password" placeholder="현재 비밀번호" class="input" />

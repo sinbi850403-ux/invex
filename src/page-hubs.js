@@ -41,13 +41,13 @@ export function renderHubInventory(container, navigateTo) {
   container.innerHTML = `
     <div class="page-header">
       <div>
-        <h1 class="page-title"><span class="title-icon">📦</span> 재고 관리</h1>
+        <h1 class="page-title"> 재고 관리</h1>
         <div class="page-desc">재고 현황, 입출고, 일괄처리, 실사를 한 곳에서 관리합니다.</div>
       </div>
     </div>
     <div class="hub-grid">
       ${renderHubCard({
-        icon: '📦',
+        icon: '',
         title: '재고 현황',
         desc: '품목별 재고, 금액, 안전재고 상태를 조회합니다.',
         nav: 'inventory',
@@ -55,7 +55,7 @@ export function renderHubInventory(container, navigateTo) {
         meta: `등록 품목 ${itemCount}건`,
       })}
       ${renderHubCard({
-        icon: '📥',
+        icon: '',
         title: '입고 관리',
         desc: '입고를 기록하면 재고 수량이 즉시 증가합니다.',
         nav: 'in',
@@ -63,7 +63,7 @@ export function renderHubInventory(container, navigateTo) {
         meta: `입고 기록 ${state.transactions?.filter(t=>t.type==='in').length||0}건`,
       })}
       ${renderHubCard({
-        icon: '📤',
+        icon: '',
         title: '출고 관리',
         desc: '출고를 기록하면 재고 수량이 즉시 감소합니다.',
         nav: 'out',
@@ -71,14 +71,14 @@ export function renderHubInventory(container, navigateTo) {
         meta: `출고 기록 ${state.transactions?.filter(t=>t.type==='out').length||0}건`,
       })}
       ${renderHubCard({
-        icon: '🧩',
+        icon: '',
         title: '일괄 처리',
         desc: '수정, 삭제, 분류 변경을 한 번에 처리합니다.',
         nav: 'bulk',
         color: '#d97706',
       })}
       ${renderHubCard({
-        icon: '🧮',
+        icon: '',
         title: '재고 실사',
         desc: '실제 재고와 시스템 재고를 비교하고 차이를 조정합니다.',
         nav: 'stocktake',
@@ -97,27 +97,27 @@ export function renderHubWarehouse(container, navigateTo) {
   container.innerHTML = `
     <div class="page-header">
       <div>
-        <h1 class="page-title"><span class="title-icon">🏬</span> 창고·거래처</h1>
+        <h1 class="page-title"> 창고·거래처</h1>
         <div class="page-desc">다중 창고와 거래처 정보를 함께 관리합니다.</div>
       </div>
     </div>
     <div class="hub-grid">
       ${renderHubCard({
-        icon: '🏬',
+        icon: '',
         title: '창고 관리',
         desc: '창고를 추가하고 창고별 재고를 분리 관리합니다.',
         nav: 'warehouses',
         color: '#0284c7',
       })}
       ${renderHubCard({
-        icon: '🔁',
+        icon: '',
         title: '창고 이동',
         desc: '창고 간 재고 이동을 기록하고 이력을 추적합니다.',
         nav: 'transfer',
         color: '#6366f1',
       })}
       ${renderHubCard({
-        icon: '🤝',
+        icon: '',
         title: '거래처 관리',
         desc: '공급처와 고객사 정보를 등록하고 관리합니다.',
         nav: 'vendors',
@@ -140,14 +140,14 @@ export function renderHubOrder(container, navigateTo) {
   container.innerHTML = `
     <div class="page-header">
       <div>
-        <h1 class="page-title"><span class="title-icon">🛒</span> 발주·예측</h1>
+        <h1 class="page-title"> 발주·예측</h1>
         <div class="page-desc">발주, 수주, 자동 추천, 수요 예측을 통합 관리합니다.</div>
       </div>
     </div>
     <div style="margin-bottom:8px;font-size:12px;color:var(--text-muted);font-weight:600;">구매 흐름</div>
     <div class="hub-grid" style="margin-bottom:20px;">
       ${renderHubCard({
-        icon: '📄',
+        icon: '',
         title: '발주 관리',
         desc: '발주 진행 상태와 이력을 조회합니다.',
         nav: 'orders',
@@ -158,7 +158,7 @@ export function renderHubOrder(container, navigateTo) {
     <div style="margin-bottom:8px;font-size:12px;color:var(--text-muted);font-weight:600;">판매 흐름</div>
     <div class="hub-grid">
       ${renderHubCard({
-        icon: '🧾',
+        icon: '',
         title: '수주 관리',
         desc: '견적, 주문, 출고 흐름을 한 화면에서 관리합니다.',
         nav: 'sales',
@@ -166,7 +166,7 @@ export function renderHubOrder(container, navigateTo) {
         meta: pendingSO > 0 ? `진행 중 ${pendingSO}건` : '',
       })}
       ${renderHubCard({
-        icon: '📈',
+        icon: '',
         title: '수요 예측',
         desc: '과거 흐름을 바탕으로 미래 수요를 예측합니다.',
         nav: 'forecast',
@@ -182,48 +182,48 @@ export function renderHubReport(container, navigateTo) {
   container.innerHTML = `
     <div class="page-header">
       <div>
-        <h1 class="page-title"><span class="title-icon">📊</span> 보고·분석</h1>
+        <h1 class="page-title"> 보고·분석</h1>
         <div class="page-desc">요약 보고, 손익, 주간 보고, 고급 분석을 한 곳에서 확인합니다.</div>
       </div>
     </div>
     <div class="hub-grid">
       ${renderHubCard({
-        icon: '📄',
+        icon: '',
         title: '요약 보고',
         desc: '핵심 지표를 빠르게 확인합니다.',
         nav: 'summary',
         color: '#2563eb',
       })}
       ${renderHubCard({
-        icon: '🗓️',
+        icon: '',
         title: '주간 보고서',
         desc: '주간 흐름과 이상 신호를 정리합니다.',
         nav: 'weekly-report',
         color: '#0891b2',
       })}
       ${renderHubCard({
-        icon: '💹',
+        icon: '',
         title: '손익 분석',
         desc: '매출, 원가, 이익 구조를 분석합니다.',
         nav: 'profit',
         color: '#16a34a',
       })}
       ${renderHubCard({
-        icon: '📚',
+        icon: '',
         title: '미수·미지급 정산',
         desc: '채권과 채무 현황을 점검합니다.',
         nav: 'accounts',
         color: '#d97706',
       })}
       ${renderHubCard({
-        icon: '🧮',
+        icon: '',
         title: '원가 분석',
         desc: '원가 구조와 변동 추이를 확인합니다.',
         nav: 'costing',
         color: '#dc2626',
       })}
       ${renderHubCard({
-        icon: '📉',
+        icon: '',
         title: '고급 분석',
         desc: '대시보드 기반으로 다양한 지표를 탐색합니다.',
         nav: 'dashboard',
@@ -239,34 +239,34 @@ export function renderHubDocuments(container, navigateTo) {
   container.innerHTML = `
     <div class="page-header">
       <div>
-        <h1 class="page-title"><span class="title-icon">🗂️</span> 문서·서류</h1>
+        <h1 class="page-title"> 문서·서류</h1>
         <div class="page-desc">세무 문서, 자동 문서 생성, 원장을 한 곳에서 관리합니다.</div>
       </div>
     </div>
     <div class="hub-grid">
       ${renderHubCard({
-        icon: '🧾',
+        icon: '',
         title: '세무·회계 서류',
         desc: '부가세와 재고 관련 문서를 생성합니다.',
         nav: 'tax-reports',
         color: '#dc2626',
       })}
       ${renderHubCard({
-        icon: '📄',
+        icon: '',
         title: '문서 생성',
         desc: '발주서, 거래명세서, 견적서를 생성합니다.',
         nav: 'documents',
         color: '#2563eb',
       })}
       ${renderHubCard({
-        icon: '📒',
+        icon: '',
         title: '원장',
         desc: '입출고 흐름과 잔액을 상세 조회합니다.',
         nav: 'ledger',
         color: '#059669',
       })}
       ${renderHubCard({
-        icon: '🕵️',
+        icon: '',
         title: '감사 추적',
         desc: '변경 이력과 작업 로그를 확인합니다.',
         nav: 'auditlog',
@@ -282,41 +282,41 @@ export function renderHubSettings(container, navigateTo) {
   container.innerHTML = `
     <div class="page-header">
       <div>
-        <h1 class="page-title"><span class="title-icon">⚙️</span> 설정</h1>
+        <h1 class="page-title"> 설정</h1>
         <div class="page-desc">기본 설정, 팀 관리, 권한, 백업을 관리합니다.</div>
       </div>
     </div>
     <div class="hub-grid">
       ${renderHubCard({
-        icon: '⚙️',
+        icon: '',
         title: '기본 설정',
         desc: '통화, 단위, 세금 등 기본 옵션을 설정합니다.',
         nav: 'settings',
         color: '#64748b',
       })}
       ${renderHubCard({
-        icon: '👥',
+        icon: '',
         title: '팀 관리',
         desc: '팀원 초대와 워크스페이스 구성을 관리합니다.',
         nav: 'team',
         color: '#2563eb',
       })}
       ${renderHubCard({
-        icon: '💾',
+        icon: '',
         title: '백업/복원',
         desc: '데이터를 백업하고 복원합니다.',
         nav: 'backup',
         color: '#0891b2',
       })}
       ${renderHubCard({
-        icon: '🔐',
+        icon: '',
         title: '권한 관리',
         desc: '역할별 접근 권한을 설정합니다.',
         nav: 'roles',
         color: '#7c3aed',
       })}
       ${renderHubCard({
-        icon: '💳',
+        icon: '',
         title: '구독 관리',
         desc: '요금제와 결제 정보를 관리합니다.',
         nav: 'billing',
@@ -335,20 +335,20 @@ export function renderHubHr(container, navigateTo) {
   container.innerHTML = `
     <div class="page-header">
       <div>
-        <h1 class="page-title"><span class="title-icon">👥</span> 인사·급여</h1>
+        <h1 class="page-title"> 인사·급여</h1>
         <div class="page-desc">직원 정보, 근태, 급여, 휴가를 통합 관리합니다.</div>
       </div>
     </div>
     <div class="hub-grid">
       ${renderHubCard({
-        icon: '📊',
+        icon: '',
         title: 'HR 대시보드',
         desc: '인원, 근태, 급여 현황을 한눈에 확인합니다.',
         nav: 'hr-dashboard',
         color: '#2563eb',
       })}
       ${renderHubCard({
-        icon: '🧑‍💼',
+        icon: '‍',
         title: '직원 관리',
         desc: '직원 등록, 조회, 수정, 상태 관리를 수행합니다.',
         nav: 'employees',
@@ -356,35 +356,35 @@ export function renderHubHr(container, navigateTo) {
         meta: employeeCount > 0 ? `재직 ${employeeCount}명` : '',
       })}
       ${renderHubCard({
-        icon: '🕒',
+        icon: '',
         title: '근태 관리',
         desc: '출퇴근과 근무 시간을 관리합니다.',
         nav: 'attendance',
         color: '#16a34a',
       })}
       ${renderHubCard({
-        icon: '💸',
+        icon: '',
         title: '급여 계산',
         desc: '급여와 공제 항목을 계산합니다.',
         nav: 'payroll',
         color: '#d97706',
       })}
       ${renderHubCard({
-        icon: '🌴',
+        icon: '',
         title: '휴가·연차 관리',
         desc: '연차 잔여와 휴가 요청 흐름을 관리합니다.',
         nav: 'leaves',
         color: '#7c3aed',
       })}
       ${renderHubCard({
-        icon: '📦',
+        icon: '',
         title: '퇴직금 계산',
         desc: '퇴직금 예상액을 계산합니다.',
         nav: 'severance',
         color: '#059669',
       })}
       ${renderHubCard({
-        icon: '🧾',
+        icon: '',
         title: '연말정산 보조',
         desc: '연말정산 준비 데이터를 계산합니다.',
         nav: 'yearend-settlement',
@@ -400,34 +400,34 @@ export function renderHubSupport(container, navigateTo) {
   container.innerHTML = `
     <div class="page-header">
       <div>
-        <h1 class="page-title"><span class="title-icon">🛟</span> 지원</h1>
+        <h1 class="page-title"> 지원</h1>
         <div class="page-desc">마이페이지, 가이드, 고객 문의, 추천을 이용합니다.</div>
       </div>
     </div>
     <div class="hub-grid">
       ${renderHubCard({
-        icon: '🙍',
+        icon: '',
         title: '마이페이지',
         desc: '내 정보와 계정을 관리합니다.',
         nav: 'mypage',
         color: '#2563eb',
       })}
       ${renderHubCard({
-        icon: '📘',
+        icon: '',
         title: '사용 가이드',
         desc: '기능별 사용법을 빠르게 확인합니다.',
         nav: 'guide',
         color: '#16a34a',
       })}
       ${renderHubCard({
-        icon: '💬',
+        icon: '',
         title: '고객 문의',
         desc: '문의 접수와 답변 상태를 확인합니다.',
         nav: 'support',
         color: '#0891b2',
       })}
       ${renderHubCard({
-        icon: '🎁',
+        icon: '',
         title: '친구 초대',
         desc: '추천 링크를 공유하고 혜택을 받습니다.',
         nav: 'referral',

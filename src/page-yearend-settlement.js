@@ -198,7 +198,7 @@ function showDetailModal(settlement) {
     <div class="modal" style="max-width:700px;">
       <div class="modal-header">
         <h3>${escapeHtml(settlement.name)} (${escapeHtml(settlement.empNo)}) - 연말정산 상세</h3>
-        <button class="btn-close">✕</button>
+        <button class="btn-close"></button>
       </div>
       <div class="modal-body">
         <table style="width: 100%; border-collapse: collapse;">

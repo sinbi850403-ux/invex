@@ -229,16 +229,16 @@ function renderPanelContent(panel) {
 
   panel.innerHTML = `
     <div class="notif-header">
-      <strong>🔔 알림 센터</strong>
+      <strong> 알림 센터</strong>
       <span class="badge ${notifications.length > 0 ? 'badge-danger' : 'badge-default'}" style="margin-left:8px;">${notifications.length}</span>
       <div class="notif-actions">
         ${notifications.length > 0 ? '<button class="notif-action-btn" id="notif-mark-all">전체 확인</button>' : ''}
-        <button class="notif-close" id="notif-close">✕</button>
+        <button class="notif-close" id="notif-close"></button>
       </div>
     </div>
     <div class="notif-body">
       ${notifications.length === 0
-        ? '<div style="text-align:center; padding:32px; color:var(--text-muted); font-size:13px;">✅ 알림이 없습니다</div>'
+        ? '<div style="text-align:center; padding:32px; color:var(--text-muted); font-size:13px;"> 알림이 없습니다</div>'
         : notifications.map((notification) => `
           <div class="notif-item notif-${notification.type}">
             <span class="notif-icon">${notification.icon}</span>

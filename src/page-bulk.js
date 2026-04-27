@@ -27,8 +27,8 @@ export function renderBulkPage(container, navigateTo) {
 
     <!-- 탭 -->
     <div class="scan-mode-bar" style="margin-bottom:16px;">
-      <button class="scan-mode-btn active" id="tab-bulk" data-tab="bulk">⚡ 일괄 입출고</button>
-      <button class="scan-mode-btn" id="tab-reorder" data-tab="reorder">🤖 자동 발주 추천 ${reorderItems.length > 0 ? `<span class="badge badge-danger" style="margin-left:4px;">${reorderItems.length}</span>` : ''}</button>
+      <button class="scan-mode-btn active" id="tab-bulk" data-tab="bulk"> 일괄 입출고</button>
+      <button class="scan-mode-btn" id="tab-reorder" data-tab="reorder"> 자동 발주 추천 ${reorderItems.length > 0 ? `<span class="badge badge-danger" style="margin-left:4px;">${reorderItems.length}</span>` : ''}</button>
     </div>
 
     <div id="tab-content-bulk">
@@ -91,7 +91,7 @@ export function renderBulkPage(container, navigateTo) {
       <td class="text-right bulk-current" data-row="${rowIdx}">-</td>
       <td><input type="number" class="form-input bulk-qty" data-row="${rowIdx}" value="1" min="1" style="width:80px; padding:3px 6px; text-align:right;" /></td>
       <td><input class="form-input bulk-note" data-row="${rowIdx}" placeholder="메모" style="width:120px; padding:3px 6px; font-size:11px;" /></td>
-      <td><button class="btn-icon btn-icon-danger bulk-remove" data-row="${rowIdx}">✕</button></td>
+      <td><button class="btn-icon btn-icon-danger bulk-remove" data-row="${rowIdx}"></button></td>
     `;
     tbody.appendChild(tr);
 
@@ -197,16 +197,16 @@ export function renderBulkPage(container, navigateTo) {
  */
 function renderBulkSection(items) {
   if (items.length === 0) {
-    return '<div class="card"><div class="empty-state"><div class="icon">⚡</div><div class="msg">품목을 먼저 등록해주세요</div></div></div>';
+    return '<div class="card"><div class="empty-state"><div class="icon"></div><div class="msg">품목을 먼저 등록해주세요</div></div></div>';
   }
 
   return `
     <div class="card">
-      <div class="card-title">⚡ 일괄 입출고</div>
+      <div class="card-title"> 일괄 입출고</div>
 
       <div style="display:flex; gap:8px; margin-bottom:16px;">
-        <button class="btn btn-success active" id="bulk-type-in" style="flex:1;">📥 일괄 입고</button>
-        <button class="btn btn-outline" id="bulk-type-out" style="flex:1; color:var(--danger); border-color:var(--danger);">📤 일괄 출고</button>
+        <button class="btn btn-success active" id="bulk-type-in" style="flex:1;"> 일괄 입고</button>
+        <button class="btn btn-outline" id="bulk-type-out" style="flex:1; color:var(--danger); border-color:var(--danger);"> 일괄 출고</button>
       </div>
 
       <div class="table-wrapper" style="border:none; margin-bottom:12px;">
@@ -226,7 +226,7 @@ function renderBulkSection(items) {
 
       <div style="display:flex; gap:8px; justify-content:space-between;">
         <button class="btn btn-outline" id="btn-bulk-add">+ 행 추가</button>
-        <button class="btn btn-primary btn-lg" id="btn-bulk-execute">⚡ 일괄 처리 실행</button>
+        <button class="btn btn-primary btn-lg" id="btn-bulk-execute"> 일괄 처리 실행</button>
       </div>
     </div>
   `;
@@ -240,7 +240,7 @@ function renderReorderSection(reorderItems, items) {
     return `
       <div class="card">
         <div class="empty-state">
-          <div class="icon" style="font-size:40px;">🤖</div>
+          <div class="icon" style="font-size:40px;"></div>
           <div class="msg">현재 발주가 필요한 품목이 없습니다</div>
           <div class="sub">모든 품목이 충분한 재고를 보유하고 있습니다.</div>
         </div>
@@ -250,7 +250,7 @@ function renderReorderSection(reorderItems, items) {
 
   return `
     <div class="card" style="border-left:3px solid var(--danger);">
-      <div class="card-title">🤖 자동 발주 추천 <span class="badge badge-danger">${reorderItems.length}건</span></div>
+      <div class="card-title"> 자동 발주 추천 <span class="badge badge-danger">${reorderItems.length}건</span></div>
       <div style="font-size:13px; color:var(--text-muted); margin-bottom:16px;">
         과거 출고 패턴과 안전재고 설정을 분석하여 발주가 필요한 품목을 추천합니다.
       </div>
@@ -300,7 +300,7 @@ function renderReorderSection(reorderItems, items) {
       </div>
 
       <div style="display:flex; gap:8px; justify-content:flex-end;">
-        <button class="btn btn-primary btn-lg" id="btn-reorder-all">📄 발주서 작성으로 이동</button>
+        <button class="btn btn-primary btn-lg" id="btn-reorder-all"> 발주서 작성으로 이동</button>
       </div>
     </div>
   `;

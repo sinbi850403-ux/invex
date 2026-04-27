@@ -132,8 +132,8 @@ export function renderOrdersPage(container, navigateTo) {
     <div class="modal-overlay" id="order-modal" style="display:none;">
       <div class="modal" style="max-width:720px; width:95vw;">
         <div class="modal-header">
-          <h3 class="modal-title" id="order-modal-title">📋 신규 발주</h3>
-          <button class="modal-close" id="order-modal-close">✕</button>
+          <h3 class="modal-title" id="order-modal-title"> 신규 발주</h3>
+          <button class="modal-close" id="order-modal-close"></button>
         </div>
         <div class="modal-body" id="order-modal-body"></div>
       </div>
@@ -143,8 +143,8 @@ export function renderOrdersPage(container, navigateTo) {
     <div class="modal-overlay" id="receive-modal" style="display:none;">
       <div class="modal" style="max-width:620px; width:95vw;">
         <div class="modal-header">
-          <h3 class="modal-title" id="receive-modal-title">📦 입고 처리</h3>
-          <button class="modal-close" id="receive-modal-close">✕</button>
+          <h3 class="modal-title" id="receive-modal-title"> 입고 처리</h3>
+          <button class="modal-close" id="receive-modal-close"></button>
         </div>
         <div class="modal-body" id="receive-modal-body"></div>
       </div>
@@ -183,7 +183,7 @@ function renderOrderTable(orders) {
 
   if (!filtered.length) {
     return `<div style="padding:48px; text-align:center; color:var(--text-muted);">
-      <div style="font-size:40px; margin-bottom:12px;">📋</div>
+      <div style="font-size:40px; margin-bottom:12px;"></div>
       <div>발주 이력이 없습니다. [+ 신규 발주] 버튼으로 시작하세요.</div>
     </div>`;
   }
@@ -356,7 +356,7 @@ function openOrderModal(container, editOrder, navigateTo) {
 
   const modal = container.querySelector('#order-modal');
   const body  = container.querySelector('#order-modal-body');
-  container.querySelector('#order-modal-title').textContent = isEdit ? `📋 발주서 수정 - ${editOrder.orderNo}` : '📋 신규 발주서 작성';
+  container.querySelector('#order-modal-title').textContent = isEdit ? ` 발주서 수정 - ${editOrder.orderNo}` : ' 신규 발주서 작성';
   modal.style.display = 'flex';
 
   const e = editOrder || {};
@@ -399,7 +399,7 @@ function openOrderModal(container, editOrder, navigateTo) {
     <!-- 품목 테이블 -->
     <div style="margin-bottom:12px;">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-        <strong style="font-size:14px;">📦 발주 품목</strong>
+        <strong style="font-size:14px;"> 발주 품목</strong>
         <button type="button" class="btn btn-sm btn-outline" id="om-add-item">+ 품목 추가</button>
       </div>
       <div style="border:1px solid var(--border); border-radius:8px; overflow:hidden;">
@@ -558,7 +558,7 @@ function renderOrderItemRow(it, idx) {
       </td>
       <td style="padding:6px 8px; text-align:right; font-weight:600;" class="om-amt">-</td>
       <td style="padding:6px 4px; text-align:center;">
-        <button type="button" class="btn-icon btn-icon-danger om-remove" style="font-size:12px;">✕</button>
+        <button type="button" class="btn-icon btn-icon-danger om-remove" style="font-size:12px;"></button>
       </td>
     </tr>`;
 }
@@ -608,7 +608,7 @@ function openOrderDetail(container, order) {
         <h2 style="font-size:20px; font-weight:700; margin:0 0 2px;">${escapeHtml(order.orderNo || '')}</h2>
         <div style="font-size:13px; color:var(--text-muted);">거래처: <strong>${escapeHtml(order.vendor || '-')}</strong></div>
       </div>
-      <button id="od-close" style="background:none; border:none; font-size:20px; cursor:pointer; color:var(--text-muted);">✕</button>
+      <button id="od-close" style="background:none; border:none; font-size:20px; cursor:pointer; color:var(--text-muted);"></button>
     </div>
 
     <!-- 날짜 정보 -->
@@ -671,8 +671,8 @@ function openOrderDetail(container, order) {
         </div>
       </div>
 
-      ${order.note ? `<div style="background:var(--bg-input); border-radius:6px; padding:10px; font-size:13px; color:var(--text-muted); margin-bottom:16px;">📝 ${escapeHtml(order.note)}</div>` : ''}
-      ${order.taxInvoiceId ? `<div style="background:rgba(63,185,80,.1); border:1px solid var(--success); border-radius:6px; padding:10px; font-size:13px; color:var(--success);">✅ 세금계산서 발행 완료 (${order.taxInvoiceId})</div>` : ''}
+      ${order.note ? `<div style="background:var(--bg-input); border-radius:6px; padding:10px; font-size:13px; color:var(--text-muted); margin-bottom:16px;"> ${escapeHtml(order.note)}</div>` : ''}
+      ${order.taxInvoiceId ? `<div style="background:rgba(63,185,80,.1); border:1px solid var(--success); border-radius:6px; padding:10px; font-size:13px; color:var(--success);"> 세금계산서 발행 완료 (${order.taxInvoiceId})</div>` : ''}
     </div>
   `;
 
@@ -685,7 +685,7 @@ function openOrderDetail(container, order) {
 function openReceiveModal(container, order, navigateTo) {
   const modal = container.querySelector('#receive-modal');
   const body  = container.querySelector('#receive-modal-body');
-  container.querySelector('#receive-modal-title').textContent = `📦 입고 처리 - ${order.orderNo}`;
+  container.querySelector('#receive-modal-title').textContent = ` 입고 처리 - ${order.orderNo}`;
   modal.style.display = 'flex';
 
   const prevReceived = order.receivedItems || {};

@@ -7,7 +7,7 @@ import { showToast } from './toast.js';
 export function renderGuidePage(container, navigateTo) {
   container.innerHTML = `
     <div style="max-width:800px; margin:0 auto; padding:24px;">
-      <h2 style="font-size:22px; font-weight:800; margin-bottom:8px;">📖 사용 가이드</h2>
+      <h2 style="font-size:22px; font-weight:800; margin-bottom:8px;"> 사용 가이드</h2>
       <p style="color:var(--text-muted); font-size:13px; margin-bottom:24px;">처음이신가요? 아래 순서대로 따라하시면 금방 익히실 수 있어요.</p>
 
       <!-- 빠른 시작 -->
@@ -19,13 +19,13 @@ export function renderGuidePage(container, navigateTo) {
 
       <!-- FAQ -->
       <div class="card" style="padding:24px; margin-bottom:16px;">
-        <h3 style="font-size:16px; font-weight:700; margin-bottom:16px;">❓ 자주 묻는 질문</h3>
+        <h3 style="font-size:16px; font-weight:700; margin-bottom:16px;"> 자주 묻는 질문</h3>
         <div id="faq-list" style="display:flex; flex-direction:column; gap:8px;"></div>
       </div>
 
       <!-- 기능별 가이드 -->
       <div class="card" style="padding:24px;">
-        <h3 style="font-size:16px; font-weight:700; margin-bottom:16px;">📚 기능별 상세 가이드</h3>
+        <h3 style="font-size:16px; font-weight:700; margin-bottom:16px;"> 기능별 상세 가이드</h3>
         <div id="feature-cards" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(220px, 1fr)); gap:12px;">
         </div>
       </div>

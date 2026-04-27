@@ -84,7 +84,7 @@ export function renderBillingPage(container, navigateTo) {
 
     <!-- 요금제 비교 -->
     <div class="card" style="margin-bottom:20px;">
-      <div class="card-title">📋 요금제 비교</div>
+      <div class="card-title"> 요금제 비교</div>
       <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:16px;">
         ${Object.values(PLANS).map(p => {
           const isCurrent = currentPlan === p.id;
@@ -105,27 +105,27 @@ export function renderBillingPage(container, navigateTo) {
 
               <div style="text-align:left; font-size:13px; line-height:2;">
                 ${p.id === 'free' ? `
-                  ✅ 품목 100개까지<br/>
-                  ✅ 기본 재고 관리<br/>
-                  ✅ 입출고 관리<br/>
-                  ✅ 엑셀 업로드<br/>
-                  ✅ 다크 모드
+                   품목 100개까지<br/>
+                   기본 재고 관리<br/>
+                   입출고 관리<br/>
+                   엑셀 업로드<br/>
+                   다크 모드
                 ` : p.id === 'pro' ? `
-                  ✅ 품목 <strong>무제한</strong><br/>
-                  ✅ AI 자동 발주 추천<br/>
-                  ✅ 원가 분석 (FIFO)<br/>
-                  ✅ 매출/매입 장부<br/>
-                  ✅ 감사 추적<br/>
-                  ✅ 바코드 라벨 인쇄<br/>
-                  ✅ 사용자 5명
+                   품목 <strong>무제한</strong><br/>
+                   AI 자동 발주 추천<br/>
+                   원가 분석 (FIFO)<br/>
+                   매출/매입 장부<br/>
+                   감사 추적<br/>
+                   바코드 라벨 인쇄<br/>
+                   사용자 5명
                 ` : `
-                  ✅ Pro 전체 기능<br/>
-                  ✅ 다중 창고 관리<br/>
-                  ✅ 사용자 <strong>무제한</strong><br/>
-                  ✅ 권한 관리 (RBAC)<br/>
-                  ✅ API 연동<br/>
-                  ✅ 전담 고객 지원<br/>
-                  ✅ SLA 99.9%
+                   Pro 전체 기능<br/>
+                   다중 창고 관리<br/>
+                   사용자 <strong>무제한</strong><br/>
+                   권한 관리 (RBAC)<br/>
+                   API 연동<br/>
+                   전담 고객 지원<br/>
+                   SLA 99.9%
                 `}
               </div>
 
@@ -146,12 +146,12 @@ export function renderBillingPage(container, navigateTo) {
     <!-- 결제 수단 -->
     <div class="card" style="margin-bottom:20px;">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
-        <div class="card-title" style="margin:0;">💳 결제 수단</div>
-        <button class="btn btn-ghost btn-sm" id="btn-add-card">➕ 카드 추가</button>
+        <div class="card-title" style="margin:0;"> 결제 수단</div>
+        <button class="btn btn-ghost btn-sm" id="btn-add-card"> 카드 추가</button>
       </div>
       ${subscription.cardLast4 ? `
         <div style="display:flex; align-items:center; gap:12px; padding:12px; background:var(--bg-secondary); border-radius:8px;">
-          <div style="font-size:24px;">💳</div>
+          <div style="font-size:24px;"></div>
           <div>
             <div style="font-weight:600;">${subscription.cardBrand || '카드'} •••• ${subscription.cardLast4}</div>
             <div style="font-size:12px; color:var(--text-muted);">만료: ${subscription.cardExpiry || '-'}</div>
@@ -160,7 +160,7 @@ export function renderBillingPage(container, navigateTo) {
         </div>
       ` : `
         <div style="text-align:center; padding:24px; color:var(--text-muted);">
-          <div style="font-size:28px; margin-bottom:8px;">💳</div>
+          <div style="font-size:28px; margin-bottom:8px;"></div>
           <div>등록된 결제 수단이 없습니다.</div>
           <div style="font-size:12px; margin-top:4px;">구독 결제를 위해 카드를 등록하세요.</div>
         </div>
@@ -169,7 +169,7 @@ export function renderBillingPage(container, navigateTo) {
 
     <!-- 결제 이력 -->
     <div class="card">
-      <div class="card-title">📜 결제 이력</div>
+      <div class="card-title"> 결제 이력</div>
       ${paymentHistory.length > 0 ? `
         <div class="table-wrapper" style="border:none;">
           <table class="data-table">
@@ -195,7 +195,7 @@ export function renderBillingPage(container, navigateTo) {
         </div>
       ` : `
         <div style="text-align:center; padding:24px; color:var(--text-muted);">
-          <div style="font-size:28px; margin-bottom:8px;">📜</div>
+          <div style="font-size:28px; margin-bottom:8px;"></div>
           <div>결제 이력이 없습니다.</div>
         </div>
       `}
@@ -203,7 +203,7 @@ export function renderBillingPage(container, navigateTo) {
 
     <!-- 보안 안내 -->
     <div style="margin-top:16px; padding:12px; border-radius:8px; background:var(--bg-secondary); font-size:12px; color:var(--text-muted); display:flex; align-items:center; gap:8px;">
-      <span style="font-size:16px;">🔒</span>
+      <span style="font-size:16px;"></span>
       <span>모든 결제는 <strong>토스페이먼츠</strong>를 통해 안전하게 처리됩니다. 카드 정보는 INVEX 서버에 저장되지 않습니다.</span>
     </div>
   `;
@@ -419,12 +419,12 @@ function showContactModal(container) {
   modal.innerHTML = `
     <div class="modal" style="max-width:450px;">
       <div class="modal-header">
-        <h3>🏢 Enterprise 상담 신청</h3>
-        <button class="btn btn-ghost btn-sm" id="contact-close">✕</button>
+        <h3> Enterprise 상담 신청</h3>
+        <button class="btn btn-ghost btn-sm" id="contact-close"></button>
       </div>
       <div class="modal-body">
         <div style="text-align:center; padding:16px 0;">
-          <div style="font-size:32px; margin-bottom:8px;">🏢</div>
+          <div style="font-size:32px; margin-bottom:8px;"></div>
           <div style="font-size:14px; margin-bottom:16px; color:var(--text-muted);">
             Enterprise 요금제는 맞춤 상담을 통해 진행됩니다.
           </div>
@@ -448,7 +448,7 @@ function showContactModal(container) {
       </div>
       <div class="modal-footer" style="display:flex; gap:8px; justify-content:flex-end;">
         <button class="btn btn-ghost" id="contact-cancel">닫기</button>
-        <button class="btn btn-primary" id="contact-submit">📧 상담 신청</button>
+        <button class="btn btn-primary" id="contact-submit"> 상담 신청</button>
       </div>
     </div>
   `;

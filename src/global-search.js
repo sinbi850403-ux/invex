@@ -46,7 +46,7 @@ function openGlobalSearch() {
   panelElement.innerHTML = `
     <div class="global-search-panel" id="gs-panel">
       <div class="gs-input-wrap">
-        <span class="gs-icon">🔍</span>
+        <span class="gs-icon"></span>
         <input class="gs-input" id="gs-input" placeholder="품목, 거래처, 코드 검색... (ESC로 닫기)" autofocus />
         <span class="gs-shortcut">Ctrl+K</span>
       </div>
@@ -156,7 +156,7 @@ function renderSearchResults(query) {
     if (matchFields.includes(query)) {
       results.push({
         type: 'tx',
-        icon: tx.type === 'in' ? '📥' : '📤',
+        icon: tx.type === 'in' ? '' : '',
         title: `${tx.itemName} (${tx.type === 'in' ? '+' : '-'}${tx.quantity})`,
         subtitle: `${tx.date} | ${tx.note || '-'}`,
         page: 'in',

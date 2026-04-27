@@ -18,7 +18,7 @@ export function renderLabelsPage(container, navigateTo) {
         <div class="page-desc">품목 라벨을 생성하고 인쇄합니다. 바코드/QR 코드 포함.</div>
       </div>
       <div class="page-actions">
-        <button class="btn btn-primary" id="btn-print-labels">🖨️ 선택 항목 인쇄</button>
+        <button class="btn btn-primary" id="btn-print-labels"> 선택 항목 인쇄</button>
       </div>
     </div>
 
@@ -47,7 +47,7 @@ export function renderLabelsPage(container, navigateTo) {
     <!-- 품목 선택 -->
     <div class="card" style="margin-bottom:12px;">
       <div style="display:flex; justify-content:space-between; margin-bottom:12px;">
-        <div class="card-title" style="margin:0;">📦 라벨 출력 품목 선택</div>
+        <div class="card-title" style="margin:0;"> 라벨 출력 품목 선택</div>
         <label style="display:flex; align-items:center; gap:4px; font-size:12px; cursor:pointer;">
           <input type="checkbox" id="label-select-all" /> 전체 선택
         </label>
@@ -67,7 +67,7 @@ export function renderLabelsPage(container, navigateTo) {
 
     <!-- 라벨 미리보기 -->
     <div class="card">
-      <div class="card-title">👁️ 라벨 미리보기</div>
+      <div class="card-title"> 라벨 미리보기</div>
       <div id="label-preview" style="display:flex; flex-wrap:wrap; gap:12px; padding:8px;">
         <div style="color:var(--text-muted); font-size:13px;">위에서 품목을 선택하면 미리보기가 표시됩니다.</div>
       </div>

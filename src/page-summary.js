@@ -25,7 +25,7 @@ export function renderSummaryPage(container, navigateTo) {
       </div>
       <div class="card">
         <div class="empty-state">
-          <div class="icon">📊</div>
+          <div class="icon"></div>
           <div class="msg">아직 보고할 데이터가 없습니다.</div>
           <div class="sub">파일을 업로드하거나 품목을 등록하면 요약 보고가 자동으로 생성됩니다.</div>
           <br/>
@@ -304,7 +304,7 @@ export function renderSummaryPage(container, navigateTo) {
             ${summary.topByQty.map((item, i) => `
               <tr>
                 <td style="text-align:center; font-weight:700; color:var(--text-muted);">
-                  ${i < 3 ? ['🥇','🥈','🥉'][i] : i + 1}
+                  ${i < 3 ? ['','',''][i] : i + 1}
                 </td>
                 <td class="col-fill"><strong>${item.itemName || '-'}</strong></td>
                 <td style="color:var(--text-muted);">${item.category || '-'}</td>

@@ -164,5 +164,5 @@ export async function renderSeverancePage(container, navigateTo) {
 
   // 이력 표시
   const historyDiv = container.querySelector('#sev-history');
-  historyDiv.innerHTML = '<div class="empty-state"><div class="icon">📋</div><div class="msg">지급된 퇴직금 이력이 없습니다</div></div>';
+  historyDiv.innerHTML = '<div class="empty-state"><div class="icon"></div><div class="msg">지급된 퇴직금 이력이 없습니다</div></div>';
 }

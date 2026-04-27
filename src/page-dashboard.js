@@ -26,7 +26,7 @@ export function renderDashboardPage(container, navigateTo) {
       </div>
       <div class="card">
         <div class="empty-state">
-          <div class="icon">📈</div>
+          <div class="icon"></div>
           <div class="msg">분석할 데이터가 없습니다.</div>
           <div class="sub">품목을 등록하면 ABC 분석과 회전율을 바로 확인할 수 있습니다.</div>
         </div>
@@ -124,7 +124,7 @@ export function renderDashboardPage(container, navigateTo) {
             ${abcData.slice(0, 20).map((d, i) => `
               <tr>
                 <td style="text-align:center; font-weight:600; color:var(--text-muted);">
-                  ${i < 3 ? ['🥇','🥈','🥉'][i] : i + 1}
+                  ${i < 3 ? ['','',''][i] : i + 1}
                 </td>
                 <td>
                   <span class="badge ${d.grade === 'A' ? 'badge-success' : d.grade === 'B' ? 'badge-warning' : 'badge-default'}">
