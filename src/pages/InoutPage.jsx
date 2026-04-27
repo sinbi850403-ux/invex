@@ -998,10 +998,10 @@ export function InoutPage({ mode = 'all' }) {
     }
   }, [isOutMode, pageData]);
 
-  // 컬럼 넓이 수동 조절
+  // 컬럼 넓이 수동 조절 (outRow1H 변경 시에도 재적용)
   useEffect(() => {
     if (tableRef.current) enableColumnResize(tableRef.current);
-  }, [pageData]);
+  }, [pageData, outRow1H]);
 
   // ── 리셋 ───────────────────────────────────────────────────────────────────
   const handleReset = () => {
