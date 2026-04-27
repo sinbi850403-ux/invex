@@ -17,9 +17,12 @@ import { storeItemToDb } from './db.js';
 import { managedQuery, invalidateCache, getTrafficMetrics } from './traffic-manager.js';
 
 // TOKEN_REFRESHED 이벤트가 이미 발생했는지 추적
-// restoreState가 만료 JWT 감지 후 불필요한 6초 대기를 스킵하기 위해
 let _tokenWasRefreshed = false;
 window.addEventListener('invex:token-refreshed', () => { _tokenWasRefreshed = true; });
+
+// 마지막 restoreState가 Supabase에서 실제 데이터를 가져왔는지 추적
+let _supabaseLoadSucceeded = false;
+export function wasLoadedFromSupabase() { return _supabaseLoadSucceeded; }
 
 // 기본 상태
 const DEFAULT_STATE = {
@@ -545,6 +548,10 @@ export async function restoreState(userId = null) {
           cloudData.transactions.forEach(tx => { tx._synced = true; });
         }
 
+        _supabaseLoadSucceeded =
+          (cloudData.mappedData?.length ?? 0) > 0 ||
+          (cloudData.transactions?.length ?? 0) > 0;
+
         state = { ...DEFAULT_STATE, ...(localData || {}), ...cloudData };
         window.dispatchEvent(new CustomEvent('invex:store-updated', { detail: { changedKeys: ['*'] } }));
         saveToDB();
@@ -552,6 +559,7 @@ export async function restoreState(userId = null) {
         return;
       }
     } catch (err) {
+      _supabaseLoadSucceeded = false;
       // 401/RLS/타임아웃은 IndexedDB 폴백이 자연스러운 흐름 — 디버그 수준만
       const msg = String(err.message || '');
       if (!msg.includes('401') && !msg.includes('row-level') && !msg.includes('timeout')) {

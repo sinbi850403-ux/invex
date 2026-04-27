@@ -14,7 +14,7 @@ import { showToast } from './toast.js';
 import { isAdmin } from './admin-auth.js';
 import { navigateTo, injectRouterCallbacks, PAGE_LOADERS, LAST_PAGE_KEY, renderQuickAccess } from './router.js';
 import { initGlobalSearch, toggleGlobalSearch } from './global-search.js';
-import { restoreState, getState, setupRealtimeSync, cleanupRealtimeSync } from './store.js';
+import { restoreState, getState, wasLoadedFromSupabase, setupRealtimeSync, cleanupRealtimeSync } from './store.js';
 import { primeUserIdCache, setWorkspaceUserId, clearWorkspaceUserId } from './db.js';
 import { getWorkspaceId } from './workspace.js';
 import { checkAndShowOnboarding } from './onboarding.js';
@@ -253,11 +253,20 @@ async function reloadDataIfEmpty() {
 
 window.addEventListener('invex:token-refreshed', async () => {
   if (!isAuthReady || isAppInitializing) {
-    // initAppAfterAuth가 아직 실행 중 or 아직 시작 전 — 끝난 뒤 처리하도록 플래그만 세팅
     pendingTokenRefresh = true;
     return;
   }
-  await reloadDataIfEmpty();
+  // Supabase 로드가 성공하지 못했으면 (강력새로고침 시 JWT 갱신 전 쿼리 실패)
+  // 토큰 갱신 완료 후 무조건 재로드 + 현재 페이지 재렌더링
+  if (!wasLoadedFromSupabase()) {
+    const uid = getCurrentUser()?.uid || null;
+    if (!uid) return;
+    primeUserIdCache(uid);
+    await restoreState(uid);
+    const { currentPage } = await import('./router.js');
+    const page = currentPage || localStorage.getItem(LAST_PAGE_KEY) || 'home';
+    await navigateTo(page);
+  }
 });
 
 const CARD_STATE_KEY = 'invex_card_state_v1';
