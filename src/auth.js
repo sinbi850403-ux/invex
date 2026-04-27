@@ -63,6 +63,8 @@ function emitAuthChanged() {
       console.error('[Auth] authChangeCallback threw:', err);
     }
   });
+  // React 컴포넌트가 canAction() 결과를 재평가하도록 store 업데이트 이벤트 발행
+  window.dispatchEvent(new CustomEvent('invex:store-updated', { detail: { changedKeys: ['_auth'] } }));
 }
 
 // ─── 스토리지 관련 ────────────────────────────────────────────────────────────
