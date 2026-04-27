@@ -4,15 +4,16 @@
  * 핵심: 입출고를 기록하면 재고 현황의 수량이 자동으로 증감됨
  */
 
-import { getState, setState, addTransaction, addTransactionsBulk, deleteTransaction, restoreTransaction, updateTransactionPrices } from './store.js';
+import { getState, setState, addTransaction, deleteTransaction, restoreTransaction, updateTransactionPrices } from './store.js';
 import { showToast } from './toast.js';
 import { downloadExcel, downloadExcelSheets, readExcelFile } from './excel.js';
-import { escapeHtml, renderQuickFilterRow, enableColumnResize, showFieldError, clearAllFieldErrors, setSavingState } from './ux-toolkit.js';
+import { escapeHtml, renderQuickFilterRow, enableColumnResize } from './ux-toolkit.js';
 import { canAction } from './auth.js';
 import { handlePageError } from './error-monitor.js';
+import { showFieldError, clearAllFieldErrors, setSavingState } from './ux-toolkit.js';
 
 const PAGE_SIZE = 15;
-const BULK_INOUT_TEMPLATE_HEADERS = ['자산', '입고일자', '거래처', '상품코드', '품명', '규격', '단위', '입고수량', '단가'];
+const BULK_INOUT_TEMPLATE_HEADERS = ['자산', '입고일자', '상품코드', '거래처', '품명', '규격', '단위', '입고수량', '단가', '공급가액', '부가세', '합계금액'];
 
 function safeAttr(value) {
   return String(value ?? '')
@@ -63,7 +64,7 @@ export function renderInoutPage(container, navigateTo, mode = 'all') {
   const isInMode  = mode === 'in';
   const isOutMode = mode === 'out';
   const pageTitle  = isInMode ? '입고 관리' : isOutMode ? '출고 관리' : '입출고 관리';
-  const pageIcon   = isInMode ? '' : isOutMode ? '' : '';
+  const pageIcon   = isInMode ? '📥' : isOutMode ? '📤' : '📥';
   const initialQuick = isInMode ? 'in' : isOutMode ? 'out' : 'all';
 
   const state = getState();
@@ -124,7 +125,7 @@ export function renderInoutPage(container, navigateTo, mode = 'all') {
   container.innerHTML = `
     <div class="page-header">
       <div>
-        <h1 class="page-title"> ${pageTitle}</h1>
+        <h1 class="page-title"><span class="title-icon">${pageIcon}</span> ${pageTitle}</h1>
         <div class="page-desc">${
           isInMode  ? '입고 기록을 등록하면 재고 수량이 자동으로 증가합니다.' :
           isOutMode ? '출고 기록을 등록하면 재고 수량이 자동으로 감소합니다.' :
@@ -292,56 +293,17 @@ export function renderInoutPage(container, navigateTo, mode = 'all') {
   }
 
   function getComparableTxValue(tx, key) {
-    const it = itemMap.get(tx.itemName) || {};
-    const qty = parseFloat(tx.quantity) || 0;
-
+    const raw = tx[key];
     if (key === 'date') {
       const source = tx.date || tx.createdAt;
       if (!source) return 0;
       const ts = new Date(source).getTime();
       return Number.isNaN(ts) ? 0 : ts;
     }
-    if (key === 'quantity')  return qty;
-    if (key === 'unitPrice') return parseFloat(tx.unitPrice) || 0;
-    if (key === 'itemCode')  return (tx.itemCode || it.itemCode || '').toLowerCase();
-    if (key === 'spec')      return (tx.spec  || it.spec  || '').toLowerCase();
-    if (key === 'unit')      return (tx.unit  || it.unit  || '').toLowerCase();
-
-    // ── 입고 계산 필드 ──────────────────────────────
-    const inCost   = parseFloat(tx.unitPrice) || 0;
-    const inSupply = Math.round(inCost * qty);
-    const inVat    = Math.floor(inSupply * 0.1);
-    if (key === 'supplyValue')   return inSupply;
-    if (key === 'vatValue')      return inVat;
-    if (key === 'totalAmount')   return inSupply + inVat;
-
-    // ── 출고 계산 필드 ──────────────────────────────
-    const outCost     = parseFloat(it.unitPrice || tx.unitPrice) || 0;
-    const purchaseAmt = Math.round(outCost * qty);
-    const purchaseVat = Math.floor(purchaseAmt * 0.1);
-    const saleUnit    = parseFloat(tx.actualSellingPrice || tx.sellingPrice || it.sellingPrice) || 0;
-    const outAmt      = Math.round(saleUnit * qty);
-    const outTotal    = Math.round(outAmt * 1.1);
-    const profit      = outAmt - purchaseAmt;
-    if (key === 'sellingPrice')   return saleUnit;
-    if (key === 'outAmt')         return outAmt;
-    if (key === 'outTotal')       return outTotal;
-    if (key === 'purchaseAmt')    return purchaseAmt;
-    if (key === 'purchaseVat')    return purchaseVat;
-    if (key === 'purchaseTotal')  return purchaseAmt + purchaseVat;
-    if (key === 'profitAmt')      return profit;
-    if (key === 'profitRate')     return outAmt > 0 ? profit / outAmt * 100 : 0;
-    if (key === 'costRate')       return outAmt > 0 ? purchaseAmt / outAmt * 100 : 0;
-
-    // ── 전체 모드: 이익률 = (실판매가 - 원가) / 원가 ──
-    if (key === 'marginRate') {
-      const actualSell = parseFloat(tx.actualSellingPrice) || 0;
-      const unitCost   = parseFloat(tx.unitPrice) || 0;
-      return (unitCost > 0 && actualSell > 0) ? (actualSell - unitCost) / unitCost * 100 : 0;
+    if (key === 'quantity' || key === 'unitPrice') {
+      const num = parseFloat(raw);
+      return Number.isNaN(num) ? 0 : num;
     }
-    if (key === 'actualSellingPrice') return parseFloat(tx.actualSellingPrice) || 0;
-
-    const raw = tx[key];
     if (!raw) return '';
     return String(raw).toLowerCase();
   }
@@ -378,74 +340,65 @@ export function renderInoutPage(container, navigateTo, mode = 'all') {
 
     let cols = '';
     if (isInMode) {
-      // 입고관리: 자산|입고일자|거래처|상품코드|품명|규격|단위|입고수량|단가|공급가액|부가세|합계금액
+      // 입고관리: 자산|입고일자|상품코드|거래처|품명|규격|단위|입고수량|단가|공급가액|부가세|합계금액
       cols = `
         <th style="width:40px; text-align:center;"><input type="checkbox" id="tx-select-all" /></th>
         <th class="col-num">#</th>
         <th>자산</th>
-        ${sortableTh('date',        '입고일자')}
-        ${sortableTh('vendor',      '거래처')}
-        ${sortableTh('itemCode',    '상품코드')}
-        ${sortableTh('itemName',    '품명', 'col-fill')}
-        ${sortableTh('spec',        '규격')}
-        ${sortableTh('unit',        '단위')}
-        ${sortableTh('quantity',    '입고수량',  'text-right')}
-        ${sortableTh('unitPrice',   '단가',      'text-right')}
-        ${sortableTh('supplyValue', '공급가액',  'text-right')}
-        ${sortableTh('vatValue',    '부가세',    'text-right')}
-        ${sortableTh('totalAmount', '합계금액',  'text-right')}`;
+        ${sortableTh('date', '입고일자')}
+        <th>상품코드</th>
+        ${sortableTh('vendor', '거래처')}
+        ${sortableTh('itemName', '품명')}
+        <th>규격</th>
+        <th>단위</th>
+        ${sortableTh('quantity', '입고수량', 'text-right')}
+        ${sortableTh('unitPrice', '단가', 'text-right')}
+        <th class="text-right">공급가액</th>
+        <th class="text-right">부가세</th>
+        <th class="text-right">합계금액</th>
+        <th style="width:50px;">삭제</th>`;
     } else if (isOutMode) {
-      // 출고관리: 2행 헤더 (그룹: 판매/매입/이익 분석)
-      thead.innerHTML = `
-        <tr>
-          <th rowspan="2" style="width:40px; text-align:center;"><input type="checkbox" id="tx-select-all" /></th>
-          <th rowspan="2" class="col-num">#</th>
-          <th rowspan="2">자산</th>
-          ${sortableTh('date',     '출고일자'              ).replace('<th ', '<th rowspan="2" ')}
-          ${sortableTh('vendor',   '거래처'                ).replace('<th ', '<th rowspan="2" ')}
-          ${sortableTh('itemCode', '상품코드'              ).replace('<th ', '<th rowspan="2" ')}
-          ${sortableTh('itemName', '품명', 'col-fill'      ).replace('<th ', '<th rowspan="2" ')}
-          ${sortableTh('spec',     '규격'                  ).replace('<th ', '<th rowspan="2" ')}
-          ${sortableTh('unit',     '단위'                  ).replace('<th ', '<th rowspan="2" ')}
-          ${sortableTh('quantity', '출고수량', 'text-right').replace('<th ', '<th rowspan="2" ')}
-          <th colspan="3" class="col-group-head col-group-sale">판매</th>
-          <th colspan="3" class="col-group-head col-group-purchase">매입</th>
-          <th colspan="3" class="col-group-head col-group-profit">이익 분석</th>
-        </tr>
-        <tr>
-          ${sortableTh('sellingPrice',  '출고단가',   'text-right col-group-sale')}
-          ${sortableTh('outAmt',        '판매가',     'text-right col-group-sale')}
-          ${sortableTh('outTotal',      '출고합',     'text-right col-group-sale')}
-          ${sortableTh('purchaseAmt',   '매입원가',   'text-right col-group-purchase')}
-          ${sortableTh('purchaseVat',   '부가세',     'text-right col-group-purchase')}
-          ${sortableTh('purchaseTotal', '공가합',     'text-right col-group-purchase')}
-          ${sortableTh('profitAmt',     '이익액',     'text-right col-group-profit')}
-          ${sortableTh('profitRate',    '이익률',     'text-right col-group-profit')}
-          ${sortableTh('costRate',      '매출원가율', 'text-right col-group-profit')}
-        </tr>`;
-      // ★ return 제거 — 이벤트 바인딩 코드가 실행돼야 정렬이 동작함
+      // 출고관리: 자산|출고일자|매장명|상품코드|입고수량|단가|공급가액|부가세|합계금액|출고단가|출고수량|출고금액|매입원가|이익액|이익율|매출원가율
+      cols = `
+        <th style="width:40px; text-align:center;"><input type="checkbox" id="tx-select-all" /></th>
+        <th class="col-num">#</th>
+        <th>자산</th>
+        ${sortableTh('date', '출고일자')}
+        ${sortableTh('vendor', '매장명')}
+        <th>상품코드</th>
+        ${sortableTh('quantity', '입고수량', 'text-right')}
+        ${sortableTh('unitPrice', '단가', 'text-right')}
+        <th class="text-right">공급가액</th>
+        <th class="text-right">부가세</th>
+        <th class="text-right">합계금액</th>
+        <th class="text-right">출고단가</th>
+        <th class="text-right">출고수량</th>
+        <th class="text-right">출고금액</th>
+        <th class="text-right">매입원가</th>
+        <th class="text-right">이익액</th>
+        <th class="text-right">이익율</th>
+        <th class="text-right">매출원가율</th>
+        <th style="width:50px;">삭제</th>`;
     } else {
       // 전체(all) 모드
       cols = `
         <th style="width:40px; text-align:center;"><input type="checkbox" id="tx-select-all" /></th>
         <th class="col-num">#</th>
-        ${sortableTh('type',               '구분')}
-        ${sortableTh('vendor',             '거래처')}
-        ${sortableTh('itemName',           '품목명',  'col-fill')}
-        ${sortableTh('itemCode',           '품목코드')}
-        ${sortableTh('quantity',           '수량',    'text-right')}
-        ${sortableTh('unitPrice',          '원가',    'text-right')}
-        ${sortableTh('sellingPrice',       '판매가',  'text-right')}
-        ${sortableTh('actualSellingPrice', '실판매가','text-right')}
-        ${sortableTh('marginRate',         '이익률',  'text-right')}
-        ${sortableTh('date',               '날짜')}
-        <th>비고</th>`;
+        ${sortableTh('type', '구분')}
+        ${sortableTh('vendor', '거래처')}
+        ${sortableTh('itemName', '품목명')}
+        <th>품목코드</th>
+        ${sortableTh('quantity', '수량', 'text-right')}
+        ${sortableTh('unitPrice', '원가', 'text-right')}
+        <th class="text-right">판매가</th>
+        <th class="text-right">실판매가</th>
+        <th class="text-right">이익률</th>
+        ${sortableTh('date', '날짜')}
+        <th>비고</th>
+        <th style="width:50px;">삭제</th>`;
     }
 
-    // 출고 모드는 위에서 thead.innerHTML을 직접 설정했으므로 덮어쓰지 않음
-    if (!isOutMode) {
-      thead.innerHTML = `<tr>${cols}</tr>`;
-    }
+    thead.innerHTML = `<tr>${cols}</tr>`;
 
     const applySortByKey = (key) => {
       if (!key) return;
@@ -482,8 +435,6 @@ export function renderInoutPage(container, navigateTo, mode = 'all') {
         applySortByKey(header.dataset.sortKey);
       }, true);
     });
-
-    enableColumnResize(container.querySelector('.data-table'));
   }
 
   function getFilteredTx() {
@@ -501,7 +452,9 @@ export function renderInoutPage(container, navigateTo, mode = 'all') {
       if (filter.date && tx.date !== filter.date) return false;
       // 거래처 필터: 트랜잭션에 직접 기록된 거래처로 필터링
       //   같은 품목을 여러 거래처에서 입고할 수 있으므로 트랜잭션 기준이 정확
+      //   같은 품목을 여러 거래처에서 입고할 수 있으므로 트랜잭션 기준이 정확
       if (filter.vendor && tx.vendor !== filter.vendor) return false;
+      //   같은 품목을 여러 거래처에서 입고할 수 있으므로 트랜잭션 기준이 정확
       if (filter.itemCode && tx.itemCode !== filter.itemCode) return false;
       if (filter.quick === 'today' && tx.date !== todayKey) return false;
       if (filter.quick === 'in' && tx.type !== 'in') return false;
@@ -522,9 +475,7 @@ export function renderInoutPage(container, navigateTo, mode = 'all') {
     if (filter.vendor) chips.push(`거래처: ${filter.vendor}`);
     if (filter.itemCode) chips.push(`품목코드: ${filter.itemCode}`);
     if (filter.date) chips.push(`날짜: ${filter.date}`);
-    if (sort.key !== defaultSort.key || sort.direction !== defaultSort.direction) {
-      chips.push(`정렬: ${getSortOptionLabel(sort)}`);
-    }
+    chips.push(`정렬: ${getSortOptionLabel(sort)}`);
 
     summaryEl.innerHTML = `
       <div class="filter-summary-row">
@@ -558,7 +509,7 @@ export function renderInoutPage(container, navigateTo, mode = 'all') {
 
     const tbody = container.querySelector('#tx-body');
     if (!tbody) return;
-    const totalColCount = isInMode ? 14 : isOutMode ? 21 : 13;
+    const totalColCount = isInMode ? 15 : isOutMode ? 19 : 14;
     if (sorted.length === 0) {
       tbody.innerHTML = `<tr><td colspan="${totalColCount}" style="text-align:center; padding:32px; color:var(--text-muted);">
         ${transactions.length === 0 ? '아직 입출고 기록이 없습니다. 위 버튼으로 먼저 등록해 주세요.' : '검색 결과가 없습니다.'}
@@ -620,6 +571,7 @@ export function renderInoutPage(container, navigateTo, mode = 'all') {
         const indent = isChild ? 'padding-left:24px;' : '';
         const it = itemMap.get(tx.itemName) || {};
         const chk = `<td style="text-align:center;"><input type="checkbox" class="tx-select-row" value="${safeAttr(tx.id)}" ${selectedTxIds.has(tx.id) ? 'checked' : ''} /></td>`;
+        const del = `<td class="text-center"><button class="btn-icon btn-icon-danger btn-del-tx" data-id="${safeAttr(tx.id)}" title="삭제">삭제</button></td>`;
 
         if (isInMode) {
           const qty = parseFloat(tx.quantity) || 0;
@@ -631,9 +583,9 @@ export function renderInoutPage(container, navigateTo, mode = 'all') {
             <td class="col-num"></td>
             <td style="font-size:12px;">${escapeHtml(tx.category || it.category || '')}</td>
             <td>${formatDate(tx.date)}</td>
-            <td style="font-size:12px;">${tx.vendor ? escapeHtml(tx.vendor) : '<span style="color:var(--text-muted)">-</span>'}</td>
             <td style="font-size:12px; color:var(--text-muted);">${escapeHtml(tx.itemCode || it.itemCode || '-')}</td>
-            <td class="col-fill" style="${indent}"><strong>${escapeHtml(tx.itemName || '-')}</strong></td>
+            <td style="font-size:12px;">${tx.vendor ? escapeHtml(tx.vendor) : '<span style="color:var(--text-muted)">-</span>'}</td>
+            <td style="${indent}"><strong>${escapeHtml(tx.itemName || '-')}</strong></td>
             <td style="font-size:12px; color:var(--text-muted);">${escapeHtml(tx.spec || it.spec || '')}</td>
             <td style="font-size:12px;">${escapeHtml(tx.unit || it.unit || '')}</td>
             <td class="text-right type-in">+${qty.toLocaleString('ko-KR')}</td>
@@ -641,20 +593,20 @@ export function renderInoutPage(container, navigateTo, mode = 'all') {
             <td class="text-right">${supply ? W(supply) : '-'}</td>
             <td class="text-right">${vat ? W(vat) : '-'}</td>
             <td class="text-right">${supply ? W(supply + vat) : '-'}</td>
+            ${del}
           </tr>`;
         }
 
         if (isOutMode) {
           const qty = parseFloat(tx.quantity) || 0;
-          const cost = parseFloat(it.unitPrice || tx.unitPrice) || 0;
+          const cost = parseFloat(tx.unitPrice) || 0;
           const supply = Math.round(cost * qty);
           const vat = Math.floor(supply * 0.1);
           const salePrice = parseFloat(tx.actualSellingPrice || tx.sellingPrice || it.sellingPrice) || 0;
           const outAmt = Math.round(salePrice * qty);
-          const outTotal = Math.round(outAmt * 1.1);
           const purchase = Math.round(cost * qty);
           const profit = outAmt - purchase;
-          const profitRate = outAmt > 0 ? (profit / outAmt * 100).toFixed(1) + '%' : '-';
+          const profitRate = purchase > 0 ? (profit / purchase * 100).toFixed(1) + '%' : '-';
           const costRate  = outAmt > 0   ? (purchase / outAmt * 100).toFixed(1) + '%'  : '-';
           const profitColor = profit > 0 ? 'var(--success)' : profit < 0 ? 'var(--danger)' : 'var(--text-muted)';
           return `<tr class="${selectedTxIds.has(tx.id) ? 'selected' : ''}" data-tx-id="${safeAttr(tx.id)}" style="${childStyle}">
@@ -664,19 +616,19 @@ export function renderInoutPage(container, navigateTo, mode = 'all') {
             <td>${formatDate(tx.date)}</td>
             <td style="font-size:12px;">${tx.vendor ? escapeHtml(tx.vendor) : '<span style="color:var(--text-muted)">-</span>'}</td>
             <td style="font-size:12px; color:var(--text-muted);">${escapeHtml(tx.itemCode || it.itemCode || '-')}</td>
-            <td class="col-fill" style="${indent}"><strong>${escapeHtml(tx.itemName || '-')}</strong></td>
-            <td style="font-size:12px; color:var(--text-muted);">${escapeHtml(tx.spec || it.spec || '')}</td>
-            <td style="font-size:12px;">${escapeHtml(tx.unit || it.unit || '')}</td>
             <td class="text-right type-out">${qty.toLocaleString('ko-KR')}</td>
-            <td class="text-right col-group-sale">${salePrice ? W(salePrice) : '-'}</td>
-            <td class="text-right col-group-sale">${outAmt ? W(outAmt) : '-'}</td>
-            <td class="text-right col-group-sale">${outTotal ? W(outTotal) : '-'}</td>
-            <td class="text-right col-group-purchase">${supply ? W(supply) : '-'}</td>
-            <td class="text-right col-group-purchase">${vat ? W(vat) : '-'}</td>
-            <td class="text-right col-group-purchase">${supply ? W(supply + vat) : '-'}</td>
-            <td class="text-right col-group-profit" style="color:${profitColor}; font-weight:600;">${purchase > 0 ? W(profit) : '-'}</td>
-            <td class="text-right col-group-profit" style="color:${profitColor};">${profitRate}</td>
-            <td class="text-right col-group-profit">${costRate}</td>
+            <td class="text-right">${cost ? W(cost) : '-'}</td>
+            <td class="text-right">${supply ? W(supply) : '-'}</td>
+            <td class="text-right">${vat ? W(vat) : '-'}</td>
+            <td class="text-right">${supply ? W(supply + vat) : '-'}</td>
+            <td class="text-right">${salePrice ? W(salePrice) : '-'}</td>
+            <td class="text-right type-out">${qty.toLocaleString('ko-KR')}</td>
+            <td class="text-right">${outAmt ? W(outAmt) : '-'}</td>
+            <td class="text-right">${purchase ? W(purchase) : '-'}</td>
+            <td class="text-right" style="color:${profitColor}; font-weight:600;">${profit ? W(profit) : '-'}</td>
+            <td class="text-right" style="color:${profitColor};">${profitRate}</td>
+            <td class="text-right">${costRate}</td>
+            ${del}
           </tr>`;
         }
 
@@ -687,7 +639,7 @@ export function renderInoutPage(container, navigateTo, mode = 'all') {
             <td class="col-num"></td>
             <td data-label="구분"><span class="${tx.type === 'in' ? 'type-in' : 'type-out'}">${tx.type === 'in' ? '입고' : '출고'}</span></td>
             <td data-label="거래처" style="font-size:12px; ${indent}">${tx.vendor ? escapeHtml(tx.vendor) : '<span style="color:var(--text-muted)">-</span>'}</td>
-            <td data-label="품목명" class="col-fill" style="${indent}">
+            <td data-label="품목명" style="${indent}">
               ${isChild ? `<span style="color:var(--text-muted); font-size:12px;">${escapeHtml(tx.itemName || '-')}</span>` : `<strong>${escapeHtml(tx.itemName || '-')}</strong>`}
             </td>
             <td data-label="품목코드" style="color:var(--text-muted); font-size:12px;">${escapeHtml(tx.itemCode || '-')}</td>
@@ -704,6 +656,7 @@ export function renderInoutPage(container, navigateTo, mode = 'all') {
             <td data-label="이익률" class="text-right">${renderMargin(tx)}</td>
             <td data-label="날짜">${formatDate(tx.date)}</td>
             <td data-label="비고" style="color:var(--text-muted); font-size:13px;">${escapeHtml(tx.note || '')}</td>
+            ${del}
           </tr>`;
       };
 
@@ -780,6 +733,7 @@ export function renderInoutPage(container, navigateTo, mode = 'all') {
 
     renderFilterSummary(sorted.length);
 
+    //   같은 품목을 여러 거래처에서 입고할 수 있으므로 트랜잭션 기준이 정확
     const pagEl = container.querySelector('#tx-pagination');
     if (!pagEl) return;
     const pageStart = sorted.length === 0 ? 0 : start + 1;
@@ -838,6 +792,39 @@ export function renderInoutPage(container, navigateTo, mode = 'all') {
       });
     });
 
+    // 삭제 이벤트
+    container.querySelectorAll('.btn-del-tx').forEach(btn => {
+      btn.addEventListener('click', () => {
+        if (!canAction('inout:delete')) {
+          showToast('삭제 권한이 없습니다. 매니저 이상만 가능합니다.', 'warning');
+          return;
+        }
+        try {
+          const removed = deleteTransaction(btn.dataset.id);
+          if (!removed || !removed.deleted) {
+            showToast('삭제할 기록을 찾지 못했습니다.', 'warning');
+            return;
+          }
+          const itemName = removed.deleted.itemName || '선택 기록';
+          selectedTxIds.delete(btn.dataset.id);
+          renderInoutPage(container, navigateTo, mode);
+          showToast(`"${itemName}" 기록을 삭제했습니다.`, 'info', 5000, {
+            actionLabel: '실행 취소',
+            onAction: () => {
+              try {
+                restoreTransaction(removed.deleted, removed.index);
+                renderInoutPage(container, navigateTo, mode);
+                showToast(`"${itemName}" 기록을 복원했습니다.`, 'success');
+              } catch (err) {
+                handlePageError(err, { page: 'inout', action: 'restore-transaction' });
+              }
+            },
+          });
+        } catch (err) {
+          handlePageError(err, { page: 'inout', action: 'delete-transaction' });
+        }
+      });
+    });
 
     // 선택 박스 이벤트
     const selectAllCheckbox = container.querySelector('#tx-select-all');
@@ -1056,8 +1043,8 @@ export function renderInoutPage(container, navigateTo, mode = 'all') {
         return {
           '자산':     it.category || '',
           '입고일자': tx.date || '',
-          '거래처':   tx.vendor || '',
           '상품코드': tx.itemCode || it.itemCode || '',
+          '거래처':   tx.vendor || '',
           '품명':     tx.itemName || '',
           '규격':     it.spec || '',
           '단위':     it.unit || '',
@@ -1085,25 +1072,24 @@ export function renderInoutPage(container, navigateTo, mode = 'all') {
         const outAmt = Math.round(salePrice * qty);
         const purchase = Math.round(unitCost * qty);
         const profit = outAmt - purchase;
-        const profitRate = outAmt > 0 ? (profit / outAmt * 100).toFixed(1) + '%' : '';
+        const profitRate = purchase > 0 ? (profit / purchase * 100).toFixed(1) + '%' : '';
         const costRate  = outAmt > 0   ? (purchase / outAmt * 100).toFixed(1) + '%'  : '';
         return {
-          '자산':       it.category || tx.category || '',
-          '출고일자':   tx.date || '',
-          '거래처':     tx.vendor || '',
-          '상품코드':   tx.itemCode || it.itemCode || '',
-          '품명':       tx.itemName || '',
-          '규격':       tx.spec || it.spec || '',
-          '단위':       tx.unit || it.unit || '',
-          '출고수량':   qty,
-          '출고단가':   salePrice,
-          '판매가':     outAmt,
-          '출고합':     Math.round(outAmt * 1.1),
-          '매입원가':   supply,
-          '부가세':     vat,
-          '공가합':     supply + vat,
-          '이익액':     profit,
-          '이익률':     profitRate,
+          '자산':     it.category || '',
+          '출고일자': tx.date || '',
+          '매장명':   tx.vendor || '',
+          '상품코드': tx.itemCode || it.itemCode || '',
+          '입고수량': qty,
+          '단가':     unitCost,
+          '공급가액': supply,
+          '부가세':   vat,
+          '합계금액': supply + vat,
+          '출고단가': salePrice,
+          '출고수량': qty,
+          '출고금액': outAmt,
+          '매입원가': purchase,
+          '이익액':   profit,
+          '이익율':   profitRate,
           '매출원가율': costRate,
         };
       });
@@ -1138,11 +1124,12 @@ export function renderInoutPage(container, navigateTo, mode = 'all') {
     }
   });
 
-  // 일괄 업로드 버튼
+  // ?묒? ?쇨큵 ?깅줉
   container.querySelector('#btn-bulk-upload').addEventListener('click', () => {
     openBulkUploadModal(container, navigateTo, items, isInMode ? 'in' : isOutMode ? 'out' : null);
   });
 
+  //   같은 품목을 여러 거래처에서 입고할 수 있으므로 트랜잭션 기준이 정확
   container.querySelector('#tx-search').value = filter.keyword;
   container.querySelector('#tx-type-filter').value = filter.type;
   container.querySelector('#tx-vendor-filter').value = filter.vendor;
@@ -1166,8 +1153,9 @@ export function renderInoutPage(container, navigateTo, mode = 'all') {
 }
 
 /**
- * 일괄 입출고 업로드 모달
- * 왜 필요? → 건별 등록은 수십 건 이상일 때 비효율적. 엑셀로 한 번에 처리.
+ * 입출고 관리 페이지 렌더링
+ * 왜 필요? → 건별 등록은 수십 건 이상일 때 비효율적.
+ * 왜 필요? → 건별 등록은 수십 건 이상일 때 비효율적.
  */
 function openBulkUploadModal(container, navigateTo, items, modeDefault = null) {
   const modalTitle = modeDefault === 'in' ? '엑셀 일괄 입고 등록'
@@ -1179,7 +1167,7 @@ function openBulkUploadModal(container, navigateTo, items, modeDefault = null) {
     <div class="modal" style="max-width:700px;">
       <div class="modal-header">
         <h3 class="modal-title">${modalTitle}</h3>
-        <button class="modal-close" id="bulk-close"></button>
+        <button class="modal-close" id="bulk-close">✕</button>
       </div>
       <div class="modal-body" id="bulk-body">
         <div class="alert alert-info" style="margin-bottom:16px;">
@@ -1194,7 +1182,7 @@ function openBulkUploadModal(container, navigateTo, items, modeDefault = null) {
         </div>
 
         <div style="border:2px dashed var(--border); border-radius:8px; padding:32px; text-align:center; cursor:pointer; transition:border-color 0.2s;" id="bulk-dropzone">
-          <div style="font-size:28px; margin-bottom:8px;"></div>
+          <div style="font-size:28px; margin-bottom:8px;">📥</div>
           <div style="font-size:13px; color:var(--text-muted);">엑셀 파일을 여기로 끌어오거나 클릭해서 선택해 주세요.</div>
           <div style="font-size:11px; color:var(--text-muted); margin-top:4px;">지원 형식: .xlsx, .xls</div>
           <input type="file" id="bulk-file-input" accept=".xlsx,.xls" style="display:none;" />
@@ -1218,21 +1206,36 @@ function openBulkUploadModal(container, navigateTo, items, modeDefault = null) {
     let templateRows, sheetName, fileName;
 
     if (modeDefault === 'out') {
-      // 출고 양식: 사용자 입력 필드만 (계산값은 시스템이 자동 산출)
-      const outHeaders = ['자산', '출고일자', '거래처', '상품코드', '품명', '규격', '단위', '출고수량', '출고단가'];
+      // 출고 양식: 출고관리 이력 export와 동일한 16열 구조
+      // 자산|출고일자|매장명|상품코드|입고수량|단가|공급가액|부가세|합계금액|출고단가|출고수량|출고금액|매입원가|이익액|이익율|매출원가율
+      const outHeaders = ['자산', '출고일자', '매장명', '상품코드', '입고수량', '단가', '공급가액', '부가세', '합계금액', '출고단가', '출고수량', '출고금액', '매입원가', '이익액', '이익율', '매출원가율'];
+      const buildOutSampleRow = (asset, vendor, code, qty, unitCost, salePrice) => {
+        const supply = Math.round(unitCost * qty);
+        const vat = Math.floor(supply * 0.1);
+        const outAmt = Math.round(salePrice * qty);
+        const purchase = Math.round(unitCost * qty);
+        const profit = outAmt - purchase;
+        const profitRate = purchase > 0 ? (profit / purchase * 100).toFixed(1) + '%' : '';
+        const costRate = outAmt > 0 ? (purchase / outAmt * 100).toFixed(1) + '%' : '';
+        return [asset, today, vendor, code, qty, unitCost, supply, vat, supply + vat, salePrice, qty, outAmt, purchase, profit, profitRate, costRate];
+      };
       templateRows = [
         outHeaders,
-        ['전자기기', today, '강남점', 'SM-S925', '갤럭시 S25', '256GB 블랙', 'EA', 10, 1500000],
-        ['전자기기', today, '홍대점', 'AP-001',  '아이패드 Air', '256GB 스타라이트', 'EA', 5, 1100000],
+        buildOutSampleRow('전자기기', '강남점', 'SM-S925', 10, 1200000, 1500000),
+        buildOutSampleRow('전자기기', '홍대점', 'AP-001', 5, 850000, 1100000),
       ];
       sheetName = '출고_양식';
       fileName = '출고_일괄등록_양식';
     } else {
-      // 입고 양식: 사용자 입력 필드만 (공급가·부가세·합계는 시스템이 자동 산출)
+      // 입고 양식 (기본): 자산|입고일자|상품코드|거래처|품명|규격|단위|입고수량|단가|공급가액|부가세|합계금액
+      const supply1 = 1200000 * 100;
+      const vat1 = Math.floor(supply1 * 0.1);
+      const supply2 = 850000 * 50;
+      const vat2 = Math.floor(supply2 * 0.1);
       templateRows = [
         BULK_INOUT_TEMPLATE_HEADERS,
-        ['전자기기', today, '(주)삼성전자', 'SM-S925', '갤럭시 S25', '256GB 블랙', 'EA', 100, 1200000],
-        ['전자기기', today, '(주)애플코리아', 'AP-001', '아이패드 Air', '256GB 스타라이트', 'EA', 50, 850000],
+        ['전자기기', today, 'SM-S925', '(주)삼성전자', '갤럭시 S25', '256GB 블랙', 'EA', 100, 1200000, supply1, vat1, supply1 + vat1],
+        ['전자기기', today, 'AP-001', '(주)애플코리아', '아이패드 Air', '256GB 스타라이트', 'EA', 50, 850000, supply2, vat2, supply2 + vat2],
       ];
       sheetName = '입고_양식';
       fileName = '입고_일괄등록_양식';
@@ -1267,6 +1270,7 @@ function openBulkUploadModal(container, navigateTo, items, modeDefault = null) {
 
 /**
  * 업로드된 엑셀 파일을 파싱하여 미리보기 + 일괄 등록
+ * 입출고 관리 페이지 렌더링
  */
 async function processUploadedFile(file, overlay, container, navigateTo, items, closeModal, modeDefault = null) {
   const previewEl = overlay.querySelector('#bulk-preview');
@@ -1282,10 +1286,7 @@ async function processUploadedFile(file, overlay, container, navigateTo, items, 
       return;
     }
 
-    const detected = detectBulkInoutColumns(sheetData);
-    const dataStartIndex = Math.max(1, detected.headerRowIndex + 1);
-    const headerRow = sheetData[detected.headerRowIndex] || sheetData[0];
-    const headers = headerRow.map((header) => String(header ?? '').trim());
+    const headers = sheetData[0].map((header) => String(header ?? '').trim());
     const findCol = (...names) => {
       for (const n of names) {
         const idx = headers.findIndex(h => h === n);
@@ -1293,35 +1294,37 @@ async function processUploadedFile(file, overlay, container, navigateTo, items, 
       }
       return -1;
     };
+    const quantityNames = modeDefault === 'out'
+      ? ['출고수량', '입고수량', '수량']
+      : ['입고수량', '출고수량', '수량'];
+    const dateNames = modeDefault === 'out'
+      ? ['출고일자', '입고일자', '날짜']
+      : ['입고일자', '출고일자', '날짜'];
     const colMap = {
       type:               findCol('구분'),
       vendor:             findCol('거래처', '매장명'),
       itemName:           findCol('품명', '품목명'),
       itemCode:           findCol('상품코드', '품목코드'),
-      // 출고 모드는 출고수량 우선, 입고 모드는 입고수량 우선
-      quantity:           modeDefault === 'out'
-        ? findCol('출고수량', '입고수량', '수량')
-        : findCol('입고수량', '출고수량', '수량'),
+      quantity:           findCol(...quantityNames),
       unitPrice:          findCol('단가', '원가'),
       sellingPrice:       findCol('판매가', '출고단가'),
       actualSellingPrice: findCol('실판매가'),
-      date:               modeDefault === 'out'
-        ? findCol('출고일자', '입고일자', '날짜')
-        : findCol('입고일자', '출고일자', '날짜'),
+      date:               findCol(...dateNames),
       note:               findCol('비고'),
       spec:               findCol('규격'),
       unit:               findCol('단위'),
       category:           findCol('자산', '분류', '카테고리'),
     };
+    const detected = detectBulkInoutColumns(sheetData);
     Object.keys(colMap).forEach((key) => {
       if (colMap[key] === -1 && detected.colMap[key] >= 0) {
         colMap[key] = detected.colMap[key];
       }
     });
+    const dataStartIndex = Math.max(1, detected.headerRowIndex + 1);
 
-    if ((colMap.itemName === -1 && colMap.itemCode === -1) || colMap.quantity === -1) {
-      const missing = [(colMap.itemName === -1 && colMap.itemCode === -1) && '품명/상품코드', colMap.quantity === -1 && '수량'].filter(Boolean).join(', ');
-      previewEl.innerHTML = `<div class="alert alert-danger">필수 컬럼을 찾을 수 없습니다 (누락: ${missing}). 양식에 "품명"(또는 "상품코드"), "입고수량"(또는 "출고수량") 컬럼이 포함되어 있는지 확인해 주세요.</div>`;
+    if (colMap.quantity === -1 || (colMap.itemName === -1 && colMap.itemCode === -1)) {
+      previewEl.innerHTML = '<div class="alert alert-danger">필수 컬럼을 찾을 수 없습니다. 양식에 "품명"(또는 "품목명") 또는 "상품코드"(또는 "품목코드"), 그리고 "입고수량"(또는 "출고수량") 컬럼이 포함되어 있는지 확인해 주세요.</div>';
       return;
     }
     // 구분 컬럼 없으면 현재 페이지 모드(입고/출고) 기본값 사용
@@ -1333,13 +1336,14 @@ async function processUploadedFile(file, overlay, container, navigateTo, items, 
       if (!row || row.length === 0) continue;
 
       const typeCell = colMap.type >= 0 ? String(row[colMap.type] ?? '').trim() : '';
-      const rawItemCode = colMap.itemCode >= 0 ? String(row[colMap.itemCode] ?? '').trim() : '';
       let itemName = colMap.itemName >= 0 ? String(row[colMap.itemName] ?? '').trim() : '';
       const quantity = parseBulkNumber(row[colMap.quantity]);
+      const rawItemCode = colMap.itemCode >= 0 ? String(row[colMap.itemCode] ?? '').trim() : '';
 
-      // 품명 없을 때 상품코드로 품목 조회
+      // 품명이 없으면 상품코드로 기존 품목 매칭하여 품명 보완
       const matchedItem = items.find((item) =>
-        (itemName && item.itemName === itemName) || (rawItemCode && item.itemCode && item.itemCode === rawItemCode)
+        (itemName && item.itemName === itemName) ||
+        (rawItemCode && item.itemCode && item.itemCode === rawItemCode)
       );
       if (!itemName && matchedItem) itemName = matchedItem.itemName;
 
@@ -1452,22 +1456,23 @@ async function processUploadedFile(file, overlay, container, navigateTo, items, 
       });
       setState({ mappedData: updatedMappedData });
 
-      // ★ addTransactionsBulk 사용: saveToDB + sync를 건수만큼 반복하지 않고 1번으로 처리
-      addTransactionsBulk(rows.map((row) => ({
-        type: row.type,
-        vendor: row.vendor,
-        itemName: row.itemName,
-        itemCode: row.itemCode,
-        quantity: row.quantity,
-        unitPrice: row.unitPrice,
-        sellingPrice: row.sellingPrice,
-        actualSellingPrice: row.actualSellingPrice,
-        date: row.date,
-        note: row.note,
-        spec: row.spec,
-        unit: row.unit,
-        category: row.category,
-      })));
+      rows.forEach((row) => {
+        addTransaction({
+          type: row.type,
+          vendor: row.vendor,
+          itemName: row.itemName,
+          itemCode: row.itemCode,
+          quantity: row.quantity,
+          unitPrice: row.unitPrice,
+          sellingPrice: row.sellingPrice,
+          actualSellingPrice: row.actualSellingPrice,
+          date: row.date,
+          note: row.note,
+          spec: row.spec,
+          unit: row.unit,
+          category: row.category,
+        });
+      });
 
       showToast(`일괄 등록 완료: 총 ${rows.length}건, 입고 ${inCount}건, 출고 ${outCount}건`, 'success');
       closeModal();
@@ -1507,14 +1512,14 @@ function emptyBulkColMap() {
 function detectBulkInoutColumns(sheetData) {
   const aliasMap = {
     type: ['구분', '입출고', '거래구분', '유형', 'type', 'inout'],
-    vendor: ['거래처', '매장명', '공급처', '고객처', 'vendor', 'supplier', 'customer'],
-    itemName: ['품명', '품목명', '상품명', '제품명', 'itemname', 'item', 'name'],
+    vendor: ['거래처', '공급처', '고객처', 'vendor', 'supplier', 'customer'],
+    itemName: ['품목명', '상품명', '제품명', 'itemname', 'item', 'name'],
     itemCode: ['품목코드', '상품코드', '코드', 'sku', 'itemcode'],
     quantity: ['수량', 'qty', 'quantity', '입고수량', '출고수량'],
     unitPrice: ['단가', '원가', '매입단가', '공급단가', 'unitprice', 'price', 'cost'],
-    sellingPrice: ['판매가', '출고단가', '판매단가', 'saleprice', 'sellingprice', 'sale', 'selling'],
+    sellingPrice: ['판매가', '판매단가', 'saleprice', 'sellingprice', 'sale', 'selling'],
     actualSellingPrice: ['실판매가', '실판매단가', 'actualsellingprice', 'actualsaleprice', 'actualprice'],
-    date: ['날짜', '일자', '거래일자', '입출고일', '입고일자', '출고일자', 'date'],
+    date: ['날짜', '일자', '거래일자', '입출고일', 'date'],
     note: ['비고', '메모', 'note', 'memo', 'remarks'],
   };
 
@@ -1586,7 +1591,7 @@ function openTxModal(container, navigateTo, type, items) {
     <div class="modal" style="max-width:980px;">
       <div class="modal-header">
         <h3 class="modal-title">${type === 'in' ? '입고 등록' : '출고 등록'}</h3>
-        <button class="modal-close" id="modal-close"></button>
+        <button class="modal-close" id="modal-close">✕</button>
       </div>
       <div class="modal-body">
         <div class="form-shell">
@@ -1645,18 +1650,7 @@ function openTxModal(container, navigateTo, type, items) {
               <div class="form-input" style="background:var(--bg-lighter); cursor:default; font-weight:600;" id="tx-margin-value">-</div>
               <div class="smart-inline-note">이익률 = (실판매가 - 원가) ÷ 원가 × 100</div>
             </div>
-            ` : `
-            <div class="form-row">
-              <div class="form-group">
-                <label class="form-label">출고단가 <span style="font-size:11px; color:var(--text-muted);">(판매가)</span></label>
-                <input class="form-input" type="number" id="tx-selling-price" placeholder="선택 사항" />
-              </div>
-              <div class="form-group">
-                <label class="form-label" style="color:transparent;">-</label>
-                <div id="tx-out-profit-display" style="padding:8px 12px; background:var(--bg-lighter); border-radius:var(--radius); font-size:13px; color:var(--text-muted);">출고단가 입력 시 이익 자동 계산</div>
-              </div>
-            </div>
-            `}
+            ` : ''}
 
             <details class="smart-details" open>
               <summary>날짜와 메모 더 보기</summary>
@@ -1812,7 +1806,7 @@ function openTxModal(container, navigateTo, type, items) {
       ? `${qty.toLocaleString('ko-KR')}개 × ${formatMoney(price)} 기준 금액입니다.`
       : '수량과 원가를 넣으면 금액을 즉시 계산합니다.';
 
-    // 이익 계산 표시
+    // 이익률 계산 (입고 전용)
     if (type === 'in') {
       const actualPrice = parseFloat(inputs.actualPrice?.value) || 0;
       const marginDisplayEl = overlay.querySelector('#tx-margin-display');
@@ -1835,19 +1829,6 @@ function openTxModal(container, navigateTo, type, items) {
       } else {
         if (marginDisplayEl) marginDisplayEl.style.display = 'none';
         if (summaryMarginWrap) summaryMarginWrap.style.display = 'none';
-      }
-    } else if (type === 'out') {
-      const salePrice = parseFloat(inputs.sellingPrice?.value) || 0;
-      const profitEl = overlay.querySelector('#tx-out-profit-display');
-      if (profitEl && salePrice > 0 && price > 0 && qty > 0) {
-        const outAmt = Math.round(salePrice * qty);
-        const costAmt = Math.round(price * qty);
-        const profit = outAmt - costAmt;
-        const profitRate = outAmt > 0 ? (profit / outAmt * 100).toFixed(1) : '0.0';
-        const color = profit > 0 ? 'var(--success)' : profit < 0 ? 'var(--danger)' : 'var(--text-muted)';
-        profitEl.innerHTML = `이익액 <strong style="color:${color};">₩${profit.toLocaleString('ko-KR')}</strong> &nbsp; 이익률 <strong style="color:${color};">${profit >= 0 ? '+' : ''}${profitRate}%</strong>`;
-      } else if (profitEl) {
-        profitEl.textContent = '출고단가 입력 시 이익 자동 계산';
       }
     }
 
@@ -2023,7 +2004,7 @@ function openTxModal(container, navigateTo, type, items) {
   }, 100);
 }
 
-// === 유틸 함수 ===
+// === ?좏떥 ===
 
 function countToday(transactions, type) {
   const today = new Date().toISOString().split('T')[0];
@@ -2031,8 +2012,9 @@ function countToday(transactions, type) {
 }
 
 /**
- * 거래처 옵션 목록 생성 — 트랜잭션과 품목 모두에서 수집
- * 왜 두 곳에서? → 기존 트랜잭션에 vendor가 없을 수 있으므로 품목 마스터도 참조
+ * 입출고 관리 페이지 렌더링
+ * 왜 트랜잭션과 품목 모두에서? → 기존 트랜잭션에 vendor가 없을 수 있으므로
+ * 왜 트랜잭션과 품목 모두에서? → 기존 트랜잭션에 vendor가 없을 수 있으므로
  */
 function getVendorOptions(transactions, items) {
   const fromTx = transactions.map(tx => tx.vendor).filter(Boolean);
