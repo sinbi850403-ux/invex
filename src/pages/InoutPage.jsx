@@ -8,6 +8,7 @@ import { showToast } from '../toast.js';
 import { downloadExcel, downloadExcelSheets, readExcelFile } from '../excel.js';
 import { canAction } from '../auth.js';
 import { addTransaction, addTransactionsBulk, deleteTransaction, restoreTransaction } from '../store.js';
+import { enableColumnResize } from '../ux-toolkit.js';
 
 const PAGE_SIZE = 15;
 
@@ -595,9 +596,11 @@ export function InoutPage({ mode = 'all' }) {
   // 모달
   const [modal, setModal] = useState(null); // null | { type: 'add', txType: 'in'|'out' } | { type: 'bulk' }
   const [selectedIds, setSelectedIds] = useState(new Set());
+  const tableRef = useRef(null);
 
   const today = todayStr();
   const month = monthStr();
+  const itemMap = useMemo(() => new Map(mappedData.map(it => [it.itemName, it])), [mappedData]);
 
   // ── 파생 통계 ──────────────────────────────────────────────────────────────
   const inList = useMemo(() => transactions.filter(tx => tx.type === 'in'), [transactions]);
@@ -847,6 +850,11 @@ export function InoutPage({ mode = 'all' }) {
     );
   };
 
+  // 컬럼 넓이 수동 조절
+  useEffect(() => {
+    if (tableRef.current) enableColumnResize(tableRef.current);
+  }, [pageData]);
+
   // ── 리셋 ───────────────────────────────────────────────────────────────────
   const handleReset = () => {
     setKeyword('');
@@ -1035,7 +1043,7 @@ export function InoutPage({ mode = 'all' }) {
           />
         ) : (
           <div className="table-wrapper" style={{ border: 'none' }}>
-            <table className="data-table">
+            <table className="data-table" ref={tableRef}>
               <thead>
                 <tr>
                   <th style={{ width: '40px', textAlign: 'center' }}>
@@ -1043,16 +1051,55 @@ export function InoutPage({ mode = 'all' }) {
                   </th>
                   <th className="col-num">#</th>
                   {!isInMode && !isOutMode && <SortTh sortKey="type">구분</SortTh>}
-                  <SortTh sortKey="date">날짜</SortTh>
-                  <SortTh sortKey="vendor">거래처</SortTh>
-                  <SortTh sortKey="itemName" className="col-fill">품목명</SortTh>
-                  <SortTh sortKey="quantity" className="text-right">수량</SortTh>
-                  <SortTh sortKey="unitPrice" className="text-right">원가</SortTh>
-                  {(isInMode || (!isInMode && !isOutMode)) && (
-                    <th className="text-right">판매가</th>
+                  {isOutMode ? (
+                    <>
+                      <th>자산</th>
+                      <SortTh sortKey="date">출고일자</SortTh>
+                      <SortTh sortKey="vendor">거래처</SortTh>
+                      <th>상품코드</th>
+                      <SortTh sortKey="itemName" className="col-fill">품명</SortTh>
+                      <th>규격</th>
+                      <th>단위</th>
+                      <th className="text-right">입고수량</th>
+                      <th className="text-right">단가</th>
+                      <th className="text-right">공급가액</th>
+                      <th className="text-right">부가세</th>
+                      <th className="text-right">합계금액</th>
+                      <th className="text-right">출고단가</th>
+                      <th className="text-right">출고수량</th>
+                      <th className="text-right">출고금액</th>
+                      <th className="text-right">매입원가</th>
+                      <th className="text-right">이익액</th>
+                      <th className="text-right">이익율</th>
+                      <th className="text-right">매출원가율</th>
+                    </>
+                  ) : isInMode ? (
+                    <>
+                      <th>자산</th>
+                      <SortTh sortKey="date">입고일자</SortTh>
+                      <SortTh sortKey="vendor">거래처</SortTh>
+                      <th>상품코드</th>
+                      <SortTh sortKey="itemName" className="col-fill">품명</SortTh>
+                      <th>규격</th>
+                      <th>단위</th>
+                      <SortTh sortKey="quantity" className="text-right">입고수량</SortTh>
+                      <SortTh sortKey="unitPrice" className="text-right">단가</SortTh>
+                      <th className="text-right">공급가액</th>
+                      <th className="text-right">부가세</th>
+                      <th className="text-right">합계금액</th>
+                    </>
+                  ) : (
+                    <>
+                      <SortTh sortKey="date">날짜</SortTh>
+                      <SortTh sortKey="vendor">거래처</SortTh>
+                      <SortTh sortKey="itemName" className="col-fill">품목명</SortTh>
+                      <SortTh sortKey="quantity" className="text-right">수량</SortTh>
+                      <SortTh sortKey="unitPrice" className="text-right">원가</SortTh>
+                      <th className="text-right">판매가</th>
+                      <th className="text-right">금액</th>
+                      <th>비고</th>
+                    </>
                   )}
-                  <th style={{ textAlign: 'right' }}>금액</th>
-                  <th>비고</th>
                   <th>관리</th>
                 </tr>
               </thead>
@@ -1060,44 +1107,93 @@ export function InoutPage({ mode = 'all' }) {
                 {pageData.map((tx, i) => {
                   const rowNum = (safePage - 1) * PAGE_SIZE + i + 1;
                   const qty = parseFloat(tx.quantity) || 0;
-                  const cost = parseFloat(tx.unitPrice) || 0;
-                  const amount = Math.round(cost * qty);
-                  const sellPrice = parseFloat(tx.sellingPrice) || 0;
+                  const itemData = itemMap.get(tx.itemName) || {};
+                  const unitPrice = parseFloat(tx.unitPrice || itemData.unitPrice) || 0;
+                  const supply = Math.round(unitPrice * qty);
+                  const vat = Math.floor(supply * 0.1);
+                  const totalPrice = supply + vat;
+                  const salePrice = parseFloat(tx.sellingPrice || itemData.salePrice) || 0;
+                  const outAmt = Math.round(salePrice * qty);
+                  const purchaseCost = supply;
+                  const profit = outAmt - purchaseCost;
+                  const profitMargin = purchaseCost > 0 && outAmt > 0 ? (profit / purchaseCost * 100).toFixed(1) + '%' : '';
+                  const cogsMargin = outAmt > 0 ? (purchaseCost / outAmt * 100).toFixed(1) + '%' : '';
+                  const category = tx.category || itemData.category || '';
+                  const itemCode = tx.itemCode || itemData.itemCode || '';
+                  const spec = tx.spec || itemData.spec || '';
+                  const unit = tx.unit || itemData.unit || '';
                   const isSelected = selectedIds.has(tx.id);
                   return (
                     <tr key={tx.id} className={isSelected ? 'selected' : ''}>
                       <td style={{ textAlign: 'center' }}>
-                        <input
-                          type="checkbox"
-                          checked={isSelected}
-                          onChange={() => toggleSelect(tx.id)}
-                        />
+                        <input type="checkbox" checked={isSelected} onChange={() => toggleSelect(tx.id)} />
                       </td>
                       <td className="col-num">{rowNum}</td>
                       {!isInMode && !isOutMode && (
                         <td><TypeBadge type={tx.type} /></td>
                       )}
-                      <td style={{ fontSize: '12px' }}>{formatDate(tx.date)}</td>
-                      <td style={{ fontSize: '12px' }}>
-                        {tx.vendor || <span style={{ color: 'var(--text-muted)' }}>-</span>}
-                      </td>
-                      <td className="col-fill">
-                        <strong>{tx.itemName || '-'}</strong>
-                        {tx.itemCode && (
-                          <span style={{ fontSize: '11px', color: 'var(--text-muted)', marginLeft: '6px' }}>{tx.itemCode}</span>
-                        )}
-                      </td>
-                      <td className="text-right">
-                        <span style={{ color: tx.type === 'in' ? '#16a34a' : '#ef4444', fontWeight: 600 }}>
-                          {tx.type === 'in' ? '+' : '-'}{fmt(qty)}
-                        </span>
-                      </td>
-                      <td className="text-right">{cost ? W(cost) : <span style={{ color: 'var(--text-muted)' }}>-</span>}</td>
-                      {(isInMode || (!isInMode && !isOutMode)) && (
-                        <td className="text-right">{sellPrice ? W(sellPrice) : <span style={{ color: 'var(--text-muted)' }}>-</span>}</td>
+                      {isOutMode ? (
+                        <>
+                          <td style={{ fontSize: '12px' }}>{category || '-'}</td>
+                          <td style={{ fontSize: '12px' }}>{formatDate(tx.date)}</td>
+                          <td style={{ fontSize: '12px' }}>{tx.vendor || '-'}</td>
+                          <td style={{ fontSize: '12px' }}>{itemCode || '-'}</td>
+                          <td className="col-fill"><strong>{tx.itemName || '-'}</strong></td>
+                          <td style={{ fontSize: '12px' }}>{spec || '-'}</td>
+                          <td style={{ fontSize: '12px' }}>{unit || '-'}</td>
+                          <td className="text-right">{qty ? qty.toLocaleString('ko-KR') : '-'}</td>
+                          <td className="text-right">{unitPrice ? W(unitPrice) : '-'}</td>
+                          <td className="text-right">{supply ? W(supply) : '-'}</td>
+                          <td className="text-right">{supply ? W(vat) : '-'}</td>
+                          <td className="text-right">{supply ? W(totalPrice) : '-'}</td>
+                          <td className="text-right">{salePrice ? W(salePrice) : '-'}</td>
+                          <td className="text-right" style={{ color: '#ef4444', fontWeight: 600 }}>
+                            {qty ? `-${qty.toLocaleString('ko-KR')}` : '-'}
+                          </td>
+                          <td className="text-right">{outAmt ? W(outAmt) : '-'}</td>
+                          <td className="text-right">{purchaseCost ? W(purchaseCost) : '-'}</td>
+                          <td className="text-right" style={{ color: profit > 0 ? 'var(--success)' : profit < 0 ? 'var(--danger)' : '' }}>
+                            {outAmt ? W(profit) : '-'}
+                          </td>
+                          <td className="text-right">{profitMargin || '-'}</td>
+                          <td className="text-right">{cogsMargin || '-'}</td>
+                        </>
+                      ) : isInMode ? (
+                        <>
+                          <td style={{ fontSize: '12px' }}>{category || '-'}</td>
+                          <td style={{ fontSize: '12px' }}>{formatDate(tx.date)}</td>
+                          <td style={{ fontSize: '12px' }}>{tx.vendor || '-'}</td>
+                          <td style={{ fontSize: '12px' }}>{itemCode || '-'}</td>
+                          <td className="col-fill"><strong>{tx.itemName || '-'}</strong></td>
+                          <td style={{ fontSize: '12px' }}>{spec || '-'}</td>
+                          <td style={{ fontSize: '12px' }}>{unit || '-'}</td>
+                          <td className="text-right" style={{ color: '#16a34a', fontWeight: 600 }}>
+                            +{qty ? qty.toLocaleString('ko-KR') : '-'}
+                          </td>
+                          <td className="text-right">{unitPrice ? W(unitPrice) : '-'}</td>
+                          <td className="text-right">{supply ? W(supply) : '-'}</td>
+                          <td className="text-right">{supply ? W(vat) : '-'}</td>
+                          <td className="text-right">{supply ? W(totalPrice) : '-'}</td>
+                        </>
+                      ) : (
+                        <>
+                          <td style={{ fontSize: '12px' }}>{formatDate(tx.date)}</td>
+                          <td style={{ fontSize: '12px' }}>{tx.vendor || '-'}</td>
+                          <td className="col-fill">
+                            <strong>{tx.itemName || '-'}</strong>
+                            {itemCode && <span style={{ fontSize: '11px', color: 'var(--text-muted)', marginLeft: '6px' }}>{itemCode}</span>}
+                          </td>
+                          <td className="text-right">
+                            <span style={{ color: tx.type === 'in' ? '#16a34a' : '#ef4444', fontWeight: 600 }}>
+                              {tx.type === 'in' ? '+' : '-'}{fmt(qty)}
+                            </span>
+                          </td>
+                          <td className="text-right">{unitPrice ? W(unitPrice) : <span style={{ color: 'var(--text-muted)' }}>-</span>}</td>
+                          <td className="text-right">{salePrice ? W(salePrice) : <span style={{ color: 'var(--text-muted)' }}>-</span>}</td>
+                          <td className="text-right" style={{ fontWeight: 600 }}>{supply ? W(supply) : <span style={{ color: 'var(--text-muted)' }}>-</span>}</td>
+                          <td style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{tx.note || ''}</td>
+                        </>
                       )}
-                      <td className="text-right" style={{ fontWeight: 600 }}>{amount ? W(amount) : <span style={{ color: 'var(--text-muted)' }}>-</span>}</td>
-                      <td style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{tx.note || ''}</td>
                       <td>
                         {canDelete && (
                           <button

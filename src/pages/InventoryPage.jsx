@@ -12,6 +12,7 @@ import {
   setSafetyStock, rebuildInventoryFromTransactions, recalcItemAmounts,
   getState as getRawState,
 } from '../store.js';
+import { enableColumnResize } from '../ux-toolkit.js';
 
 // ── 상수 ────────────────────────────────────────────────────────────────────
 const PAGE_SIZE = 20;
@@ -500,6 +501,8 @@ export default function InventoryPage() {
   const canCreate = canAction('item:create');
   const canBulk   = canAction('item:bulk');
 
+  const tableRef = useRef(null);
+
   // 저장된 뷰 설정
   const savedPrefs = state.inventoryViewPrefs || {};
   const [filter, setFilterRaw] = useState({
@@ -519,6 +522,11 @@ export default function InventoryPage() {
     setFilterRaw(prev => ({ ...prev, ...patch }));
     setPage(1);
   }, []);
+
+  // 컬럼 넓이 수동 조절
+  useEffect(() => {
+    if (tableRef.current) enableColumnResize(tableRef.current);
+  }, [pageItems]);
 
   // 뷰 설정 자동저장 (debounce)
   const prefsTimerRef = useRef(null);
@@ -830,7 +838,7 @@ export default function InventoryPage() {
       {/* 테이블 */}
       <div className="card card-flush">
         <div className="table-wrapper">
-          <table className="data-table">
+          <table className="data-table" ref={tableRef}>
             <thead>
               <tr>
                 {canDelete && <th style={{ width: 32 }}><input type="checkbox" checked={allPageSelected} onChange={toggleSelectAll} /></th>}
