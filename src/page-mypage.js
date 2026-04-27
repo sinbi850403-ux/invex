@@ -2,7 +2,7 @@
  * page-mypage.js - 마이페이지
  * 왜 필요? → 사용자가 프로필 수정, 비밀번호 변경, 회원탈퇴를 할 수 있어야 함 (개인정보보호법 준수)
  */
-import { getCurrentUser, getUserProfileData } from './auth.js';
+import { getCurrentUser, getUserProfileData, logout } from './auth.js';
 import { supabase } from './supabase-client.js';
 import { showToast } from './toast.js';
 import { getCurrentPlan, PLANS } from './plan.js';
@@ -140,20 +140,30 @@ export function renderMyPage(container) {
 
   // 회원 탈퇴
   document.getElementById('btn-delete-account')?.addEventListener('click', async () => {
-    const confirmed = confirm('정말 탈퇴하시겠습니까?\n\n저장된 재고, 거래 내역 등 모든 데이터가 삭제됩니다.');
+    const confirmed = confirm('정말 탈퇴하시겠습니까?\n\n저장된 재고, 거래 내역 등 모든 데이터와 로그인 계정이 완전히 삭제됩니다.');
     if (!confirmed) return;
     const doubleCheck = prompt('탈퇴를 진행하려면 "회원탈퇴"를 입력하세요:');
     if (doubleCheck !== '회원탈퇴') { showToast('탈퇴가 취소되었습니다.', 'info'); return; }
 
+    const btn = document.getElementById('btn-delete-account');
+    if (btn) { btn.disabled = true; btn.textContent = '탈퇴 처리 중...'; }
+
     try {
-      // Supabase: 클라이언트에서 직접 계정 삭제는 불가 — 관리자 함수/서버 함수 필요
-      // 대안: 사용자 데이터 정리 + 로그아웃
-      const { clearAllUserData } = await import('./db.js');
-      await clearAllUserData();
-      await supabase.auth.signOut();
-      showToast('데이터가 삭제됐습니다. 계정 완전 삭제는 관리자에게 문의해 주세요.', 'info');
+      // delete_own_account() RPC: 모든 데이터 + auth.users 계정 완전 삭제
+      // (supabase/delete-account.sql 실행 후 사용 가능)
+      const { error } = await supabase.rpc('delete_own_account');
+      if (error) throw error;
+
+      // IndexedDB 로컬 캐시도 삭제
+      try { indexedDB.deleteDatabase('invex-db'); } catch (_) {}
+
+      showToast('탈퇴가 완료되었습니다. 그동안 이용해 주셔서 감사합니다.', 'info', 4000);
+
+      // 로컬 상태 초기화 후 로그인 화면으로 이동
+      await logout();
     } catch (e) {
-      showToast('탈퇴 실패: ' + e.message, 'error');
+      if (btn) { btn.disabled = false; btn.textContent = '탈퇴하기'; }
+      showToast('탈퇴 실패: ' + (e.message || '알 수 없는 오류'), 'error');
     }
   });
 }
