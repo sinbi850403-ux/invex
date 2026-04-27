@@ -1328,14 +1328,14 @@ export function InoutPage({ mode = 'all' }) {
                           <td className="text-right" style={{ background: 'rgba(37,99,235,0.08)' }}>{outAmt ? W(Math.round(outAmt * 1.1)) : '-'}</td>
                           {/* 매입 그룹 */}
                           <td className="text-right" style={{ background: 'rgba(139,98,20,0.12)' }}>{wacSupply ? W(wacSupply) : '-'}</td>
-                          <td className="text-right" style={{ background: 'rgba(139,98,20,0.07)', color: 'var(--text-muted)' }}>{wacSupply ? W(wacVat) : '-'}</td>
+                          <td className="text-right" style={{ background: 'rgba(139,98,20,0.07)', color: '#fff' }}>{wacSupply ? W(wacVat) : '-'}</td>
                           <td className="text-right" style={{ background: 'rgba(139,98,20,0.12)', fontWeight: 600 }}>{wacSupply ? W(wacTotal) : '-'}</td>
                           {/* 이익 분석 그룹 */}
                           <td className="text-right" style={{ background: 'rgba(30,122,72,0.12)', color: profit > 0 ? '#4ade80' : profit < 0 ? '#f87171' : 'var(--text-muted)', fontWeight: profit !== 0 ? 700 : 400 }}>
                             {outAmt ? W(profit) : '-'}
                           </td>
                           <td className="text-right" style={{ background: 'rgba(30,122,72,0.10)', color: profit > 0 ? '#4ade80' : profit < 0 ? '#f87171' : 'var(--text-muted)' }}>{profitMargin || '-'}</td>
-                          <td className="text-right" style={{ background: 'rgba(30,122,72,0.07)', color: 'var(--text-muted)' }}>{cogsMargin || '-'}</td>
+                          <td className="text-right" style={{ background: 'rgba(30,122,72,0.07)', color: '#fff' }}>{cogsMargin || '-'}</td>
                         </>
                       ) : isInMode ? (
                         <>
