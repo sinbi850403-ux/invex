@@ -38,7 +38,7 @@ const AUTH_STORAGE_PATTERNS = [
   /^sb-.*-auth-token$/,
   /^supabase\.auth\./,
 ];
-const LEGACY_AUTH_PREFIX = `${String.fromCharCode(102, 105, 114, 101, 98, 97, 115, 101)}:`;
+const LEGACY_AUTH_PREFIX = 'firebase:';
 // ─── 유틸리티 ─────────────────────────────────────────────────────────────────
 
 function toCompatUser(supabaseUser) {
@@ -67,24 +67,7 @@ function emitAuthChanged() {
   });
 }
 
-function getFallbackProfile(user) {
-  return {
-    uid: user?.uid || null,
-    email: user?.email || null,
-    name: user?.displayName || '사용자',
-    photoURL: user?.photoURL || null,
-    role: resolveProfileRole(null, user?.email),
-    plan: 'free',
-  };
-}
-
 // ─── 스토리지 관련 ────────────────────────────────────────────────────────────
-
-function resolveProfileRole(role, email) {
-  if (isSuperAdminEmail(email)) return 'admin';
-  if (VALID_ROLES.has(role)) return role;
-  return 'viewer';
-}
 
 function forEachStorageKey(callback) {
   if (typeof window === 'undefined' || !window.localStorage) return;
@@ -291,6 +274,10 @@ export function initAuth(callback) {
   if (callback && !authChangeCallbacks.includes(callback)) {
     authChangeCallbacks.push(callback);
   }
+  const unsubscribe = () => {
+    const idx = authChangeCallbacks.indexOf(callback);
+    if (idx !== -1) authChangeCallbacks.splice(idx, 1);
+  };
 
   if (!isSupabaseConfigured) {
     purgeAuthStorage({ includeSupabaseSession: true });
@@ -299,14 +286,14 @@ export function initAuth(callback) {
     if (callback) {
       try { callback(null, userProfile); } catch (e) { console.error('[Auth] callback error:', e); }
     }
-    return;
+    return unsubscribe;
   }
 
   if (authInitialized) {
     if (callback) {
       try { callback(currentUser, userProfile); } catch (e) { console.error('[Auth] callback error:', e); }
     }
-    return;
+    return unsubscribe;
   }
 
   authInitialized = true;
@@ -345,6 +332,8 @@ export function initAuth(callback) {
         authHydrationComplete = true;
       });
   }, 1200);
+
+  return unsubscribe;
 }
 
 // ─── Google 로그인 ────────────────────────────────────────────────────────────

@@ -17,7 +17,7 @@ export function getAuthSnapshot() {
 }
 
 export function subscribeAuth(listener) {
-  initAuth(listener);
+  return initAuth(listener);
 }
 
 export async function loginWithEmailPassword(email, password) {

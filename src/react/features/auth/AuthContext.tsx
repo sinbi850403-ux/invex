@@ -40,13 +40,14 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const [isPending, startTransition] = useTransition();
 
   useEffect(() => {
-    subscribeToAuth((nextUser, nextProfile) => {
+    const unsubscribe = subscribeToAuth((nextUser, nextProfile) => {
       startTransition(() => {
         setUser(nextUser);
         setProfile(nextProfile);
         setIsReady(true);
       });
     });
+    return () => unsubscribe?.();
   }, []);
 
   const value: AuthContextValue = {

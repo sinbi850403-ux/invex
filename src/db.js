@@ -381,10 +381,12 @@ export const transactions = {
   },
 
   async remove(txId) {
+    const userId = await getUserId();
     const { error } = await supabase
       .from('transactions')
       .delete()
-      .eq('id', txId);
+      .eq('id', txId)
+      .eq('user_id', userId);
     handleError(error, '입출고 삭제');
   },
 };
@@ -537,10 +539,12 @@ export const accountEntries = {
   },
 
   async update(entryId, updates) {
+    const userId = await getUserId();
     const { data, error } = await supabase
       .from('account_entries')
       .update(updates)
       .eq('id', entryId)
+      .eq('user_id', userId)
       .select()
       .single();
     handleError(error, '장부 수정');
@@ -548,10 +552,12 @@ export const accountEntries = {
   },
 
   async remove(entryId) {
+    const userId = await getUserId();
     const { error } = await supabase
       .from('account_entries')
       .delete()
-      .eq('id', entryId);
+      .eq('id', entryId)
+      .eq('user_id', userId);
     handleError(error, '장부 삭제');
   },
 };
@@ -583,10 +589,12 @@ export const purchaseOrders = {
   },
 
   async update(orderId, updates) {
+    const userId = await getUserId();
     const { data, error } = await supabase
       .from('purchase_orders')
       .update(updates)
       .eq('id', orderId)
+      .eq('user_id', userId)
       .select()
       .single();
     handleError(error, '발주서 수정');
@@ -728,10 +736,12 @@ export const customFields = {
   },
 
   async remove(fieldId) {
+    const userId = await getUserId();
     const { error } = await supabase
       .from('custom_fields')
       .delete()
-      .eq('id', fieldId);
+      .eq('id', fieldId)
+      .eq('user_id', userId);
     handleError(error, '커스텀 필드 삭제');
   },
 };
@@ -775,11 +785,13 @@ export const employees = {
     return dbEmployeeToStore(data);
   },
   async update(id, updates) {
+    const userId = await getUserId();
     const rrnPlain = updates._rrnPlain;
     const row = storeEmployeeToDb(updates);
-    const { data, error } = await supabase.from('employees').update(row).eq('id', id).select().single();
+    const { data, error } = await supabase.from('employees').update(row).eq('id', id).eq('user_id', userId).select().single();
     handleError(error, '직원 수정');
     if (rrnPlain) {
+      // RPC 호출 전 소유권이 update 쿼리에서 이미 검증됨
       const { error: e2 } = await supabase.rpc('set_employee_rrn', { emp_id: id, plain: rrnPlain });
       handleError(e2, '주민번호 암호화');
     }
@@ -842,13 +854,15 @@ export const attendance = {
     return dbAttendanceToStore(data);
   },
   async update(id, updates) {
+    const userId = await getUserId();
     const row = storeAttendanceToDb(updates);
-    const { data, error } = await supabase.from('attendance').update(row).eq('id', id).select().single();
+    const { data, error } = await supabase.from('attendance').update(row).eq('id', id).eq('user_id', userId).select().single();
     handleError(error, '근태 수정');
     return dbAttendanceToStore(data);
   },
   async remove(id) {
-    const { error } = await supabase.from('attendance').delete().eq('id', id);
+    const userId = await getUserId();
+    const { error } = await supabase.from('attendance').delete().eq('id', id).eq('user_id', userId);
     handleError(error, '근태 삭제');
   },
   async bulkUpsert(arr) {
@@ -868,8 +882,11 @@ export const payrolls = {
   async list(options = {}) {
     const userId = await getUserId();
     let query = supabase.from('payrolls').select('*').eq('user_id', userId);
-    if (options.year)  query = query.eq('pay_year', options.year);
-    if (options.month) query = query.eq('pay_month', options.month);
+    const year  = options.payYear  ?? options.year;
+    const month = options.payMonth ?? options.month;
+    if (year)  query = query.eq('pay_year', year);
+    if (month) query = query.eq('pay_month', month);
+    if (options.status) query = query.eq('status', options.status);
     if (options.employeeId) query = query.eq('employee_id', options.employeeId);
     query = query.order('pay_year', { ascending: false }).order('pay_month', { ascending: false });
     const { data, error } = await query;
@@ -886,13 +903,15 @@ export const payrolls = {
     return dbPayrollToStore(data);
   },
   async update(id, updates) {
+    const userId = await getUserId();
     const row = storePayrollToDb(updates);
-    const { data, error } = await supabase.from('payrolls').update(row).eq('id', id).select().single();
+    const { data, error } = await supabase.from('payrolls').update(row).eq('id', id).eq('user_id', userId).select().single();
     handleError(error, '급여 수정');
     return dbPayrollToStore(data);
   },
   async remove(id) {
-    const { error } = await supabase.from('payrolls').delete().eq('id', id);
+    const userId = await getUserId();
+    const { error } = await supabase.from('payrolls').delete().eq('id', id).eq('user_id', userId);
     handleError(error, '급여 삭제');
   },
   async bulkUpsert(arr) {
@@ -927,13 +946,15 @@ export const leaves = {
     return dbLeaveToStore(data);
   },
   async update(id, updates) {
+    const userId = await getUserId();
     const row = storeLeaveToDb(updates);
-    const { data, error } = await supabase.from('leaves').update(row).eq('id', id).select().single();
+    const { data, error } = await supabase.from('leaves').update(row).eq('id', id).eq('user_id', userId).select().single();
     handleError(error, '휴가 수정');
     return dbLeaveToStore(data);
   },
   async remove(id) {
-    const { error } = await supabase.from('leaves').delete().eq('id', id);
+    const userId = await getUserId();
+    const { error } = await supabase.from('leaves').delete().eq('id', id).eq('user_id', userId);
     handleError(error, '휴가 삭제');
   },
 };
@@ -955,12 +976,14 @@ export const salaryItems = {
     return data;
   },
   async update(id, updates) {
-    const { data, error } = await supabase.from('salary_items').update(updates).eq('id', id).select().single();
+    const userId = await getUserId();
+    const { data, error } = await supabase.from('salary_items').update(updates).eq('id', id).eq('user_id', userId).select().single();
     handleError(error, '수당/공제 수정');
     return data;
   },
   async remove(id) {
-    const { error } = await supabase.from('salary_items').delete().eq('id', id);
+    const userId = await getUserId();
+    const { error } = await supabase.from('salary_items').delete().eq('id', id).eq('user_id', userId);
     handleError(error, '수당/공제 삭제');
   },
 };

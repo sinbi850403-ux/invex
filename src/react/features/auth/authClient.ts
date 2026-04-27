@@ -11,7 +11,7 @@ import {
 export { getAuthSnapshot, loginWithEmailPassword, registerWithEmail, sendPasswordReset, signOut };
 
 export function subscribeToAuth(listener: Parameters<typeof subscribeAuth>[0]) {
-  subscribeAuth(listener);
+  return subscribeAuth(listener);
 }
 
 export async function loginWithGoogleForReact() {
