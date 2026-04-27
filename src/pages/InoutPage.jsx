@@ -597,6 +597,8 @@ export function InoutPage({ mode = 'all' }) {
   const [modal, setModal] = useState(null); // null | { type: 'add', txType: 'in'|'out' } | { type: 'bulk' }
   const [selectedIds, setSelectedIds] = useState(new Set());
   const tableRef = useRef(null);
+  const outRow1Ref = useRef(null);
+  const [outRow1H, setOutRow1H] = useState(36);
 
   const today = todayStr();
   const month = monthStr();
@@ -973,6 +975,14 @@ export function InoutPage({ mode = 'all' }) {
     );
   };
 
+  // 출고 헤더 1행 높이 측정 (2행 sticky top 계산용)
+  useEffect(() => {
+    if (outRow1Ref.current && isOutMode) {
+      const h = outRow1Ref.current.offsetHeight;
+      if (h > 0) setOutRow1H(h);
+    }
+  }, [isOutMode, pageData]);
+
   // 컬럼 넓이 수동 조절
   useEffect(() => {
     if (tableRef.current) enableColumnResize(tableRef.current);
@@ -1170,7 +1180,7 @@ export function InoutPage({ mode = 'all' }) {
               <thead>
                 {isOutMode ? (
                   <>
-                    <tr>
+                    <tr ref={outRow1Ref}>
                       <th rowSpan={2} style={{ width: '40px', textAlign: 'center', verticalAlign: 'middle', position: 'sticky', top: 0, zIndex: 4 }}>
                         <input type="checkbox" checked={allOnPageSelected} onChange={toggleSelectAll} />
                       </th>
@@ -1189,15 +1199,15 @@ export function InoutPage({ mode = 'all' }) {
                       <th rowSpan={2} style={{ verticalAlign: 'middle', position: 'sticky', top: 0, zIndex: 4 }}>관리</th>
                     </tr>
                     <tr>
-                      <SortTh sortKey="sellingPrice" className="text-right" style={{ background: 'rgba(37,99,235,0.18)', color: 'inherit', top: '36px', zIndex: 3 }}>출고단가</SortTh>
-                      <SortTh sortKey="outAmt" className="text-right" style={{ background: 'rgba(37,99,235,0.18)', color: 'inherit', top: '36px', zIndex: 3 }}>판매가</SortTh>
-                      <SortTh sortKey="outTotal" className="text-right" style={{ background: 'rgba(37,99,235,0.18)', color: 'inherit', top: '36px', zIndex: 3 }}>출고합</SortTh>
-                      <SortTh sortKey="supply" className="text-right" style={{ background: 'rgba(124,94,46,0.25)', color: 'inherit', top: '36px', zIndex: 3 }}>매입원가</SortTh>
-                      <SortTh sortKey="vat" className="text-right" style={{ background: 'rgba(124,94,46,0.25)', color: 'inherit', top: '36px', zIndex: 3 }}>부가세</SortTh>
-                      <SortTh sortKey="totalPrice" className="text-right" style={{ background: 'rgba(124,94,46,0.25)', color: 'inherit', top: '36px', zIndex: 3 }}>공가합</SortTh>
-                      <SortTh sortKey="profit" className="text-right" style={{ background: 'rgba(42,107,74,0.22)', color: 'inherit', top: '36px', zIndex: 3 }}>이익액</SortTh>
-                      <SortTh sortKey="profitMargin" className="text-right" style={{ background: 'rgba(42,107,74,0.22)', color: 'inherit', top: '36px', zIndex: 3 }}>이익율</SortTh>
-                      <SortTh sortKey="cogsMargin" className="text-right" style={{ background: 'rgba(42,107,74,0.22)', color: 'inherit', top: '36px', zIndex: 3 }}>매출원가율</SortTh>
+                      <SortTh sortKey="sellingPrice" className="text-right" style={{ position: 'sticky', background: 'rgba(37,99,235,0.18)', color: 'inherit', top: outRow1H, zIndex: 3 }}>출고단가</SortTh>
+                      <SortTh sortKey="outAmt" className="text-right" style={{ position: 'sticky', background: 'rgba(37,99,235,0.18)', color: 'inherit', top: outRow1H, zIndex: 3 }}>판매가</SortTh>
+                      <SortTh sortKey="outTotal" className="text-right" style={{ position: 'sticky', background: 'rgba(37,99,235,0.18)', color: 'inherit', top: outRow1H, zIndex: 3 }}>출고합</SortTh>
+                      <SortTh sortKey="supply" className="text-right" style={{ position: 'sticky', background: 'rgba(124,94,46,0.25)', color: 'inherit', top: outRow1H, zIndex: 3 }}>매입원가</SortTh>
+                      <SortTh sortKey="vat" className="text-right" style={{ position: 'sticky', background: 'rgba(124,94,46,0.25)', color: 'inherit', top: outRow1H, zIndex: 3 }}>부가세</SortTh>
+                      <SortTh sortKey="totalPrice" className="text-right" style={{ position: 'sticky', background: 'rgba(124,94,46,0.25)', color: 'inherit', top: outRow1H, zIndex: 3 }}>공가합</SortTh>
+                      <SortTh sortKey="profit" className="text-right" style={{ position: 'sticky', background: 'rgba(42,107,74,0.22)', color: 'inherit', top: outRow1H, zIndex: 3 }}>이익액</SortTh>
+                      <SortTh sortKey="profitMargin" className="text-right" style={{ position: 'sticky', background: 'rgba(42,107,74,0.22)', color: 'inherit', top: outRow1H, zIndex: 3 }}>이익율</SortTh>
+                      <SortTh sortKey="cogsMargin" className="text-right" style={{ position: 'sticky', background: 'rgba(42,107,74,0.22)', color: 'inherit', top: outRow1H, zIndex: 3 }}>매출원가율</SortTh>
                     </tr>
                   </>
                 ) : (
