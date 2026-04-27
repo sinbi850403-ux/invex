@@ -427,13 +427,11 @@ export const transactions = {
 // 거래처 (Vendors) CRUD
 // ============================================================
 export const vendors = {
-  async list() {
+  async list(options = {}) {
     const userId = await getUserId();
-    const { data, error } = await supabase
-      .from('vendors')
-      .select('*')
-      .eq('user_id', userId)
-      .order('name');
+    let query = supabase.from('vendors').select('*').eq('user_id', userId).order('name');
+    if (options.limit) query = query.limit(options.limit);
+    const { data, error } = await query;
     handleError(error, '거래처 조회');
     return data || [];
   },
@@ -485,13 +483,11 @@ export const vendors = {
 // 창고 이동 (Transfers)
 // ============================================================
 export const transfers = {
-  async list() {
+  async list(options = {}) {
     const userId = await getUserId();
-    const { data, error } = await supabase
-      .from('transfers')
-      .select('*')
-      .eq('user_id', userId)
-      .order('date', { ascending: false });
+    let query = supabase.from('transfers').select('*').eq('user_id', userId).order('date', { ascending: false });
+    if (options.limit) query = query.limit(options.limit);
+    const { data, error } = await query;
     handleError(error, '이동 이력 조회');
     return data || [];
   },
@@ -590,13 +586,11 @@ export const accountEntries = {
 // 발주서 (Purchase Orders)
 // ============================================================
 export const purchaseOrders = {
-  async list() {
+  async list(options = {}) {
     const userId = await getUserId();
-    const { data, error } = await supabase
-      .from('purchase_orders')
-      .select('*')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false });
+    let query = supabase.from('purchase_orders').select('*').eq('user_id', userId).order('created_at', { ascending: false });
+    if (options.limit) query = query.limit(options.limit);
+    const { data, error } = await query;
     handleError(error, '발주서 조회');
     return data || [];
   },
@@ -1029,12 +1023,12 @@ export async function loadAllData() {
   const results = await Promise.allSettled([
     items.list(ALL_ROWS),
     transactions.list(ALL_ROWS),
-    vendors.list(),
-    transfers.list(),
+    vendors.list(ALL_ROWS),
+    transfers.list(ALL_ROWS),
     stocktakes.list(),
     auditLogs.list({ limit: 200 }),
-    accountEntries.list(),
-    purchaseOrders.list(),
+    accountEntries.list(ALL_ROWS),
+    purchaseOrders.list(ALL_ROWS),
     posSales.list({ limit: 1000 }),
     customFields.list(),
     settings.getAll(),

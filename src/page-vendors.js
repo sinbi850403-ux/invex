@@ -4,7 +4,7 @@
  * 모든 발주서·거래명세서·세금계산서의 기초 데이터
  */
 
-import { getState, setState } from './store.js';
+import { getState, setState, deleteVendor } from './store.js';
 import { showToast } from './toast.js';
 import { downloadExcel } from './excel.js';
 import { escapeHtml } from './ux-toolkit.js';
@@ -463,7 +463,8 @@ function bindTableActions(container, vendors, txs, statsMap, navigateTo) {
       const idx = parseInt(btn.dataset.idx);
       const v = vendors[idx];
       if (!confirm(`"${v.name}" 거래처를 삭제하시겠습니까?`)) return;
-      setState({ vendorMaster: vendors.filter((_, i) => i !== idx) });
+      const realIdx = vendors.indexOf(v);
+      deleteVendor(realIdx);
       showToast('거래처를 삭제했습니다.', 'info');
       renderVendorsPage(container, navigateTo);
     });
