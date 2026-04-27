@@ -403,26 +403,26 @@ function openDetail(container, vendor, txs, navigateTo) {
           최근 거래 이력 <span style="font-weight:400;">(${vendorTxs.length}건)</span>
         </div>
         ${vendorTxs.length === 0 ? `<div style="text-align:center; padding:24px; color:var(--text-muted); font-size:13px;">거래 이력이 없습니다.</div>` : `
-          <div style="border:1px solid var(--border); border-radius:8px; overflow:hidden;">
-            <table style="width:100%; border-collapse:collapse; font-size:12px;">
+          <div class="table-wrapper" style="border:none;">
+            <table class="data-table">
               <thead>
-                <tr style="background:var(--bg-input);">
-                  <th style="padding:8px 10px; text-align:left; color:var(--text-muted);">날짜</th>
-                  <th style="padding:8px 10px; text-align:left; color:var(--text-muted);">구분</th>
-                  <th style="padding:8px 10px; text-align:left; color:var(--text-muted);">품목</th>
-                  <th style="padding:8px 10px; text-align:right; color:var(--text-muted);">수량</th>
-                  <th style="padding:8px 10px; text-align:right; color:var(--text-muted);">금액</th>
+                <tr>
+                  <th>날짜</th>
+                  <th>구분</th>
+                  <th>품목</th>
+                  <th class="text-right">수량</th>
+                  <th class="text-right">금액</th>
                 </tr>
               </thead>
               <tbody>
-                ${vendorTxs.slice(0, 20).map((tx, i) => {
+                ${vendorTxs.slice(0, 20).map((tx) => {
                   const amt = toNum(tx.quantity) * toNum(tx.unitPrice || 0);
-                  return `<tr style="border-top:1px solid var(--border); ${i % 2 === 0 ? '' : 'background:var(--bg-input)'}">
-                    <td style="padding:7px 10px; color:var(--text-muted);">${String(tx.date || '').slice(0,10)}</td>
-                    <td style="padding:7px 10px;"><span class="${tx.type === 'in' ? 'type-in' : 'type-out'}">${tx.type === 'in' ? '입고' : '출고'}</span></td>
-                    <td style="padding:7px 10px;">${escapeHtml(tx.itemName || '-')}</td>
-                    <td style="padding:7px 10px; text-align:right;">${toNum(tx.quantity).toLocaleString('ko-KR')}</td>
-                    <td style="padding:7px 10px; text-align:right;">${fmt(amt)}</td>
+                  return `<tr>
+                    <td style="color:var(--text-muted);">${String(tx.date || '').slice(0,10)}</td>
+                    <td><span class="${tx.type === 'in' ? 'type-in' : 'type-out'}">${tx.type === 'in' ? '입고' : '출고'}</span></td>
+                    <td>${escapeHtml(tx.itemName || '-')}</td>
+                    <td class="text-right">${toNum(tx.quantity).toLocaleString('ko-KR')}</td>
+                    <td class="text-right">${fmt(amt)}</td>
                   </tr>`;
                 }).join('')}
                 ${vendorTxs.length > 20 ? `<tr><td colspan="5" style="padding:8px; text-align:center; color:var(--text-muted);">외 ${vendorTxs.length - 20}건 더 있음</td></tr>` : ''}
@@ -463,7 +463,12 @@ function bindTableActions(container, vendors, txs, statsMap, navigateTo) {
       const idx = parseInt(btn.dataset.idx);
       const v = vendors[idx];
       if (!confirm(`"${v.name}" 거래처를 삭제하시겠습니까?`)) return;
-      setState({ vendorMaster: vendors.filter((_, i) => i !== idx) });
+      // ★ _deletedVendors: syncToSupabase가 읽어서 Supabase에서도 삭제
+      const _prev = (getState()._deletedVendors || []);
+      setState({
+        vendorMaster: vendors.filter((_, i) => i !== idx),
+        _deletedVendors: [..._prev, v],
+      });
       showToast('거래처를 삭제했습니다.', 'info');
       renderVendorsPage(container, navigateTo);
     });

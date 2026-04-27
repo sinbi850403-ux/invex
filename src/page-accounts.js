@@ -511,7 +511,7 @@ function openAccountModal(container, editData, navigateTo) {
     if (!amount || amount <= 0) { showToast('금액을 입력해 주세요.', 'warning'); return; }
 
     const entry = {
-      id:          Date.now() + '_manual_' + Math.random().toString(36).slice(2, 6),
+      id:          crypto.randomUUID(),
       type:        body.querySelector('#acc-type').value,
       vendorName:  body.querySelector('#acc-vendor').value,
       amount,

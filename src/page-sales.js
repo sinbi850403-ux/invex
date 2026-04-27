@@ -359,7 +359,7 @@ function openSalesModal(container, editOrder, navigateTo) {
 
     const orderDate = body.querySelector('#sm-date').value;
     const newOrder = {
-      id:               editOrder?.id || (Date.now() + '_' + Math.random().toString(36).slice(2, 6)),
+      id:               editOrder?.id || crypto.randomUUID(),
       orderNo:          editOrder?.orderNo || genOrderNo(orders, orderDate),
       orderDate,
       deliveryDate:     body.querySelector('#sm-delivery').value,
@@ -565,7 +565,7 @@ function openShipModal(container, order, navigateTo) {
     if (allComplete && !order.receivableEntryId) {
       const { total } = orderTotal(order);
       const entry = {
-        id:          Date.now() + '_recv_' + Math.random().toString(36).slice(2, 6),
+        id:          crypto.randomUUID(),
         type:        'receivable',
         vendorName:  order.customer,
         amount:      total,
@@ -613,7 +613,7 @@ function generateSalesTaxInvoice(container, order, navigateTo) {
   if (existing) { showToast('이미 발행된 세금계산서가 있습니다.', 'warning'); return; }
 
   const taxInvoice = {
-    id:         Date.now() + '_ti_' + Math.random().toString(36).slice(2, 6),
+    id:         crypto.randomUUID(),
     invoiceNo,
     type:       'sales',
     customer:   order.customer,

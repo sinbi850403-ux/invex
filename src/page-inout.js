@@ -4,7 +4,7 @@
  * 핵심: 입출고를 기록하면 재고 현황의 수량이 자동으로 증감됨
  */
 
-import { getState, setState, addTransaction, deleteTransaction, restoreTransaction, updateTransactionPrices } from './store.js';
+import { getState, setState, addTransaction, addTransactionsBulk, deleteTransaction, restoreTransaction, updateTransactionPrices } from './store.js';
 import { showToast } from './toast.js';
 import { downloadExcel, downloadExcelSheets, readExcelFile } from './excel.js';
 import { escapeHtml, renderQuickFilterRow, enableColumnResize } from './ux-toolkit.js';
@@ -1415,23 +1415,22 @@ async function processUploadedFile(file, overlay, container, navigateTo, items, 
       });
       setState({ mappedData: updatedMappedData });
 
-      rows.forEach((row) => {
-        addTransaction({
-          type: row.type,
-          vendor: row.vendor,
-          itemName: row.itemName,
-          itemCode: row.itemCode,
-          quantity: row.quantity,
-          unitPrice: row.unitPrice,
-          sellingPrice: row.sellingPrice,
-          actualSellingPrice: row.actualSellingPrice,
-          date: row.date,
-          note: row.note,
-          spec: row.spec,
-          unit: row.unit,
-          category: row.category,
-        });
-      });
+      // ★ addTransactionsBulk 사용: saveToDB + sync를 건수만큼 반복하지 않고 1번으로 처리
+      addTransactionsBulk(rows.map((row) => ({
+        type: row.type,
+        vendor: row.vendor,
+        itemName: row.itemName,
+        itemCode: row.itemCode,
+        quantity: row.quantity,
+        unitPrice: row.unitPrice,
+        sellingPrice: row.sellingPrice,
+        actualSellingPrice: row.actualSellingPrice,
+        date: row.date,
+        note: row.note,
+        spec: row.spec,
+        unit: row.unit,
+        category: row.category,
+      })));
 
       showToast(`일괄 등록 완료: 총 ${rows.length}건, 입고 ${inCount}건, 출고 ${outCount}건`, 'success');
       closeModal();
