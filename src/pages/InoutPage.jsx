@@ -710,6 +710,9 @@ export function InoutPage({ mode = 'all' }) {
       } else if (sort.key === 'outAmt') {
         av = (parseFloat(a.sellingPrice || aItem.salePrice) || 0) * (parseFloat(a.quantity) || 0);
         bv = (parseFloat(b.sellingPrice || bItem.salePrice) || 0) * (parseFloat(b.quantity) || 0);
+      } else if (sort.key === 'outTotal') {
+        av = Math.round((parseFloat(a.sellingPrice || aItem.salePrice) || 0) * (parseFloat(a.quantity) || 0) * 1.1);
+        bv = Math.round((parseFloat(b.sellingPrice || bItem.salePrice) || 0) * (parseFloat(b.quantity) || 0) * 1.1);
       } else if (sort.key === 'profit') {
         const aQty = parseFloat(a.quantity) || 0;
         const bQty = parseFloat(b.quantity) || 0;
@@ -907,13 +910,15 @@ export function InoutPage({ mode = 'all' }) {
     setPage(1);
   };
 
-  const SortTh = ({ sortKey, children, className = '' }) => {
+  const SortTh = ({ sortKey, children, className = '', rowSpan, colSpan, style = {} }) => {
     const isActive = sort.key === sortKey;
     const indicator = !isActive ? '↕' : sort.dir === 'asc' ? '↑' : '↓';
     return (
       <th
+        rowSpan={rowSpan}
+        colSpan={colSpan}
         className={`sortable-header ${isActive ? 'is-active' : ''} ${className}`}
-        style={{ cursor: 'pointer', userSelect: 'none' }}
+        style={{ cursor: 'pointer', userSelect: 'none', verticalAlign: 'middle', ...style }}
         onClick={() => toggleSort(sortKey)}
       >
         {children} <span className="sort-indicator" style={{ fontSize: '10px', opacity: 0.6 }}>{indicator}</span>
@@ -1116,62 +1121,75 @@ export function InoutPage({ mode = 'all' }) {
           <div className="table-wrapper" style={{ border: 'none' }}>
             <table className="data-table" ref={tableRef}>
               <thead>
-                <tr>
-                  <th style={{ width: '40px', textAlign: 'center' }}>
-                    <input type="checkbox" checked={allOnPageSelected} onChange={toggleSelectAll} />
-                  </th>
-                  <th className="col-num">#</th>
-                  {!isInMode && !isOutMode && <SortTh sortKey="type">구분</SortTh>}
-                  {isOutMode ? (
-                    <>
-                      <SortTh sortKey="category">자산</SortTh>
-                      <SortTh sortKey="date">출고일자</SortTh>
-                      <SortTh sortKey="vendor">거래처</SortTh>
-                      <SortTh sortKey="itemCode">상품코드</SortTh>
-                      <SortTh sortKey="itemName" className="col-fill">품명</SortTh>
-                      <SortTh sortKey="spec">규격</SortTh>
-                      <SortTh sortKey="unit">단위</SortTh>
-                      <SortTh sortKey="unitPrice" className="text-right">단가</SortTh>
-                      <SortTh sortKey="supply" className="text-right">공급가액</SortTh>
-                      <SortTh sortKey="vat" className="text-right">부가세</SortTh>
-                      <SortTh sortKey="totalPrice" className="text-right">합계금액</SortTh>
+                {isOutMode ? (
+                  <>
+                    <tr>
+                      <th rowSpan={2} style={{ width: '40px', textAlign: 'center', verticalAlign: 'middle' }}>
+                        <input type="checkbox" checked={allOnPageSelected} onChange={toggleSelectAll} />
+                      </th>
+                      <th rowSpan={2} className="col-num" style={{ verticalAlign: 'middle' }}>#</th>
+                      <SortTh sortKey="category" rowSpan={2}>자산</SortTh>
+                      <SortTh sortKey="date" rowSpan={2}>출고일자</SortTh>
+                      <SortTh sortKey="vendor" rowSpan={2}>거래처</SortTh>
+                      <SortTh sortKey="itemCode" rowSpan={2}>상품코드</SortTh>
+                      <SortTh sortKey="itemName" className="col-fill" rowSpan={2}>품명</SortTh>
+                      <SortTh sortKey="spec" rowSpan={2}>규격</SortTh>
+                      <SortTh sortKey="unit" rowSpan={2}>단위</SortTh>
+                      <SortTh sortKey="quantity" className="text-right" rowSpan={2}>출고수량</SortTh>
+                      <th colSpan={3} style={{ textAlign: 'center', background: 'var(--primary,#2563eb)', color: '#fff', fontWeight: 700, padding: '6px' }}>판매</th>
+                      <th colSpan={3} style={{ textAlign: 'center', background: '#7c5e2e', color: '#fff', fontWeight: 700, padding: '6px' }}>매입</th>
+                      <th colSpan={3} style={{ textAlign: 'center', background: '#2a6b4a', color: '#fff', fontWeight: 700, padding: '6px' }}>이익 분석</th>
+                      <th rowSpan={2} style={{ verticalAlign: 'middle' }}>관리</th>
+                    </tr>
+                    <tr>
                       <SortTh sortKey="sellingPrice" className="text-right">출고단가</SortTh>
-                      <SortTh sortKey="quantity" className="text-right">출고수량</SortTh>
-                      <SortTh sortKey="outAmt" className="text-right">출고금액</SortTh>
+                      <SortTh sortKey="outAmt" className="text-right">판매가</SortTh>
+                      <SortTh sortKey="outTotal" className="text-right">출고합</SortTh>
                       <SortTh sortKey="supply" className="text-right">매입원가</SortTh>
+                      <SortTh sortKey="vat" className="text-right">부가세</SortTh>
+                      <SortTh sortKey="totalPrice" className="text-right">공가합</SortTh>
                       <SortTh sortKey="profit" className="text-right">이익액</SortTh>
                       <SortTh sortKey="profitMargin" className="text-right">이익율</SortTh>
                       <SortTh sortKey="cogsMargin" className="text-right">매출원가율</SortTh>
-                    </>
-                  ) : isInMode ? (
-                    <>
-                      <SortTh sortKey="category">자산</SortTh>
-                      <SortTh sortKey="date">입고일자</SortTh>
-                      <SortTh sortKey="vendor">거래처</SortTh>
-                      <SortTh sortKey="itemCode">상품코드</SortTh>
-                      <SortTh sortKey="itemName" className="col-fill">품명</SortTh>
-                      <SortTh sortKey="spec">규격</SortTh>
-                      <SortTh sortKey="unit">단위</SortTh>
-                      <SortTh sortKey="quantity" className="text-right">입고수량</SortTh>
-                      <SortTh sortKey="unitPrice" className="text-right">단가</SortTh>
-                      <SortTh sortKey="supply" className="text-right">공급가액</SortTh>
-                      <SortTh sortKey="vat" className="text-right">부가세</SortTh>
-                      <SortTh sortKey="totalPrice" className="text-right">합계금액</SortTh>
-                    </>
-                  ) : (
-                    <>
-                      <SortTh sortKey="date">날짜</SortTh>
-                      <SortTh sortKey="vendor">거래처</SortTh>
-                      <SortTh sortKey="itemName" className="col-fill">품목명</SortTh>
-                      <SortTh sortKey="quantity" className="text-right">수량</SortTh>
-                      <SortTh sortKey="unitPrice" className="text-right">원가</SortTh>
-                      <SortTh sortKey="sellingPrice" className="text-right">판매가</SortTh>
-                      <SortTh sortKey="supply" className="text-right">금액</SortTh>
-                      <SortTh sortKey="note">비고</SortTh>
-                    </>
-                  )}
-                  <th>관리</th>
-                </tr>
+                    </tr>
+                  </>
+                ) : (
+                  <tr>
+                    <th style={{ width: '40px', textAlign: 'center' }}>
+                      <input type="checkbox" checked={allOnPageSelected} onChange={toggleSelectAll} />
+                    </th>
+                    <th className="col-num">#</th>
+                    {!isInMode && !isOutMode && <SortTh sortKey="type">구분</SortTh>}
+                    {isInMode ? (
+                      <>
+                        <SortTh sortKey="category">자산</SortTh>
+                        <SortTh sortKey="date">입고일자</SortTh>
+                        <SortTh sortKey="vendor">거래처</SortTh>
+                        <SortTh sortKey="itemCode">상품코드</SortTh>
+                        <SortTh sortKey="itemName" className="col-fill">품명</SortTh>
+                        <SortTh sortKey="spec">규격</SortTh>
+                        <SortTh sortKey="unit">단위</SortTh>
+                        <SortTh sortKey="quantity" className="text-right">입고수량</SortTh>
+                        <SortTh sortKey="unitPrice" className="text-right">단가</SortTh>
+                        <SortTh sortKey="supply" className="text-right">공급가액</SortTh>
+                        <SortTh sortKey="vat" className="text-right">부가세</SortTh>
+                        <SortTh sortKey="totalPrice" className="text-right">합계금액</SortTh>
+                      </>
+                    ) : (
+                      <>
+                        <SortTh sortKey="date">날짜</SortTh>
+                        <SortTh sortKey="vendor">거래처</SortTh>
+                        <SortTh sortKey="itemName" className="col-fill">품목명</SortTh>
+                        <SortTh sortKey="quantity" className="text-right">수량</SortTh>
+                        <SortTh sortKey="unitPrice" className="text-right">원가</SortTh>
+                        <SortTh sortKey="sellingPrice" className="text-right">판매가</SortTh>
+                        <SortTh sortKey="supply" className="text-right">금액</SortTh>
+                        <SortTh sortKey="note">비고</SortTh>
+                      </>
+                    )}
+                    <th>관리</th>
+                  </tr>
+                )}
               </thead>
               <tbody>
                 {pageData.map((tx, i) => {
@@ -1211,16 +1229,18 @@ export function InoutPage({ mode = 'all' }) {
                           <td className="col-fill"><strong>{tx.itemName || '-'}</strong></td>
                           <td style={{ fontSize: '12px' }}>{spec || '-'}</td>
                           <td style={{ fontSize: '12px' }}>{unit || '-'}</td>
-                          <td className="text-right">{unitPrice ? W(unitPrice) : '-'}</td>
+                          <td className="text-right" style={{ color: '#ef4444', fontWeight: 600 }}>
+                            {qty ? qty.toLocaleString('ko-KR') : '-'}
+                          </td>
+                          {/* 판매 그룹 */}
+                          <td className="text-right">{salePrice ? W(salePrice) : '-'}</td>
+                          <td className="text-right">{outAmt ? W(outAmt) : '-'}</td>
+                          <td className="text-right">{outAmt ? W(Math.round(outAmt * 1.1)) : '-'}</td>
+                          {/* 매입 그룹 */}
                           <td className="text-right">{supply ? W(supply) : '-'}</td>
                           <td className="text-right">{supply ? W(vat) : '-'}</td>
                           <td className="text-right">{supply ? W(totalPrice) : '-'}</td>
-                          <td className="text-right">{salePrice ? W(salePrice) : '-'}</td>
-                          <td className="text-right" style={{ color: '#ef4444', fontWeight: 600 }}>
-                            {qty ? `-${qty.toLocaleString('ko-KR')}` : '-'}
-                          </td>
-                          <td className="text-right">{outAmt ? W(outAmt) : '-'}</td>
-                          <td className="text-right">{purchaseCost ? W(purchaseCost) : '-'}</td>
+                          {/* 이익 분석 그룹 */}
                           <td className="text-right" style={{ color: profit > 0 ? 'var(--success)' : profit < 0 ? 'var(--danger)' : '' }}>
                             {outAmt ? W(profit) : '-'}
                           </td>
