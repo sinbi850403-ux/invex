@@ -329,23 +329,127 @@ async function syncToSupabase() {
     }
 
     // 거래처 동기화 — upsert(onConflict: user_id,name)로 수정 내용도 반영
+    // ★ _id(UUID)를 id로 포함: 이름 변경 시 같은 row를 업데이트 (중복 생성 방지)
     if (keysToSync.has('vendorMaster')) {
-      const vendors = (state.vendorMaster || []).map(v => ({
-        name: v.name,
-        type: v.type,
-        biz_number: v.bizNumber,
-        ceo_name: v.ceoName,
-        contact_name: v.contactName,
-        phone: v.phone,
-        email: v.email,
-        address: v.address,
-        memo: v.memo,
-      }));
+      const vendors = (state.vendorMaster || []).map(v => {
+        const payload = {
+          name: v.name,
+          type: v.type,
+          biz_number: v.bizNumber,
+          ceo_name: v.ceoName,
+          contact_name: v.contactName,
+          phone: v.phone,
+          email: v.email,
+          address: v.address,
+          memo: v.memo,
+        };
+        if (v._id) payload.id = v._id; // UUID 있으면 포함 → id conflict로 정확한 row 업데이트
+        return payload;
+      });
       for (const vendor of vendors) {
         promises.push(
           managedQuery(() => db.vendors.upsert(vendor)).catch(err => {
             console.warn('[Sync] 거래처 동기화 실패:', getErrorMessage(err));
             failedKeys.add('vendorMaster');
+          })
+        );
+      }
+
+      // ★ 삭제된 거래처 Supabase에서도 제거
+      // _deletedVendors: setState로 전달된 삭제 목록 (store에서 추적)
+      const deletedVendors = state._deletedVendors || [];
+      if (deletedVendors.length > 0) {
+        for (const v of deletedVendors) {
+          const del = v._id
+            ? managedQuery(() => db.vendors.remove(v._id))
+            : managedQuery(() => db.vendors.removeByName(v.name));
+          promises.push(
+            del.catch(err => console.warn('[Sync] 거래처 삭제 동기화 실패:', getErrorMessage(err)))
+          );
+        }
+        // 처리 후 초기화
+        state._deletedVendors = [];
+      }
+    }
+
+    // 매출/매입 전표 동기화
+    if (keysToSync.has('accountEntries')) {
+      const entries = (state.accountEntries || [])
+        .filter(e => e.id && String(e.id).includes('-')) // UUID 형식만 sync (Date.now_ 형식은 제외)
+        .map(e => ({
+          id: e.id,
+          type: e.type,
+          vendor: e.vendorName,
+          amount: e.amount || 0,
+          currency: e.currency || 'KRW',
+          date: e.date,
+          due_date: e.dueDate || null,
+          description: e.description || null,
+          settled: e.settled || false,
+          settled_date: e.settledDate || null,
+          payment_method: e.paymentMethod || null,
+          settle_note: e.settleNote || null,
+          source: e.source || null,
+        }));
+      if (entries.length > 0) {
+        promises.push(
+          managedQuery(() => db.accountEntries.bulkUpsert(entries)).catch(err => {
+            console.warn('[Sync] 매출/매입 전표 동기화 실패:', getErrorMessage(err));
+            failedKeys.add('accountEntries');
+          })
+        );
+      }
+    }
+
+    // 발주서 동기화
+    if (keysToSync.has('purchaseOrders')) {
+      const orders = (state.purchaseOrders || [])
+        .filter(o => o.id && String(o.id).includes('-')) // UUID 형식만 sync
+        .map(o => ({
+          id: o.id,
+          order_no: o.orderNo,
+          order_date: o.orderDate,
+          delivery_date: o.deliveryDate || null,
+          payment_due_date: o.paymentDueDate || null,
+          vendor: o.vendor,
+          items: o.items || [],
+          status: o.status || 'draft',
+          total_amount: o.totalAmount || 0,
+          notes: o.notes || null,
+          confirmed_at: o.confirmedAt || null,
+          cancelled_at: o.cancelledAt || null,
+          payable_entry_id: o.payableEntryId || null,
+          tax_invoice_id: o.taxInvoiceId || null,
+        }));
+      if (orders.length > 0) {
+        promises.push(
+          managedQuery(() => db.purchaseOrders.bulkUpsert(orders)).catch(err => {
+            console.warn('[Sync] 발주서 동기화 실패:', getErrorMessage(err));
+            failedKeys.add('purchaseOrders');
+          })
+        );
+      }
+    }
+
+    // 창고 이동 동기화
+    if (keysToSync.has('transfers')) {
+      const rows = (state.transfers || [])
+        .filter(t => t.id && String(t.id).includes('-')) // UUID 형식만 sync
+        .map(t => ({
+          id: t.id,
+          date: t.date,
+          item_name: t.itemName,
+          item_code: t.itemCode || null,
+          from_warehouse: t.fromWarehouse,
+          to_warehouse: t.toWarehouse,
+          quantity: t.quantity,
+          note: t.note || null,
+        }));
+      if (rows.length > 0) {
+        promises.push(
+          managedQuery(() => db.transfers.bulkUpsert(rows)).catch(err => {
+            console.warn('[Sync] 창고 이동 동기화 실패:', getErrorMessage(err));
+            failedKeys.add('transfers');
           })
         );
       }
@@ -356,6 +460,8 @@ async function syncToSupabase() {
       'safetyStock', 'beginnerMode', 'dashboardMode', 'visibleColumns',
       'inventoryViewPrefs', 'inoutViewPrefs', 'tableSortPrefs',
       'costMethod', 'currency',
+      'notificationReadMap', // ★ 알림 읽음 상태 — 새로고침 후에도 유지
+      'ledgerOpeningOverrides', // ★ 수불부 기초재고 수동 입력값 — 다기기 동기화
     ];
     for (const key of settingKeys) {
       if (keysToSync.has(key) && state[key] !== undefined) {
@@ -612,13 +718,20 @@ export async function restoreState(userId = null) {
         if ((safeCloudData.transactions?.length ?? 0) === 0 && (localData?.transactions?.length ?? 0) > 0) {
           delete safeCloudData.transactions;
         }
-        // ★ 주요 데이터 추가 보호 (빈 배열로 덮어쓰기 방지)
-        const protectKeys = ['vendorMaster', 'transfers', 'safetyStock'];
-        protectKeys.forEach(key => {
+        // ★ 주요 데이터 추가 보호 (빈 배열/객체로 덮어쓰기 방지)
+        // vendorMaster, transfers, accountEntries, purchaseOrders, stocktakeHistory는 배열 → .length 사용
+        // safetyStock은 객체({품목명: 수량}) → Object.keys().length 사용
+        const protectArrayKeys = ['vendorMaster', 'transfers', 'accountEntries', 'purchaseOrders', 'stocktakeHistory'];
+        protectArrayKeys.forEach(key => {
           if ((safeCloudData[key]?.length ?? 0) === 0 && (localData?.[key]?.length ?? 0) > 0) {
             delete safeCloudData[key];
           }
         });
+        const localSafetyStockLen = Object.keys(localData?.safetyStock || {}).length;
+        const cloudSafetyStockLen = Object.keys(safeCloudData?.safetyStock || {}).length;
+        if (cloudSafetyStockLen === 0 && localSafetyStockLen > 0) {
+          delete safeCloudData.safetyStock;
+        }
 
         state = { ...DEFAULT_STATE, ...(localData || {}), ...safeCloudData };
         window.dispatchEvent(new CustomEvent('invex:store-updated', { detail: { changedKeys: ['*'] } }));
@@ -789,6 +902,80 @@ export function addTransaction(tx) {
     window.dispatchEvent(new CustomEvent('notifications-updated'));
   }
   return newTx;
+}
+
+/**
+ * 일괄 입출고 기록 추가 (엑셀 대량 등록용)
+ * addTransaction을 N번 호출하면 saveToDB + scheduleSyncToSupabase도 N번 실행됨
+ * → 이 함수로 모두 처리 후 saveToDB 1번, sync 1번으로 줄임
+ * @param {object[]} txList - addTransaction과 동일한 형태의 tx 배열
+ */
+export function addTransactionsBulk(txList) {
+  if (!txList || txList.length === 0) return [];
+  const newTxs = [];
+
+  for (const tx of txList) {
+    const clientId = (typeof crypto !== 'undefined' && crypto.randomUUID)
+      ? crypto.randomUUID()
+      : `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+    const newTx = { id: clientId, createdAt: new Date().toISOString(), ...tx };
+    newTxs.push(newTx);
+
+    // 재고 수량 반영
+    const item = state.mappedData.find(d =>
+      String(d.itemName || '').trim() === String(tx.itemName || '').trim() ||
+      (d.itemCode && tx.itemCode && String(d.itemCode).trim() === String(tx.itemCode).trim())
+    );
+    if (item) {
+      const qty = toNum(tx.quantity);
+      const currentQty = toNum(item.quantity);
+      if (tx.type === 'in') {
+        item.quantity = currentQty + qty;
+        const txPrice = toNum(tx.unitPrice);
+        const itemPrice = toNum(item.unitPrice);
+        if (txPrice > 0) {
+          const costMethod = state.costMethod || 'weighted-avg';
+          if (costMethod === 'weighted-avg' && itemPrice > 0) {
+            const prevQty = Math.max(0, currentQty);
+            const totalValue = (prevQty * itemPrice) + (qty * txPrice);
+            const totalQty = prevQty + qty;
+            if (totalQty > 0) item.unitPrice = Math.round(totalValue / totalQty);
+          } else if (itemPrice === 0) {
+            item.unitPrice = txPrice;
+          }
+        }
+      } else {
+        item.quantity = Math.max(0, currentQty - qty);
+      }
+      recalcItemAmounts(item);
+    } else {
+      const qty = tx.type === 'in' ? toNum(tx.quantity) : 0;
+      const price = toNum(tx.unitPrice);
+      const supplyValue = qty * price;
+      const vat = Math.floor(supplyValue * 0.1);
+      state.mappedData = [
+        { itemName: tx.itemName, itemCode: tx.itemCode || '', category: tx.category || '미분류',
+          spec: tx.spec || '', quantity: qty, unit: tx.unit || 'EA', unitPrice: price,
+          salePrice: 0, supplyValue, vat, totalPrice: supplyValue + vat,
+          warehouse: tx.warehouse || '', note: '입출고 등록에 의한 자동 생성', safetyStock: 0 },
+        ...state.mappedData,
+      ];
+    }
+  }
+
+  // 전체를 앞에 한 번에 추가
+  state.transactions = [...newTxs, ...state.transactions];
+
+  // IndexedDB 1번, sync 1번
+  saveToDB();
+  if (_syncCallback) _syncCallback();
+  if (isSupabaseConfigured) {
+    scheduleSyncToSupabase(['transactions', 'mappedData']);
+  }
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('notifications-updated'));
+  }
+  return newTxs;
 }
 
 /**

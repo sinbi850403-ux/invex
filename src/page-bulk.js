@@ -4,7 +4,7 @@
  * 왜 필수? → 대량 입고/출고를 품목 하나씩 하면 시간 낭비. 자동 발주는 기회 손실 방지.
  */
 
-import { getState, addTransaction, setState } from './store.js';
+import { getState, addTransaction, addTransactionsBulk, setState } from './store.js';
 import { showToast } from './toast.js';
 import { openPurchaseOrderDraft } from './purchase-order-draft.js';
 
@@ -129,7 +129,7 @@ export function renderBulkPage(container, navigateTo) {
     const rows = container.querySelectorAll('#bulk-rows tr');
     const today = new Date().toISOString().split('T')[0];
     const execItems = getState().mappedData || [];
-    let count = 0;
+    const txBatch = [];
 
     rows.forEach(tr => {
       const select = tr.querySelector('.bulk-item');
@@ -152,7 +152,7 @@ export function renderBulkPage(container, navigateTo) {
         }
       }
 
-      addTransaction({
+      txBatch.push({
         type: bulkType,
         itemName: item.itemName,
         itemCode: item.itemCode || '',
@@ -161,15 +161,17 @@ export function renderBulkPage(container, navigateTo) {
         date: today,
         note: (noteInput?.value || '') + ' [일괄]',
       });
-      count++;
     });
 
-    if (count === 0) {
+    if (txBatch.length === 0) {
       showToast('처리할 품목이 없습니다.', 'warning');
       return;
     }
 
-    showToast(`${bulkType === 'in' ? '입고' : '출고'} ${count}건 일괄 처리 완료`, 'success');
+    // ★ 단건 루프(N번 IndexedDB 쓰기) 대신 한 번에 처리
+    addTransactionsBulk(txBatch);
+
+    showToast(`${bulkType === 'in' ? '입고' : '출고'} ${txBatch.length}건 일괄 처리 완료`, 'success');
     renderBulkPage(container, navigateTo);
   });
 

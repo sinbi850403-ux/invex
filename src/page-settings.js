@@ -6,7 +6,7 @@
 import { getState, setState, resetState } from './store.js';
 import { showToast } from './toast.js';
 import { isSupabaseConfigured } from './supabase-client.js';
-import { clearAllUserData } from './db.js';
+import { clearAllUserData, transactions as dbTransactions, transfers as dbTransfers } from './db.js';
 
 export function renderSettingsPage(container, navigateTo) {
   const state = getState();
@@ -73,16 +73,40 @@ export function renderSettingsPage(container, navigateTo) {
   });
 
   // 데이터 초기화
-  container.querySelector('#btn-clear-tx').addEventListener('click', () => {
+  container.querySelector('#btn-clear-tx').addEventListener('click', async () => {
     if (!confirm('입출고 기록을 모두 삭제하시겠습니까?')) return;
-    setState({ transactions: [] });
-    showToast('입출고 기록이 초기화되었습니다.', 'info');
+    const btn = container.querySelector('#btn-clear-tx');
+    if (btn) { btn.disabled = true; btn.textContent = '삭제 중...'; }
+    try {
+      if (isSupabaseConfigured) {
+        await dbTransactions.deleteAll();
+      }
+      setState({ transactions: [] });
+      showToast('입출고 기록이 초기화되었습니다.', 'info');
+    } catch (err) {
+      console.error('[Settings] 입출고 초기화 실패:', err);
+      showToast('삭제 중 오류가 발생했습니다.', 'error');
+    } finally {
+      if (btn) { btn.disabled = false; btn.textContent = ' 입출고 기록 초기화'; }
+    }
   });
 
-  container.querySelector('#btn-clear-transfers').addEventListener('click', () => {
+  container.querySelector('#btn-clear-transfers').addEventListener('click', async () => {
     if (!confirm('이동 이력을 모두 삭제하시겠습니까?')) return;
-    setState({ transfers: [] });
-    showToast('이동 이력이 초기화되었습니다.', 'info');
+    const btn = container.querySelector('#btn-clear-transfers');
+    if (btn) { btn.disabled = true; btn.textContent = '삭제 중...'; }
+    try {
+      if (isSupabaseConfigured) {
+        await dbTransfers.deleteAll();
+      }
+      setState({ transfers: [] });
+      showToast('이동 이력이 초기화되었습니다.', 'info');
+    } catch (err) {
+      console.error('[Settings] 이동 이력 초기화 실패:', err);
+      showToast('삭제 중 오류가 발생했습니다.', 'error');
+    } finally {
+      if (btn) { btn.disabled = false; btn.textContent = ' 이동 이력 초기화'; }
+    }
   });
 
   container.querySelector('#btn-clear-all').addEventListener('click', async () => {

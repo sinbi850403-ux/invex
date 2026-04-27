@@ -402,15 +402,15 @@ function openOrderModal(container, editOrder, navigateTo) {
         <strong style="font-size:14px;"> 발주 품목</strong>
         <button type="button" class="btn btn-sm btn-outline" id="om-add-item">+ 품목 추가</button>
       </div>
-      <div style="border:1px solid var(--border); border-radius:8px; overflow:hidden;">
-        <table style="width:100%; border-collapse:collapse; font-size:13px;">
+      <div class="table-wrapper" style="border-radius:8px; overflow:hidden;">
+        <table class="data-table" data-auto-sort="off">
           <thead>
-            <tr style="background:var(--bg-input);">
-              <th style="padding:8px 10px; text-align:left; color:var(--text-muted);">품목명</th>
-              <th style="padding:8px 10px; text-align:left; color:var(--text-muted); width:90px;">품목코드</th>
-              <th style="padding:8px 10px; text-align:right; color:var(--text-muted); width:80px;">수량</th>
-              <th style="padding:8px 10px; text-align:right; color:var(--text-muted); width:110px;">단가 (₩)</th>
-              <th style="padding:8px 10px; text-align:right; color:var(--text-muted); width:110px;">금액</th>
+            <tr>
+              <th>품목명</th>
+              <th style="width:90px;">품목코드</th>
+              <th class="text-right" style="width:80px;">수량</th>
+              <th class="text-right" style="width:110px;">단가 (₩)</th>
+              <th class="text-right" style="width:110px;">금액</th>
               <th style="width:36px;"></th>
             </tr>
           </thead>
@@ -514,7 +514,7 @@ function openOrderModal(container, editOrder, navigateTo) {
 
     const orderDate = body.querySelector('#om-date').value;
     const newOrder = {
-      id:              editOrder?.id || (Date.now() + '_' + Math.random().toString(36).slice(2, 6)),
+      id:              editOrder?.id || crypto.randomUUID(),
       orderNo:         editOrder?.orderNo || genOrderNo(orders, orderDate),
       orderDate,
       deliveryDate:    body.querySelector('#om-delivery').value,
@@ -627,29 +627,29 @@ function openOrderDetail(container, order) {
     <div style="padding:16px 24px;">
       <!-- 품목 목록 -->
       <div style="font-size:12px; font-weight:700; color:var(--text-muted); margin-bottom:8px; letter-spacing:.05em;">발주 품목</div>
-      <div style="border:1px solid var(--border); border-radius:8px; overflow:hidden; margin-bottom:16px;">
-        <table style="width:100%; border-collapse:collapse; font-size:13px;">
+      <div class="table-wrapper" style="margin-bottom:16px; border-radius:8px; overflow:hidden;">
+        <table class="data-table">
           <thead>
-            <tr style="background:var(--bg-input);">
-              <th style="padding:8px 10px; text-align:left; color:var(--text-muted);">품목명</th>
-              <th style="padding:8px 10px; text-align:left; color:var(--text-muted);">코드</th>
-              <th style="padding:8px 10px; text-align:right; color:var(--text-muted);">수량</th>
-              <th style="padding:8px 10px; text-align:right; color:var(--text-muted);">단가</th>
-              <th style="padding:8px 10px; text-align:right; color:var(--text-muted);">금액</th>
-              ${order.receivedItems ? '<th style="padding:8px 10px; text-align:right; color:var(--text-muted);">입고</th>' : ''}
+            <tr>
+              <th>품목명</th>
+              <th>코드</th>
+              <th class="text-right">수량</th>
+              <th class="text-right">단가</th>
+              <th class="text-right">금액</th>
+              ${order.receivedItems ? '<th class="text-right">입고</th>' : ''}
             </tr>
           </thead>
           <tbody>
             ${(order.items || []).map((it, i) => {
               const amt = toNum(it.qty) * toNum(it.price);
               const received = (order.receivedItems || {})[i] || 0;
-              return `<tr style="border-top:1px solid var(--border);">
-                <td style="padding:8px 10px;">${escapeHtml(it.name)}</td>
-                <td style="padding:8px 10px; font-size:11px; color:var(--text-muted);">${escapeHtml(it.itemCode || '-')}</td>
-                <td style="padding:8px 10px; text-align:right;">${toNum(it.qty).toLocaleString('ko-KR')}</td>
-                <td style="padding:8px 10px; text-align:right;">${fmt(it.price)}</td>
-                <td style="padding:8px 10px; text-align:right; font-weight:600;">${fmt(amt)}</td>
-                ${order.receivedItems ? `<td style="padding:8px 10px; text-align:right; color:${received >= toNum(it.qty) ? 'var(--success)' : 'var(--warning)'};">${received}</td>` : ''}
+              return `<tr>
+                <td>${escapeHtml(it.name)}</td>
+                <td style="font-size:11px; color:var(--text-muted);">${escapeHtml(it.itemCode || '-')}</td>
+                <td class="text-right">${toNum(it.qty).toLocaleString('ko-KR')}</td>
+                <td class="text-right">${fmt(it.price)}</td>
+                <td class="text-right" style="font-weight:600;">${fmt(amt)}</td>
+                ${order.receivedItems ? `<td class="text-right" style="color:${received >= toNum(it.qty) ? 'var(--success)' : 'var(--warning)'};">${received}</td>` : ''}
               </tr>`;
             }).join('')}
           </tbody>
@@ -694,15 +694,15 @@ function openReceiveModal(container, order, navigateTo) {
     <div style="margin-bottom:12px; font-size:13px; color:var(--text-muted);">
       거래처: <strong style="color:var(--text-primary);">${escapeHtml(order.vendor)}</strong> · 발주일: ${order.orderDate}
     </div>
-    <div style="border:1px solid var(--border); border-radius:8px; overflow:hidden; margin-bottom:16px;">
-      <table style="width:100%; border-collapse:collapse; font-size:13px;">
+    <div class="table-wrapper" style="margin-bottom:16px; border-radius:8px; overflow:hidden;">
+      <table class="data-table" data-auto-sort="off">
         <thead>
-          <tr style="background:var(--bg-input);">
-            <th style="padding:8px 10px; text-align:left; color:var(--text-muted);">품목명</th>
-            <th style="padding:8px 10px; text-align:right; color:var(--text-muted);">발주수량</th>
-            <th style="padding:8px 10px; text-align:right; color:var(--text-muted);">기입고</th>
-            <th style="padding:8px 10px; text-align:right; color:var(--text-muted);">이번 입고 <span class="required">*</span></th>
-            <th style="padding:8px 10px; text-align:right; color:var(--text-muted);">단가</th>
+          <tr>
+            <th>품목명</th>
+            <th class="text-right">발주수량</th>
+            <th class="text-right">기입고</th>
+            <th class="text-right">이번 입고 <span class="required">*</span></th>
+            <th class="text-right">단가</th>
           </tr>
         </thead>
         <tbody>
@@ -710,17 +710,17 @@ function openReceiveModal(container, order, navigateTo) {
             const ordered   = toNum(it.qty);
             const already   = toNum(prevReceived[i] || 0);
             const remaining = ordered - already;
-            return `<tr style="border-top:1px solid var(--border);">
-              <td style="padding:8px 10px;">${escapeHtml(it.name)}</td>
-              <td style="padding:8px 10px; text-align:right;">${ordered.toLocaleString('ko-KR')}</td>
-              <td style="padding:8px 10px; text-align:right; color:var(--text-muted);">${already.toLocaleString('ko-KR')}</td>
-              <td style="padding:8px 10px; text-align:right;">
+            return `<tr>
+              <td>${escapeHtml(it.name)}</td>
+              <td class="text-right">${ordered.toLocaleString('ko-KR')}</td>
+              <td class="text-right" style="color:var(--text-muted);">${already.toLocaleString('ko-KR')}</td>
+              <td class="text-right">
                 <input type="number" class="form-input receive-qty" data-idx="${safeAttr(i)}" data-max="${safeAttr(remaining)}"
                   value="${safeAttr(remaining)}" min="0" max="${safeAttr(remaining)}"
                   style="width:80px; text-align:right; ${remaining <= 0 ? 'opacity:.5;' : ''}"
                   ${remaining <= 0 ? 'disabled' : ''} />
               </td>
-              <td style="padding:8px 10px; text-align:right; font-size:12px; color:var(--text-muted);">${fmt(it.price)}</td>
+              <td class="text-right" style="font-size:12px; color:var(--text-muted);">${fmt(it.price)}</td>
             </tr>`;
           }).join('')}
         </tbody>
@@ -801,7 +801,7 @@ function openReceiveModal(container, order, navigateTo) {
       const total = orderTotal(order);
       if (total > 0) {
         const entry = {
-          id: `acc-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+          id: crypto.randomUUID(),
           type: 'payable', vendorName: order.vendor, amount: total,
           currency: 'KRW', date: receiveDate,
           dueDate: order.paymentDueDate || dueDate(receiveDate, 30),
@@ -848,7 +848,7 @@ function generateTaxInvoice(order, orders, navigateTo, container) {
   const invoiceNo = `TI-${order.orderNo}`;
 
   const taxInvoice = {
-    id:          `tax-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    id:          crypto.randomUUID(),
     invoiceNo,
     type:        'purchase',
     vendor:      order.vendor,

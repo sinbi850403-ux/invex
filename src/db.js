@@ -421,6 +421,18 @@ export const transactions = {
       .eq('user_id', userId);
     handleError(error, '입출고 삭제');
   },
+
+  /**
+   * 해당 사용자의 입출고 기록 전체 삭제 (설정 페이지 초기화용)
+   */
+  async deleteAll() {
+    const userId = await getUserId();
+    const { error } = await supabase
+      .from('transactions')
+      .delete()
+      .eq('user_id', userId);
+    handleError(error, '입출고 전체 삭제');
+  },
 };
 
 // ============================================================
@@ -479,6 +491,19 @@ export const vendors = {
       .eq('user_id', userId);
     handleError(error, '거래처 삭제');
   },
+
+  /**
+   * 거래처 이름 기반 삭제 (Supabase UUID를 모를 때 폴백)
+   */
+  async removeByName(name) {
+    const userId = await getUserId();
+    const { error } = await supabase
+      .from('vendors')
+      .delete()
+      .eq('user_id', userId)
+      .eq('name', name);
+    handleError(error, '거래처 삭제(by name)');
+  },
 };
 
 // ============================================================
@@ -505,6 +530,27 @@ export const transfers = {
       .single();
     handleError(error, '이동 등록');
     return data;
+  },
+
+  async bulkUpsert(transfersArray) {
+    const userId = await getUserId();
+    const rows = transfersArray.map(t => ({ ...t, user_id: userId }));
+    const { error } = await supabase
+      .from('transfers')
+      .upsert(rows, { onConflict: 'id' });
+    handleError(error, '창고 이동 일괄 저장');
+  },
+
+  /**
+   * 해당 사용자의 이동 이력 전체 삭제 (설정 페이지 초기화용)
+   */
+  async deleteAll() {
+    const userId = await getUserId();
+    const { error } = await supabase
+      .from('transfers')
+      .delete()
+      .eq('user_id', userId);
+    handleError(error, '창고 이동 전체 삭제');
   },
 };
 
@@ -575,6 +621,15 @@ export const accountEntries = {
     return data;
   },
 
+  async bulkUpsert(entriesArray) {
+    const userId = await getUserId();
+    const rows = entriesArray.map(e => ({ ...e, user_id: userId }));
+    const { error } = await supabase
+      .from('account_entries')
+      .upsert(rows, { onConflict: 'id' });
+    handleError(error, '장부 일괄 저장');
+  },
+
   async remove(entryId) {
     const userId = await getUserId();
     const { error } = await supabase
@@ -610,6 +665,15 @@ export const purchaseOrders = {
       .single();
     handleError(error, '발주서 생성');
     return data;
+  },
+
+  async bulkUpsert(ordersArray) {
+    const userId = await getUserId();
+    const rows = ordersArray.map(o => ({ ...o, user_id: userId }));
+    const { error } = await supabase
+      .from('purchase_orders')
+      .upsert(rows, { onConflict: 'id' });
+    handleError(error, '발주서 일괄 저장');
   },
 
   async update(orderId, updates) {

@@ -5,7 +5,7 @@
  */
 
 import { readExcelFile } from './excel.js';
-import { setState, resetState, getState } from './store.js';
+import { setState, getState } from './store.js';
 import { showToast } from './toast.js';
 import { downloadTemplate, getTemplateList } from './excel-templates.js';
 import { ERP_FIELDS, autoMap, buildMappedData } from './domain/excelFieldMap.js';
@@ -160,7 +160,8 @@ async function handleFile(file, navigateTo) {
       }
     });
 
-    resetState();
+    // ★ resetState() 금지 — 기존 입출고 이력/거래처/안전재고가 사라짐
+    // 재고 품목(mappedData)만 교체하고 나머지 데이터는 보존
     setState({
       rawData,
       sheetNames: result.sheetNames,
