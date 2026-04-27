@@ -1208,9 +1208,9 @@ export function InoutPage({ mode = 'all' }) {
                       <SortTh sortKey="spec" rowSpan={2} style={{ position: 'sticky', top: 0, zIndex: 4 }}>규격</SortTh>
                       <SortTh sortKey="unit" rowSpan={2} style={{ position: 'sticky', top: 0, zIndex: 4 }}>단위</SortTh>
                       <SortTh sortKey="quantity" className="text-right" rowSpan={2} style={{ position: 'sticky', top: 0, zIndex: 4 }}>출고수량</SortTh>
-                      <th colSpan={3} style={{ textAlign: 'center', background: '#1d3d6b', color: '#fff', fontWeight: 700, padding: '6px', position: 'sticky', top: 0, zIndex: 4 }}>판매</th>
-                      <th colSpan={3} style={{ textAlign: 'center', background: '#4a2e14', color: '#fff', fontWeight: 700, padding: '6px', position: 'sticky', top: 0, zIndex: 4 }}>매입</th>
-                      <th colSpan={3} style={{ textAlign: 'center', background: '#163526', color: '#fff', fontWeight: 700, padding: '6px', position: 'sticky', top: 0, zIndex: 4 }}>이익 분석</th>
+                      <th colSpan={3} style={{ textAlign: 'center', background: '#2563eb', color: '#fff', fontWeight: 700, padding: '6px', position: 'sticky', top: 0, zIndex: 4 }}>판매</th>
+                      <th colSpan={3} style={{ textAlign: 'center', background: '#8b6214', color: '#fff', fontWeight: 700, padding: '6px', position: 'sticky', top: 0, zIndex: 4 }}>매입</th>
+                      <th colSpan={3} style={{ textAlign: 'center', background: '#1e7a48', color: '#fff', fontWeight: 700, padding: '6px', position: 'sticky', top: 0, zIndex: 4 }}>이익 분석</th>
                       <th rowSpan={2} style={{ verticalAlign: 'middle', position: 'sticky', top: 0, zIndex: 4, textTransform: 'none', fontSize: '13px' }}>관리</th>
                     </tr>
                     <tr>
@@ -1225,7 +1225,7 @@ export function InoutPage({ mode = 'all' }) {
                         { key: 'profitMargin', label: '이익율',     grp: 'prof' },
                         { key: 'cogsMargin',   label: '원가율',     grp: 'prof' },
                       ].map(({ key, label, grp }) => {
-                        const bg = grp === 'sale' ? '#264d84' : grp === 'buy' ? '#5c3820' : '#1e4530';
+                        const bg = grp === 'sale' ? '#1e50c8' : grp === 'buy' ? '#7a5510' : '#196840';
                         return (
                           <SortTh key={key} sortKey={key} className="text-right" style={{
                             position: 'sticky', top: outRow1H, zIndex: 3,
@@ -1322,20 +1322,20 @@ export function InoutPage({ mode = 'all' }) {
                           <td className="text-right" style={{ color: '#ef4444', fontWeight: 600 }}>
                             {qty ? qty.toLocaleString('ko-KR') : '-'}
                           </td>
-                          {/* 판매 그룹 (rgb 38,77,132) */}
-                          <td className="text-right" style={{ background: 'rgba(38,77,132,0.22)' }}>{salePrice ? W(salePrice) : '-'}</td>
-                          <td className="text-right" style={{ background: 'rgba(38,77,132,0.32)', fontWeight: 600 }}>{outAmt ? W(outAmt) : '-'}</td>
-                          <td className="text-right" style={{ background: 'rgba(38,77,132,0.22)' }}>{outAmt ? W(Math.round(outAmt * 1.1)) : '-'}</td>
-                          {/* 매입 그룹 (rgb 92,56,32) */}
-                          <td className="text-right" style={{ background: 'rgba(92,56,32,0.28)' }}>{wacSupply ? W(wacSupply) : '-'}</td>
-                          <td className="text-right" style={{ background: 'rgba(92,56,32,0.18)', color: 'var(--text-muted)' }}>{wacSupply ? W(wacVat) : '-'}</td>
-                          <td className="text-right" style={{ background: 'rgba(92,56,32,0.32)', fontWeight: 600 }}>{wacSupply ? W(wacTotal) : '-'}</td>
-                          {/* 이익 분석 그룹 (rgb 30,69,48) */}
-                          <td className="text-right" style={{ background: 'rgba(30,69,48,0.32)', color: profit > 0 ? '#4ade80' : profit < 0 ? '#f87171' : 'var(--text-muted)', fontWeight: profit !== 0 ? 700 : 400 }}>
+                          {/* 판매 그룹 */}
+                          <td className="text-right" style={{ background: 'rgba(37,99,235,0.08)' }}>{salePrice ? W(salePrice) : '-'}</td>
+                          <td className="text-right" style={{ background: 'rgba(37,99,235,0.12)', fontWeight: 600 }}>{outAmt ? W(outAmt) : '-'}</td>
+                          <td className="text-right" style={{ background: 'rgba(37,99,235,0.08)' }}>{outAmt ? W(Math.round(outAmt * 1.1)) : '-'}</td>
+                          {/* 매입 그룹 */}
+                          <td className="text-right" style={{ background: 'rgba(139,98,20,0.12)' }}>{wacSupply ? W(wacSupply) : '-'}</td>
+                          <td className="text-right" style={{ background: 'rgba(139,98,20,0.07)', color: 'var(--text-muted)' }}>{wacSupply ? W(wacVat) : '-'}</td>
+                          <td className="text-right" style={{ background: 'rgba(139,98,20,0.12)', fontWeight: 600 }}>{wacSupply ? W(wacTotal) : '-'}</td>
+                          {/* 이익 분석 그룹 */}
+                          <td className="text-right" style={{ background: 'rgba(30,122,72,0.12)', color: profit > 0 ? '#4ade80' : profit < 0 ? '#f87171' : 'var(--text-muted)', fontWeight: profit !== 0 ? 700 : 400 }}>
                             {outAmt ? W(profit) : '-'}
                           </td>
-                          <td className="text-right" style={{ background: 'rgba(30,69,48,0.28)', color: profit > 0 ? '#4ade80' : profit < 0 ? '#f87171' : 'var(--text-muted)' }}>{profitMargin || '-'}</td>
-                          <td className="text-right" style={{ background: 'rgba(30,69,48,0.18)', color: 'var(--text-muted)' }}>{cogsMargin || '-'}</td>
+                          <td className="text-right" style={{ background: 'rgba(30,122,72,0.10)', color: profit > 0 ? '#4ade80' : profit < 0 ? '#f87171' : 'var(--text-muted)' }}>{profitMargin || '-'}</td>
+                          <td className="text-right" style={{ background: 'rgba(30,122,72,0.07)', color: 'var(--text-muted)' }}>{cogsMargin || '-'}</td>
                         </>
                       ) : isInMode ? (
                         <>
