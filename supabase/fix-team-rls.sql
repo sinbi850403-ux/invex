@@ -20,6 +20,9 @@
 -- Step 1: 팀 멤버 확인 헬퍼 함수
 -- ============================================================
 
+-- 기존 함수 삭제 (파라미터명 변경 시 DROP 필요)
+DROP FUNCTION IF EXISTS is_workspace_member(UUID);
+
 /**
  * 현재 로그인 유저가 workspace_owner_uid 의 워크스페이스 멤버인지 확인
  * SECURITY DEFINER: RLS 우회하여 team_workspaces 직접 조회
