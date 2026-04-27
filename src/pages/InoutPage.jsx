@@ -1199,15 +1199,28 @@ export function InoutPage({ mode = 'all' }) {
                       <th rowSpan={2} style={{ verticalAlign: 'middle', position: 'sticky', top: 0, zIndex: 4 }}>관리</th>
                     </tr>
                     <tr>
-                      <SortTh sortKey="sellingPrice" className="text-right" style={{ position: 'sticky', background: 'rgba(37,99,235,0.18)', color: 'inherit', top: outRow1H, zIndex: 3 }}>출고단가</SortTh>
-                      <SortTh sortKey="outAmt" className="text-right" style={{ position: 'sticky', background: 'rgba(37,99,235,0.18)', color: 'inherit', top: outRow1H, zIndex: 3 }}>판매가</SortTh>
-                      <SortTh sortKey="outTotal" className="text-right" style={{ position: 'sticky', background: 'rgba(37,99,235,0.18)', color: 'inherit', top: outRow1H, zIndex: 3 }}>출고합</SortTh>
-                      <SortTh sortKey="supply" className="text-right" style={{ position: 'sticky', background: 'rgba(124,94,46,0.25)', color: 'inherit', top: outRow1H, zIndex: 3 }}>매입원가</SortTh>
-                      <SortTh sortKey="vat" className="text-right" style={{ position: 'sticky', background: 'rgba(124,94,46,0.25)', color: 'inherit', top: outRow1H, zIndex: 3 }}>부가세</SortTh>
-                      <SortTh sortKey="totalPrice" className="text-right" style={{ position: 'sticky', background: 'rgba(124,94,46,0.25)', color: 'inherit', top: outRow1H, zIndex: 3 }}>공가합</SortTh>
-                      <SortTh sortKey="profit" className="text-right" style={{ position: 'sticky', background: 'rgba(42,107,74,0.22)', color: 'inherit', top: outRow1H, zIndex: 3 }}>이익액</SortTh>
-                      <SortTh sortKey="profitMargin" className="text-right" style={{ position: 'sticky', background: 'rgba(42,107,74,0.22)', color: 'inherit', top: outRow1H, zIndex: 3 }}>이익율</SortTh>
-                      <SortTh sortKey="cogsMargin" className="text-right" style={{ position: 'sticky', background: 'rgba(42,107,74,0.22)', color: 'inherit', top: outRow1H, zIndex: 3 }}>매출원가율</SortTh>
+                      {[
+                        { key: 'sellingPrice', label: '출고단가',   grp: 'sale' },
+                        { key: 'outAmt',       label: '판매가',     grp: 'sale' },
+                        { key: 'outTotal',     label: '출고합계',   grp: 'sale' },
+                        { key: 'supply',       label: '매입원가',   grp: 'buy'  },
+                        { key: 'vat',          label: '부가세',     grp: 'buy'  },
+                        { key: 'totalPrice',   label: '공급합계',   grp: 'buy'  },
+                        { key: 'profit',       label: '이익액',     grp: 'prof' },
+                        { key: 'profitMargin', label: '이익율',     grp: 'prof' },
+                        { key: 'cogsMargin',   label: '원가율',     grp: 'prof' },
+                      ].map(({ key, label, grp }) => {
+                        const bg = grp === 'sale' ? '#3b6fd4' : grp === 'buy' ? '#7a5c2e' : '#2d6e4a';
+                        return (
+                          <SortTh key={key} sortKey={key} className="text-right" style={{
+                            position: 'sticky', top: outRow1H, zIndex: 3,
+                            background: bg, color: '#fff',
+                            fontSize: '12px', fontWeight: 600,
+                            textTransform: 'none', padding: '6px 10px',
+                            whiteSpace: 'nowrap',
+                          }}>{label}</SortTh>
+                        );
+                      })}
                     </tr>
                   </>
                 ) : (
