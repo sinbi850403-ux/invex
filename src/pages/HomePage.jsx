@@ -275,59 +275,82 @@ export default function HomePage() {
           {/* KPI 6개 */}
           <div className="db-kpi-grid">
             <div className="db-kpi-card" onClick={() => navigate('/inventory')} style={{ cursor: 'pointer' }}>
-              <div className="db-kpi-icon">📦</div>
               <div className="db-kpi-label">총 품목</div>
               <div className="db-kpi-value text-accent">{totalItems.toLocaleString('ko-KR')}</div>
+              <div className="db-kpi-footer">
+                <span className="db-kpi-delta db-delta-flat">전체 등록 품목</span>
+              </div>
             </div>
             <div className="db-kpi-card" onClick={() => navigate('/inventory')} style={{ cursor: 'pointer' }}>
-              <div className="db-kpi-icon">💰</div>
               <div className="db-kpi-label">재고 금액</div>
               <div className="db-kpi-value text-success">{formatCurrency(totalSupplyValue)}</div>
-              <Sparkline data={weekData.map(d => Math.max(0, d.inQty - d.outQty))} color="var(--success)" />
+              <div className="db-kpi-footer">
+                <span className="db-kpi-delta db-delta-flat">현재 보유 재고</span>
+                <Sparkline data={weekData.map(d => Math.max(0, d.inQty - d.outQty))} color="var(--success)" />
+              </div>
             </div>
             <div className={`db-kpi-card${lowStockItems.length > 0 ? ' db-kpi-danger' : ''}`} onClick={() => navigate('/inventory')} style={{ cursor: 'pointer' }}>
-              <div className="db-kpi-icon">⚠️</div>
               <div className="db-kpi-label">부족 품목</div>
               <div className={`db-kpi-value${lowStockItems.length > 0 ? ' text-danger' : ''}`}>
                 {lowStockItems.length > 0 ? `${lowStockItems.length}건` : '없음'}
               </div>
+              <div className="db-kpi-footer">
+                <span className="db-kpi-delta db-delta-flat">안전재고 미달</span>
+              </div>
             </div>
             <div className="db-kpi-card" onClick={() => navigate('/in')} style={{ cursor: 'pointer' }}>
-              <div className="db-kpi-icon">📥</div>
               <div className="db-kpi-label">오늘 입고</div>
               <div className="db-kpi-value text-success">{todayInCount}건</div>
-              <TrendBadge pct={inTrendPct} />
-              <Sparkline data={weekData.map(d => d.inQty)} color="var(--success)" />
+              <div className="db-kpi-footer">
+                {inTrendPct != null ? (
+                  <span className={`db-kpi-delta ${inTrendPct > 0 ? 'db-delta-up' : inTrendPct < 0 ? 'db-delta-down' : 'db-delta-flat'}`}>
+                    {inTrendPct > 0 ? '▲' : inTrendPct < 0 ? '▼' : '–'} {Math.abs(inTrendPct)}% 전월 대비
+                  </span>
+                ) : (
+                  <span className="db-kpi-delta db-delta-flat">전월 집계 중</span>
+                )}
+                <Sparkline data={weekData.map(d => d.inQty)} color="var(--success)" />
+              </div>
             </div>
             <div className="db-kpi-card" onClick={() => navigate('/out')} style={{ cursor: 'pointer' }}>
-              <div className="db-kpi-icon">📤</div>
               <div className="db-kpi-label">오늘 출고</div>
               <div className="db-kpi-value text-danger">{todayOutCount}건</div>
-              <TrendBadge pct={outTrendPct} />
-              <Sparkline data={weekData.map(d => d.outQty)} color="var(--danger)" />
+              <div className="db-kpi-footer">
+                {outTrendPct != null ? (
+                  <span className={`db-kpi-delta ${outTrendPct > 0 ? 'db-delta-up' : outTrendPct < 0 ? 'db-delta-down' : 'db-delta-flat'}`}>
+                    {outTrendPct > 0 ? '▲' : outTrendPct < 0 ? '▼' : '–'} {Math.abs(outTrendPct)}% 전월 대비
+                  </span>
+                ) : (
+                  <span className="db-kpi-delta db-delta-flat">전월 집계 중</span>
+                )}
+                <Sparkline data={weekData.map(d => d.outQty)} color="var(--danger)" />
+              </div>
             </div>
             <div className={`db-kpi-card${deadStockItems.length > 0 ? ' db-kpi-warn' : ''}`} style={{ cursor: deadStockItems.length > 0 ? 'pointer' : 'default' }}>
-              <div className="db-kpi-icon">🕰️</div>
               <div className="db-kpi-label">정체 재고(30일)</div>
               <div className={`db-kpi-value${deadStockItems.length > 0 ? ' text-warning' : ''}`}>
                 {deadStockItems.length}건
               </div>
-              {deadStockItems.length > 0 && (
-                <button
-                  className="btn btn-sm btn-outline"
-                  style={{ marginTop: 6, fontSize: 11, color: 'var(--warning)', borderColor: 'var(--warning)', padding: '2px 8px' }}
-                  onClick={(e) => { e.stopPropagation(); navigate('/auto-order'); }}
-                >
-                  발주 바로가기 →
-                </button>
-              )}
+              <div className="db-kpi-footer">
+                {deadStockItems.length > 0 ? (
+                  <button
+                    className="db-kpi-delta db-delta-flat"
+                    style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: 'var(--warning)', fontSize: 11, fontWeight: 500 }}
+                    onClick={(e) => { e.stopPropagation(); navigate('/auto-order'); }}
+                  >
+                    발주 바로가기 →
+                  </button>
+                ) : (
+                  <span className="db-kpi-delta db-delta-flat">30일 미출고 품목</span>
+                )}
+              </div>
             </div>
           </div>
 
           {/* 재고 부족 경고 바 */}
           {lowStockItems.length > 0 && (
             <div className="db-alert-bar" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span className="db-alert-title" style={{ cursor: 'pointer' }} onClick={() => navigate('/inventory')}>⚠️ 재고 부족 {lowStockItems.length}건</span>
+              <span className="db-alert-title" style={{ cursor: 'pointer' }} onClick={() => navigate('/inventory')}>재고 부족 {lowStockItems.length}건</span>
               <span className="db-alert-items" style={{ flex: 1, cursor: 'pointer' }} onClick={() => navigate('/inventory')}>
                 {lowStockItems.slice(0, 3).map(item =>
                   `${item.itemName} (현재 ${toNumber(item.quantity)} / 안전 ${toNumber(safetyStock[item.itemName])})`
