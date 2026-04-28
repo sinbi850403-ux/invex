@@ -641,77 +641,56 @@ export default function HomePage() {
               </div>
             </div>
             <div className="db-kpi-card" onClick={() => navigate('/in')} style={{ cursor: 'pointer' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <div className="db-kpi-label">오늘 입고</div>
-                {dashRole === 'manager' && (
-                  <button className="btn btn-sm btn-ghost"
-                    style={{ fontSize: 10, padding: '1px 6px', color: 'var(--text-muted)' }}
-                    onClick={e => { e.stopPropagation(); openTargetEdit('in', targets.in); }}>
-                    목표 설정
-                  </button>
-                )}
-              </div>
+              <div className="db-kpi-label">오늘 입고</div>
               <div className="db-kpi-value text-success">{todayInCount}건</div>
-              {editingTarget === 'in' ? (
-                <div style={{ display: 'flex', gap: 4, marginTop: 4 }} onClick={e => e.stopPropagation()}>
-                  <input type="number" value={targetInput} onChange={e => setTargetInput(e.target.value)}
-                    onKeyDown={e => { if (e.key === 'Enter') saveTarget(); if (e.key === 'Escape') setEditingTarget(null); }}
-                    style={{ width: 80, fontSize: 12, padding: '2px 6px', borderRadius: 4, border: '1px solid var(--border)', background: 'var(--bg-card)', color: 'var(--text)' }}
-                    placeholder="목표 수량" autoFocus />
-                  <button className="btn btn-sm btn-primary" style={{ fontSize: 11, padding: '2px 8px' }} onClick={saveTarget}>확인</button>
-                </div>
-              ) : targets.in > 0 && (
-                <div style={{ marginTop: 4 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--text-muted)', marginBottom: 2 }}>
-                    <span>이달 {monthInQty.toLocaleString('ko-KR')} / {targets.in.toLocaleString('ko-KR')}</span>
-                    <span style={{ color: monthInQty >= targets.in ? 'var(--success)' : 'var(--text-muted)', fontWeight: 600 }}>
-                      {Math.min(Math.round(monthInQty / targets.in * 100), 999)}%
-                    </span>
-                  </div>
-                  <div style={{ height: 4, borderRadius: 2, background: 'var(--border)', overflow: 'hidden' }}>
-                    <div style={{ height: '100%', borderRadius: 2, background: 'var(--success)', width: `${Math.min(monthInQty / targets.in * 100, 100)}%`, transition: 'width 0.4s' }} />
-                  </div>
-                </div>
-              )}
               <TrendBadge pct={inTrendPct} />
               <Sparkline data={weekData.map(d => d.inQty)} color="var(--success)" />
             </div>
             <div className="db-kpi-card" onClick={() => navigate('/out')} style={{ cursor: 'pointer' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <div className="db-kpi-label">오늘 출고</div>
-                {dashRole === 'manager' && (
-                  <button className="btn btn-sm btn-ghost"
-                    style={{ fontSize: 10, padding: '1px 6px', color: 'var(--text-muted)' }}
-                    onClick={e => { e.stopPropagation(); openTargetEdit('out', targets.out); }}>
-                    목표 설정
-                  </button>
-                )}
-              </div>
+              <div className="db-kpi-label">오늘 출고</div>
               <div className="db-kpi-value text-danger">{todayOutCount}건</div>
-              {editingTarget === 'out' ? (
-                <div style={{ display: 'flex', gap: 4, marginTop: 4 }} onClick={e => e.stopPropagation()}>
-                  <input type="number" value={targetInput} onChange={e => setTargetInput(e.target.value)}
-                    onKeyDown={e => { if (e.key === 'Enter') saveTarget(); if (e.key === 'Escape') setEditingTarget(null); }}
-                    style={{ width: 80, fontSize: 12, padding: '2px 6px', borderRadius: 4, border: '1px solid var(--border)', background: 'var(--bg-card)', color: 'var(--text)' }}
-                    placeholder="목표 수량" autoFocus />
-                  <button className="btn btn-sm btn-primary" style={{ fontSize: 11, padding: '2px 8px' }} onClick={saveTarget}>확인</button>
-                </div>
-              ) : targets.out > 0 && (
-                <div style={{ marginTop: 4 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--text-muted)', marginBottom: 2 }}>
-                    <span>이달 {monthOutQty.toLocaleString('ko-KR')} / {targets.out.toLocaleString('ko-KR')}</span>
-                    <span style={{ color: monthOutQty >= targets.out ? 'var(--danger)' : 'var(--text-muted)', fontWeight: 600 }}>
-                      {Math.min(Math.round(monthOutQty / targets.out * 100), 999)}%
-                    </span>
-                  </div>
-                  <div style={{ height: 4, borderRadius: 2, background: 'var(--border)', overflow: 'hidden' }}>
-                    <div style={{ height: '100%', borderRadius: 2, background: 'var(--danger)', width: `${Math.min(monthOutQty / targets.out * 100, 100)}%`, transition: 'width 0.4s' }} />
-                  </div>
-                </div>
-              )}
               <TrendBadge pct={outTrendPct} />
               <Sparkline data={weekData.map(d => d.outQty)} color="var(--danger)" />
             </div>
+            {dashRole === 'manager' && (
+              <div className="db-kpi-card" onClick={() => navigate('/out')} style={{ cursor: 'pointer' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div className="db-kpi-label">이달 매출</div>
+                  <button className="btn btn-sm btn-ghost"
+                    style={{ fontSize: 10, padding: '1px 6px', color: 'var(--text-muted)' }}
+                    onClick={e => { e.stopPropagation(); openTargetEdit('revenue', targets.revenue); }}>
+                    목표 설정
+                  </button>
+                </div>
+                <div className="db-kpi-value text-accent">{formatCurrency(monthRevenue)}</div>
+                {editingTarget === 'revenue' ? (
+                  <div style={{ display: 'flex', gap: 4, marginTop: 4 }} onClick={e => e.stopPropagation()}>
+                    <input type="number" value={targetInput} onChange={e => setTargetInput(e.target.value)}
+                      onKeyDown={e => { if (e.key === 'Enter') saveTarget(); if (e.key === 'Escape') setEditingTarget(null); }}
+                      style={{ flex: 1, fontSize: 12, padding: '2px 6px', borderRadius: 4, border: '1px solid var(--border)', background: 'var(--bg-card)', color: 'var(--text)' }}
+                      placeholder="목표 금액 (원)" autoFocus />
+                    <button className="btn btn-sm btn-primary" style={{ fontSize: 11, padding: '2px 8px' }} onClick={saveTarget}>확인</button>
+                  </div>
+                ) : targets.revenue > 0 && (
+                  <div style={{ marginTop: 4 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--text-muted)', marginBottom: 2 }}>
+                      <span>목표 {formatCurrency(targets.revenue)}</span>
+                      <span style={{ color: monthRevenue >= targets.revenue ? 'var(--success)' : 'var(--accent)', fontWeight: 700 }}>
+                        {Math.min(Math.round(monthRevenue / targets.revenue * 100), 999)}%
+                      </span>
+                    </div>
+                    <div style={{ height: 4, borderRadius: 2, background: 'var(--border)', overflow: 'hidden' }}>
+                      <div style={{
+                        height: '100%', borderRadius: 2,
+                        background: monthRevenue >= targets.revenue ? 'var(--success)' : 'var(--accent)',
+                        width: `${Math.min(monthRevenue / targets.revenue * 100, 100)}%`,
+                        transition: 'width 0.4s',
+                      }} />
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
             {dashRole === 'manager' && (
               <div className={`db-kpi-card${deadStockItems.length > 0 ? ' db-kpi-warn' : ''}`}>
                 <div className="db-kpi-label">정체 재고(30일)</div>
