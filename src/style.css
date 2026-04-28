@@ -5136,9 +5136,9 @@ html.dark-mode .top-header {
 .th-section-profit   { background: #f0fff4; color: #166534; }
 
 /* 출고관리 컬럼 섹션 색상 — 다크 */
-html.dark-mode .th-section-out      { background: rgba(31, 111, 235, 0.12); color: #93c5fd; }
-html.dark-mode .th-section-purchase { background: rgba(234, 179, 8, 0.10);  color: #fcd34d; }
-html.dark-mode .th-section-profit   { background: rgba(34, 197, 94, 0.10);  color: #86efac; }
+html.dark-mode .th-section-out      { background: rgba(210, 120, 30, 0.20);  color: #e8b87a; }
+html.dark-mode .th-section-purchase { background: rgba(170, 130, 15, 0.20);  color: #d4c06a; }
+html.dark-mode .th-section-profit   { background: rgba(40,  160, 85, 0.18);  color: #72d498; }
 
 /* --- 브레드크럼 --- */
 .breadcrumb {
