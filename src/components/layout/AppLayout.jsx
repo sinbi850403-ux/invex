@@ -175,8 +175,17 @@ export default function AppLayout() {
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
         collapsed={sidebarCollapsed}
-        onToggleCollapse={toggleSidebarCollapse}
       />
+
+      {/* 사이드바 접기/펼치기 탭 */}
+      <button
+        className={`sidebar-toggle-tab${sidebarCollapsed ? ' collapsed' : ''}`}
+        onClick={toggleSidebarCollapse}
+        title={sidebarCollapsed ? '사이드바 펼치기' : '사이드바 접기'}
+        aria-label={sidebarCollapsed ? '사이드바 펼치기' : '사이드바 접기'}
+      >
+        {sidebarCollapsed ? '›' : '‹'}
+      </button>
 
       <TopHeader user={user} profile={profile} />
 

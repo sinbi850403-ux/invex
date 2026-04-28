@@ -168,15 +168,6 @@ export default function Sidebar({ isOpen, onClose, collapsed = false, onToggleCo
 
   return (
     <aside id="sidebar" className={`sidebar ${isOpen ? 'open' : ''}${collapsed ? ' sidebar--collapsed' : ''}`}>
-      {/* 접기/펼치기 토글 버튼 */}
-      <button
-        className="sidebar-collapse-btn"
-        onClick={onToggleCollapse}
-        title={collapsed ? '사이드바 펼치기' : '사이드바 접기'}
-      >
-        {collapsed ? '›' : '‹'}
-      </button>
-
       <div className="sidebar-logo">
         <img src="/logo-mark.svg" alt="INVEX" width="28" height="28" style={{borderRadius:'7px', flexShrink:0}} />
         <div className="sidebar-logo-text">INVEX<span className="logo-sub">Inventory Expert</span></div>
