@@ -666,20 +666,20 @@ export default function HomePage() {
                 {lowStockItems.length > 0 ? `${lowStockItems.length}건` : '없음'}
               </div>
             </div>
-            <div className="db-kpi-card" onClick={() => navigate('/in')} style={{ cursor: 'pointer', borderLeft: '3px solid var(--success)' }}>
+            <div className="db-kpi-card" onClick={() => navigate('/in')} style={{ cursor: 'pointer' }}>
               <div className="db-kpi-label">오늘 입고</div>
               <div className="db-kpi-value text-success">{todayInCount}건</div>
               <TrendBadge pct={inTrendPct} />
               <Sparkline data={weekData.map(d => d.inQty)} color="var(--success)" />
             </div>
-            <div className="db-kpi-card" onClick={() => navigate('/out')} style={{ cursor: 'pointer', borderLeft: '3px solid var(--danger)' }}>
+            <div className="db-kpi-card" onClick={() => navigate('/out')} style={{ cursor: 'pointer' }}>
               <div className="db-kpi-label">오늘 출고</div>
               <div className="db-kpi-value text-danger">{todayOutCount}건</div>
               <TrendBadge pct={outTrendPct} />
               <Sparkline data={weekData.map(d => d.outQty)} color="var(--danger)" />
             </div>
             {dashRole === 'manager' && (
-              <div className="db-kpi-card" onClick={() => navigate('/out')} style={{ cursor: 'pointer', borderLeft: '3px solid #a371f7' }}>
+              <div className="db-kpi-card" onClick={() => navigate('/out')} style={{ cursor: 'pointer' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <div className="db-kpi-label">이달 매출</div>
                   <button className="btn btn-sm btn-ghost"
@@ -718,7 +718,7 @@ export default function HomePage() {
               </div>
             )}
             {dashRole === 'manager' && (
-              <div className={`db-kpi-card${deadStockItems.length > 0 ? ' db-kpi-warn' : ''}`} style={{ borderLeft: `3px solid ${deadStockItems.length > 0 ? 'var(--warning)' : 'var(--border)'}` }}>
+              <div className={`db-kpi-card${deadStockItems.length > 0 ? ' db-kpi-warn' : ''}`}>
                 <div className="db-kpi-label">정체 재고(30일)</div>
                 <div className={`db-kpi-value${deadStockItems.length > 0 ? ' text-warning' : ''}`}>{deadStockItems.length}건</div>
                 {deadStockItems.length > 0 && (
