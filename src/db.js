@@ -966,6 +966,23 @@ export const employees = {
     handleError(error, '주민번호 조회');
     return data;
   },
+
+  async setAccountNo(id, plain) {
+    const userId = await getUserId();
+    const { data: emp } = await supabase.from('employees').select('id').eq('id', id).eq('user_id', userId).single();
+    if (!emp) throw new Error('권한이 없거나 존재하지 않는 직원입니다.');
+    const { error } = await supabase.rpc('set_employee_account_no', { emp_id: id, plain: plain ?? '' });
+    handleError(error, '계좌번호 암호화');
+  },
+
+  async getAccountNo(id) {
+    const userId = await getUserId();
+    const { data: emp } = await supabase.from('employees').select('id').eq('id', id).eq('user_id', userId).single();
+    if (!emp) throw new Error('조회 권한이 없습니다.');
+    const { data, error } = await supabase.rpc('decrypt_account_no', { emp_id: id });
+    handleError(error, '계좌번호 조회');
+    return data;
+  },
 };
 
 // ============================================================

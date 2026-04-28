@@ -442,6 +442,284 @@ BEGIN
 END $$;
 
 -- ============================================================
+-- V011: system_config 테이블 신규 + handle_new_user 이메일 외부화
+-- ============================================================
+CREATE TABLE IF NOT EXISTS system_config (
+  key TEXT PRIMARY KEY,
+  value JSONB NOT NULL,
+  description TEXT,
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+INSERT INTO system_config(key, value, description)
+VALUES (
+  'admin_emails',
+  '["sinbi0214@naver.com","sinbi850403@gmail.com","admin@invex.io.kr"]',
+  '관리자 이메일 목록'
+) ON CONFLICT (key) DO NOTHING;
+
+-- handle_new_user 함수 교체 (하드코딩 → system_config 참조)
+CREATE OR REPLACE FUNCTION handle_new_user()
+RETURNS TRIGGER AS $$
+BEGIN
+  INSERT INTO profiles (id, name, email, photo_url, role)
+  VALUES (
+    NEW.id,
+    COALESCE(NEW.raw_user_meta_data->>'full_name', NEW.raw_user_meta_data->>'name', '사용자'),
+    NEW.email,
+    NEW.raw_user_meta_data->>'avatar_url',
+    CASE
+      WHEN EXISTS (
+        SELECT 1
+        FROM jsonb_array_elements_text(
+          COALESCE((SELECT value FROM system_config WHERE key = 'admin_emails'), '[]'::jsonb)
+        ) AS admin_email
+        WHERE lower(admin_email) = lower(COALESCE(NEW.email, ''))
+      ) THEN 'admin'
+      ELSE 'viewer'
+    END
+  );
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_catalog, pg_temp;
+
+-- ============================================================
+-- V012: employees.account_no 암호화 (CRIT-06)
+-- ============================================================
+ALTER TABLE employees ADD COLUMN IF NOT EXISTS account_no_enc BYTEA;
+ALTER TABLE employees ADD COLUMN IF NOT EXISTS account_no_mask TEXT;
+
+CREATE OR REPLACE FUNCTION set_employee_account_no(emp_id UUID, plain TEXT)
+RETURNS VOID AS $$
+DECLARE mask TEXT;
+BEGIN
+  IF plain IS NULL OR length(plain) = 0 THEN
+    UPDATE employees SET account_no_enc = NULL, account_no_mask = NULL
+     WHERE id = emp_id AND user_id = auth.uid();
+  ELSE
+    mask := CASE
+      WHEN length(regexp_replace(plain, '[^0-9]', '', 'g')) >= 8
+        THEN left(regexp_replace(plain, '[^0-9]', '', 'g'), 4) || '****' ||
+             right(regexp_replace(plain, '[^0-9]', '', 'g'), 4)
+      ELSE repeat('*', length(plain))
+    END;
+    UPDATE employees
+       SET account_no_enc  = pgp_sym_encrypt(plain, current_setting('app.rrn_key', true)),
+           account_no_mask = mask
+     WHERE id = emp_id AND user_id = auth.uid();
+  END IF;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_catalog, pg_temp;
+GRANT EXECUTE ON FUNCTION set_employee_account_no(UUID, TEXT) TO authenticated;
+
+CREATE OR REPLACE FUNCTION decrypt_account_no(emp_id UUID)
+RETURNS TEXT AS $$
+DECLARE enc_data BYTEA;
+BEGIN
+  SELECT account_no_enc INTO enc_data FROM employees
+   WHERE id = emp_id AND user_id = auth.uid();
+  IF enc_data IS NULL THEN RETURN NULL; END IF;
+  INSERT INTO audit_logs(user_id, action, target, detail)
+    VALUES (auth.uid(), 'employee.viewAccountNo', emp_id::text, '계좌번호 평문 조회');
+  RETURN pgp_sym_decrypt(enc_data, current_setting('app.rrn_key', true));
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_catalog, pg_temp;
+GRANT EXECUTE ON FUNCTION decrypt_account_no(UUID) TO authenticated;
+
+-- ============================================================
+-- V013: V004 Phase 2 — transfers/pos_sales/items/purchase_orders DATE 컬럼
+-- ============================================================
+ALTER TABLE transfers ADD COLUMN IF NOT EXISTS date_d DATE;
+UPDATE transfers SET date_d = date::DATE WHERE date_d IS NULL AND date ~ '^\d{4}-\d{2}-\d{2}$';
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_transfers_date_d ON transfers(user_id, date_d DESC);
+
+ALTER TABLE pos_sales ADD COLUMN IF NOT EXISTS sale_date_d DATE;
+UPDATE pos_sales SET sale_date_d = sale_date::DATE WHERE sale_date_d IS NULL AND sale_date ~ '^\d{4}-\d{2}-\d{2}$';
+
+ALTER TABLE items ADD COLUMN IF NOT EXISTS expiry_date_d DATE;
+UPDATE items SET expiry_date_d = expiry_date::DATE WHERE expiry_date_d IS NULL AND expiry_date ~ '^\d{4}-\d{2}-\d{2}$';
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_items_expiry ON items(user_id, expiry_date_d) WHERE expiry_date_d IS NOT NULL;
+
+ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS order_date_d DATE;
+ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS expected_date_d DATE;
+UPDATE purchase_orders SET order_date_d = order_date::DATE WHERE order_date_d IS NULL AND order_date ~ '^\d{4}-\d{2}-\d{2}$';
+UPDATE purchase_orders SET expected_date_d = expected_date::DATE WHERE expected_date_d IS NULL AND expected_date ~ '^\d{4}-\d{2}-\d{2}$';
+
+-- ============================================================
+-- V014: payrolls RLS FOR ALL → SELECT/INSERT/UPDATE/DELETE 분리
+-- ============================================================
+DROP POLICY IF EXISTS "payrolls_all" ON payrolls;
+CREATE POLICY "payrolls_select" ON payrolls FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "payrolls_insert" ON payrolls FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "payrolls_update" ON payrolls FOR UPDATE
+  USING (auth.uid() = user_id)
+  WITH CHECK (
+    auth.uid() = user_id
+    AND (
+      status = (SELECT p2.status FROM payrolls p2 WHERE p2.id = id LIMIT 1)
+      OR (SELECT role FROM profiles WHERE id = auth.uid()) IN ('manager', 'admin')
+    )
+  );
+CREATE POLICY "payrolls_delete" ON payrolls FOR DELETE
+  USING (
+    auth.uid() = user_id
+    AND (SELECT role FROM profiles WHERE id = auth.uid()) = 'admin'
+  );
+
+-- ============================================================
+-- V015: purchase_order_items 변경 → purchase_orders.total_amount 자동 동기화
+-- ============================================================
+CREATE OR REPLACE FUNCTION sync_po_total_amount()
+RETURNS TRIGGER AS $$
+DECLARE target_order_id UUID;
+BEGIN
+  target_order_id := COALESCE(NEW.order_id, OLD.order_id);
+  UPDATE purchase_orders
+     SET total_amount = COALESCE((
+           SELECT SUM(quantity * unit_price)
+             FROM purchase_order_items
+            WHERE order_id = target_order_id
+         ), 0),
+         updated_at = now()
+   WHERE id = target_order_id;
+  RETURN COALESCE(NEW, OLD);
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_catalog, pg_temp;
+
+DROP TRIGGER IF EXISTS trg_sync_po_total ON purchase_order_items;
+CREATE TRIGGER trg_sync_po_total
+  AFTER INSERT OR UPDATE OR DELETE ON purchase_order_items
+  FOR EACH ROW EXECUTE FUNCTION sync_po_total_amount();
+
+-- ============================================================
+-- V016: team_workspaces id/owner_id TEXT → UUID
+-- 주의: 기존 값이 모두 유효한 UUID 형식이어야 함 (Supabase Auth UID)
+-- ============================================================
+DO $$
+BEGIN
+  -- 유효하지 않은 UUID 형식 데이터 확인 (있으면 RAISE)
+  IF EXISTS (
+    SELECT 1 FROM team_workspaces
+    WHERE id !~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+  ) THEN
+    RAISE EXCEPTION 'team_workspaces에 UUID 형식이 아닌 id가 존재합니다. 수동 정리 후 재실행하세요.';
+  END IF;
+END $$;
+
+-- workspace_members FK 임시 제거
+ALTER TABLE workspace_members DROP CONSTRAINT IF EXISTS workspace_members_workspace_id_fkey;
+
+-- 타입 변환
+ALTER TABLE team_workspaces ALTER COLUMN id TYPE UUID USING id::UUID;
+ALTER TABLE team_workspaces ALTER COLUMN owner_id TYPE UUID USING owner_id::UUID;
+ALTER TABLE workspace_members ALTER COLUMN workspace_id TYPE UUID USING workspace_id::UUID;
+
+-- FK 복원
+ALTER TABLE workspace_members ADD CONSTRAINT workspace_members_workspace_id_fkey
+  FOREIGN KEY (workspace_id) REFERENCES team_workspaces(id) ON DELETE CASCADE;
+
+-- RLS 정책 교체 (::text 캐스트 제거)
+DROP POLICY IF EXISTS "tw_select" ON team_workspaces;
+DROP POLICY IF EXISTS "tw_insert" ON team_workspaces;
+DROP POLICY IF EXISTS "tw_update" ON team_workspaces;
+DROP POLICY IF EXISTS "tw_delete" ON team_workspaces;
+
+CREATE POLICY "tw_select" ON team_workspaces FOR SELECT TO authenticated USING (
+  auth.uid() = owner_id
+  OR members @> jsonb_build_array(jsonb_build_object('uid', auth.uid()::text))
+);
+CREATE POLICY "tw_insert" ON team_workspaces FOR INSERT WITH CHECK (auth.uid() = owner_id);
+CREATE POLICY "tw_update" ON team_workspaces FOR UPDATE USING (auth.uid() = owner_id);
+CREATE POLICY "tw_delete" ON team_workspaces FOR DELETE USING (auth.uid() = owner_id);
+
+-- RPC 함수 UUID 파라미터로 교체
+CREATE OR REPLACE FUNCTION workspace_add_member(ws_id UUID, new_member JSONB)
+RETURNS VOID AS $$
+DECLARE ws_owner UUID;
+BEGIN
+  SELECT owner_id INTO ws_owner FROM team_workspaces WHERE id = ws_id;
+  IF ws_owner IS NULL THEN RAISE EXCEPTION '워크스페이스를 찾을 수 없습니다.'; END IF;
+  IF ws_owner != auth.uid() THEN RAISE EXCEPTION '팀장만 멤버를 초대할 수 있습니다.'; END IF;
+  UPDATE team_workspaces
+    SET members = members || jsonb_build_array(new_member), updated_at = now()
+    WHERE id = ws_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_catalog, pg_temp;
+GRANT EXECUTE ON FUNCTION workspace_add_member(UUID, JSONB) TO authenticated;
+
+CREATE OR REPLACE FUNCTION workspace_remove_member(ws_id UUID, member_uid UUID)
+RETURNS VOID AS $$
+DECLARE ws_owner UUID; caller UUID := auth.uid();
+BEGIN
+  SELECT owner_id INTO ws_owner FROM team_workspaces WHERE id = ws_id;
+  IF ws_owner IS NULL THEN RAISE EXCEPTION '워크스페이스를 찾을 수 없습니다.'; END IF;
+  IF caller != ws_owner AND caller != member_uid THEN RAISE EXCEPTION '권한이 없습니다.'; END IF;
+  IF member_uid = ws_owner THEN RAISE EXCEPTION '팀장은 제거할 수 없습니다.'; END IF;
+  UPDATE team_workspaces
+    SET members = COALESCE((
+          SELECT jsonb_agg(m) FROM jsonb_array_elements(members) m
+          WHERE (m->>'uid')::UUID != member_uid
+        ), '[]'::jsonb),
+        updated_at = now()
+    WHERE id = ws_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_catalog, pg_temp;
+GRANT EXECUTE ON FUNCTION workspace_remove_member(UUID, UUID) TO authenticated;
+
+CREATE OR REPLACE FUNCTION workspace_set_member_status(ws_id UUID, member_uid UUID, new_status TEXT)
+RETURNS VOID AS $$
+DECLARE caller UUID := auth.uid();
+BEGIN
+  IF caller != member_uid THEN RAISE EXCEPTION '본인의 초대 상태만 변경할 수 있습니다.'; END IF;
+  IF new_status NOT IN ('active', 'rejected') THEN RAISE EXCEPTION '유효하지 않은 상태값입니다.'; END IF;
+  UPDATE team_workspaces
+    SET members = (
+          SELECT jsonb_agg(
+            CASE WHEN (m->>'uid')::UUID = member_uid
+              THEN m || jsonb_build_object('status', new_status)
+              ELSE m END
+          ) FROM jsonb_array_elements(members) m
+        ),
+        updated_at = now()
+    WHERE id = ws_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_catalog, pg_temp;
+GRANT EXECUTE ON FUNCTION workspace_set_member_status(UUID, UUID, TEXT) TO authenticated;
+
+-- ============================================================
+-- V017: Materialized View (재고 요약, 월별 손익)
+-- ============================================================
+CREATE MATERIALIZED VIEW IF NOT EXISTS mv_inventory_summary AS
+SELECT
+  i.user_id, i.id AS item_id, i.item_name, i.category, i.warehouse,
+  i.quantity, i.unit_price, i.min_stock,
+  CASE WHEN i.min_stock IS NOT NULL AND i.quantity <= i.min_stock THEN true ELSE false END AS is_low_stock,
+  COUNT(t.id)      AS tx_count_90d,
+  MAX(t.txn_date)  AS last_tx_date
+FROM items i
+LEFT JOIN transactions t ON t.item_id = i.id
+  AND t.txn_date >= CURRENT_DATE - INTERVAL '90 days'
+GROUP BY i.id, i.user_id, i.item_name, i.category, i.warehouse,
+         i.quantity, i.unit_price, i.min_stock
+WITH DATA;
+
+CREATE UNIQUE INDEX IF NOT EXISTS mv_inventory_summary_pk ON mv_inventory_summary(user_id, item_id);
+
+CREATE MATERIALIZED VIEW IF NOT EXISTS mv_monthly_profit AS
+SELECT
+  user_id,
+  date_trunc('month', txn_date)::DATE AS month,
+  type, category,
+  SUM(total_amount) AS total_amount,
+  COUNT(*)          AS tx_count
+FROM transactions
+WHERE txn_date IS NOT NULL
+GROUP BY user_id, date_trunc('month', txn_date), type, category
+WITH DATA;
+
+CREATE UNIQUE INDEX IF NOT EXISTS mv_monthly_profit_pk ON mv_monthly_profit(user_id, month, type, category);
+
+-- ============================================================
 -- 완료 확인 쿼리
 -- ============================================================
 -- SELECT 'profiles_select_for_invite' AS check, COUNT(*) = 0 AS ok
@@ -455,3 +733,9 @@ END $$;
 -- SELECT 'departments' AS check, to_regclass('public.departments') IS NOT NULL AS ok;
 -- SELECT 'account_entries.vendor_id' AS check, EXISTS(SELECT 1 FROM information_schema.columns WHERE table_name='account_entries' AND column_name='vendor_id') AS ok;
 -- SELECT 'items.warehouse_id' AS check, EXISTS(SELECT 1 FROM information_schema.columns WHERE table_name='items' AND column_name='warehouse_id') AS ok;
+-- SELECT 'system_config' AS check, to_regclass('public.system_config') IS NOT NULL AS ok;
+-- SELECT 'account_no_enc' AS check, EXISTS(SELECT 1 FROM information_schema.columns WHERE table_name='employees' AND column_name='account_no_enc') AS ok;
+-- SELECT 'txn_date_transfers' AS check, EXISTS(SELECT 1 FROM information_schema.columns WHERE table_name='transfers' AND column_name='date_d') AS ok;
+-- SELECT 'mv_inventory_summary' AS check, to_regclass('public.mv_inventory_summary') IS NOT NULL AS ok;
+-- SELECT 'payrolls_rls_split' AS check, COUNT(*) >= 4 AS ok FROM pg_policies WHERE tablename = 'payrolls';
+-- SELECT 'team_workspaces_uuid' AS check, data_type = 'uuid' AS ok FROM information_schema.columns WHERE table_name='team_workspaces' AND column_name='id';
