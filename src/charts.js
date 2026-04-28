@@ -50,16 +50,15 @@ function destroyChart(id) {
   }
 }
 
-export function renderWeeklyTrendChart(canvasId, weekData, onClickDate = null) {
+export function renderWeeklyTrendChart(canvasId, weekData, onBarClick) {
   destroyChart(canvasId);
   const canvas = document.getElementById(canvasId);
   if (!canvas) return;
 
   const { textColor, gridColor } = getThemeColors();
-  const isMany = weekData.length > 14;
 
   chartInstances[canvasId] = new Chart(canvas, {
-    type: isMany ? 'bar' : 'line',
+    type: 'line',
     data: {
       labels: weekData.map(d => d.label),
       datasets: [
@@ -67,25 +66,23 @@ export function renderWeeklyTrendChart(canvasId, weekData, onClickDate = null) {
           label: '입고',
           data: weekData.map(d => d.inQty),
           borderColor: '#3fb950',
-          backgroundColor: isMany ? 'rgba(63,185,80,0.7)' : 'rgba(63,185,80,0.1)',
-          fill: !isMany,
+          backgroundColor: 'rgba(63,185,80,0.1)',
+          fill: true,
           tension: 0.4,
-          borderWidth: isMany ? 0 : 2,
-          pointRadius: isMany ? 0 : 4,
+          borderWidth: 2,
+          pointRadius: 4,
           pointBackgroundColor: '#3fb950',
-          borderRadius: isMany ? 3 : 0,
         },
         {
           label: '출고',
           data: weekData.map(d => d.outQty),
           borderColor: '#f85149',
-          backgroundColor: isMany ? 'rgba(248,81,73,0.7)' : 'rgba(248,81,73,0.1)',
-          fill: !isMany,
+          backgroundColor: 'rgba(248,81,73,0.1)',
+          fill: true,
           tension: 0.4,
-          borderWidth: isMany ? 0 : 2,
-          pointRadius: isMany ? 0 : 4,
+          borderWidth: 2,
+          pointRadius: 4,
           pointBackgroundColor: '#f85149',
-          borderRadius: isMany ? 3 : 0,
         },
       ],
     },
@@ -93,6 +90,11 @@ export function renderWeeklyTrendChart(canvasId, weekData, onClickDate = null) {
       responsive: true,
       maintainAspectRatio: false,
       interaction: { intersect: false, mode: 'index' },
+      ...(onBarClick ? { onClick: (evt, elements) => {
+        if (!elements.length) return;
+        const d = weekData[elements[0].index];
+        if (d?.date) onBarClick(d.date);
+      }} : {}),
       plugins: {
         legend: {
           labels: { color: textColor, font: { size: 11 }, usePointStyle: true, pointStyle: 'circle' },
@@ -107,13 +109,12 @@ export function renderWeeklyTrendChart(canvasId, weekData, onClickDate = null) {
           cornerRadius: 6,
           callbacks: {
             label: (ctx) => ` ${ctx.dataset.label}: ${ctx.parsed.y.toLocaleString('ko-KR')}개`,
-            ...(onClickDate ? { footer: () => '클릭하면 해당 날짜 상세로 이동' } : {}),
           },
         },
       },
       scales: {
         x: {
-          ticks: { color: textColor, font: { size: 10 }, maxRotation: isMany ? 45 : 0 },
+          ticks: { color: textColor, font: { size: 10 } },
           grid: { color: gridColor },
         },
         y: {
@@ -122,13 +123,6 @@ export function renderWeeklyTrendChart(canvasId, weekData, onClickDate = null) {
           grid: { color: gridColor },
         },
       },
-      onClick: onClickDate ? (evt, elements) => {
-        if (elements.length > 0) {
-          const idx = elements[0].index;
-          onClickDate(weekData[idx].date);
-        }
-      } : undefined,
-      ...(onClickDate ? { cursor: 'pointer' } : {}),
     },
   });
 }
