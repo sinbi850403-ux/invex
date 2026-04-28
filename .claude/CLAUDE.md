@@ -48,23 +48,23 @@
 
 ## INVEX 프로젝트 맥락에서의 사용 메모
 
-루트 [../CLAUDE.md](../CLAUDE.md) 의 도메인 정보(Vanilla JS SPA + Supabase, RLS, 12개 테이블, 향후 HR/Payroll 확장)와 결합해 활용:
+루트 [../CLAUDE.md](../CLAUDE.md) 의 도메인 정보(React 18 SPA + Supabase, RLS, 12개 테이블)와 결합해 활용:
 
 ### 16-fullstack-webapp
-- **주의**: 이 harness의 `frontend-dev` 기본 가정은 **React/Next.js** 입니다. INVEX 는 Vanilla JS + Vite 라서, 호출할 때 입력에 *"프레임워크 없음, Vanilla JS, `src/page-*.js` 패턴 사용"* 을 명시하세요. 그래야 specialist 가 React 코드를 만들지 않습니다.
-- 새 페이지 모듈 추가(예: `page-employees.js`)에 적합. 루트 가이드의 [§9.3 새 페이지 추가 체크리스트](../CLAUDE.md) 와 함께 사용.
+- INVEX는 **React 18 + React Router v6 + Vite** 입니다. `frontend-dev`가 React 코드를 생성하므로 그대로 활용 가능.
+- 새 페이지 추가 시 `src/pages/{Name}Page.jsx` 패턴 사용. 루트 가이드의 §10.2 새 페이지 추가 체크리스트와 함께 사용.
 
 ### 19-database-architect
 - **Supabase 전용 컨텍스트** 를 입력에 포함: *"Postgres + RLS, `auth.uid() = user_id` 정책 필수, schema 변경은 [supabase/schema.sql](../supabase/schema.sql) 에 반영"*.
-- 향후 HR/Payroll 테이블(`employees`, `attendance_records`, `payroll_records` 등) 설계에 적합. 루트 가이드 §12 의 미리 정의된 스키마와 함께 사용.
+- HR/Payroll 테이블(`employees`, `attendance`, `payrolls` 등) 설계에 적합.
 
 ### 21-code-reviewer
 - 이 harness 의 `performance-analyst` 는 **코드 성능** 분석가 (19의 `db-performance-analyst` 와는 별개).
-- INVEX의 무거운 페이지(`page-inventory.js` 84KB, `page-inout.js` 70KB+, `style.css` 95KB+) 리팩토링 검토에 적합. 입력에 *"파일 크기/도메인 분리 우선순위 평가 포함"* 명시.
+- INVEX의 핵심 페이지(`pages/InoutPage.jsx`, `pages/InventoryPage.jsx`, `style.css` 95KB+) 리팩토링 검토에 적합.
 
 ### 28-security-audit
 - **RLS 정책 검증** 을 입력에 명시: *"각 테이블의 RLS 정책이 `user_id = auth.uid()` 로 되어있는지 + `audit_logs`/`profiles` 테이블의 권한 정책 확인"*.
-- 인증 시스템(`auth.js`, `admin-auth.js`)의 fallback (`directPasswordLogin`) 도 감사 대상으로 명시할 것.
+- 인증 시스템(`auth/service.js`, `contexts/AuthContext.jsx`)의 fallback 처리도 감사 대상으로 명시할 것.
 
 ---
 
