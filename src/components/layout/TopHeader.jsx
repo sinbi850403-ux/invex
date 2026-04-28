@@ -3,7 +3,7 @@ import { useLocation } from 'react-router-dom';
 import { PAGE_LABELS } from '../../router-config.js';
 import { toggleTheme } from '../../theme.js';
 
-export default function TopHeader({ user, profile }) {
+export default function TopHeader({ user, profile, sidebarCollapsed }) {
   const location = useLocation();
   const pageId = location.pathname.slice(1) || 'home';
   const pageLabel = PAGE_LABELS[pageId] || pageId;
@@ -25,7 +25,7 @@ export default function TopHeader({ user, profile }) {
   };
 
   return (
-    <header className="top-header" id="top-header">
+    <header className={`top-header${sidebarCollapsed ? ' sidebar-collapsed' : ''}`} id="top-header">
       <div className="top-header-left">
         <nav className="breadcrumb" id="breadcrumb" aria-label="현재 위치">
           <span className="breadcrumb-current"> {pageLabel}</span>

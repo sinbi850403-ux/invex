@@ -178,7 +178,7 @@ export default function AppLayout() {
         onToggleCollapse={toggleSidebarCollapse}
       />
 
-<TopHeader user={user} profile={profile} />
+<TopHeader user={user} profile={profile} sidebarCollapsed={sidebarCollapsed} />
 
       <main id="main-content" className={sidebarCollapsed ? 'sidebar-collapsed' : ''}>
         <Suspense fallback={<div style={{padding:'40px',textAlign:'center',color:'var(--text-muted)'}}>로딩 중...</div>}>

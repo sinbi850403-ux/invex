@@ -5105,10 +5105,15 @@ html.dark-mode .view-settings-menu {
   z-index: 50;
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
+  transition: left 0.22s cubic-bezier(0.4,0,0.2,1);
 }
 
 html.dark-mode .top-header {
   background: rgba(22, 27, 34, 0.85);
+}
+.top-header.sidebar-collapsed {
+  left: 52px;
+  transition: left 0.22s cubic-bezier(0.4,0,0.2,1);
 }
 
 .top-header-left,
