@@ -1,0 +1,149 @@
+import { ALL_FIELDS, ALWAYS_VISIBLE, toNum } from './inventoryConfig.js';
+
+export function computeData(rawData, transactions) {
+  const txAgg = {};
+  (transactions || []).forEach(tx => {
+    const k = tx.itemName;
+    if (!k) return;
+    if (!txAgg[k]) txAgg[k] = { inQty: 0, inAmt: 0, outQty: 0, outAmt: 0, costAmt: 0 };
+    const qty = parseFloat(tx.quantity) || 0;
+    if (tx.type === 'in') {
+      txAgg[k].inQty += qty;
+      txAgg[k].inAmt += Math.round((parseFloat(tx.unitPrice) || 0) * qty);
+    } else {
+      txAgg[k].outQty += qty;
+      const sp = parseFloat(tx.actualSellingPrice || tx.sellingPrice) || 0;
+      const cp = parseFloat(tx.unitPrice) || 0;
+      txAgg[k].outAmt  += Math.round(sp * qty);
+      txAgg[k].costAmt += Math.round(cp * qty);
+    }
+  });
+
+  return (rawData || []).map(item => {
+    const agg        = txAgg[item.itemName] || {};
+    const inQty      = agg.inQty  || 0;
+    const inAmt      = agg.inAmt  || 0;
+    const outQty     = agg.outQty || 0;
+    const outAmt     = agg.outAmt || 0;
+    const unitPrice  = parseFloat(item.unitPrice) || 0;
+    const qty        = parseFloat(item.quantity)  || 0;
+
+    const weightedAvgCost = inAmt > 0 && inQty > 0 ? inAmt / inQty : unitPrice;
+
+    const storedVat  = parseFloat(item.vat) || 0;
+    const storedSv   = parseFloat(item.supplyValue) || 0;
+    const vatRate    = storedSv > 0 && storedVat / storedSv < 0.05 ? 0 : 0.1;
+    const supplyValue = inAmt > 0
+      ? inAmt
+      : inQty > 0 && unitPrice > 0
+        ? Math.round(inQty * unitPrice)
+        : qty > 0 && unitPrice > 0
+          ? Math.round(qty * unitPrice)
+          : 0;
+    const vat        = Math.ceil(supplyValue * vatRate);
+    const totalPrice = supplyValue + vat;
+
+    const masterSalePrice = parseFloat(item.salePrice) || 0;
+    const calcSalePrice   = outQty > 0 ? Math.round(outAmt / outQty) : 0;
+    const salePrice       = masterSalePrice > 0 ? masterSalePrice : calcSalePrice;
+
+    const costAmt = agg.costAmt > 0
+      ? agg.costAmt
+      : (outQty > 0 ? Math.round(weightedAvgCost * outQty) : 0);
+    const profit  = outAmt - costAmt;
+
+    return {
+      ...item,
+      supplyValue:          supplyValue || '',
+      vat:                  vat || '',
+      totalPrice:           totalPrice || '',
+      salePrice:            salePrice || '',
+      inQty,
+      outQty:               outQty || '',
+      outTotalPrice:        outAmt  || '',
+      purchaseCost:         costAmt || '',
+      profit:               outAmt > 0 ? profit : '',
+      profitMargin:         outAmt > 0 ? ((profit / outAmt) * 100).toFixed(1) + '%' : '',
+      cogsMargin:           outAmt > 0 ? ((costAmt / outAmt) * 100).toFixed(1) + '%' : '',
+      endingInventoryValue: qty > 0 ? Math.round(qty * (weightedAvgCost || unitPrice)) : '',
+    };
+  });
+}
+
+export function getVisibleFields(data, visibleColumns) {
+  const hasData = new Set(
+    ALL_FIELDS.map(f => f.key).filter(key =>
+      (data || []).some(row => row[key] !== '' && row[key] != null)
+    )
+  );
+  if (visibleColumns && Array.isArray(visibleColumns)) {
+    const validCols = [...visibleColumns];
+    if (!validCols.includes('category')) validCols.push('category');
+    return ALL_FIELDS.filter(f => validCols.includes(f.key)).map(f => f.key);
+  }
+  return ALL_FIELDS.filter(f => ALWAYS_VISIBLE.includes(f.key) && hasData.has(f.key)).map(f => f.key);
+}
+
+export function applySmartSearch(data, safetyStock, keyword) {
+  if (!keyword) return data;
+  const kw = keyword.trim().toLowerCase();
+  const matchers = [];
+
+  kw.split(/\s+/).forEach(part => {
+    const p = part.toLowerCase();
+    const catM = p.match(/^분류:(.+)/);
+    if (catM) { matchers.push(r => String(r.category || '').toLowerCase().includes(catM[1])); return; }
+    const whM = p.match(/^창고:(.+)/);
+    if (whM) { matchers.push(r => String(r.warehouse || '').toLowerCase().includes(whM[1])); return; }
+    const geM = p.match(/^재고>=(\d+)/);
+    if (geM) { const n = parseFloat(geM[1]); matchers.push(r => (parseFloat(r.quantity) || 0) >= n); return; }
+    const leM = p.match(/^재고<=(\d+)/);
+    if (leM) { const n = parseFloat(leM[1]); matchers.push(r => (parseFloat(r.quantity) || 0) <= n); return; }
+    if (p === '부족')      { matchers.push(r => { const min = safetyStock[r.itemName]; return min != null && (parseFloat(r.quantity) || 0) <= min; }); return; }
+    if (p === '품절')      { matchers.push(r => (parseFloat(r.quantity) || 0) === 0); return; }
+    if (p === '거래처없음') { matchers.push(r => !String(r.vendor || '').trim()); return; }
+    if (p === '위치없음')  { matchers.push(r => !String(r.warehouse || '').trim()); return; }
+    matchers.push(r =>
+      String(r.itemName || '').toLowerCase().includes(p) ||
+      String(r.itemCode || '').toLowerCase().includes(p) ||
+      String(r.vendor || '').toLowerCase().includes(p) ||
+      String(r.category || '').toLowerCase().includes(p) ||
+      String(r.warehouse || '').toLowerCase().includes(p)
+    );
+  });
+
+  if (!matchers.length) return data;
+  return data.filter(row => matchers.every(m => m(row)));
+}
+
+export function applyFilters(data, safetyStock, { keyword, category, warehouse, stock, itemCode, vendor, focus }) {
+  let result = data;
+  if (focus === 'low')               result = result.filter(r => { const min = safetyStock[r.itemName]; return min != null && (parseFloat(r.quantity) || 0) <= min; });
+  else if (focus === 'zero')         result = result.filter(r => (parseFloat(r.quantity) || 0) === 0);
+  else if (focus === 'missingVendor')    result = result.filter(r => !String(r.vendor || '').trim());
+  else if (focus === 'missingWarehouse') result = result.filter(r => !String(r.warehouse || '').trim());
+
+  if (category)  result = result.filter(r => String(r.category  || '') === category);
+  if (warehouse) result = result.filter(r => String(r.warehouse || '') === warehouse);
+  if (itemCode)  result = result.filter(r => String(r.itemCode  || '') === itemCode);
+  if (vendor)    result = result.filter(r => String(r.vendor    || '') === vendor);
+  if (stock === 'low') result = result.filter(r => { const min = safetyStock[r.itemName]; return min != null && (parseFloat(r.quantity) || 0) <= min; });
+  if (keyword)   result = applySmartSearch(result, safetyStock, keyword);
+  return result;
+}
+
+export function applySort(data, sort) {
+  if (!sort || !sort.key || sort.key === 'default') return data;
+  const { key, direction } = sort;
+  return [...data].sort((a, b) => {
+    if (key === '__lowStock') {
+      return (b.__lowStock ? 1 : 0) - (a.__lowStock ? 1 : 0);
+    }
+    const aNum = toNum(a[key]), bNum = toNum(b[key]);
+    if (!isNaN(aNum) && !isNaN(bNum)) {
+      return direction === 'asc' ? aNum - bNum : bNum - aNum;
+    }
+    const av = String(a[key] || ''), bv = String(b[key] || '');
+    return direction === 'asc' ? av.localeCompare(bv, 'ko') : bv.localeCompare(av, 'ko');
+  });
+}
