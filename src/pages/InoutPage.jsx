@@ -1313,8 +1313,8 @@ export function InoutPage({ mode = 'all' }) {
                           <td className="text-right" style={{ background: '#f0fdf4', color: '#111', fontWeight: profit !== 0 ? 700 : 400 }}>
                             {outAmt ? W(profit) : '-'}
                           </td>
-                          <td className="text-right" style={{ background: '#f0fdf4', color: '#111' }}>{profitMargin || '-'}</td>
-                          <td className="text-right" style={{ background: '#f0fdf4', color: '#111' }}>{cogsMargin || '-'}</td>
+                          <td className="text-right" style={{ background: '#f0fdf4', color: '#111', fontWeight: 700 }}>{profitMargin || '-'}</td>
+                          <td className="text-right" style={{ background: '#f0fdf4', color: '#111', fontWeight: 700 }}>{cogsMargin || '-'}</td>
                         </>
                       ) : isInMode ? (
                         <>
