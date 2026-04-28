@@ -13,7 +13,7 @@ import { handlePageError } from './error-monitor.js';
 import { showFieldError, clearAllFieldErrors, setSavingState } from './ux-toolkit.js';
 
 const PAGE_SIZE = 15;
-const BULK_INOUT_TEMPLATE_HEADERS = ['자산', '입고일자', '상품코드', '거래처', '품명', '규격', '단위', '입고수량', '단가', '공급가액', '부가세', '합계금액'];
+const BULK_INOUT_TEMPLATE_HEADERS = ['자산', '입고일자', '상품코드', '거래처', '품명', '규격', '단위', '입고수량', '원가', '공급가액', '부가세', '합계금액'];
 
 function safeAttr(value) {
   return String(value ?? '')
@@ -1945,10 +1945,10 @@ function openTxModal(container, navigateTo, type, items) {
     if (priceRaw) {
       const price = parseFloat(priceRaw);
       if (isNaN(price)) {
-        showFieldError(inputs.price, '단가에 숫자만 입력해 주세요.');
+        showFieldError(inputs.price, '원가에 숫자만 입력해 주세요.');
         hasError = true;
       } else if (price < 0) {
-        showFieldError(inputs.price, '단가는 0 이상이어야 합니다.');
+        showFieldError(inputs.price, '원가는 0 이상이어야 합니다.');
         hasError = true;
       }
     }
