@@ -1,10 +1,11 @@
 /**
  * LedgerPage.jsx - 수불부 (재고수불대장)
  */
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useStore } from '../hooks/useStore.js';
 import { showToast } from '../toast.js';
 import { downloadExcel } from '../excel.js';
+import { enableColumnResize } from '../ux-toolkit.js';
 import { jsPDF } from 'jspdf';
 import { applyPlugin } from 'jspdf-autotable';
 import { applyKoreanFont, getKoreanFontStyle } from '../pdf-font.js';
@@ -165,6 +166,13 @@ export default function LedgerPage() {
     [items, transactions, fromDate, toDate, itemFilter, openingOverrides]
   );
   const rows = useMemo(() => sortRows(rawRows, sort), [rawRows, sort]);
+  const tableRef = useRef(null);
+
+  useEffect(() => {
+    if (showTable && rows.length > 0 && tableRef.current) {
+      enableColumnResize(tableRef.current);
+    }
+  }, [showTable, rows]);
 
   const handleSort = (key) => {
     setSort(prev => ({
@@ -302,7 +310,7 @@ export default function LedgerPage() {
               </span>
             </div>
             <div className="table-wrapper" style={{ border: 'none', borderRadius: 0 }}>
-              <table className="data-table">
+              <table className="data-table" ref={tableRef}>
                 <thead>
                   <tr>
                     <th style={{ width: '40px' }}>#</th>

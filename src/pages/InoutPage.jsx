@@ -1312,13 +1312,13 @@ export function InoutPage({ mode = 'all' }) {
                       )}
                       {isOutMode ? (
                         <>
-                          <td style={{ fontSize: '12px' }}>{category || '-'}</td>
-                          <td style={{ fontSize: '12px' }}>{formatDate(tx.date)}</td>
-                          <td style={{ fontSize: '12px' }}>{tx.vendor || '-'}</td>
-                          <td style={{ fontSize: '12px' }}>{itemCode || '-'}</td>
+                          <td style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{category || '-'}</td>
+                          <td>{formatDate(tx.date)}</td>
+                          <td>{tx.vendor || '-'}</td>
+                          <td style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{itemCode || '-'}</td>
                           <td className="col-fill"><strong>{tx.itemName || '-'}</strong></td>
-                          <td style={{ fontSize: '12px' }}>{spec || '-'}</td>
-                          <td style={{ fontSize: '12px' }}>{unit || '-'}</td>
+                          <td style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{spec || '-'}</td>
+                          <td style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{unit || '-'}</td>
                           <td className="text-right" style={{ fontWeight: 600 }}>
                             {qty ? qty.toLocaleString('ko-KR') : '-'}
                           </td>
