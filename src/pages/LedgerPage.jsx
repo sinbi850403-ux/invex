@@ -190,7 +190,7 @@ export default function LedgerPage() {
     const exportRows = rows.map(row => {
       // 공급가액: 실제 거래 금액 우선, 없으면 마스터 단가 × 입고수량
       const supply = row.inAmt > 0 ? row.inAmt : Math.round((row.unitPrice || 0) * (row.inQty || 0));
-      const vat = Math.floor(supply * 0.1);
+      const vat = Math.ceil(supply * 0.1);
       // 출고금액: 실제 거래 금액 우선, 없으면 판매가 × 출고수량
       const outAmt = row.outAmt > 0 ? row.outAmt : Math.round((row.sellingPrice || 0) * (row.outQty || 0));
       // 매입원가: 실제 거래 원가 우선, 없으면 가중평균 단가 × 출고수량

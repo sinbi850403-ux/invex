@@ -139,7 +139,7 @@ function computeData(rawData, transactions) {
         : qty > 0 && unitPrice > 0
           ? Math.round(qty * unitPrice)  // 거래 없는 품목: 현재수량 × 단가
           : 0;
-    const vat        = Math.floor(supplyValue * vatRate);
+    const vat        = Math.ceil(supplyValue * vatRate);
     const totalPrice = supplyValue + vat;
 
     const masterSalePrice = parseFloat(item.salePrice) || 0;
@@ -297,7 +297,7 @@ function ItemModal({ item, editIdx, onClose, onSaved }) {
   const up       = parseFloat(form.unitPrice) || 0;
   const sp       = parseFloat(form.salePrice) || 0;
   const supply   = qty * up;
-  const vat      = Math.floor(supply * 0.1);
+  const vat      = Math.ceil(supply * 0.1);
   const total    = supply + vat;
   const margin   = sp > 0 ? sp - up : null;
 
@@ -351,7 +351,7 @@ function ItemModal({ item, editIdx, onClose, onSaved }) {
     const prevVat   = parseFloat(prevItem.vat) || 0;
     const vatRate   = (isEdit && prevSv > 0 && prevVat / prevSv < 0.05) ? 0 : 0.1;
     newItem.supplyValue = newItem.quantity * newItem.unitPrice;
-    newItem.vat         = Math.floor(newItem.supplyValue * vatRate);
+    newItem.vat         = Math.ceil(newItem.supplyValue * vatRate);
     newItem.totalPrice  = newItem.supplyValue + newItem.vat;
 
     if (isEdit) {

@@ -759,15 +759,15 @@ export function InoutPage({ mode = 'all' }) {
       } else if (sort.key === 'vat') {
         const aUp = parseFloat(a.unitPrice || aItem.unitPrice) || 0;
         const bUp = parseFloat(b.unitPrice || bItem.unitPrice) || 0;
-        av = Math.floor(aUp * (parseFloat(a.quantity) || 0) * 0.1);
-        bv = Math.floor(bUp * (parseFloat(b.quantity) || 0) * 0.1);
+        av = Math.ceil(aUp * (parseFloat(a.quantity) || 0) * 0.1);
+        bv = Math.ceil(bUp * (parseFloat(b.quantity) || 0) * 0.1);
       } else if (sort.key === 'totalPrice') {
         const aUp = parseFloat(a.unitPrice || aItem.unitPrice) || 0;
         const bUp = parseFloat(b.unitPrice || bItem.unitPrice) || 0;
         const aSupply = Math.round(aUp * (parseFloat(a.quantity) || 0));
         const bSupply = Math.round(bUp * (parseFloat(b.quantity) || 0));
-        av = aSupply + Math.floor(aSupply * 0.1);
-        bv = bSupply + Math.floor(bSupply * 0.1);
+        av = aSupply + Math.ceil(aSupply * 0.1);
+        bv = bSupply + Math.ceil(bSupply * 0.1);
       } else if (sort.key === 'profitMargin') {
         const aQty = parseFloat(a.quantity) || 0;
         const bQty = parseFloat(b.quantity) || 0;
@@ -832,8 +832,8 @@ export function InoutPage({ mode = 'all' }) {
       const sup = Math.round(cost * q);
       totQty += q;
       totSupply += sup;
-      totVat += Math.floor(sup * 0.1);
-      totTotal += sup + Math.floor(sup * 0.1);
+      totVat += Math.ceil(sup * 0.1);
+      totTotal += sup + Math.ceil(sup * 0.1);
     });
     return { totQty, totSupply, totVat, totTotal };
   }, [sorted, isInMode, itemMap]);
