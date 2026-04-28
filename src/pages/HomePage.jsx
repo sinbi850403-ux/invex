@@ -138,44 +138,6 @@ function TrendBadge({ pct }) {
   );
 }
 
-function MoreMenu({ onSaveFilter, onExportCSV, editMode, onToggleEdit }) {
-  const [open, setOpen] = React.useState(false);
-  const ref = React.useRef(null);
-  React.useEffect(() => {
-    if (!open) return;
-    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, [open]);
-  return (
-    <div ref={ref} style={{ position: 'relative' }}>
-      <button className="btn btn-sm btn-ghost" style={{ fontSize: 12 }} onClick={() => setOpen(v => !v)}>
-        ··· 더보기
-      </button>
-      {open && (
-        <div style={{
-          position: 'absolute', top: 'calc(100% + 4px)', right: 0,
-          background: 'var(--bg-card)', border: '1px solid var(--border)',
-          borderRadius: 8, minWidth: 148, padding: '4px', zIndex: 200,
-          boxShadow: '0 8px 24px rgba(0,0,0,0.25)',
-        }}>
-          <button className="btn btn-ghost" style={{ width: '100%', textAlign: 'left', fontSize: 12, padding: '7px 12px', borderRadius: 5 }}
-            onClick={() => { onSaveFilter(); setOpen(false); }}>+ 필터 저장</button>
-          {onExportCSV && (
-            <button className="btn btn-ghost" style={{ width: '100%', textAlign: 'left', fontSize: 12, padding: '7px 12px', borderRadius: 5 }}
-              onClick={() => { onExportCSV(); setOpen(false); }}>CSV 내보내기</button>
-          )}
-          <div style={{ height: 1, background: 'var(--border)', margin: '3px 0' }} />
-          <button className="btn btn-ghost" style={{ width: '100%', textAlign: 'left', fontSize: 12, padding: '7px 12px', borderRadius: 5, color: editMode ? 'var(--accent)' : undefined }}
-            onClick={() => { onToggleEdit(); setOpen(false); }}>
-            {editMode ? '편집 완료' : '위젯 편집'}
-          </button>
-        </div>
-      )}
-    </div>
-  );
-}
-
 function exportCSV(transactions) {
   const header = ['유형', '품목명', '수량', '날짜', '거래처', '단가', '금액'];
   const rows = transactions.map(tx => [
@@ -375,7 +337,8 @@ export default function HomePage() {
     const monthRevenue  = sumBy(monthTx.filter(t => t.type === 'out'), t => toNumber(t.quantity) * toNumber(t.unitPrice || 0));
 
     const recentTransactions = [...filteredTx]
-      .sort((a, b) => String(b.date || b.createdAt || '').localeCompare(String(a.date || a.createdAt || '')));
+      .sort((a, b) => String(b.date || b.createdAt || '').localeCompare(String(a.date || a.createdAt || '')))
+      .slice(0, 30);
 
     const categoryMap = new Map();
     filteredItems.forEach(item => {
@@ -590,13 +553,24 @@ export default function HomePage() {
             </select>
           )}
 
-          {/* 더보기 드롭다운 (필터저장 / CSV / 편집) */}
-          <MoreMenu
-            onSaveFilter={saveCurrentFilter}
-            onExportCSV={allTransactions.length > 0 ? () => exportCSV(allTransactions) : null}
-            editMode={editMode}
-            onToggleEdit={() => setEditMode(v => !v)}
-          />
+          {/* 필터 저장 */}
+          <button className="btn btn-sm btn-ghost" style={{ fontSize: 12 }} onClick={saveCurrentFilter} title="현재 필터 조건 저장">
+            + 필터 저장
+          </button>
+
+          {/* 내보내기 */}
+          {allTransactions.length > 0 && (
+            <button className="btn btn-outline btn-sm" style={{ fontSize: 12 }} onClick={() => exportCSV(allTransactions)}>
+              CSV 내보내기
+            </button>
+          )}
+
+          {/* 대시보드 편집 모드 */}
+          <button
+            className={`btn btn-sm ${editMode ? 'btn-primary' : 'btn-ghost'}`}
+            style={{ fontSize: 12 }}
+            onClick={() => setEditMode(v => !v)}
+          >{editMode ? ' 완료' : '⠿ 편집'}</button>
 
           {notifications.length > 0 && (
             <button type="button" className="badge badge-danger dashboard-notif-trigger"
@@ -644,12 +618,12 @@ export default function HomePage() {
         <>
           {/* KPI */}
           <div className={`db-kpi-grid${dashRole === 'staff' ? ' db-kpi-grid-compact' : ''}`}>
-            <div className="db-kpi-card" onClick={() => navigate('/inventory')} style={{ cursor: 'pointer', borderLeft: '3px solid var(--accent)' }}>
+            <div className="db-kpi-card" onClick={() => navigate('/inventory')} style={{ cursor: 'pointer' }}>
               <div className="db-kpi-label">총 품목</div>
               <div className="db-kpi-value text-accent">{totalItems.toLocaleString('ko-KR')}</div>
             </div>
             {dashRole === 'manager' && (
-              <div className="db-kpi-card" onClick={() => navigate('/inventory')} style={{ cursor: 'pointer', borderLeft: '3px solid var(--success)' }}>
+              <div className="db-kpi-card" onClick={() => navigate('/inventory')} style={{ cursor: 'pointer' }}>
                 <div className="db-kpi-label">재고 금액</div>
                 <div className="db-kpi-value text-success">{formatCurrency(totalSupplyValue)}</div>
                 {gmroi !== null && (
@@ -660,63 +634,84 @@ export default function HomePage() {
                 <Sparkline data={weekData.map(d => Math.max(0, d.inQty - d.outQty))} color="var(--success)" />
               </div>
             )}
-            <div className={`db-kpi-card${lowStockItems.length > 0 ? ' db-kpi-danger' : ''}`} onClick={() => navigate('/inventory')} style={{ cursor: 'pointer', borderLeft: `3px solid ${lowStockItems.length > 0 ? 'var(--danger)' : 'var(--border)'}` }}>
+            <div className={`db-kpi-card${lowStockItems.length > 0 ? ' db-kpi-danger' : ''}`} onClick={() => navigate('/inventory')} style={{ cursor: 'pointer' }}>
               <div className="db-kpi-label">부족 품목</div>
               <div className={`db-kpi-value${lowStockItems.length > 0 ? ' text-danger' : ''}`}>
                 {lowStockItems.length > 0 ? `${lowStockItems.length}건` : '없음'}
               </div>
             </div>
             <div className="db-kpi-card" onClick={() => navigate('/in')} style={{ cursor: 'pointer' }}>
-              <div className="db-kpi-label">오늘 입고</div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div className="db-kpi-label">오늘 입고</div>
+                {dashRole === 'manager' && (
+                  <button className="btn btn-sm btn-ghost"
+                    style={{ fontSize: 10, padding: '1px 6px', color: 'var(--text-muted)' }}
+                    onClick={e => { e.stopPropagation(); openTargetEdit('in', targets.in); }}>
+                    목표 설정
+                  </button>
+                )}
+              </div>
               <div className="db-kpi-value text-success">{todayInCount}건</div>
+              {editingTarget === 'in' ? (
+                <div style={{ display: 'flex', gap: 4, marginTop: 4 }} onClick={e => e.stopPropagation()}>
+                  <input type="number" value={targetInput} onChange={e => setTargetInput(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') saveTarget(); if (e.key === 'Escape') setEditingTarget(null); }}
+                    style={{ width: 80, fontSize: 12, padding: '2px 6px', borderRadius: 4, border: '1px solid var(--border)', background: 'var(--bg-card)', color: 'var(--text)' }}
+                    placeholder="목표 수량" autoFocus />
+                  <button className="btn btn-sm btn-primary" style={{ fontSize: 11, padding: '2px 8px' }} onClick={saveTarget}>확인</button>
+                </div>
+              ) : targets.in > 0 && (
+                <div style={{ marginTop: 4 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--text-muted)', marginBottom: 2 }}>
+                    <span>이달 {monthInQty.toLocaleString('ko-KR')} / {targets.in.toLocaleString('ko-KR')}</span>
+                    <span style={{ color: monthInQty >= targets.in ? 'var(--success)' : 'var(--text-muted)', fontWeight: 600 }}>
+                      {Math.min(Math.round(monthInQty / targets.in * 100), 999)}%
+                    </span>
+                  </div>
+                  <div style={{ height: 4, borderRadius: 2, background: 'var(--border)', overflow: 'hidden' }}>
+                    <div style={{ height: '100%', borderRadius: 2, background: 'var(--success)', width: `${Math.min(monthInQty / targets.in * 100, 100)}%`, transition: 'width 0.4s' }} />
+                  </div>
+                </div>
+              )}
               <TrendBadge pct={inTrendPct} />
               <Sparkline data={weekData.map(d => d.inQty)} color="var(--success)" />
             </div>
             <div className="db-kpi-card" onClick={() => navigate('/out')} style={{ cursor: 'pointer' }}>
-              <div className="db-kpi-label">오늘 출고</div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div className="db-kpi-label">오늘 출고</div>
+                {dashRole === 'manager' && (
+                  <button className="btn btn-sm btn-ghost"
+                    style={{ fontSize: 10, padding: '1px 6px', color: 'var(--text-muted)' }}
+                    onClick={e => { e.stopPropagation(); openTargetEdit('out', targets.out); }}>
+                    목표 설정
+                  </button>
+                )}
+              </div>
               <div className="db-kpi-value text-danger">{todayOutCount}건</div>
+              {editingTarget === 'out' ? (
+                <div style={{ display: 'flex', gap: 4, marginTop: 4 }} onClick={e => e.stopPropagation()}>
+                  <input type="number" value={targetInput} onChange={e => setTargetInput(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') saveTarget(); if (e.key === 'Escape') setEditingTarget(null); }}
+                    style={{ width: 80, fontSize: 12, padding: '2px 6px', borderRadius: 4, border: '1px solid var(--border)', background: 'var(--bg-card)', color: 'var(--text)' }}
+                    placeholder="목표 수량" autoFocus />
+                  <button className="btn btn-sm btn-primary" style={{ fontSize: 11, padding: '2px 8px' }} onClick={saveTarget}>확인</button>
+                </div>
+              ) : targets.out > 0 && (
+                <div style={{ marginTop: 4 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--text-muted)', marginBottom: 2 }}>
+                    <span>이달 {monthOutQty.toLocaleString('ko-KR')} / {targets.out.toLocaleString('ko-KR')}</span>
+                    <span style={{ color: monthOutQty >= targets.out ? 'var(--danger)' : 'var(--text-muted)', fontWeight: 600 }}>
+                      {Math.min(Math.round(monthOutQty / targets.out * 100), 999)}%
+                    </span>
+                  </div>
+                  <div style={{ height: 4, borderRadius: 2, background: 'var(--border)', overflow: 'hidden' }}>
+                    <div style={{ height: '100%', borderRadius: 2, background: 'var(--danger)', width: `${Math.min(monthOutQty / targets.out * 100, 100)}%`, transition: 'width 0.4s' }} />
+                  </div>
+                </div>
+              )}
               <TrendBadge pct={outTrendPct} />
               <Sparkline data={weekData.map(d => d.outQty)} color="var(--danger)" />
             </div>
-            {dashRole === 'manager' && (
-              <div className="db-kpi-card" onClick={() => navigate('/out')} style={{ cursor: 'pointer' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <div className="db-kpi-label">이달 매출</div>
-                  <button className="btn btn-sm btn-ghost"
-                    style={{ fontSize: 10, padding: '1px 6px', color: 'var(--text-muted)' }}
-                    onClick={e => { e.stopPropagation(); openTargetEdit('revenue', targets.revenue); }}>
-                    목표 설정
-                  </button>
-                </div>
-                <div className="db-kpi-value text-accent">{formatCurrency(monthRevenue)}</div>
-                {editingTarget === 'revenue' ? (
-                  <div style={{ display: 'flex', gap: 4, marginTop: 4 }} onClick={e => e.stopPropagation()}>
-                    <input type="number" value={targetInput} onChange={e => setTargetInput(e.target.value)}
-                      onKeyDown={e => { if (e.key === 'Enter') saveTarget(); if (e.key === 'Escape') setEditingTarget(null); }}
-                      style={{ flex: 1, fontSize: 12, padding: '2px 6px', borderRadius: 4, border: '1px solid var(--border)', background: 'var(--bg-card)', color: 'var(--text)' }}
-                      placeholder="목표 금액 (원)" autoFocus />
-                    <button className="btn btn-sm btn-primary" style={{ fontSize: 11, padding: '2px 8px' }} onClick={saveTarget}>확인</button>
-                  </div>
-                ) : targets.revenue > 0 && (
-                  <div style={{ marginTop: 4 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--text-muted)', marginBottom: 2 }}>
-                      <span>목표 {formatCurrency(targets.revenue)}</span>
-                      <span style={{ color: monthRevenue >= targets.revenue ? 'var(--success)' : 'var(--accent)', fontWeight: 700 }}>
-                        {Math.min(Math.round(monthRevenue / targets.revenue * 100), 999)}%
-                      </span>
-                    </div>
-                    <div style={{ height: 4, borderRadius: 2, background: 'var(--border)', overflow: 'hidden' }}>
-                      <div style={{
-                        height: '100%', borderRadius: 2,
-                        background: monthRevenue >= targets.revenue ? 'var(--success)' : 'var(--accent)',
-                        width: `${Math.min(monthRevenue / targets.revenue * 100, 100)}%`,
-                        transition: 'width 0.4s',
-                      }} />
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
             {dashRole === 'manager' && (
               <div className={`db-kpi-card${deadStockItems.length > 0 ? ' db-kpi-warn' : ''}`}>
                 <div className="db-kpi-label">정체 재고(30일)</div>
@@ -765,7 +760,7 @@ export default function HomePage() {
           {/* 재고 부족 경고 바 */}
           {lowStockItems.length > 0 && (
             <div className="db-alert-bar" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span className="db-alert-title" style={{ cursor: 'pointer' }} onClick={() => navigate('/inventory')}>재고 부족 {lowStockItems.length}건</span>
+              <span className="db-alert-title" style={{ cursor: 'pointer' }} onClick={() => navigate('/inventory')}> 재고 부족 {lowStockItems.length}건</span>
               <span className="db-alert-items" style={{ flex: 1, cursor: 'pointer' }} onClick={() => navigate('/inventory')}>
                 {lowStockItems.slice(0, 3).map(item =>
                   `${item.itemName} (현재 ${toNumber(item.quantity)} / 안전 ${toNumber(safetyStock[item.itemName])})`
@@ -784,7 +779,7 @@ export default function HomePage() {
           {roleConf.showWinners && (winners.length > 0 || losers.length > 0) && (
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
               <div className="card" style={{ padding: '14px 16px' }}>
-                <div className="card-title" style={{ marginBottom: 10, fontSize: 13 }}>판매 TOP (최근 30일)</div>
+                <div className="card-title" style={{ marginBottom: 10, fontSize: 13 }}> 판매 TOP (최근 30일)</div>
                 {winners.length === 0
                   ? <div style={{ color: 'var(--text-muted)', fontSize: 12 }}>데이터 없음</div>
                   : winners.map((w, i) => {
@@ -806,7 +801,7 @@ export default function HomePage() {
                 }
               </div>
               <div className="card" style={{ padding: '14px 16px' }}>
-                <div className="card-title" style={{ marginBottom: 10, fontSize: 13 }}>정체 재고 (30일 미출고)</div>
+                <div className="card-title" style={{ marginBottom: 10, fontSize: 13 }}> 정체 재고 (30일 미출고)</div>
                 {losers.length === 0
                   ? <div style={{ color: 'var(--text-muted)', fontSize: 12 }}>정체 재고 없음</div>
                   : <>
