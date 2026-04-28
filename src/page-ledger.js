@@ -22,7 +22,7 @@ const LEDGER_SORT_FIELDS = [
   { key: 'inQty', label: '입고', numeric: true, align: 'text-right', style: 'color:var(--success);' },
   { key: 'outQty', label: '출고', numeric: true, align: 'text-right', style: 'color:var(--danger);' },
   { key: 'closingQty', label: '기말재고', numeric: true, align: 'text-right', style: 'font-weight:700;' },
-  { key: 'unitPrice', label: '단가', numeric: true, align: 'text-right' },
+  { key: 'unitPrice', label: '원가', numeric: true, align: 'text-right' },
   { key: 'closingValue', label: '재고금액', numeric: true, align: 'text-right' },
 ];
 const LEDGER_SORT_FIELD_MAP = Object.fromEntries(LEDGER_SORT_FIELDS.map(field => [field.key, field]));
@@ -167,7 +167,7 @@ export function renderLedgerPage(container, navigateTo) {
 
       doc.autoTable({
         startY: 32,
-        head: [['No', '품목명', '코드', '단위', '기초재고', '입고', '출고', '기말재고', '단가', '재고금액']],
+        head: [['No', '품목명', '코드', '단위', '기초재고', '입고', '출고', '기말재고', '원가', '재고금액']],
         body: tableRows,
         theme: 'grid',
         headStyles: { fillColor: [37, 99, 235], ...fontStyle },

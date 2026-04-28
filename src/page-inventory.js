@@ -44,7 +44,7 @@ const ALL_FIELDS = [
   { key: 'spec', label: '규격', numeric: false },
   { key: 'unit', label: '단위', numeric: false },
   { key: 'inQty', label: '입고수량', numeric: true },
-  { key: 'unitPrice', label: '단가', numeric: true },
+  { key: 'unitPrice', label: '원가', numeric: true },
   { key: 'supplyValue', label: '공급가액', numeric: true },
   { key: 'vat', label: '부가세', numeric: true },
   { key: 'totalPrice', label: '합계금액', numeric: true },
