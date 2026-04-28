@@ -97,6 +97,15 @@ export default function AppLayout() {
   const { user, profile, startPage } = useAuth();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => localStorage.getItem('invex:sidebar-collapsed') === '1');
+
+  const toggleSidebarCollapse = () => {
+    setSidebarCollapsed(prev => {
+      const next = !prev;
+      localStorage.setItem('invex:sidebar-collapsed', next ? '1' : '0');
+      return next;
+    });
+  };
 
   // 앱 초기 진입 시 startPage로 이동
   useEffect(() => {
@@ -165,11 +174,13 @@ export default function AppLayout() {
       <Sidebar
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
+        collapsed={sidebarCollapsed}
+        onToggleCollapse={toggleSidebarCollapse}
       />
 
       <TopHeader user={user} profile={profile} />
 
-      <main id="main-content">
+      <main id="main-content" className={sidebarCollapsed ? 'sidebar-collapsed' : ''}>
         <Suspense fallback={<div style={{padding:'40px',textAlign:'center',color:'var(--text-muted)'}}>로딩 중...</div>}>
           <Routes>
             <Route index element={<Navigate to="/home" replace />} />
