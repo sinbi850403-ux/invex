@@ -1,0 +1,325 @@
+/* === variables.css — :root CSS 변수 + 다크모드 + 폰트 === */
+
+:root {
+  /* 색상: 프로 ERP 수준의 차분한 톤 */
+  --bg-main: #f0f2f5;
+  --bg-sidebar: #1b2838;
+  --bg-sidebar-hover: rgba(255,255,255,0.06);
+  --bg-card: #ffffff;
+  --bg-header: #ffffff;
+  --text-primary: #1a1a2e;
+  --text-secondary: #5a6474;
+  --text-muted: #8c95a4;
+  --text-sidebar: #9ca8b8;
+  --text-sidebar-active: #ffffff;
+  --border: #e2e6eb;
+  --border-light: #f0f2f5;
+  --accent: #2563eb;
+  --accent-hover: #1d4ed8;
+  --accent-light: #eff6ff;
+  --success: #16a34a;
+  --success-light: #f0fdf4;
+  --warning: #d97706;
+  --warning-light: #fffbeb;
+  --danger: #dc2626;
+  --danger-light: #fef2f2;
+  --info: #0284c7;
+  --info-light: #f0f9ff;
+
+  /* 그림자 */
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+  --shadow-md: 0 2px 8px rgba(0,0,0,0.08);
+  --shadow-lg: 0 4px 16px rgba(0,0,0,0.1);
+
+  /* 간격 */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+
+  /* 폰트 */
+  --font-family: 'Noto Sans KR', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-size-xs: 11px;
+  --font-size-sm: 13px;
+  --font-size-md: 14px;
+  --font-size-lg: 15px;
+  --font-size-xl: 18px;
+  --font-size-2xl: 22px;
+
+  /* 라운딩 */
+  --radius-sm: 4px;
+  --radius: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+}
+
+/* 테마 전환 중 transition 억제 — 다크/라이트 즉각 전환 */
+html.invex-no-transition *,
+html.invex-no-transition *::before,
+html.invex-no-transition *::after {
+  transition: none !important;
+  animation-duration: 0s !important;
+}
+
+/* === 다크 모드 === */
+html.dark-mode {
+  /* 배경 — 통일된 어두운 톤 */
+  --bg-main: #0f1419;
+  --bg-sidebar: #0d1117;
+  --bg-sidebar-hover: rgba(255,255,255,0.08);
+  --bg-card: #161b22;
+  --bg-header: #161b22;
+
+  /* 텍스트 — 밝고 읽기 쉬운 색상 */
+  --text-primary: #e6edf3;
+  --text-secondary: #b1bac4;
+  --text-muted: #8b949e;
+  --text-sidebar: #8b949e;
+  --text-sidebar-active: #ffffff;
+
+  /* 테두리 — 통일 */
+  --border: #30363d;
+  --border-light: #21262d;
+
+  /* 강조색 */
+  --accent: #58a6ff;
+  --accent-hover: #79c0ff;
+  --accent-light: rgba(88,166,255,0.15);
+
+  /* 상태색 */
+  --success: #3fb950;
+  --success-light: rgba(63,185,80,0.15);
+  --warning: #d29922;
+  --warning-light: rgba(210,153,34,0.15);
+  --danger: #f85149;
+  --danger-light: rgba(248,81,73,0.15);
+  --info: #58a6ff;
+  --info-light: rgba(88,166,255,0.15);
+
+  /* 그림자 */
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.4);
+  --shadow-md: 0 2px 8px rgba(0,0,0,0.5);
+  --shadow-lg: 0 4px 16px rgba(0,0,0,0.6);
+  --shadow: 0 2px 8px rgba(0,0,0,0.5);
+}
+
+/* 테이블 — 행 색상 통일, 줄무늬 제거 */
+html.dark-mode .data-table thead th {
+  background: #1c2128;
+  border-color: #30363d;
+  color: #e6edf3;
+}
+
+html.dark-mode .data-table tbody td {
+  border-color: #21262d;
+  color: #e6edf3;
+}
+
+/* 줄무늬 및 기본 배경 — CSS 변수로 다크 모드 적용 */
+html.dark-mode {
+  --table-stripe: #161b22;
+  --table-hover: #1c2128;
+}
+
+html.dark-mode .data-table tbody tr {
+  background: #161b22;
+}
+
+html.dark-mode .data-table tbody tr:nth-child(even) {
+  background: #161b22;
+}
+
+html.dark-mode .data-table tbody tr:hover {
+  background: #1c2128;
+}
+
+/* 입력 필드 — 모든 input, select, textarea 동일 */
+html.dark-mode .form-input,
+html.dark-mode .form-select,
+html.dark-mode input[type="text"],
+html.dark-mode input[type="number"],
+html.dark-mode input[type="date"],
+html.dark-mode input[type="search"],
+html.dark-mode input[type="email"],
+html.dark-mode input[type="password"],
+html.dark-mode textarea,
+html.dark-mode select {
+  background: #0d1117 !important;
+  border-color: #30363d !important;
+  color: #e6edf3 !important;
+}
+
+html.dark-mode .form-input::placeholder,
+html.dark-mode input::placeholder,
+html.dark-mode textarea::placeholder,
+html.dark-mode input::-ms-input-placeholder {
+  color: #484f58 !important;
+}
+
+html.dark-mode .form-input:focus,
+html.dark-mode .form-select:focus,
+html.dark-mode input:focus,
+html.dark-mode select:focus,
+html.dark-mode textarea:focus {
+  border-color: #58a6ff !important;
+  box-shadow: 0 0 0 2px rgba(88,166,255,0.2) !important;
+}
+
+/* 카드 — 통일된 배경 */
+html.dark-mode .card {
+  background: #161b22;
+  border-color: #30363d;
+}
+
+html.dark-mode .stat-card {
+  background: #161b22;
+  border-color: #30363d;
+}
+
+/* 알림/배지 */
+html.dark-mode .alert {
+  border-color: #30363d;
+}
+
+html.dark-mode .alert-info {
+  background: rgba(88,166,255,0.1);
+  border-color: rgba(88,166,255,0.2);
+  color: #b1bac4;
+}
+
+html.dark-mode .alert-success {
+  background: rgba(63,185,80,0.1);
+  border-color: rgba(63,185,80,0.2);
+  color: #b1bac4;
+}
+
+html.dark-mode .alert-warning {
+  background: rgba(210,153,34,0.1);
+  border-color: rgba(210,153,34,0.2);
+  color: #b1bac4;
+}
+
+html.dark-mode .alert-danger {
+  background: rgba(248,81,73,0.1);
+  border-color: rgba(248,81,73,0.2);
+  color: #b1bac4;
+}
+
+/* 버튼 */
+html.dark-mode .btn-outline {
+  border-color: #30363d;
+  color: #b1bac4;
+}
+
+html.dark-mode .btn-outline:hover {
+  background: #21262d;
+  color: #e6edf3;
+  border-color: #484f58;
+}
+
+html.dark-mode .btn-ghost {
+  color: #b1bac4;
+}
+
+html.dark-mode .btn-ghost:hover {
+  background: rgba(255,255,255,0.06);
+  color: #e6edf3;
+}
+
+/* 모달 */
+html.dark-mode .modal {
+  background: #161b22;
+  border: 1px solid #30363d;
+}
+
+html.dark-mode .modal-header {
+  border-bottom-color: #21262d;
+}
+
+/* 업로드 존 */
+html.dark-mode .upload-zone {
+  border-color: #30363d;
+  background: #0d1117;
+}
+
+html.dark-mode .upload-zone:hover,
+html.dark-mode .upload-zone.dragover {
+  border-color: #58a6ff;
+  background: rgba(88,166,255,0.05);
+}
+
+/* 템플릿 카드 */
+html.dark-mode .template-card {
+  background: #0d1117;
+  border-color: #30363d;
+  color: #e6edf3;
+}
+
+html.dark-mode .template-card:hover {
+  border-color: #58a6ff;
+  background: #161b22;
+}
+
+/* 사이드바 */
+html.dark-mode .sidebar-logo {
+  border-bottom-color: #21262d;
+}
+
+/* 스텝 진행바 */
+html.dark-mode .step {
+  color: #8b949e;
+}
+
+html.dark-mode .step.active {
+  color: #e6edf3;
+}
+
+/* 탭/필터 버튼 */
+html.dark-mode .filter-tag,
+html.dark-mode .tab-btn {
+  background: #0d1117;
+  border-color: #30363d;
+  color: #b1bac4;
+}
+
+html.dark-mode .filter-tag:hover,
+html.dark-mode .tab-btn:hover {
+  background: #21262d;
+  color: #e6edf3;
+}
+
+html.dark-mode .filter-tag.active,
+html.dark-mode .tab-btn.active {
+  background: rgba(88,166,255,0.15);
+  border-color: #58a6ff;
+  color: #58a6ff;
+}
+
+/* 배지 */
+html.dark-mode .badge {
+  background: #21262d;
+  color: #b1bac4;
+}
+
+/* 페이지 헤더 */
+html.dark-mode .page-title {
+  color: #e6edf3;
+}
+
+html.dark-mode .page-desc {
+  color: #8b949e;
+}
+
+/* 스크롤바 */
+html.dark-mode ::-webkit-scrollbar-track {
+  background: #0d1117;
+}
+
+html.dark-mode ::-webkit-scrollbar-thumb {
+  background: #30363d;
+}
+
+html.dark-mode ::-webkit-scrollbar-thumb:hover {
+  background: #484f58;
+}
