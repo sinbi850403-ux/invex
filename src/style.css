@@ -5140,10 +5140,10 @@ html.dark-mode .top-header {
 .th-section-purchase { background: #ffedd5; color: #9a3412; }
 .th-section-profit   { background: #dcfce7; color: #166534; }
 
-/* 출고관리 th 섹션 색상 — 다크 (높은 특이도로 기본 thead th 배경 덮어씀) */
-html.dark-mode .data-table thead th.th-section-out      { background: rgba(59,  130, 246, 0.22); color: #93c5fd; }
-html.dark-mode .data-table thead th.th-section-purchase { background: rgba(234,  88,  12, 0.22); color: #fdba74; }
-html.dark-mode .data-table thead th.th-section-profit   { background: rgba(40,  160,  85, 0.20); color: #72d498; }
+/* 출고관리 th 섹션 색상 — 다크 (sticky 헤더는 불투명 고정색 필수) */
+html.dark-mode .data-table thead th.th-section-out      { background: #233755; color: #93c5fd; }
+html.dark-mode .data-table thead th.th-section-purchase { background: #492d22; color: #fdba74; }
+html.dark-mode .data-table thead th.th-section-profit   { background: #1e3a31; color: #72d498; }
 
 /* 출고관리 td 섹션 색상 — 라이트 */
 .td-section-out      { background: #eff6ff; }
