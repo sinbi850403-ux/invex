@@ -225,7 +225,7 @@ CREATE TABLE IF NOT EXISTS stocktakes (
 -- ============================================================
 CREATE TABLE IF NOT EXISTS audit_logs (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  user_id UUID REFERENCES profiles(id) ON DELETE SET NULL, -- 탈퇴 후 로그 익명화 보존
   action TEXT NOT NULL,
   target TEXT,
   detail TEXT,
@@ -338,8 +338,6 @@ ALTER TABLE user_settings ENABLE ROW LEVEL SECURITY;
 -- profiles
 CREATE POLICY "profiles_select" ON profiles FOR SELECT USING (auth.uid() = id);
 CREATE POLICY "profiles_select_admin" ON profiles FOR SELECT USING (auth.jwt()->>'email' IN ('sinbi0214@naver.com', 'sinbi850403@gmail.com', 'admin@invex.io.kr'));
--- 팀 초대: 인증된 사용자가 이메일로 다른 사용자 프로필 조회 허용
-CREATE POLICY "profiles_select_for_invite" ON profiles FOR SELECT USING (auth.uid() IS NOT NULL);
 -- 자기 프로필 INSERT (부트스트랩, 이름 변경 upsert 용)
 CREATE POLICY "profiles_insert" ON profiles FOR INSERT WITH CHECK (auth.uid() = id);
 -- [HF1] role 자가 에스컬레이션 방지: WITH CHECK으로 role 변경 차단
@@ -385,6 +383,18 @@ CREATE POLICY "fields_all" ON custom_fields FOR ALL USING (auth.uid() = user_id)
 
 -- user_settings
 CREATE POLICY "settings_all" ON user_settings FOR ALL USING (auth.uid() = user_id);
+
+-- 팀 초대 전용 RPC: 이메일로 단일 프로필만 조회 (전체 노출 방지)
+CREATE OR REPLACE FUNCTION get_profile_by_email(lookup_email TEXT)
+RETURNS TABLE(id UUID, name TEXT, email TEXT)
+LANGUAGE plpgsql SECURITY DEFINER
+SET search_path = public, pg_catalog, pg_temp AS $$
+BEGIN
+  IF auth.uid() IS NULL THEN RAISE EXCEPTION '인증 필요'; END IF;
+  RETURN QUERY SELECT p.id, p.name, p.email FROM profiles p
+    WHERE p.email = lookup_email LIMIT 1;
+END; $$;
+GRANT EXECUTE ON FUNCTION get_profile_by_email(TEXT) TO authenticated;
 
 -- ============================================================
 -- 15. 인사·급여·근태 모듈 (HR)
@@ -545,9 +555,13 @@ CREATE POLICY "salary_items_all" ON salary_items FOR ALL USING (auth.uid() = use
 -- [HF2] SECURITY DEFINER 함수 3종 search_path 고정 (schema injection 방어)
 CREATE OR REPLACE FUNCTION encrypt_rrn(plain TEXT)
 RETURNS BYTEA AS $$
+DECLARE rrn_key TEXT;
 BEGIN
-  -- 프로덕션에서는 Supabase Vault 시크릿 사용 권장
-  RETURN pgp_sym_encrypt(plain, current_setting('app.rrn_key', true));
+  rrn_key := current_setting('app.rrn_key', true);
+  IF rrn_key IS NULL OR length(rrn_key) < 32 THEN
+    RAISE EXCEPTION 'app.rrn_key 미설정 또는 길이 부족 (최소 32자). Supabase Vault 사용 권장.';
+  END IF;
+  RETURN pgp_sym_encrypt(plain, rrn_key);
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_catalog, pg_temp;
 
@@ -593,7 +607,7 @@ BEGIN
   NEW.updated_at = now();
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql SET search_path = public, pg_catalog, pg_temp;
 
 -- updated_at 컬럼이 있는 테이블에 트리거 연결
 DO $$
@@ -657,8 +671,12 @@ CREATE TABLE IF NOT EXISTS team_workspaces (
 
 ALTER TABLE team_workspaces ENABLE ROW LEVEL SECURITY;
 
--- 로그인한 모든 사용자가 읽기 가능 (초대 수락/거절을 위해 다른 워크스페이스도 조회 필요)
-CREATE POLICY "tw_select" ON team_workspaces FOR SELECT TO authenticated USING (true);
+-- 본인 워크스페이스 또는 초대된 워크스페이스만 조회
+-- 주의: workspace_members 테이블 생성(섹션 17) 전까지는 owner_id 조건만 동작
+CREATE POLICY "tw_select" ON team_workspaces FOR SELECT TO authenticated USING (
+  auth.uid()::text = owner_id
+  OR members @> jsonb_build_array(jsonb_build_object('uid', auth.uid()::text))
+);
 -- 본인 워크스페이스만 생성/수정/삭제 가능
 CREATE POLICY "tw_insert" ON team_workspaces FOR INSERT WITH CHECK (auth.uid()::text = owner_id);
 CREATE POLICY "tw_update" ON team_workspaces FOR UPDATE USING (auth.uid()::text = owner_id);
@@ -759,3 +777,242 @@ CREATE INDEX IF NOT EXISTS idx_att_emp_month
 -- [PERF-04] leaves 상태별 조회
 CREATE INDEX IF NOT EXISTS idx_leave_status
   ON leaves(user_id, status, start_date DESC);
+
+-- ============================================================
+-- 17. 워크스페이스 멤버 정규화 (team_workspaces.members JSONB 대체)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS workspace_members (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id TEXT NOT NULL REFERENCES team_workspaces(id) ON DELETE CASCADE,
+  member_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  role TEXT DEFAULT 'member',
+  status TEXT DEFAULT 'pending', -- pending/active/rejected
+  invited_at TIMESTAMPTZ DEFAULT now(),
+  joined_at TIMESTAMPTZ,
+  UNIQUE(workspace_id, member_id)
+);
+
+ALTER TABLE workspace_members ENABLE ROW LEVEL SECURITY;
+
+-- 워크스페이스 소유자 또는 본인만 조회
+CREATE POLICY "wm_select" ON workspace_members FOR SELECT USING (
+  member_id = auth.uid()
+  OR EXISTS (SELECT 1 FROM team_workspaces tw WHERE tw.id = workspace_id AND tw.owner_id = auth.uid()::text)
+);
+CREATE POLICY "wm_insert" ON workspace_members FOR INSERT WITH CHECK (
+  EXISTS (SELECT 1 FROM team_workspaces tw WHERE tw.id = workspace_id AND tw.owner_id = auth.uid()::text)
+);
+CREATE POLICY "wm_update" ON workspace_members FOR UPDATE USING (
+  member_id = auth.uid()
+  OR EXISTS (SELECT 1 FROM team_workspaces tw WHERE tw.id = workspace_id AND tw.owner_id = auth.uid()::text)
+);
+CREATE POLICY "wm_delete" ON workspace_members FOR DELETE USING (
+  member_id = auth.uid()
+  OR EXISTS (SELECT 1 FROM team_workspaces tw WHERE tw.id = workspace_id AND tw.owner_id = auth.uid()::text)
+);
+
+CREATE INDEX IF NOT EXISTS idx_wm_workspace ON workspace_members(workspace_id);
+CREATE INDEX IF NOT EXISTS idx_wm_member ON workspace_members(member_id);
+
+-- ============================================================
+-- 18. 창고 마스터 (items.warehouse TEXT 정규화 기반)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS warehouses (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  code TEXT,
+  address TEXT,
+  manager TEXT,
+  memo TEXT,
+  is_active BOOLEAN DEFAULT true,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now(),
+  UNIQUE(user_id, name)
+);
+
+ALTER TABLE warehouses ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "warehouses_all" ON warehouses FOR ALL USING (auth.uid() = user_id);
+CREATE INDEX IF NOT EXISTS idx_warehouses_user ON warehouses(user_id);
+
+-- ============================================================
+-- 19. 발주서 라인 아이템 (purchase_orders.items JSONB 정규화)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS purchase_order_items (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  order_id UUID NOT NULL REFERENCES purchase_orders(id) ON DELETE CASCADE,
+  item_id UUID REFERENCES items(id) ON DELETE SET NULL,
+  item_name TEXT NOT NULL,
+  quantity NUMERIC NOT NULL DEFAULT 0,
+  unit_price NUMERIC DEFAULT 0,
+  received_qty NUMERIC DEFAULT 0, -- 실제 입고 수량 (발주↔입고 연결)
+  note TEXT
+);
+
+ALTER TABLE purchase_order_items ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "poi_all" ON purchase_order_items FOR ALL USING (auth.uid() = user_id);
+CREATE INDEX IF NOT EXISTS idx_poi_order ON purchase_order_items(order_id);
+CREATE INDEX IF NOT EXISTS idx_poi_item ON purchase_order_items(item_id) WHERE item_id IS NOT NULL;
+
+-- ============================================================
+-- 20. 재고 실사 라인 아이템 (stocktakes.details JSONB 정규화)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS stocktake_items (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  stocktake_id UUID NOT NULL REFERENCES stocktakes(id) ON DELETE CASCADE,
+  item_id UUID REFERENCES items(id) ON DELETE SET NULL,
+  item_name TEXT NOT NULL,
+  system_qty NUMERIC DEFAULT 0,
+  actual_qty NUMERIC DEFAULT 0,
+  diff_qty NUMERIC GENERATED ALWAYS AS (actual_qty - system_qty) STORED,
+  note TEXT
+);
+
+ALTER TABLE stocktake_items ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "sti_all" ON stocktake_items FOR ALL USING (auth.uid() = user_id);
+CREATE INDEX IF NOT EXISTS idx_sti_stocktake ON stocktake_items(stocktake_id);
+
+-- ============================================================
+-- 21. 성능 보강 인덱스 2차 (DB 설계 리뷰 — 2026-04)
+-- ============================================================
+
+-- [PERF-05] transactions: 손익 분석 커버링 인덱스
+CREATE INDEX IF NOT EXISTS idx_tx_analysis
+  ON transactions(user_id, type, date DESC, category)
+  INCLUDE (total_amount);
+
+-- [PERF-06] transactions: item_id 기반 재고 집계 (item_id nullable FK)
+CREATE INDEX IF NOT EXISTS idx_tx_item_id
+  ON transactions(item_id, user_id)
+  WHERE item_id IS NOT NULL;
+
+-- [PERF-07] transactions: warehouse 필터
+CREATE INDEX IF NOT EXISTS idx_tx_warehouse
+  ON transactions(user_id, warehouse, date DESC)
+  WHERE warehouse IS NOT NULL;
+
+-- [PERF-08] items: item_name 검색 (LIKE 'prefix%' 포함)
+CREATE INDEX IF NOT EXISTS idx_items_name
+  ON items(user_id, item_name);
+CREATE INDEX IF NOT EXISTS idx_items_name_text
+  ON items(user_id, item_name text_pattern_ops);
+
+-- [PERF-09] items: 카테고리 + 이름 + 핵심 컬럼 커버링
+CREATE INDEX IF NOT EXISTS idx_items_cat_name
+  ON items(user_id, category, item_name)
+  INCLUDE (quantity, unit_price, min_stock);
+
+-- [PERF-10] account_entries: type + status 복합
+CREATE INDEX IF NOT EXISTS idx_accounts_type_status
+  ON account_entries(user_id, type, status)
+  INCLUDE (amount);
+
+-- [PERF-11] purchase_orders: status 필터 (진행 중만)
+CREATE INDEX IF NOT EXISTS idx_po_status
+  ON purchase_orders(user_id, status, order_date DESC)
+  WHERE status != 'completed';
+
+-- [PERF-12] employees: 재직자 전용 부분 인덱스
+CREATE INDEX IF NOT EXISTS idx_emp_active
+  ON employees(user_id, name)
+  WHERE status = 'active';
+
+-- [PERF-13] attendance: 전체 직원 월별 집계 (급여 계산)
+CREATE INDEX IF NOT EXISTS idx_att_date_range
+  ON attendance(user_id, work_date, employee_id)
+  INCLUDE (work_min, overtime_min, status);
+
+-- [PERF-14] transfers: 날짜 정렬
+CREATE INDEX IF NOT EXISTS idx_transfers_date
+  ON transfers(user_id, date DESC);
+
+-- [PERF-15] audit_logs: action 타입 필터
+CREATE INDEX IF NOT EXISTS idx_audit_action
+  ON audit_logs(user_id, action, created_at DESC);
+
+-- ============================================================
+-- 22. 감사 트리거 (고위험 이벤트 자동 기록)
+-- ============================================================
+
+-- 급여 상태 변경 감사 (초안→확정→지급)
+CREATE OR REPLACE FUNCTION audit_payroll_status_change()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF OLD.status IS DISTINCT FROM NEW.status THEN
+    INSERT INTO audit_logs(user_id, action, target, detail, user_email)
+    VALUES (
+      auth.uid(),
+      'payroll.statusChange',
+      NEW.id::text,
+      format('급여 상태: %s → %s (%s년 %s월)', OLD.status, NEW.status, NEW.pay_year, NEW.pay_month),
+      (SELECT email FROM profiles WHERE id = auth.uid())
+    );
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_catalog, pg_temp;
+
+DROP TRIGGER IF EXISTS trg_audit_payroll ON payrolls;
+CREATE TRIGGER trg_audit_payroll
+  AFTER UPDATE ON payrolls
+  FOR EACH ROW EXECUTE FUNCTION audit_payroll_status_change();
+
+-- 직원 삭제 감사
+CREATE OR REPLACE FUNCTION audit_employee_delete()
+RETURNS TRIGGER AS $$
+BEGIN
+  INSERT INTO audit_logs(user_id, action, target, detail, user_email)
+  VALUES (
+    auth.uid(),
+    'employee.delete',
+    OLD.id::text,
+    format('직원 삭제: %s (사번: %s)', OLD.name, OLD.emp_no),
+    (SELECT email FROM profiles WHERE id = auth.uid())
+  );
+  RETURN OLD;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_catalog, pg_temp;
+
+DROP TRIGGER IF EXISTS trg_audit_employee_delete ON employees;
+CREATE TRIGGER trg_audit_employee_delete
+  BEFORE DELETE ON employees
+  FOR EACH ROW EXECUTE FUNCTION audit_employee_delete();
+
+-- 역할(role) 변경 감사
+CREATE OR REPLACE FUNCTION audit_profile_role_change()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF OLD.role IS DISTINCT FROM NEW.role THEN
+    INSERT INTO audit_logs(user_id, action, target, detail, user_email)
+    VALUES (
+      auth.uid(),
+      'profile.roleChange',
+      NEW.id::text,
+      format('역할 변경: %s → %s (%s)', OLD.role, NEW.role, NEW.email),
+      (SELECT email FROM profiles WHERE id = auth.uid())
+    );
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_catalog, pg_temp;
+
+DROP TRIGGER IF EXISTS trg_audit_profile_role ON profiles;
+CREATE TRIGGER trg_audit_profile_role
+  AFTER UPDATE ON profiles
+  FOR EACH ROW EXECUTE FUNCTION audit_profile_role_change();
+
+-- updated_at 트리거 신규 테이블에 연결
+DO $$
+DECLARE tbl TEXT;
+BEGIN
+  FOREACH tbl IN ARRAY ARRAY['warehouses']
+  LOOP
+    EXECUTE format(
+      'DROP TRIGGER IF EXISTS set_updated_at ON %I; CREATE TRIGGER set_updated_at BEFORE UPDATE ON %I FOR EACH ROW EXECUTE FUNCTION update_updated_at();',
+      tbl, tbl
+    );
+  END LOOP;
+END;
+$$;
