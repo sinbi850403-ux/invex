@@ -188,13 +188,9 @@ export const items = {
    */
   async create(item) {
     const userId = await getUserId();
-    const warehouseMap = await resolveFKMap('warehouses', 'name', userId, [item?.warehouse]);
+    // warehouse_id FK: fix-security-perf-2026-04.sql V008-ext 적용 후 활성화
     const { data, error } = await withDbTimeout(
-      supabase.from('items').insert({
-        ...item,
-        user_id: userId,
-        warehouse_id: warehouseMap[item?.warehouse] ?? null,
-      }).select().single(),
+      supabase.from('items').insert({ ...item, user_id: userId }).select().single(),
       '품목 생성'
     );
     handleError(error, '품목 생성');
@@ -301,10 +297,10 @@ export const items = {
       row.id = existingId || generateClientUuid();
     });
 
-    // warehouse_id FK 듀얼라이트 (배치 조회로 N+1 방지)
-    const warehouseNames = dedupedRows.map(r => r.warehouse).filter(Boolean);
-    const warehouseMap = await resolveFKMap('warehouses', 'name', userId, warehouseNames);
-    dedupedRows.forEach(row => { row.warehouse_id = warehouseMap[row.warehouse] ?? null; });
+    // warehouse_id FK 듀얼라이트: fix-security-perf-2026-04.sql 적용(V008-ext) 후 아래 주석 해제
+    // const warehouseNames = dedupedRows.map(r => r.warehouse).filter(Boolean);
+    // const warehouseMap = await resolveFKMap('warehouses', 'name', userId, warehouseNames);
+    // dedupedRows.forEach(row => { const wid = warehouseMap[row.warehouse]; if (wid) row.warehouse_id = wid; });
 
     // 500개씩 배치 처리 — Supabase 요청 크기 제한 대응
     const BATCH_SIZE = 500;
@@ -328,10 +324,7 @@ export const items = {
    */
   async update(itemId, updates) {
     const userId = await getUserId();
-    if ('warehouse' in updates) {
-      const warehouseMap = await resolveFKMap('warehouses', 'name', userId, [updates.warehouse]);
-      updates = { ...updates, warehouse_id: warehouseMap[updates.warehouse] ?? null };
-    }
+    // warehouse_id FK: fix-security-perf-2026-04.sql V008-ext 적용 후 활성화
     const { data, error } = await supabase
       .from('items')
       .update(updates)
@@ -629,10 +622,10 @@ export const accountEntries = {
 
   async create(entry) {
     const userId = await getUserId();
-    const vendorMap = await resolveFKMap('vendors', 'name', userId, [entry?.vendor]);
+    // vendor_id FK: fix-security-perf-2026-04.sql V007-ext 적용 후 활성화
     const { data, error } = await supabase
       .from('account_entries')
-      .insert({ ...entry, user_id: userId, vendor_id: vendorMap[entry?.vendor] ?? null })
+      .insert({ ...entry, user_id: userId })
       .select()
       .single();
     handleError(error, '장부 등록');
@@ -641,10 +634,7 @@ export const accountEntries = {
 
   async update(entryId, updates) {
     const userId = await getUserId();
-    if ('vendor' in updates) {
-      const vendorMap = await resolveFKMap('vendors', 'name', userId, [updates.vendor]);
-      updates = { ...updates, vendor_id: vendorMap[updates.vendor] ?? null };
-    }
+    // vendor_id FK: fix-security-perf-2026-04.sql V007-ext 적용 후 활성화
     const { data, error } = await supabase
       .from('account_entries')
       .update(updates)
@@ -658,13 +648,8 @@ export const accountEntries = {
 
   async bulkUpsert(entriesArray) {
     const userId = await getUserId();
-    const vendorNames = entriesArray.map(e => e?.vendor).filter(Boolean);
-    const vendorMap = await resolveFKMap('vendors', 'name', userId, vendorNames);
-    const rows = entriesArray.map(e => ({
-      ...e,
-      user_id: userId,
-      vendor_id: vendorMap[e?.vendor] ?? null,
-    }));
+    // vendor_id FK: fix-security-perf-2026-04.sql V007-ext 적용 후 활성화
+    const rows = entriesArray.map(e => ({ ...e, user_id: userId }));
     const { error } = await supabase
       .from('account_entries')
       .upsert(rows, { onConflict: 'id' });
@@ -699,10 +684,10 @@ export const purchaseOrders = {
 
   async create(order) {
     const userId = await getUserId();
-    const vendorMap = await resolveFKMap('vendors', 'name', userId, [order?.vendor]);
+    // vendor_id FK: fix-security-perf-2026-04.sql V007-ext 적용 후 활성화
     const { data, error } = await supabase
       .from('purchase_orders')
-      .insert({ ...order, user_id: userId, vendor_id: vendorMap[order?.vendor] ?? null })
+      .insert({ ...order, user_id: userId })
       .select()
       .single();
     handleError(error, '발주서 생성');
@@ -711,13 +696,8 @@ export const purchaseOrders = {
 
   async bulkUpsert(ordersArray) {
     const userId = await getUserId();
-    const vendorNames = ordersArray.map(o => o?.vendor).filter(Boolean);
-    const vendorMap = await resolveFKMap('vendors', 'name', userId, vendorNames);
-    const rows = ordersArray.map(o => ({
-      ...o,
-      user_id: userId,
-      vendor_id: vendorMap[o?.vendor] ?? null,
-    }));
+    // vendor_id FK: fix-security-perf-2026-04.sql V007-ext 적용 후 활성화
+    const rows = ordersArray.map(o => ({ ...o, user_id: userId }));
     const { error } = await supabase
       .from('purchase_orders')
       .upsert(rows, { onConflict: 'id' });
@@ -726,10 +706,7 @@ export const purchaseOrders = {
 
   async update(orderId, updates) {
     const userId = await getUserId();
-    if ('vendor' in updates) {
-      const vendorMap = await resolveFKMap('vendors', 'name', userId, [updates.vendor]);
-      updates = { ...updates, vendor_id: vendorMap[updates.vendor] ?? null };
-    }
+    // vendor_id FK: fix-security-perf-2026-04.sql V007-ext 적용 후 활성화
     const { data, error } = await supabase
       .from('purchase_orders')
       .update(updates)
