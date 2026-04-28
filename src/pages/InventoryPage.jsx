@@ -27,18 +27,18 @@ const ALL_FIELDS = [
   { key: 'unit',                 label: '단위',         numeric: false },
   { key: 'inQty',                label: '입고수량',     numeric: true  },
   { key: 'unitPrice',            label: '원가',         numeric: true  },
-  { key: 'supplyValue',          label: '공급가액',     numeric: true  },
+  { key: 'supplyValue',          label: '공가합계',     numeric: true  },
   { key: 'vat',                  label: '부가세',       numeric: true  },
   { key: 'totalPrice',           label: '합계금액',     numeric: true  },
   { key: 'salePrice',            label: '출고단가',     numeric: true  },
   { key: 'outQty',               label: '출고수량',     numeric: true  },
-  { key: 'outTotalPrice',        label: '출고금액',     numeric: true  },
+  { key: 'outTotalPrice',        label: '출고합계',     numeric: true  },
   { key: 'purchaseCost',         label: '매입원가',     numeric: true  },
   { key: 'profit',               label: '이익액',       numeric: true  },
   { key: 'profitMargin',         label: '이익률',       numeric: false },
-  { key: 'cogsMargin',           label: '매출원가율',   numeric: false },
+  { key: 'cogsMargin',           label: '원가율',       numeric: false },
   { key: 'quantity',             label: '기말재고수량', numeric: true  },
-  { key: 'endingInventoryValue', label: '기말재고',     numeric: true  },
+  { key: 'endingInventoryValue', label: '기말재고액',   numeric: true  },
   { key: 'warehouse',            label: '창고/위치',    numeric: false },
   { key: 'expiryDate',           label: '유통기한',     numeric: false },
   { key: 'lotNumber',            label: 'LOT번호',      numeric: false },
@@ -46,9 +46,8 @@ const ALL_FIELDS = [
 ];
 
 const ALWAYS_VISIBLE = [
-  'category','inDate','itemCode','vendor','itemName','spec','unit',
-  'inQty','unitPrice','supplyValue','vat','totalPrice','salePrice',
-  'outQty','outTotalPrice','purchaseCost','profit','profitMargin',
+  'category','itemCode','itemName','spec','unit',
+  'outTotalPrice','supplyValue','profit','profitMargin',
   'cogsMargin','quantity','endingInventoryValue',
 ];
 
