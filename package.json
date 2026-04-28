@@ -8,9 +8,13 @@
     "dev:local": "vite --host 127.0.0.1 --port 4173",
     "build": "vite build",
     "preview": "vite preview",
-    "preview:local": "vite preview --host 127.0.0.1 --port 4173"
+    "preview:local": "vite preview --host 127.0.0.1 --port 4173",
+    "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "typescript": "^6.0.3",
     "vite": "^8.0.1"
   },
   "dependencies": {
