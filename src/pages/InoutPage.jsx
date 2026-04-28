@@ -485,15 +485,19 @@ function BulkUploadModal({ items, modeDefault, onClose, onSuccess }) {
             onDragOver={e => e.preventDefault()}
             onClick={() => fileInputRef.current?.click()}
             style={{
-              border: '2px dashed var(--border-color)',
+              border: '2px solid var(--accent)',
               borderRadius: '8px',
               padding: '32px',
               textAlign: 'center',
               cursor: 'pointer',
+              background: 'var(--accent-light)',
+              transition: 'background 0.15s',
             }}
+            onMouseEnter={e => e.currentTarget.style.background = 'rgba(37,99,235,0.10)'}
+            onMouseLeave={e => e.currentTarget.style.background = 'var(--accent-light)'}
           >
             <div style={{ fontSize: '28px', marginBottom: '8px' }}>📁</div>
-            <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>엑셀 파일을 끌어오거나 클릭해서 선택해 주세요</div>
+            <div style={{ fontSize: '13px', color: 'var(--accent)', fontWeight: 600 }}>엑셀 파일을 끌어오거나 클릭해서 선택해 주세요</div>
             <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>지원 형식: .xlsx, .xls</div>
             <input ref={fileInputRef} type="file" accept=".xlsx,.xls" style={{ display: 'none' }} onChange={handleFileChange} />
           </div>
