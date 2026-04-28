@@ -86,7 +86,7 @@ function formatCell(key, value) {
   if (MONEY_KEYS.has(key)) {
     const n = toNum(value);
     if (!isNaN(n)) {
-      const color = key === 'profit' ? (n > 0 ? 'var(--success)' : n < 0 ? 'var(--danger)' : '') : '';
+      const color = '';
       const text = '₩' + Math.round(n).toLocaleString('ko-KR');
       return color ? <span style={{ color }}>{text}</span> : text;
     }
