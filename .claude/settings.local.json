@@ -76,7 +76,13 @@
       "Bash(git -C \"C:\\\\Users\\\\admin\\\\Documents\\\\GitHub\\\\invex\" merge claude/naughty-leavitt-118108 --no-ff -m \"Merge worktree branch: DB 보안·성능 패치 + 신규 테이블 4개\")",
       "Bash(git -C \"C:\\\\Users\\\\admin\\\\Documents\\\\GitHub\\\\invex\" push origin master)",
       "Bash(git -C \"C:\\\\Users\\\\admin\\\\Documents\\\\GitHub\\\\invex\\\\.claude\\\\worktrees\\\\naughty-leavitt-118108\" pull)",
-      "Bash(git -C \"C:\\\\Users\\\\admin\\\\Documents\\\\GitHub\\\\invex\\\\.claude\\\\worktrees\\\\naughty-leavitt-118108\" add .claude/settings.local.json _workspace/)"
+      "Bash(git -C \"C:\\\\Users\\\\admin\\\\Documents\\\\GitHub\\\\invex\\\\.claude\\\\worktrees\\\\naughty-leavitt-118108\" add .claude/settings.local.json _workspace/)",
+      "Bash(git -C \"C:\\\\Users\\\\admin\\\\Documents\\\\GitHub\\\\invex\" merge claude/naughty-leavitt-118108 --no-ff -m \"Merge worktree branch: DB 설계 리뷰 산출물 + settings 권한\")",
+      "Bash(grep -v \"출고단가\\\\|매입단가\\\\|판매단가\\\\|//\")",
+      "Bash(awk '{print $5, $9}')",
+      "Bash(sort -t'/' -k3)",
+      "Bash(grep -r \"from.*router'\" src/ --include=\"*.jsx\" --include=\"*.tsx\" --include=\"*.js\" -l)",
+      "Bash(grep -r \"import.*router\\\\.js\" src/ -l)"
     ]
   }
 }
