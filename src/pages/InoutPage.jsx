@@ -1048,10 +1048,11 @@ export function InoutPage({ mode = 'all' }) {
           <div className="page-desc">{pageDesc}</div>
         </div>
         <div className="page-actions">
-          <button className="btn btn-outline" onClick={handleExport}>📊 이력 내보내기</button>
+          <button className="btn btn-ghost btn-sm" onClick={handleExport}>📊 내보내기</button>
           {canBulk && (
-            <button className="btn btn-outline" onClick={() => setModal({ type: 'bulk' })}>📂 엑셀 일괄 등록</button>
+            <button className="btn btn-ghost btn-sm" onClick={() => setModal({ type: 'bulk' })}>📂 일괄 등록</button>
           )}
+          {(canBulk || true) && <div style={{ width: '1px', height: '22px', background: 'var(--border)', margin: '0 2px', alignSelf: 'center' }} />}
           {!isOutMode && (
             <button
               className="btn btn-success"
@@ -1059,9 +1060,7 @@ export function InoutPage({ mode = 'all' }) {
                 if (!canCreate) { showToast('등록 권한이 없습니다. 직원 이상만 가능합니다.', 'warning'); return; }
                 setModal({ type: 'add', txType: 'in' });
               }}
-            >
-              + 입고 등록
-            </button>
+            >+ 입고 등록</button>
           )}
           {!isInMode && (
             <button
@@ -1070,9 +1069,7 @@ export function InoutPage({ mode = 'all' }) {
                 if (!canCreate) { showToast('등록 권한이 없습니다. 직원 이상만 가능합니다.', 'warning'); return; }
                 setModal({ type: 'add', txType: 'out' });
               }}
-            >
-              + 출고 등록
-            </button>
+            >+ 출고 등록</button>
           )}
         </div>
       </div>
@@ -1097,103 +1094,82 @@ export function InoutPage({ mode = 'all' }) {
         </div>
       </div>
 
-      {/* 빠른 필터 칩 */}
-      <div className="scan-mode-bar" style={{ marginBottom: '12px' }}>
-        {quickChips.map(chip => (
-          <button
-            key={chip.value}
-            className={`scan-mode-btn${quick === chip.value ? ' active' : ''}`}
-            onClick={() => handleQuickChange(chip.value)}
-          >
-            {chip.label}
-          </button>
-        ))}
-      </div>
-
-      {/* 검색 툴바 */}
-      <div className="toolbar">
-        <input
-          type="text"
-          className="search-input"
-          placeholder="품목명, 코드, 거래처 검색..."
-          value={keyword}
-          onChange={e => { setKeyword(e.target.value); setPage(1); }}
-        />
-        {!isInMode && !isOutMode && (
-          <select
-            className="filter-select"
-            value={typeFilter}
-            onChange={e => { setTypeFilter(e.target.value); setPage(1); }}
-          >
-            <option value="">전체</option>
-            <option value="in">입고만</option>
-            <option value="out">출고만</option>
+      {/* 통합 필터 영역 */}
+      <div className="card" style={{ padding: '12px 16px', marginBottom: '12px' }}>
+        {/* 검색 + 필터 컨트롤 */}
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center', marginBottom: '10px' }}>
+          <input
+            type="text"
+            className="search-input"
+            style={{ flex: '1 1 180px', minWidth: 0 }}
+            placeholder="품목명, 코드, 거래처 검색..."
+            value={keyword}
+            onChange={e => { setKeyword(e.target.value); setPage(1); }}
+          />
+          {!isInMode && !isOutMode && (
+            <select className="filter-select" style={{ flex: '0 0 auto' }} value={typeFilter} onChange={e => { setTypeFilter(e.target.value); setPage(1); }}>
+              <option value="">전체</option>
+              <option value="in">입고만</option>
+              <option value="out">출고만</option>
+            </select>
+          )}
+          <select className="filter-select" style={{ flex: '0 0 auto' }} value={vendorFilter} onChange={e => { setVendorFilter(e.target.value); setPage(1); }}>
+            <option value="">전체 거래처</option>
+            {vendorOptions.map(v => <option key={v} value={v}>{v}</option>)}
           </select>
-        )}
-        <select
-          className="filter-select"
-          value={vendorFilter}
-          onChange={e => { setVendorFilter(e.target.value); setPage(1); }}
-        >
-          <option value="">전체 거래처</option>
-          {vendorOptions.map(v => <option key={v} value={v}>{v}</option>)}
-        </select>
-        <input
-          type="date"
-          className="filter-select"
-          style={{ padding: '7px 10px' }}
-          value={dateFilter}
-          onChange={e => { setDateFilter(e.target.value); setPage(1); }}
-        />
-        <select
-          className="filter-select"
-          value={`${sort.key}:${sort.dir}`}
-          onChange={e => {
-            const [key, dir] = e.target.value.split(':');
-            setSort({ key, dir }); setPage(1);
-          }}
-        >
-          <option value="date:desc">최신 날짜 순</option>
-          <option value="date:asc">오래된 날짜 순</option>
-          <option value="quantity:desc">수량 많은 순</option>
-          <option value="quantity:asc">수량 적은 순</option>
-          <option value="itemName:asc">품목명 가나다순</option>
-          <option value="vendor:asc">거래처 가나다순</option>
-        </select>
-        <button className="btn btn-ghost btn-sm" onClick={handleReset}>초기화</button>
-      </div>
-
-      {/* 필터 요약 */}
-      <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '8px', padding: '0 4px' }}>
-        표시 {sorted.length}건 / 전체 {transactions.length}건
-      </div>
-
-      {/* 품목 없음 경고 */}
-      {mappedData.length === 0 && (
-        <div className="alert alert-warning" style={{ marginBottom: '12px' }}>
-          등록된 품목이 없습니다. 먼저 재고 현황에서 품목을 등록하거나 파일을 업로드해 주세요.
+          <input type="date" className="filter-select" style={{ padding: '7px 10px', flex: '0 0 auto' }} value={dateFilter} onChange={e => { setDateFilter(e.target.value); setPage(1); }} />
+          <select className="filter-select" style={{ flex: '0 0 auto' }} value={`${sort.key}:${sort.dir}`} onChange={e => { const [key, dir] = e.target.value.split(':'); setSort({ key, dir }); setPage(1); }}>
+            <option value="date:desc">최신 날짜 순</option>
+            <option value="date:asc">오래된 날짜 순</option>
+            <option value="quantity:desc">수량 많은 순</option>
+            <option value="quantity:asc">수량 적은 순</option>
+            <option value="itemName:asc">품목명 가나다순</option>
+            <option value="vendor:asc">거래처 가나다순</option>
+          </select>
+          <button className="btn btn-ghost btn-sm" onClick={handleReset} style={{ flex: '0 0 auto' }}>초기화</button>
         </div>
-      )}
+        {/* 빠른 필터 + 건수 */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+          <span style={{ fontSize: '12px', color: 'var(--text-muted)', flexShrink: 0 }}>빠른 필터</span>
+          <div style={{ width: '1px', height: '14px', background: 'var(--border)', flexShrink: 0 }} />
+          {quickChips.map(chip => (
+            <button
+              key={chip.value}
+              className={`scan-mode-btn${quick === chip.value ? ' active' : ''}`}
+              style={{ padding: '3px 10px', fontSize: '12px' }}
+              onClick={() => handleQuickChange(chip.value)}
+            >{chip.label}</button>
+          ))}
+          <span style={{ marginLeft: 'auto', fontSize: '12px', color: 'var(--text-muted)', flexShrink: 0 }}>
+            {sorted.length.toLocaleString()}건 표시 · 전체 {transactions.length.toLocaleString()}건
+          </span>
+        </div>
+        {mappedData.length === 0 && (
+          <div style={{ marginTop: '10px', padding: '9px 12px', background: 'rgba(234,179,8,0.08)', border: '1px solid rgba(234,179,8,0.25)', borderRadius: '7px', fontSize: '13px', color: 'var(--text-muted)' }}>
+            등록된 품목이 없습니다. 재고 현황에서 품목을 등록하거나 파일을 업로드해 주세요.
+          </div>
+        )}
+      </div>
 
       {/* 테이블 */}
       <div className="card card-flush">
-        {/* 선택 액션 바 */}
-        <div style={{
-          padding: '10px 16px', display: 'flex', justifyContent: 'space-between',
-          alignItems: 'center', borderBottom: '1px solid var(--border-color)',
-          background: 'var(--bg-lighter)',
-        }}>
-          <div style={{ fontSize: '13px', fontWeight: 600 }}>선택 {selectedIds.size}건</div>
-          {canBulk && (
-            <button
-              className="btn btn-danger btn-sm"
-              disabled={selectedIds.size === 0}
-              onClick={handleBulkDelete}
-            >
-              선택 삭제
-            </button>
-          )}
-        </div>
+        {/* 선택 액션 바: 선택한 항목이 있을 때만 표시 */}
+        {selectedIds.size > 0 && (
+          <div style={{
+            padding: '8px 16px', display: 'flex', justifyContent: 'space-between',
+            alignItems: 'center', borderBottom: '1px solid var(--border)',
+            background: 'rgba(37,99,235,0.06)',
+          }}>
+            <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--accent)' }}>
+              {selectedIds.size}건 선택됨
+            </div>
+            {canBulk && (
+              <button className="btn btn-danger btn-sm" onClick={handleBulkDelete}>
+                선택 삭제
+              </button>
+            )}
+          </div>
+        )}
 
         {sorted.length === 0 ? (
           <EmptyState
