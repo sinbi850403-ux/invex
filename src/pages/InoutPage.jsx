@@ -591,9 +591,19 @@ export function InoutPage({ mode = 'all' }) {
   const [typeFilter, setTypeFilter] = useState(isInMode ? 'in' : isOutMode ? 'out' : '');
   const [vendorFilter, setVendorFilter] = useState('');
   const [dateFilter, setDateFilter] = useState('');
+  const [monthFilter, setMonthFilter] = useState('');
   const [quick, setQuick] = useState(initialQuick);
   const [sort, setSort] = useState({ key: 'date', dir: 'desc' });
   const [page, setPage] = useState(1);
+
+  // 대시보드 차트 드릴다운: sessionStorage에서 월 필터 읽기
+  useEffect(() => {
+    const m = sessionStorage.getItem('invex:inout-filter-month');
+    if (m) {
+      sessionStorage.removeItem('invex:inout-filter-month');
+      setMonthFilter(m);
+    }
+  }, []);
 
   // 모달
   const [modal, setModal] = useState(null); // null | { type: 'add', txType: 'in'|'out' } | { type: 'bulk' }
@@ -697,6 +707,7 @@ export function InoutPage({ mode = 'all' }) {
       )) return false;
       if (typeFilter && tx.type !== typeFilter) return false;
       if (dateFilter && tx.date !== dateFilter) return false;
+      if (monthFilter && !String(tx.date || '').startsWith(monthFilter)) return false;
       if (vendorFilter && tx.vendor !== vendorFilter) return false;
       if (quick === 'today' && tx.date !== today) return false;
       if (quick === 'in' && tx.type !== 'in') return false;
@@ -705,7 +716,7 @@ export function InoutPage({ mode = 'all' }) {
       if (quick === 'recent3' && String(tx.date || '') < threeDaysAgo) return false;
       return true;
     });
-  }, [transactions, keyword, typeFilter, dateFilter, vendorFilter, quick, today, threeDaysAgo]);
+  }, [transactions, keyword, typeFilter, dateFilter, monthFilter, vendorFilter, quick, today, threeDaysAgo]);
 
   const sorted = useMemo(() => {
     const dir = sort.dir === 'asc' ? 1 : -1;
@@ -1088,6 +1099,20 @@ export function InoutPage({ mode = 'all' }) {
           </button>
         ))}
       </div>
+
+      {/* 월 필터 칩 (대시보드 드릴다운 시 표시) */}
+      {monthFilter && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0' }}>
+          <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>필터 적용 중:</span>
+          <span className="badge badge-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            📅 {monthFilter}
+            <button
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', padding: 0, lineHeight: 1 }}
+              onClick={() => { setMonthFilter(''); setPage(1); }}
+            >✕</button>
+          </span>
+        </div>
+      )}
 
       {/* 검색 툴바 */}
       <div className="toolbar">

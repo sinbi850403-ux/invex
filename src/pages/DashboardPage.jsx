@@ -1,12 +1,44 @@
 /**
  * DashboardPage.jsx - 고급 분석 (ABC 분석, 회전율, 월별 추이, 유통기한 임박)
  */
-import React, { useMemo, useState, useEffect, useRef } from 'react';
+import React, { useMemo, useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '../hooks/useStore.js';
 import { showToast } from '../toast.js';
 import { downloadExcel } from '../excel.js';
 import { renderMonthlyChart, destroyAllCharts } from '../charts.js';
+
+function Sparkline({ data, color = '#3b82f6', height = 28, width = 80 }) {
+  if (!data || data.length < 2) return null;
+  const max = Math.max(...data) || 1;
+  const pts = data.map((v, i) => {
+    const x = (i / (data.length - 1)) * width;
+    const y = height - (v / max) * (height - 4) - 2;
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  }).join(' ');
+  return (
+    <svg width={width} height={height} style={{ display: 'block', opacity: 0.75 }}>
+      <polyline points={pts} fill="none" stroke={color} strokeWidth="1.5" strokeLinejoin="round" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function KpiFooter({ trend, sparkData, sparkColor }) {
+  const up = trend > 0;
+  const down = trend < 0;
+  const trendColor = up ? 'var(--success)' : down ? 'var(--danger)' : 'var(--text-muted)';
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 8 }}>
+      <span style={{ fontSize: 11, color: trendColor }}>
+        {trend != null
+          ? <>{up ? '▲' : down ? '▼' : '–'} {Math.abs(trend)}% 전월 대비</>
+          : <span style={{ color: 'var(--text-muted)' }}>– 전월 데이터 없음</span>
+        }
+      </span>
+      <Sparkline data={sparkData} color={sparkColor || (up ? '#22c55e' : down ? '#ef4444' : '#94a3b8')} />
+    </div>
+  );
+}
 
 function calcABCAnalysis(items) {
   const sorted = items
@@ -50,10 +82,10 @@ function calcTurnoverRate(items, transactions) {
   }).sort((a, b) => b.turnover - a.turnover);
 }
 
-function calcMonthlyTrend(transactions, weeks = 0) {
+function calcMonthlyTrend(transactions, days = 0) {
   if (!transactions.length) return [];
-  const cutoff = weeks > 0
-    ? (() => { const d = new Date(); d.setDate(d.getDate() - weeks * 7); return d.toISOString().split('T')[0]; })()
+  const cutoff = days > 0
+    ? (() => { const d = new Date(); d.setDate(d.getDate() - days); return d.toISOString().split('T')[0]; })()
     : null;
   const monthMap = {};
   transactions.forEach(tx => {
@@ -66,6 +98,34 @@ function calcMonthlyTrend(transactions, weeks = 0) {
     else monthMap[month].outQty += qty;
   });
   return Object.values(monthMap).sort((a, b) => a.month.localeCompare(b.month));
+}
+
+function calcKPITrends(transactions) {
+  const now = new Date();
+  const months = [];
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    months.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
+  }
+  const stats = {};
+  months.forEach(m => { stats[m] = { outAmt: 0, outQty: 0 }; });
+  transactions.forEach(tx => {
+    const m = (tx.date || '').substring(0, 7);
+    if (!stats[m] || tx.type !== 'out') return;
+    const qty = parseFloat(tx.quantity) || 0;
+    const sp = parseFloat(tx.sellingPrice) || 0;
+    stats[m].outAmt += Math.round(sp * qty);
+    stats[m].outQty += qty;
+  });
+  const thisM = months[5];
+  const prevM = months[4];
+  const calcTrend = (curr, prev) => prev > 0 ? Math.round((curr - prev) / prev * 100) : null;
+  return {
+    outAmts: months.map(m => stats[m].outAmt),
+    outQtys: months.map(m => stats[m].outQty),
+    outAmtTrend: calcTrend(stats[thisM].outAmt, stats[prevM].outAmt),
+    outQtyTrend: calcTrend(stats[thisM].outQty, stats[prevM].outQty),
+  };
 }
 
 function getExpiryAlerts(items) {
@@ -81,28 +141,40 @@ function getExpiryAlerts(items) {
     .sort((a, b) => a.daysLeft - b.daysLeft);
 }
 
+const PERIOD_OPTS = [
+  { v: 7,   l: '7일' },
+  { v: 30,  l: '1달' },
+  { v: 90,  l: '3달' },
+  { v: 0,   l: '전체' },
+];
+
 export default function DashboardPage() {
   const [state] = useStore();
   const items = state.mappedData || [];
   const transactions = state.transactions || [];
   const navigate = useNavigate();
-  const [period, setPeriod] = useState(0); // 0=전체, 1=1주, 4=1달(4주), 12=3달(12주)
-  const monthChartRef = useRef(null);
+  const [period, setPeriod] = useState(0);
   const CHART_ID = 'dashboard-monthly-chart';
 
   const abcData      = useMemo(() => calcABCAnalysis(items), [items]);
   const turnoverData = useMemo(() => calcTurnoverRate(items, transactions), [items, transactions]);
   const monthlyTrend = useMemo(() => calcMonthlyTrend(transactions, period), [transactions, period]);
   const expiryAlerts = useMemo(() => getExpiryAlerts(items), [items]);
+  const kpiTrends    = useMemo(() => calcKPITrends(transactions), [transactions]);
+
+  const handleChartClick = useCallback((month) => {
+    sessionStorage.setItem('invex:inout-filter-month', month);
+    navigate('/out');
+  }, [navigate]);
 
   useEffect(() => {
     if (monthlyTrend.length === 0) return;
-    renderMonthlyChart(CHART_ID, monthlyTrend);
+    renderMonthlyChart(CHART_ID, monthlyTrend, handleChartClick);
     return () => { destroyAllCharts(); };
-  }, [monthlyTrend]);
+  }, [monthlyTrend, handleChartClick]);
 
-  const totalValue   = useMemo(() => items.reduce((s, r) => s + (parseFloat(r.totalPrice) || 0), 0), [items]);
-  const avgTurnover  = useMemo(() =>
+  const totalValue     = useMemo(() => items.reduce((s, r) => s + (parseFloat(r.totalPrice) || 0), 0), [items]);
+  const avgTurnover    = useMemo(() =>
     turnoverData.length > 0
       ? (turnoverData.reduce((s, t) => s + t.turnover, 0) / turnoverData.length).toFixed(1)
       : '0',
@@ -156,21 +228,32 @@ export default function DashboardPage() {
         <div className="stat-card">
           <div className="stat-label">총 재고 가치</div>
           <div className="stat-value text-accent">{totalValue > 0 ? '₩' + Math.round(totalValue).toLocaleString('ko-KR') : '-'}</div>
+          <KpiFooter trend={kpiTrends.outAmtTrend} sparkData={kpiTrends.outAmts} sparkColor="#3b82f6" />
         </div>
         <div className="stat-card">
           <div className="stat-label">평균 회전율</div>
           <div className="stat-value">{avgTurnover}회</div>
           <div className="stat-change">최근 30일 기준</div>
+          <KpiFooter trend={kpiTrends.outQtyTrend} sparkData={kpiTrends.outQtys} sparkColor="#8b5cf6" />
         </div>
         <div className="stat-card">
           <div className="stat-label">A등급 품목</div>
           <div className="stat-value text-success">{aCount}개</div>
-          <div className="stat-change">가치 상위 80% 차지</div>
+          <div className="stat-change">가치 상위 80% 차지 · B {bCount} / C {cCount}</div>
         </div>
         <div className="stat-card">
           <div className="stat-label">비활성 재고</div>
           <div className={`stat-value${deadStockCount > 0 ? ' text-danger' : ''}`}>{deadStockCount}개</div>
           <div className="stat-change">30일간 출고 없음</div>
+          {deadStockCount > 0 && (
+            <button
+              className="btn btn-sm btn-outline"
+              style={{ marginTop: 8, fontSize: 11, color: 'var(--danger)', borderColor: 'var(--danger)' }}
+              onClick={() => navigate('/auto-order')}
+            >
+              발주 바로가기 →
+            </button>
+          )}
         </div>
       </div>
 
@@ -276,9 +359,9 @@ export default function DashboardPage() {
       {monthlyTrend.length > 0 && (
         <div className="card">
           <div className="card-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span>월별 입출고 추이</span>
+            <span>월별 입출고 추이 <span style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 400 }}>막대 클릭 시 해당 월 출고 내역으로 이동</span></span>
             <div style={{ display: 'flex', gap: 4 }}>
-              {[{v:0,l:'전체'},{v:1,l:'1주'},{v:4,l:'1달'},{v:12,l:'3달'}].map(opt => (
+              {PERIOD_OPTS.map(opt => (
                 <button
                   key={opt.v}
                   className={`btn btn-sm ${period === opt.v ? 'btn-primary' : 'btn-ghost'}`}
@@ -289,7 +372,7 @@ export default function DashboardPage() {
               ))}
             </div>
           </div>
-          <div style={{ height: 260, position: 'relative' }}>
+          <div style={{ height: 260, position: 'relative', cursor: 'pointer' }}>
             <canvas id={CHART_ID} />
           </div>
         </div>
@@ -298,7 +381,10 @@ export default function DashboardPage() {
       {/* 유통기한 임박 */}
       {expiryAlerts.length > 0 && (
         <div className="card" style={{ borderLeft: '3px solid var(--warning)' }}>
-          <div className="card-title" style={{ color: 'var(--warning)' }}>유통기한 임박 품목 <span className="badge badge-warning">{expiryAlerts.length}건</span></div>
+          <div className="card-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ color: 'var(--warning)' }}>유통기한 임박 품목 <span className="badge badge-warning">{expiryAlerts.length}건</span></span>
+            <button className="btn btn-sm btn-outline" onClick={() => navigate('/auto-order')}>발주 바로가기 →</button>
+          </div>
           <div className="table-wrapper" style={{ border: 'none' }}>
             <table className="data-table">
               <thead>
