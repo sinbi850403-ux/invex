@@ -202,7 +202,7 @@ export default function LedgerPage() {
         '공급가액': supply, '부가세': vat, '합계금액': supply + vat,
         '출고수량': row.outQty, '출고금액': outAmt, '매입원가': purchase,
         '이익액': profit,
-        '이익률': purchase > 0 ? (profit / purchase * 100).toFixed(1) + '%' : '',
+        '이익률': outAmt > 0 ? (profit / outAmt * 100).toFixed(1) + '%' : '',
         '기말재고수량': row.closingQty, '기말재고': row.closingValue,
       };
     });

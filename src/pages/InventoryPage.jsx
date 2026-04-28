@@ -296,7 +296,7 @@ function ItemModal({ item, editIdx, onClose, onSaved }) {
   const qty      = parseFloat(form.quantity)  || 0;
   const up       = parseFloat(form.unitPrice) || 0;
   const sp       = parseFloat(form.salePrice) || 0;
-  const supply   = qty * up;
+  const supply   = Math.round(qty * up);
   const vat      = Math.ceil(supply * 0.1);
   const total    = supply + vat;
   const margin   = sp > 0 ? sp - up : null;
@@ -350,7 +350,7 @@ function ItemModal({ item, editIdx, onClose, onSaved }) {
     const prevSv    = parseFloat(prevItem.supplyValue) || 0;
     const prevVat   = parseFloat(prevItem.vat) || 0;
     const vatRate   = (isEdit && prevSv > 0 && prevVat / prevSv < 0.05) ? 0 : 0.1;
-    newItem.supplyValue = newItem.quantity * newItem.unitPrice;
+    newItem.supplyValue = Math.round(newItem.quantity * newItem.unitPrice);
     newItem.vat         = Math.ceil(newItem.supplyValue * vatRate);
     newItem.totalPrice  = newItem.supplyValue + newItem.vat;
 

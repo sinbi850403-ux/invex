@@ -101,7 +101,7 @@ function TxModal({ txType, items, vendors, onClose, onSave }) {
   const margin = useMemo(() => {
     const cost = parseFloat(form.unitPrice) || 0;
     const sell = parseFloat(form.sellingPrice) || 0;
-    if (cost > 0 && sell > 0) return ((sell - cost) / cost * 100).toFixed(1);
+    if (cost > 0 && sell > 0) return ((sell - cost) / sell * 100).toFixed(1);
     return null;
   }, [form.unitPrice, form.sellingPrice]);
 
@@ -1280,7 +1280,7 @@ export function InoutPage({ mode = 'all' }) {
                   // 출고모드 매입 그룹: 가중평균 원가 우선, 없으면 단가 사용
                   const wac = wacMap[tx.itemName] || unitPrice;
                   const wacSupply = Math.round(wac * qty);
-                  const wacVat = Math.ceil(wacSupply * 0.1);
+                  const wacVat = Math.floor(wacSupply * 0.1);
                   const wacTotal = wacSupply + wacVat;
                   const purchaseCost = wacSupply;
                   const profit = outAmt - purchaseCost;
