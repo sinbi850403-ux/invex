@@ -88,13 +88,13 @@ export default function MappingPage() {
   const dataRows = rawData.slice(1);
   const mapping = state.columnMapping || {};
 
-  // 자동 매핑 초기화 (mapping이 비어있을 때만)
+  // 자동 매핑 초기화 — headers 변경(시트 전환 포함) 시 재실행, mapping이 비어있을 때만 덮어씀
   useEffect(() => {
     if (Object.keys(mapping).length === 0 && headers.length > 0) {
-      const autoMapped = autoMap(headers);
-      setState({ columnMapping: autoMapped });
+      setState({ columnMapping: autoMap(headers) });
     }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [headers]); // eslint-disable-line react-hooks/exhaustive-deps
+  // mapping 은 의도적으로 제외: setState 후 mapping이 채워지면 guard가 막으므로 무한루프 없음
 
   const mappedColsSet = useMemo(() => new Set(Object.values(mapping)), [mapping]);
 
