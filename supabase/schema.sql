@@ -166,6 +166,11 @@ CREATE INDEX IF NOT EXISTS idx_tx_user ON transactions(user_id);
 CREATE INDEX IF NOT EXISTS idx_tx_date ON transactions(user_id, date DESC);
 CREATE INDEX IF NOT EXISTS idx_tx_item ON transactions(user_id, item_name);
 
+-- DATE 타입 컬럼 추가 (date TEXT 하위 호환 유지 — 앱 전환 후 date 컬럼 삭제 예정)
+ALTER TABLE transactions ADD COLUMN IF NOT EXISTS txn_date DATE;
+UPDATE transactions SET txn_date = date::DATE WHERE txn_date IS NULL AND date ~ '^\d{4}-\d{2}-\d{2}$';
+CREATE INDEX IF NOT EXISTS idx_tx_txn_date ON transactions(user_id, txn_date DESC);
+
 -- ============================================================
 -- 4. 거래처 마스터
 -- ============================================================
@@ -243,6 +248,7 @@ CREATE TABLE IF NOT EXISTS account_entries (
   user_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
   type TEXT CHECK (type IN ('receivable', 'payable')),
   vendor TEXT,
+  vendor_id UUID REFERENCES vendors(id) ON DELETE SET NULL,
   description TEXT,
   amount NUMERIC DEFAULT 0,
   due_date TEXT,
@@ -253,7 +259,9 @@ CREATE TABLE IF NOT EXISTS account_entries (
   updated_at TIMESTAMPTZ DEFAULT now()
 );
 
+ALTER TABLE account_entries ADD COLUMN IF NOT EXISTS vendor_id UUID REFERENCES vendors(id) ON DELETE SET NULL;
 CREATE INDEX IF NOT EXISTS idx_accounts_user ON account_entries(user_id);
+CREATE INDEX IF NOT EXISTS idx_accounts_vendor_id ON account_entries(vendor_id) WHERE vendor_id IS NOT NULL;
 
 -- ============================================================
 -- 9. 발주서
@@ -262,6 +270,7 @@ CREATE TABLE IF NOT EXISTS purchase_orders (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
   vendor TEXT,
+  vendor_id UUID REFERENCES vendors(id) ON DELETE SET NULL,
   status TEXT DEFAULT 'draft',
   items JSONB DEFAULT '[]',
   total_amount NUMERIC DEFAULT 0,
@@ -397,9 +406,40 @@ END; $$;
 GRANT EXECUTE ON FUNCTION get_profile_by_email(TEXT) TO authenticated;
 
 -- ============================================================
+-- 14-2. 발주서 vendor_id 백필 (구매처 텍스트 → FK 연결)
+-- ============================================================
+ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS vendor_id UUID REFERENCES vendors(id) ON DELETE SET NULL;
+CREATE INDEX IF NOT EXISTS idx_po_vendor_id ON purchase_orders(vendor_id) WHERE vendor_id IS NOT NULL;
+UPDATE purchase_orders po
+   SET vendor_id = v.id
+  FROM vendors v
+ WHERE v.user_id = po.user_id AND v.name = po.vendor AND po.vendor_id IS NULL;
+
+UPDATE account_entries ae
+   SET vendor_id = v.id
+  FROM vendors v
+ WHERE v.user_id = ae.user_id AND v.name = ae.vendor AND ae.vendor_id IS NULL;
+
+-- ============================================================
 -- 15. 인사·급여·근태 모듈 (HR)
 -- 왜 모듈 단위로 묶음? → 재고와 독립적으로 관리/권한/배포 가능
 -- ============================================================
+
+-- 15-0. 부서 마스터 (employees.department_id 참조)
+CREATE TABLE IF NOT EXISTS departments (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  parent_id UUID REFERENCES departments(id) ON DELETE SET NULL,
+  manager TEXT,
+  sort_order INTEGER DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  UNIQUE(user_id, name)
+);
+
+ALTER TABLE departments ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "departments_all" ON departments FOR ALL USING (auth.uid() = user_id);
+CREATE INDEX IF NOT EXISTS idx_departments_user ON departments(user_id);
 
 -- pgcrypto 확장 (주민번호 AES 암호화용)
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
@@ -411,6 +451,7 @@ CREATE TABLE IF NOT EXISTS employees (
   emp_no TEXT NOT NULL,                           -- 사번
   name TEXT NOT NULL,
   dept TEXT,
+  department_id UUID REFERENCES departments(id) ON DELETE SET NULL,
   position TEXT,
   hire_date DATE NOT NULL,
   resign_date DATE,
@@ -436,9 +477,11 @@ CREATE TABLE IF NOT EXISTS employees (
   UNIQUE(user_id, emp_no)
 );
 
+ALTER TABLE employees ADD COLUMN IF NOT EXISTS department_id UUID REFERENCES departments(id) ON DELETE SET NULL;
 CREATE INDEX IF NOT EXISTS idx_emp_user ON employees(user_id);
 CREATE INDEX IF NOT EXISTS idx_emp_dept ON employees(user_id, dept);
 CREATE INDEX IF NOT EXISTS idx_emp_status ON employees(user_id, status);
+CREATE INDEX IF NOT EXISTS idx_emp_department ON employees(department_id) WHERE department_id IS NOT NULL;
 
 -- 15-2. 일별 근태
 CREATE TABLE IF NOT EXISTS attendance (
@@ -487,7 +530,7 @@ CREATE TABLE IF NOT EXISTS payrolls (
   net NUMERIC(12,0) DEFAULT 0,                    -- 실지급액
   status TEXT DEFAULT '초안',                       -- 초안/확정/지급
   paid_at TIMESTAMPTZ,
-  confirmed_by UUID,
+  confirmed_by UUID REFERENCES profiles(id) ON DELETE SET NULL,
   confirmed_at TIMESTAMPTZ,
   issue_no TEXT,                                   -- 전자급여명세서 발급번호
   memo TEXT,
@@ -511,7 +554,7 @@ CREATE TABLE IF NOT EXISTS leaves (
   days NUMERIC(4,1) DEFAULT 1,
   reason TEXT,
   status TEXT DEFAULT '신청',                       -- 신청/승인/반려
-  approved_by UUID,
+  approved_by UUID REFERENCES profiles(id) ON DELETE SET NULL,
   approved_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ DEFAULT now()
 );
@@ -834,6 +877,25 @@ CREATE TABLE IF NOT EXISTS warehouses (
 ALTER TABLE warehouses ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "warehouses_all" ON warehouses FOR ALL USING (auth.uid() = user_id);
 CREATE INDEX IF NOT EXISTS idx_warehouses_user ON warehouses(user_id);
+
+-- 품목 창고 FK (warehouses 테이블 이후에 추가 — 순환 참조 방지)
+ALTER TABLE items ADD COLUMN IF NOT EXISTS warehouse_id UUID REFERENCES warehouses(id) ON DELETE SET NULL;
+CREATE INDEX IF NOT EXISTS idx_items_warehouse_id ON items(user_id, warehouse_id) WHERE warehouse_id IS NOT NULL;
+-- 백필: items.warehouse 텍스트 → warehouses.id FK
+UPDATE items i SET warehouse_id = w.id FROM warehouses w WHERE w.user_id = i.user_id AND w.name = i.warehouse AND i.warehouse_id IS NULL;
+
+-- FK 제약 추가 (기존 DB — confirmed_by / approved_by)
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'payrolls_confirmed_by_fkey') THEN
+    ALTER TABLE payrolls ADD CONSTRAINT payrolls_confirmed_by_fkey
+      FOREIGN KEY (confirmed_by) REFERENCES profiles(id) ON DELETE SET NULL;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'leaves_approved_by_fkey') THEN
+    ALTER TABLE leaves ADD CONSTRAINT leaves_approved_by_fkey
+      FOREIGN KEY (approved_by) REFERENCES profiles(id) ON DELETE SET NULL;
+  END IF;
+END $$;
 
 -- ============================================================
 -- 19. 발주서 라인 아이템 (purchase_orders.items JSONB 정규화)

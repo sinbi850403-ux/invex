@@ -366,6 +366,82 @@ CREATE TRIGGER trg_audit_profile_role AFTER UPDATE ON profiles
   FOR EACH ROW EXECUTE FUNCTION audit_profile_role_change();
 
 -- ============================================================
+-- V004: transactions.txn_date DATE 컬럼 추가 (date TEXT 하위 호환)
+-- ============================================================
+ALTER TABLE transactions ADD COLUMN IF NOT EXISTS txn_date DATE;
+UPDATE transactions
+   SET txn_date = date::DATE
+ WHERE txn_date IS NULL AND date ~ '^\d{4}-\d{2}-\d{2}$';
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_tx_txn_date
+  ON transactions(user_id, txn_date DESC);
+
+-- ============================================================
+-- V007-ext: account_entries / purchase_orders vendor_id FK 추가
+-- ============================================================
+ALTER TABLE account_entries ADD COLUMN IF NOT EXISTS vendor_id UUID REFERENCES vendors(id) ON DELETE SET NULL;
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_accounts_vendor_id
+  ON account_entries(vendor_id) WHERE vendor_id IS NOT NULL;
+UPDATE account_entries ae
+   SET vendor_id = v.id
+  FROM vendors v
+ WHERE v.user_id = ae.user_id AND v.name = ae.vendor AND ae.vendor_id IS NULL;
+
+ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS vendor_id UUID REFERENCES vendors(id) ON DELETE SET NULL;
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_po_vendor_id
+  ON purchase_orders(vendor_id) WHERE vendor_id IS NOT NULL;
+UPDATE purchase_orders po
+   SET vendor_id = v.id
+  FROM vendors v
+ WHERE v.user_id = po.user_id AND v.name = po.vendor AND po.vendor_id IS NULL;
+
+-- ============================================================
+-- V008-ext: items.warehouse_id FK 추가 (warehouses 생성 후)
+-- ============================================================
+ALTER TABLE items ADD COLUMN IF NOT EXISTS warehouse_id UUID REFERENCES warehouses(id) ON DELETE SET NULL;
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_items_warehouse_id
+  ON items(user_id, warehouse_id) WHERE warehouse_id IS NOT NULL;
+UPDATE items i
+   SET warehouse_id = w.id
+  FROM warehouses w
+ WHERE w.user_id = i.user_id AND w.name = i.warehouse AND i.warehouse_id IS NULL;
+
+-- ============================================================
+-- V009: 부서 마스터 + employees.department_id FK
+-- ============================================================
+CREATE TABLE IF NOT EXISTS departments (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  parent_id UUID REFERENCES departments(id) ON DELETE SET NULL,
+  manager TEXT,
+  sort_order INTEGER DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  UNIQUE(user_id, name)
+);
+ALTER TABLE departments ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "departments_all" ON departments FOR ALL USING (auth.uid() = user_id);
+CREATE INDEX IF NOT EXISTS idx_departments_user ON departments(user_id);
+
+ALTER TABLE employees ADD COLUMN IF NOT EXISTS department_id UUID REFERENCES departments(id) ON DELETE SET NULL;
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_emp_department
+  ON employees(department_id) WHERE department_id IS NOT NULL;
+
+-- ============================================================
+-- V010: payrolls.confirmed_by / leaves.approved_by FK 제약 추가
+-- ============================================================
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'payrolls_confirmed_by_fkey') THEN
+    ALTER TABLE payrolls ADD CONSTRAINT payrolls_confirmed_by_fkey
+      FOREIGN KEY (confirmed_by) REFERENCES profiles(id) ON DELETE SET NULL;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'leaves_approved_by_fkey') THEN
+    ALTER TABLE leaves ADD CONSTRAINT leaves_approved_by_fkey
+      FOREIGN KEY (approved_by) REFERENCES profiles(id) ON DELETE SET NULL;
+  END IF;
+END $$;
+
+-- ============================================================
 -- 완료 확인 쿼리
 -- ============================================================
 -- SELECT 'profiles_select_for_invite' AS check, COUNT(*) = 0 AS ok
@@ -375,3 +451,7 @@ CREATE TRIGGER trg_audit_profile_role AFTER UPDATE ON profiles
 -- SELECT 'purchase_order_items' AS check, to_regclass('public.purchase_order_items') IS NOT NULL AS ok;
 -- SELECT 'stocktake_items' AS check, to_regclass('public.stocktake_items') IS NOT NULL AS ok;
 -- SELECT 'audit_trigger_payroll' AS check, EXISTS(SELECT 1 FROM pg_trigger WHERE tgname = 'trg_audit_payroll') AS ok;
+-- SELECT 'txn_date' AS check, EXISTS(SELECT 1 FROM information_schema.columns WHERE table_name='transactions' AND column_name='txn_date') AS ok;
+-- SELECT 'departments' AS check, to_regclass('public.departments') IS NOT NULL AS ok;
+-- SELECT 'account_entries.vendor_id' AS check, EXISTS(SELECT 1 FROM information_schema.columns WHERE table_name='account_entries' AND column_name='vendor_id') AS ok;
+-- SELECT 'items.warehouse_id' AS check, EXISTS(SELECT 1 FROM information_schema.columns WHERE table_name='items' AND column_name='warehouse_id') AS ok;
