@@ -1,212 +1,46 @@
-/**
- * HomePage.jsx - 홈 대시보드
- */
 import React, { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '../hooks/useStore.js';
 import { restoreState } from '../store.js';
 import { getNotifications, renderNotificationPanel } from '../notifications.js';
 import { renderWeeklyTrendChart, renderCategoryChart, destroyAllCharts } from '../charts.js';
+import {
+  PERIOD_OPTS, WIDGET_DEFS, DEFAULT_MAIN_ORDER, ROLE_CONFIG,
+  loadLS, saveLS, exportCSV, getPeriodData, computeHomeDashboard,
+  toNumber, formatCurrency, getItemSupplyValue,
+} from '../domain/homeCompute.js';
+import { Sparkline }   from '../components/home/Sparkline.jsx';
+import { TrendBadge }  from '../components/home/TrendBadge.jsx';
 
-const CHART_WEEKLY_ID = 'home-chart-weekly';
+const CHART_WEEKLY_ID   = 'home-chart-weekly';
 const CHART_CATEGORY_ID = 'home-chart-category';
-
-const PERIOD_OPTS = [
-  { v: 7,  l: '7일' },
-  { v: 30, l: '1달' },
-  { v: 90, l: '3달' },
-  { v: 0,  l: '전체' },
-];
-
-// 드래그 가능한 메인 위젯 목록
-const WIDGET_DEFS = [
-  { id: 'recent',   label: '최근 입출고 이력' },
-  { id: 'chart',    label: '입출고 흐름 차트' },
-  { id: 'category', label: '분류별 재고 비중' },
-];
-
-const DEFAULT_MAIN_ORDER = ['recent', 'chart', 'category'];
-
-function loadLS(key, fallback) {
-  try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; }
-  catch { return fallback; }
-}
-function saveLS(key, value) {
-  try { localStorage.setItem(key, JSON.stringify(value)); } catch {}
-}
-
-function toNumber(value) {
-  if (value === null || value === undefined || value === '') return 0;
-  const n = parseFloat(String(value).replace(/,/g, ''));
-  return isNaN(n) ? 0 : n;
-}
-function sumBy(rows, fn) { return rows.reduce((s, r) => s + fn(r), 0); }
-function toDateKey(value) { return new Date(value).toISOString().split('T')[0]; }
-function addDays(base, delta) { const d = new Date(base); d.setDate(d.getDate() + delta); return d; }
-function formatCurrency(value) {
-  const n = toNumber(value);
-  if (n <= 0) return '-';
-  return `₩${Math.round(n).toLocaleString('ko-KR')}`;
-}
-function getItemSupplyValue(item) {
-  const supplyValue = toNumber(item.supplyValue);
-  if (supplyValue > 0) return supplyValue;
-  return toNumber(item.quantity) * toNumber(item.unitPrice || item.unitCost);
-}
-
-function getPeriodData(transactions, days) {
-  const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
-  const today = new Date();
-
-  if (days === 7) {
-    return Array.from({ length: 7 }, (_, i) => {
-      const date = addDays(today, -(6 - i));
-      const dateKey = toDateKey(date);
-      const dayTx = transactions.filter(tx => String(tx.date || '') === dateKey);
-      return {
-        date: dateKey,
-        label: `${date.getMonth() + 1}/${date.getDate()} (${dayNames[date.getDay()]})`,
-        inQty:  sumBy(dayTx.filter(t => t.type === 'in'),  t => toNumber(t.quantity)),
-        outQty: sumBy(dayTx.filter(t => t.type === 'out'), t => toNumber(t.quantity)),
-      };
-    });
-  }
-
-  if (days === 30) {
-    return Array.from({ length: 30 }, (_, i) => {
-      const date = addDays(today, -(29 - i));
-      const dateKey = toDateKey(date);
-      const dayTx = transactions.filter(tx => String(tx.date || '') === dateKey);
-      return {
-        date: dateKey,
-        label: `${date.getMonth() + 1}/${date.getDate()}`,
-        inQty:  sumBy(dayTx.filter(t => t.type === 'in'),  t => toNumber(t.quantity)),
-        outQty: sumBy(dayTx.filter(t => t.type === 'out'), t => toNumber(t.quantity)),
-      };
-    });
-  }
-
-  if (days === 90) {
-    return Array.from({ length: 13 }, (_, i) => {
-      const weekEnd   = addDays(today, -(12 - i) * 7);
-      const weekStart = addDays(weekEnd, -6);
-      const s = toDateKey(weekStart), e = toDateKey(weekEnd);
-      const weekTx = transactions.filter(tx => { const d = String(tx.date || ''); return d >= s && d <= e; });
-      return {
-        date: s,
-        label: `${weekStart.getMonth() + 1}/${weekStart.getDate()}주`,
-        inQty:  sumBy(weekTx.filter(t => t.type === 'in'),  t => toNumber(t.quantity)),
-        outQty: sumBy(weekTx.filter(t => t.type === 'out'), t => toNumber(t.quantity)),
-      };
-    });
-  }
-
-  const monthMap = {};
-  transactions.forEach(tx => {
-    const month = (tx.date || '').substring(0, 7);
-    if (!month) return;
-    if (!monthMap[month]) monthMap[month] = { date: month + '-01', month, inQty: 0, outQty: 0, label: month };
-    const qty = toNumber(tx.quantity);
-    if (tx.type === 'in') monthMap[month].inQty += qty;
-    else monthMap[month].outQty += qty;
-  });
-  return Object.values(monthMap).sort((a, b) => a.month.localeCompare(b.month));
-}
-
-function Sparkline({ data, color = 'currentColor', height = 24, width = 72 }) {
-  if (!data || data.length < 2) return null;
-  const max = Math.max(...data) || 1;
-  const pts = data.map((v, i) => {
-    const x = (i / (data.length - 1)) * width;
-    const y = height - (v / max) * (height - 2) - 1;
-    return `${x.toFixed(1)},${y.toFixed(1)}`;
-  }).join(' ');
-  return (
-    <svg width={width} height={height} style={{ display: 'block', marginTop: 4, opacity: 0.75 }}>
-      <polyline points={pts} fill="none" stroke={color} strokeWidth="1.5" strokeLinejoin="round" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function TrendBadge({ pct }) {
-  if (pct == null) return null;
-  const up = pct > 0, down = pct < 0;
-  return (
-    <div style={{ fontSize: 11, color: up ? 'var(--success)' : down ? 'var(--danger)' : 'var(--text-muted)', marginTop: 2 }}>
-      {up ? '▲' : down ? '▼' : '–'} {Math.abs(pct)}% 전월 대비
-    </div>
-  );
-}
-
-function exportCSV(transactions) {
-  const header = ['유형', '품목명', '수량', '날짜', '거래처', '단가', '금액'];
-  const rows = transactions.map(tx => [
-    tx.type === 'in' ? '입고' : '출고',
-    tx.itemName || '',
-    toNumber(tx.quantity),
-    tx.date || '',
-    tx.vendor || '',
-    toNumber(tx.unitPrice || tx.unitCost || 0),
-    Math.round(toNumber(tx.quantity) * toNumber(tx.unitPrice || tx.unitCost || 0)),
-  ]);
-  const csv = [header, ...rows].map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
-  const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `invex-거래내역-${new Date().toISOString().split('T')[0]}.csv`;
-  a.click();
-  URL.revokeObjectURL(url);
-}
-
-// ── 역할별 표시 설정 ─────────────────────────────────────────────
-const ROLE_CONFIG = {
-  manager: {
-    label: '경영자',
-    showWinners: true,
-    showCategory: true,
-    showGmroi: true,
-    kpiCards: ['totalItems', 'totalValue', 'lowStock', 'todayIn', 'todayOut', 'deadStock'],
-  },
-  staff: {
-    label: '직원',
-    showWinners: false,
-    showCategory: false,
-    showGmroi: false,
-    kpiCards: ['totalItems', 'lowStock', 'todayIn', 'todayOut'],
-  },
-};
 
 export default function HomePage() {
   const navigate = useNavigate();
   const [state] = useStore();
 
-  // ── 커스터마이징 상태 ────────────────────────────────────────
-  const [chartPeriod, setChartPeriod]     = useState(() => loadLS('invex:home-period', 7));
-  const [txFilter, setTxFilter]           = useState('all');
+  const [chartPeriod,    setChartPeriod]    = useState(() => loadLS('invex:home-period', 7));
+  const [txFilter,       setTxFilter]       = useState('all');
   const [categoryFilter, setCategoryFilter] = useState('');
-  const [dashRole, setDashRole]           = useState(() => loadLS('invex:home-role', 'manager'));
-  const [mainOrder, setMainOrder]         = useState(() => loadLS('invex:home-order', DEFAULT_MAIN_ORDER));
-  const [savedFilters, setSavedFilters]   = useState(() => loadLS('invex:home-saved-filters', []));
-  const [editMode, setEditMode]           = useState(false);
-  const [targets, setTargets]             = useState(() => loadLS('invex:home-targets', { in: 0, out: 0, revenue: 0 }));
-  const [editingTarget, setEditingTarget] = useState(null); // 'in' | 'out' | 'revenue' | null
-  const [targetInput, setTargetInput]     = useState('');
-  const [lastRefresh, setLastRefresh]     = useState(() => new Date());
-  const [refreshing, setRefreshing]       = useState(false);
+  const [dashRole,       setDashRole]       = useState(() => loadLS('invex:home-role', 'manager'));
+  const [mainOrder,      setMainOrder]      = useState(() => loadLS('invex:home-order', DEFAULT_MAIN_ORDER));
+  const [savedFilters,   setSavedFilters]   = useState(() => loadLS('invex:home-saved-filters', []));
+  const [editMode,       setEditMode]       = useState(false);
+  const [targets,        setTargets]        = useState(() => loadLS('invex:home-targets', { in: 0, out: 0, revenue: 0 }));
+  const [editingTarget,  setEditingTarget]  = useState(null);
+  const [targetInput,    setTargetInput]    = useState('');
+  const [lastRefresh,    setLastRefresh]    = useState(() => new Date());
+  const [refreshing,     setRefreshing]     = useState(false);
 
-  // 드래그 상태
   const dragId = useRef(null);
   const [dragOver, setDragOver] = useState(null);
 
   const roleConf = ROLE_CONFIG[dashRole] || ROLE_CONFIG.manager;
 
-  // ── 역할/기간 변경 시 localStorage 동기화 ──────────────────
-  useEffect(() => { saveLS('invex:home-role', dashRole); }, [dashRole]);
+  useEffect(() => { saveLS('invex:home-role',   dashRole);   }, [dashRole]);
   useEffect(() => { saveLS('invex:home-period', chartPeriod); }, [chartPeriod]);
-  useEffect(() => { saveLS('invex:home-order', mainOrder); }, [mainOrder]);
+  useEffect(() => { saveLS('invex:home-order',  mainOrder);  }, [mainOrder]);
 
-  // ── 필터 저장 ────────────────────────────────────────────────
   function saveCurrentFilter() {
     const name = window.prompt('필터 이름을 입력하세요 (예: 식품 1달)');
     if (!name || !name.trim()) return;
@@ -214,21 +48,14 @@ export default function HomePage() {
     setSavedFilters(next);
     saveLS('invex:home-saved-filters', next);
   }
-  function applySavedFilter(f) {
-    setCategoryFilter(f.category);
-    setChartPeriod(f.period);
-  }
+  function applySavedFilter(f) { setCategoryFilter(f.category); setChartPeriod(f.period); }
   function deleteSavedFilter(idx) {
     const next = savedFilters.filter((_, i) => i !== idx);
     setSavedFilters(next);
     saveLS('invex:home-saved-filters', next);
   }
 
-  // ── 목표치 설정 ──────────────────────────────────────────────
-  function openTargetEdit(key, currentVal) {
-    setEditingTarget(key);
-    setTargetInput(String(currentVal || ''));
-  }
+  function openTargetEdit(key, currentVal) { setEditingTarget(key); setTargetInput(String(currentVal || '')); }
   function saveTarget() {
     const val = parseInt(targetInput, 10);
     if (isNaN(val) || val < 0) { setEditingTarget(null); return; }
@@ -238,7 +65,6 @@ export default function HomePage() {
     setEditingTarget(null);
   }
 
-  // ── 실시간 갱신 ──────────────────────────────────────────────
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
     try { await restoreState(); } catch {}
@@ -247,11 +73,10 @@ export default function HomePage() {
   }, []);
 
   useEffect(() => {
-    const id = setInterval(() => { handleRefresh(); }, 60_000);
+    const id = setInterval(handleRefresh, 60_000);
     return () => clearInterval(id);
   }, [handleRefresh]);
 
-  // ── 드래그 & 드롭 ────────────────────────────────────────────
   function handleDragStart(e, id) {
     dragId.current = id;
     e.dataTransfer.effectAllowed = 'move';
@@ -274,138 +99,29 @@ export default function HomePage() {
     next.splice(to, 0, dragId.current);
     setMainOrder(next);
   }
-  function handleDrop(e) {
-    e.preventDefault();
-    setDragOver(null);
-  }
+  function handleDrop(e) { e.preventDefault(); setDragOver(null); }
 
-  // ── 데이터 계산 ──────────────────────────────────────────────
   const {
-    items, transactions, safetyStock,
-    totalItems, totalSupplyValue,
+    filteredTx, totalItems, totalSupplyValue,
     lowStockItems, deadStockItems,
     todayInCount, todayOutCount,
-    monthInQty, monthOutQty, monthRevenue,
+    monthInQty, monthOutQty,
     recentTransactions, categories,
-    categoryOptions,
-    winners, losers, gmroi,
-    hasData, dateStr, notifications,
-    inTrendPct, outTrendPct, weekData,
-  } = useMemo(() => {
-    const items        = state.mappedData   || [];
-    const transactions = state.transactions || [];
-    const safetyStock  = state.safetyStock  || {};
-    const notifications = getNotifications();
-
-    const today = new Date();
-    const todayKey = toDateKey(today);
-    const thirtyDayCutoff = toDateKey(addDays(today, -30));
-
-    const categoryOptions = [...new Set(items.map(i => i.category).filter(Boolean))].sort();
-
-    const filteredItems = categoryFilter
-      ? items.filter(item => item.category === categoryFilter)
-      : items;
-    const itemNameSet = categoryFilter ? new Set(filteredItems.map(i => i.itemName)) : null;
-    const filteredTx  = itemNameSet
-      ? transactions.filter(tx => itemNameSet.has(tx.itemName))
-      : transactions;
-
-    const totalItems       = filteredItems.length;
-    const totalSupplyValue = sumBy(filteredItems, getItemSupplyValue);
-
-    const lowStockItems = filteredItems.filter(item => {
-      const minimum = toNumber(safetyStock[item.itemName]);
-      return minimum > 0 && toNumber(item.quantity) <= minimum;
-    });
-    const deadStockItems = filteredItems.filter(item => {
-      if (toNumber(item.quantity) <= 0) return false;
-      return !filteredTx.some(tx =>
-        tx.type === 'out' && tx.itemName === item.itemName && String(tx.date || '') >= thirtyDayCutoff
-      );
-    });
-
-    const todayTx      = filteredTx.filter(tx => String(tx.date || '') === todayKey);
-    const todayInCount  = todayTx.filter(tx => tx.type === 'in').length;
-    const todayOutCount = todayTx.filter(tx => tx.type === 'out').length;
-
-    // 이달 집계
-    const thisMonthKey2 = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
-    const monthTx       = filteredTx.filter(tx => (tx.date || '').startsWith(thisMonthKey2));
-    const monthInQty    = sumBy(monthTx.filter(t => t.type === 'in'),  t => toNumber(t.quantity));
-    const monthOutQty   = sumBy(monthTx.filter(t => t.type === 'out'), t => toNumber(t.quantity));
-    const monthRevenue  = sumBy(monthTx.filter(t => t.type === 'out'), t => toNumber(t.quantity) * toNumber(t.unitPrice || 0));
-
-    const recentTransactions = [...filteredTx]
-      .sort((a, b) => String(b.date || b.createdAt || '').localeCompare(String(a.date || a.createdAt || '')))
-      .slice(0, 30);
-
-    const categoryMap = new Map();
-    filteredItems.forEach(item => {
-      const cat = item.category || '미분류';
-      categoryMap.set(cat, (categoryMap.get(cat) || 0) + toNumber(item.quantity));
-    });
-    const categories = [...categoryMap.entries()].sort((a, b) => b[1] - a[1]);
-
-    const weekData = getPeriodData(filteredTx, 7);
-    const hasData  = items.length > 0;
-    const dateStr  = today.toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' });
-
-    const thisMonthKey  = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
-    const prevMonthDate = new Date(today.getFullYear(), today.getMonth() - 1, 1);
-    const prevMonthKey  = `${prevMonthDate.getFullYear()}-${String(prevMonthDate.getMonth() + 1).padStart(2, '0')}`;
-    const thisIn  = sumBy(filteredTx.filter(t => t.type === 'in'  && (t.date || '').startsWith(thisMonthKey)), t => toNumber(t.quantity));
-    const prevIn  = sumBy(filteredTx.filter(t => t.type === 'in'  && (t.date || '').startsWith(prevMonthKey)), t => toNumber(t.quantity));
-    const thisOut = sumBy(filteredTx.filter(t => t.type === 'out' && (t.date || '').startsWith(thisMonthKey)), t => toNumber(t.quantity));
-    const prevOut = sumBy(filteredTx.filter(t => t.type === 'out' && (t.date || '').startsWith(prevMonthKey)), t => toNumber(t.quantity));
-    const inTrendPct  = prevIn  > 0 ? Math.round((thisIn  - prevIn)  / prevIn  * 100) : null;
-    const outTrendPct = prevOut > 0 ? Math.round((thisOut - prevOut) / prevOut * 100) : null;
-
-    // Winners
-    const outQtyMap = {};
-    filteredTx.filter(t => t.type === 'out' && String(t.date || '') >= thirtyDayCutoff)
-      .forEach(t => { outQtyMap[t.itemName] = (outQtyMap[t.itemName] || 0) + toNumber(t.quantity); });
-    const winners = Object.entries(outQtyMap)
-      .sort((a, b) => b[1] - a[1]).slice(0, 5)
-      .map(([name, qty]) => ({ name, qty }));
-
-    // Losers
-    const losers = filteredItems
-      .filter(item => {
-        if (toNumber(item.quantity) <= 0) return false;
-        return !filteredTx.some(tx =>
-          tx.type === 'out' && tx.itemName === item.itemName && String(tx.date || '') >= thirtyDayCutoff
-        );
-      })
-      .sort((a, b) => getItemSupplyValue(b) - getItemSupplyValue(a))
-      .slice(0, 5);
-
-    // GMROI
-    const outTx30    = filteredTx.filter(t => t.type === 'out' && String(t.date || '') >= thirtyDayCutoff);
-    const revenue    = sumBy(outTx30, t => toNumber(t.quantity) * toNumber(t.unitPrice  || t.price || 0));
-    const cogs       = sumBy(outTx30, t => toNumber(t.quantity) * toNumber(t.unitCost || t.cost  || 0));
-    const grossProfit = revenue - cogs;
-    const gmroi = totalSupplyValue > 0 && revenue > 0
-      ? Math.round(grossProfit / totalSupplyValue * 100) / 100
-      : null;
-
-    return {
-      items, transactions: filteredTx, safetyStock,
-      totalItems, totalSupplyValue,
-      lowStockItems, deadStockItems,
-      todayInCount, todayOutCount,
-      monthInQty, monthOutQty, monthRevenue,
-      recentTransactions, categories,
-      categoryOptions, winners, losers, gmroi,
-      hasData, dateStr, notifications,
-      inTrendPct, outTrendPct, weekData,
-    };
-  }, [state.mappedData, state.transactions, state.safetyStock, categoryFilter]);
-
-  const chartData = useMemo(
-    () => getPeriodData(transactions, chartPeriod),
-    [transactions, chartPeriod]
+    categoryOptions, winners, losers, gmroi,
+    hasData, dateStr, inTrendPct, outTrendPct, weekData,
+  } = useMemo(() =>
+    computeHomeDashboard({
+      items:        state.mappedData   || [],
+      transactions: state.transactions || [],
+      safetyStock:  state.safetyStock  || {},
+      categoryFilter,
+    }),
+    [state.mappedData, state.transactions, state.safetyStock, categoryFilter]
   );
+
+  const notifications = useMemo(() => getNotifications(), []);
+
+  const chartData = useMemo(() => getPeriodData(filteredTx, chartPeriod), [filteredTx, chartPeriod]);
 
   const handleChartClick = useCallback((date) => {
     const month = String(date || '').substring(0, 7);
@@ -420,28 +136,30 @@ export default function HomePage() {
     return () => { destroyAllCharts(); };
   }, [hasData, chartData, categories, handleChartClick]);
 
-  const chartTitle = chartPeriod === 7 ? '최근 7일' : chartPeriod === 30 ? '최근 1달' : chartPeriod === 90 ? '최근 3달' : '전체';
+  const chartTitle      = chartPeriod === 7 ? '최근 7일' : chartPeriod === 30 ? '최근 1달' : chartPeriod === 90 ? '최근 3달' : '전체';
   const allTransactions = state.transactions || [];
 
-  // ── 위젯 렌더러 ──────────────────────────────────────────────
+  function draggableProps(id) {
+    if (!editMode) return {};
+    return {
+      draggable: true,
+      onDragStart: e => handleDragStart(e, id),
+      onDragEnd:   handleDragEnd,
+      onDragOver:  e => handleDragOver(e, id),
+      onDrop:      handleDrop,
+      style: { outline: dragOver === id ? '2px dashed var(--accent)' : undefined, cursor: 'grab' },
+    };
+  }
+
   function renderWidget(id) {
     if (id === 'recent') return (
-      <div key="recent" className="card"
-        draggable={editMode}
-        onDragStart={editMode ? e => handleDragStart(e, 'recent') : undefined}
-        onDragEnd={editMode ? handleDragEnd : undefined}
-        onDragOver={editMode ? e => handleDragOver(e, 'recent') : undefined}
-        onDrop={editMode ? handleDrop : undefined}
-        style={{ outline: editMode && dragOver === 'recent' ? '2px dashed var(--accent)' : undefined, cursor: editMode ? 'grab' : undefined }}
-      >
+      <div key="recent" className="card" {...draggableProps('recent')}>
         {editMode && <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 6, userSelect: 'none' }}>⠿ 드래그하여 순서 변경</div>}
         <div className="card-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <span>최근 입출고 이력</span>
           <div style={{ display: 'flex', gap: 3 }}>
             {[{v:'all',l:'전체'},{v:'in',l:'입고'},{v:'out',l:'출고'}].map(opt => (
-              <button key={opt.v}
-                className={`btn btn-sm ${txFilter === opt.v ? 'btn-primary' : 'btn-ghost'}`}
-                onClick={() => setTxFilter(opt.v)}>{opt.l}</button>
+              <button key={opt.v} className={`btn btn-sm ${txFilter === opt.v ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setTxFilter(opt.v)}>{opt.l}</button>
             ))}
           </div>
         </div>
@@ -469,22 +187,13 @@ export default function HomePage() {
     );
 
     if (id === 'chart') return (
-      <div key="chart" className="card"
-        draggable={editMode}
-        onDragStart={editMode ? e => handleDragStart(e, 'chart') : undefined}
-        onDragEnd={editMode ? handleDragEnd : undefined}
-        onDragOver={editMode ? e => handleDragOver(e, 'chart') : undefined}
-        onDrop={editMode ? handleDrop : undefined}
-        style={{ outline: editMode && dragOver === 'chart' ? '2px dashed var(--accent)' : undefined, cursor: editMode ? 'grab' : undefined }}
-      >
+      <div key="chart" className="card" {...draggableProps('chart')}>
         {editMode && <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 6, userSelect: 'none' }}>⠿ 드래그하여 순서 변경</div>}
         <div className="card-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <span>{chartTitle} 입출고 흐름 <span style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 400 }}>클릭 → 출고내역</span></span>
           <div style={{ display: 'flex', gap: 3 }}>
             {PERIOD_OPTS.map(opt => (
-              <button key={opt.v}
-                className={`btn btn-sm ${chartPeriod === opt.v ? 'btn-primary' : 'btn-ghost'}`}
-                onClick={() => setChartPeriod(opt.v)}>{opt.l}</button>
+              <button key={opt.v} className={`btn btn-sm ${chartPeriod === opt.v ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setChartPeriod(opt.v)}>{opt.l}</button>
             ))}
           </div>
         </div>
@@ -495,14 +204,7 @@ export default function HomePage() {
     );
 
     if (id === 'category' && categories.length > 0) return (
-      <div key="category" className="card"
-        draggable={editMode}
-        onDragStart={editMode ? e => handleDragStart(e, 'category') : undefined}
-        onDragEnd={editMode ? handleDragEnd : undefined}
-        onDragOver={editMode ? e => handleDragOver(e, 'category') : undefined}
-        onDrop={editMode ? handleDrop : undefined}
-        style={{ outline: editMode && dragOver === 'category' ? '2px dashed var(--accent)' : undefined, cursor: editMode ? 'grab' : undefined }}
-      >
+      <div key="category" className="card" {...draggableProps('category')}>
         {editMode && <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 6, userSelect: 'none' }}>⠿ 드래그하여 순서 변경</div>}
         <div className="card-title">분류별 재고 비중</div>
         <div style={{ height: 220, position: 'relative' }}>
@@ -516,7 +218,6 @@ export default function HomePage() {
 
   return (
     <div>
-      {/* 페이지 헤더 */}
       <div className="page-header">
         <div>
           <h1 className="page-title">대시보드</h1>
@@ -526,52 +227,30 @@ export default function HomePage() {
               <span style={{ width: 6, height: 6, borderRadius: '50%', background: refreshing ? 'var(--warning)' : 'var(--success)', display: 'inline-block', animation: refreshing ? 'pulse 0.8s ease-in-out infinite' : 'none' }} />
               {refreshing ? '갱신 중...' : `${Math.floor((Date.now() - lastRefresh) / 1000 / 60) === 0 ? '방금' : `${Math.floor((Date.now() - lastRefresh) / 1000 / 60)}분 전`} 갱신`}
             </span>
-            <button className="btn btn-sm btn-ghost" style={{ fontSize: 11, padding: '1px 6px' }} onClick={handleRefresh} disabled={refreshing}>
-              새로고침
-            </button>
+            <button className="btn btn-sm btn-ghost" style={{ fontSize: 11, padding: '1px 6px' }} onClick={handleRefresh} disabled={refreshing}>새로고침</button>
           </div>
         </div>
         <div className="page-actions" style={{ flexWrap: 'wrap', gap: 6 }}>
-          {/* 역할 전환 */}
           <div style={{ display: 'flex', border: '1px solid var(--border)', borderRadius: 6, overflow: 'hidden' }}>
             {Object.entries(ROLE_CONFIG).map(([key, conf]) => (
-              <button key={key}
-                className={`btn btn-sm ${dashRole === key ? 'btn-primary' : 'btn-ghost'}`}
-                style={{ borderRadius: 0, border: 'none', fontSize: 12 }}
-                onClick={() => setDashRole(key)}
-              >{conf.label}</button>
+              <button key={key} className={`btn btn-sm ${dashRole === key ? 'btn-primary' : 'btn-ghost'}`}
+                style={{ borderRadius: 0, border: 'none', fontSize: 12 }} onClick={() => setDashRole(key)}>{conf.label}</button>
             ))}
           </div>
-
-          {/* 카테고리 필터 */}
           {categoryOptions.length > 0 && (
             <select value={categoryFilter} onChange={e => setCategoryFilter(e.target.value)}
-              style={{ padding: '5px 10px', borderRadius: 6, border: '1px solid var(--border)', background: 'var(--bg-card)', color: 'var(--text)', fontSize: 13, cursor: 'pointer' }}
-            >
+              style={{ padding: '5px 10px', borderRadius: 6, border: '1px solid var(--border)', background: 'var(--bg-card)', color: 'var(--text)', fontSize: 13, cursor: 'pointer' }}>
               <option value="">전체 카테고리</option>
               {categoryOptions.map(c => <option key={c} value={c}>{c}</option>)}
             </select>
           )}
-
-          {/* 필터 저장 */}
-          <button className="btn btn-sm btn-ghost" style={{ fontSize: 12 }} onClick={saveCurrentFilter} title="현재 필터 조건 저장">
-            + 필터 저장
-          </button>
-
-          {/* 내보내기 */}
+          <button className="btn btn-sm btn-ghost" style={{ fontSize: 12 }} onClick={saveCurrentFilter} title="현재 필터 조건 저장">+ 필터 저장</button>
           {allTransactions.length > 0 && (
-            <button className="btn btn-outline btn-sm" style={{ fontSize: 12 }} onClick={() => exportCSV(allTransactions)}>
-              CSV 내보내기
-            </button>
+            <button className="btn btn-outline btn-sm" style={{ fontSize: 12 }} onClick={() => exportCSV(allTransactions)}>CSV 내보내기</button>
           )}
-
-          {/* 대시보드 편집 모드 */}
-          <button
-            className={`btn btn-sm ${editMode ? 'btn-primary' : 'btn-ghost'}`}
-            style={{ fontSize: 12 }}
-            onClick={() => setEditMode(v => !v)}
-          >{editMode ? ' 완료' : '⠿ 편집'}</button>
-
+          <button className={`btn btn-sm ${editMode ? 'btn-primary' : 'btn-ghost'}`} style={{ fontSize: 12 }} onClick={() => setEditMode(v => !v)}>
+            {editMode ? ' 완료' : '⠿ 편집'}
+          </button>
           {notifications.length > 0 && (
             <button type="button" className="badge badge-danger dashboard-notif-trigger"
               onClick={e => { e.preventDefault(); e.stopPropagation(); renderNotificationPanel(); }}>
@@ -583,7 +262,6 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* 저장된 필터 칩 */}
       {savedFilters.length > 0 && (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>
           {savedFilters.map((f, idx) => (
@@ -595,8 +273,7 @@ export default function HomePage() {
               color: categoryFilter === f.category && chartPeriod === f.period ? '#fff' : 'var(--text)',
             }}>
               <span onClick={() => applySavedFilter(f)}>{f.name}</span>
-              <span style={{ color: 'var(--text-muted)', cursor: 'pointer', marginLeft: 2 }}
-                onClick={() => deleteSavedFilter(idx)}>×</span>
+              <span style={{ color: 'var(--text-muted)', cursor: 'pointer', marginLeft: 2 }} onClick={() => deleteSavedFilter(idx)}>×</span>
             </div>
           ))}
         </div>
@@ -616,7 +293,6 @@ export default function HomePage() {
         </div>
       ) : (
         <>
-          {/* KPI */}
           <div className={`db-kpi-grid${dashRole === 'staff' ? ' db-kpi-grid-compact' : ''}`}>
             <div className="db-kpi-card" onClick={() => navigate('/inventory')} style={{ cursor: 'pointer' }}>
               <div className="db-kpi-label">총 품목</div>
@@ -640,15 +316,14 @@ export default function HomePage() {
                 {lowStockItems.length > 0 ? `${lowStockItems.length}건` : '없음'}
               </div>
             </div>
+
+            {/* 오늘 입고 */}
             <div className="db-kpi-card" onClick={() => navigate('/in')} style={{ cursor: 'pointer' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <div className="db-kpi-label">오늘 입고</div>
                 {dashRole === 'manager' && (
-                  <button className="btn btn-sm btn-ghost"
-                    style={{ fontSize: 10, padding: '1px 6px', color: 'var(--text-muted)' }}
-                    onClick={e => { e.stopPropagation(); openTargetEdit('in', targets.in); }}>
-                    목표 설정
-                  </button>
+                  <button className="btn btn-sm btn-ghost" style={{ fontSize: 10, padding: '1px 6px', color: 'var(--text-muted)' }}
+                    onClick={e => { e.stopPropagation(); openTargetEdit('in', targets.in); }}>목표 설정</button>
                 )}
               </div>
               <div className="db-kpi-value text-success">{todayInCount}건</div>
@@ -676,15 +351,14 @@ export default function HomePage() {
               <TrendBadge pct={inTrendPct} />
               <Sparkline data={weekData.map(d => d.inQty)} color="var(--success)" />
             </div>
+
+            {/* 오늘 출고 */}
             <div className="db-kpi-card" onClick={() => navigate('/out')} style={{ cursor: 'pointer' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <div className="db-kpi-label">오늘 출고</div>
                 {dashRole === 'manager' && (
-                  <button className="btn btn-sm btn-ghost"
-                    style={{ fontSize: 10, padding: '1px 6px', color: 'var(--text-muted)' }}
-                    onClick={e => { e.stopPropagation(); openTargetEdit('out', targets.out); }}>
-                    목표 설정
-                  </button>
+                  <button className="btn btn-sm btn-ghost" style={{ fontSize: 10, padding: '1px 6px', color: 'var(--text-muted)' }}
+                    onClick={e => { e.stopPropagation(); openTargetEdit('out', targets.out); }}>목표 설정</button>
                 )}
               </div>
               <div className="db-kpi-value text-danger">{todayOutCount}건</div>
@@ -712,6 +386,7 @@ export default function HomePage() {
               <TrendBadge pct={outTrendPct} />
               <Sparkline data={weekData.map(d => d.outQty)} color="var(--danger)" />
             </div>
+
             {dashRole === 'manager' && (
               <div className={`db-kpi-card${deadStockItems.length > 0 ? ' db-kpi-warn' : ''}`}>
                 <div className="db-kpi-label">정체 재고(30일)</div>
@@ -727,26 +402,17 @@ export default function HomePage() {
             )}
           </div>
 
-          {/* 직원 전용: 빠른 작업 패널 */}
           {dashRole === 'staff' && (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginBottom: 12 }}>
               {[
-                { icon: '', label: '입고 등록', desc: '상품 입고 처리', color: 'var(--success)', bg: 'rgba(34,197,94,0.08)', border: 'rgba(34,197,94,0.3)', route: '/in' },
+                { icon: '', label: '입고 등록', desc: '상품 입고 처리', color: 'var(--success)', bg: 'rgba(34,197,94,0.08)',  border: 'rgba(34,197,94,0.3)',  route: '/in' },
                 { icon: '', label: '출고 등록', desc: '상품 출고 처리', color: 'var(--danger)',  bg: 'rgba(239,68,68,0.08)',  border: 'rgba(239,68,68,0.3)',  route: '/out' },
                 { icon: '', label: '재고 조회', desc: '현재 재고 확인',  color: 'var(--accent)',  bg: 'rgba(88,166,255,0.08)', border: 'rgba(88,166,255,0.3)', route: '/inventory' },
               ].map(item => (
-                <button key={item.route}
-                  onClick={() => navigate(item.route)}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: 14,
-                    padding: '16px 20px', borderRadius: 10,
-                    background: item.bg, border: `1.5px solid ${item.border}`,
-                    cursor: 'pointer', textAlign: 'left', width: '100%',
-                    transition: 'transform 0.1s, box-shadow 0.1s',
-                  }}
+                <button key={item.route} onClick={() => navigate(item.route)}
+                  style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '16px 20px', borderRadius: 10, background: item.bg, border: `1.5px solid ${item.border}`, cursor: 'pointer', textAlign: 'left', width: '100%', transition: 'transform 0.1s, box-shadow 0.1s' }}
                   onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)'; }}
-                  onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = ''; }}
-                >
+                  onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = ''; }}>
                   <span style={{ fontSize: 28, lineHeight: 1 }}>{item.icon}</span>
                   <div>
                     <div style={{ fontWeight: 700, fontSize: 15, color: item.color }}>{item.label}</div>
@@ -757,25 +423,20 @@ export default function HomePage() {
             </div>
           )}
 
-          {/* 재고 부족 경고 바 */}
           {lowStockItems.length > 0 && (
             <div className="db-alert-bar" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <span className="db-alert-title" style={{ cursor: 'pointer' }} onClick={() => navigate('/inventory')}> 재고 부족 {lowStockItems.length}건</span>
               <span className="db-alert-items" style={{ flex: 1, cursor: 'pointer' }} onClick={() => navigate('/inventory')}>
                 {lowStockItems.slice(0, 3).map(item =>
-                  `${item.itemName} (현재 ${toNumber(item.quantity)} / 안전 ${toNumber(safetyStock[item.itemName])})`
+                  `${item.itemName} (현재 ${toNumber(item.quantity)} / 안전 ${toNumber((state.safetyStock || {})[item.itemName])})`
                 ).join(' · ')}
                 {lowStockItems.length > 3 ? ` 외 ${lowStockItems.length - 3}건` : ''}
               </span>
-              <button className="btn btn-sm btn-outline"
-                style={{ flexShrink: 0, fontSize: 11, color: 'var(--danger)', borderColor: 'var(--danger)', padding: '2px 10px' }}
-                onClick={() => navigate('/auto-order')}>
-                발주 바로가기 →
-              </button>
+              <button className="btn btn-sm btn-outline" style={{ flexShrink: 0, fontSize: 11, color: 'var(--danger)', borderColor: 'var(--danger)', padding: '2px 10px' }}
+                onClick={() => navigate('/auto-order')}>발주 바로가기 →</button>
             </div>
           )}
 
-          {/* Winners / Losers (경영자 전용) */}
           {roleConf.showWinners && (winners.length > 0 || losers.length > 0) && (
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
               <div className="card" style={{ padding: '14px 16px' }}>
@@ -828,7 +489,6 @@ export default function HomePage() {
             </div>
           )}
 
-          {/* 메인 위젯 그리드 (드래그 순서 반영) */}
           <div className="db-main-grid">
             {mainOrder.map(id => renderWidget(id))}
           </div>
