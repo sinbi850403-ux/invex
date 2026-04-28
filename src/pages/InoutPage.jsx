@@ -1224,12 +1224,6 @@ export function InoutPage({ mode = 'all' }) {
                       { key: 'sellingPrice', label: '출고단가', cls: 'th-section-out' },
                       { key: 'outAmt',       label: '판매가',   cls: 'th-section-out' },
                       { key: 'outTotal',     label: '출고합계', cls: 'th-section-out' },
-                      { key: 'supply',       label: '매입원가', cls: 'th-section-purchase' },
-                      { key: 'vat',          label: '부가세',   cls: 'th-section-purchase' },
-                      { key: 'totalPrice',   label: '공급합계', cls: 'th-section-purchase' },
-                      { key: 'profit',       label: '이익액',   cls: 'th-section-profit' },
-                      { key: 'profitMargin', label: '이익율',   cls: 'th-section-profit' },
-                      { key: 'cogsMargin',   label: '원가율',   cls: 'th-section-profit' },
                     ].map(({ key, label, cls }) => (
                       <SortTh key={key} sortKey={key} sort={sort} onSort={toggleSort} className={`text-right ${cls}`} style={{
                         fontWeight: 700, fontSize: '11px', textTransform: 'none', whiteSpace: 'nowrap', minWidth: 72,
