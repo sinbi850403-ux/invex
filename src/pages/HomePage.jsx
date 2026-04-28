@@ -452,7 +452,7 @@ export default function HomePage() {
       </div>
     );
 
-    if (id === 'category' && roleConf.showCategory && categories.length > 0) return (
+    if (id === 'category' && categories.length > 0) return (
       <div key="category" className="card"
         draggable={editMode}
         onDragStart={editMode ? e => handleDragStart(e, 'category') : undefined}
