@@ -50,7 +50,7 @@ function destroyChart(id) {
   }
 }
 
-export function renderWeeklyTrendChart(canvasId, weekData) {
+export function renderWeeklyTrendChart(canvasId, weekData, onBarClick) {
   destroyChart(canvasId);
   const canvas = document.getElementById(canvasId);
   if (!canvas) return;
@@ -90,6 +90,11 @@ export function renderWeeklyTrendChart(canvasId, weekData) {
       responsive: true,
       maintainAspectRatio: false,
       interaction: { intersect: false, mode: 'index' },
+      ...(onBarClick ? { onClick: (evt, elements) => {
+        if (!elements.length) return;
+        const d = weekData[elements[0].index];
+        if (d?.date) onBarClick(d.date);
+      }} : {}),
       plugins: {
         legend: {
           labels: { color: textColor, font: { size: 11 }, usePointStyle: true, pointStyle: 'circle' },

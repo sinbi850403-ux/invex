@@ -1,7 +1,7 @@
 /**
  * HomePage.jsx - 홈 대시보드
  */
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '../hooks/useStore.js';
 import { getNotifications, renderNotificationPanel } from '../notifications.js';
@@ -10,7 +10,13 @@ import { renderWeeklyTrendChart, renderCategoryChart, destroyAllCharts } from '.
 const CHART_WEEKLY_ID = 'home-chart-weekly';
 const CHART_CATEGORY_ID = 'home-chart-category';
 
-// 헬퍼 함수들
+const PERIOD_OPTS = [
+  { v: 7,  l: '7일' },
+  { v: 30, l: '1달' },
+  { v: 90, l: '3달' },
+  { v: 0,  l: '전체' },
+];
+
 function toNumber(value) {
   if (value === null || value === undefined || value === '') return 0;
   const n = parseFloat(String(value).replace(/,/g, ''));
@@ -29,19 +35,65 @@ function getItemSupplyValue(item) {
   if (supplyValue > 0) return supplyValue;
   return toNumber(item.quantity) * toNumber(item.unitPrice || item.unitCost);
 }
-function getLast7Days(transactions) {
+
+function getPeriodData(transactions, days) {
   const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
-  return Array.from({ length: 7 }, (_, i) => {
-    const date = addDays(new Date(), -(6 - i));
-    const dateKey = toDateKey(date);
-    const dayTx = transactions.filter(tx => String(tx.date || '') === dateKey);
-    return {
-      date: dateKey,
-      label: `${date.getMonth() + 1}/${date.getDate()} (${dayNames[date.getDay()]})`,
-      inQty:  sumBy(dayTx.filter(tx => tx.type === 'in'),  tx => toNumber(tx.quantity)),
-      outQty: sumBy(dayTx.filter(tx => tx.type === 'out'), tx => toNumber(tx.quantity)),
-    };
+  const today = new Date();
+
+  if (days === 7) {
+    return Array.from({ length: 7 }, (_, i) => {
+      const date = addDays(today, -(6 - i));
+      const dateKey = toDateKey(date);
+      const dayTx = transactions.filter(tx => String(tx.date || '') === dateKey);
+      return {
+        date: dateKey,
+        label: `${date.getMonth() + 1}/${date.getDate()} (${dayNames[date.getDay()]})`,
+        inQty:  sumBy(dayTx.filter(t => t.type === 'in'),  t => toNumber(t.quantity)),
+        outQty: sumBy(dayTx.filter(t => t.type === 'out'), t => toNumber(t.quantity)),
+      };
+    });
+  }
+
+  if (days === 30) {
+    return Array.from({ length: 30 }, (_, i) => {
+      const date = addDays(today, -(29 - i));
+      const dateKey = toDateKey(date);
+      const dayTx = transactions.filter(tx => String(tx.date || '') === dateKey);
+      return {
+        date: dateKey,
+        label: `${date.getMonth() + 1}/${date.getDate()}`,
+        inQty:  sumBy(dayTx.filter(t => t.type === 'in'),  t => toNumber(t.quantity)),
+        outQty: sumBy(dayTx.filter(t => t.type === 'out'), t => toNumber(t.quantity)),
+      };
+    });
+  }
+
+  if (days === 90) {
+    return Array.from({ length: 13 }, (_, i) => {
+      const weekEnd   = addDays(today, -(12 - i) * 7);
+      const weekStart = addDays(weekEnd, -6);
+      const s = toDateKey(weekStart), e = toDateKey(weekEnd);
+      const weekTx = transactions.filter(tx => { const d = String(tx.date || ''); return d >= s && d <= e; });
+      return {
+        date: s,
+        label: `${weekStart.getMonth() + 1}/${weekStart.getDate()}주`,
+        inQty:  sumBy(weekTx.filter(t => t.type === 'in'),  t => toNumber(t.quantity)),
+        outQty: sumBy(weekTx.filter(t => t.type === 'out'), t => toNumber(t.quantity)),
+      };
+    });
+  }
+
+  // 전체 — 월별
+  const monthMap = {};
+  transactions.forEach(tx => {
+    const month = (tx.date || '').substring(0, 7);
+    if (!month) return;
+    if (!monthMap[month]) monthMap[month] = { date: month + '-01', month, inQty: 0, outQty: 0, label: month };
+    const qty = toNumber(tx.quantity);
+    if (tx.type === 'in') monthMap[month].inQty += qty;
+    else monthMap[month].outQty += qty;
   });
+  return Object.values(monthMap).sort((a, b) => a.month.localeCompare(b.month));
 }
 
 function Sparkline({ data, color = 'currentColor', height = 24, width = 72 }) {
@@ -59,18 +111,30 @@ function Sparkline({ data, color = 'currentColor', height = 24, width = 72 }) {
   );
 }
 
+function TrendBadge({ pct }) {
+  if (pct == null) return null;
+  const up = pct > 0, down = pct < 0;
+  return (
+    <div style={{ fontSize: 11, color: up ? 'var(--success)' : down ? 'var(--danger)' : 'var(--text-muted)', marginTop: 2 }}>
+      {up ? '▲' : down ? '▼' : '–'} {Math.abs(pct)}% 전월 대비
+    </div>
+  );
+}
+
 export default function HomePage() {
   const navigate = useNavigate();
   const [state] = useStore();
+  const [chartPeriod, setChartPeriod] = useState(7);
 
   const {
     items, transactions, safetyStock,
     totalItems, totalSupplyValue,
     lowStockItems, deadStockItems,
     todayInCount, todayOutCount,
-    recentTransactions, categories, weekData,
+    recentTransactions, categories,
     hasData, dateStr, notifications, todayKey,
     inTrendPct, outTrendPct,
+    weekData,
   } = useMemo(() => {
     const items = state.mappedData || [];
     const transactions = state.transactions || [];
@@ -97,7 +161,7 @@ export default function HomePage() {
     });
 
     const todayTransactions = transactions.filter(tx => String(tx.date || '') === todayKey);
-    const todayInCount = todayTransactions.filter(tx => tx.type === 'in').length;
+    const todayInCount  = todayTransactions.filter(tx => tx.type === 'in').length;
     const todayOutCount = todayTransactions.filter(tx => tx.type === 'out').length;
 
     const recentTransactions = [...transactions]
@@ -111,7 +175,7 @@ export default function HomePage() {
     });
     const categories = [...categoryMap.entries()].sort((a, b) => b[1] - a[1]);
 
-    const weekData = getLast7Days(transactions);
+    const weekData = getPeriodData(transactions, 7);
     const hasData = totalItems > 0;
     const dateStr = today.toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' });
 
@@ -132,22 +196,34 @@ export default function HomePage() {
       totalItems, totalSupplyValue,
       lowStockItems, deadStockItems,
       todayInCount, todayOutCount,
-      recentTransactions, categories, weekData,
+      recentTransactions, categories,
       hasData, dateStr, notifications, todayKey,
-      thisMonthIn, prevMonthIn, thisMonthOut, prevMonthOut, inTrendPct, outTrendPct,
+      inTrendPct, outTrendPct, weekData,
     };
   }, [state.mappedData, state.transactions, state.safetyStock]);
 
-  // 차트 렌더링
+  const chartData = useMemo(
+    () => getPeriodData(transactions, chartPeriod),
+    [transactions, chartPeriod]
+  );
+
+  const handleChartClick = useCallback((date) => {
+    const month = String(date || '').substring(0, 7);
+    if (month) {
+      sessionStorage.setItem('invex:inout-filter-month', month);
+      navigate('/out');
+    }
+  }, [navigate]);
+
   useEffect(() => {
     if (!hasData) return;
     destroyAllCharts();
-    renderWeeklyTrendChart(CHART_WEEKLY_ID, weekData);
+    renderWeeklyTrendChart(CHART_WEEKLY_ID, chartData, handleChartClick);
     if (categories.length > 0) {
       renderCategoryChart(CHART_CATEGORY_ID, categories);
     }
     return () => { destroyAllCharts(); };
-  }, [hasData, weekData, categories]);
+  }, [hasData, chartData, categories, handleChartClick]);
 
   const handleQuickIn = () => {
     sessionStorage.setItem('invex:quick-open-inbound', '1');
@@ -157,6 +233,8 @@ export default function HomePage() {
     sessionStorage.setItem('invex:quick-open-outbound', '1');
     navigate('/out');
   };
+
+  const chartTitle = chartPeriod === 7 ? '최근 7일' : chartPeriod === 30 ? '최근 1달' : chartPeriod === 90 ? '최근 3달' : '전체';
 
   return (
     <div>
@@ -205,10 +283,7 @@ export default function HomePage() {
               <div className="db-kpi-icon">💰</div>
               <div className="db-kpi-label">재고 금액</div>
               <div className="db-kpi-value text-success">{formatCurrency(totalSupplyValue)}</div>
-              <Sparkline
-                data={weekData.map(d => Math.max(0, d.inQty - d.outQty))}
-                color="var(--success)"
-              />
+              <Sparkline data={weekData.map(d => Math.max(0, d.inQty - d.outQty))} color="var(--success)" />
             </div>
             <div className={`db-kpi-card${lowStockItems.length > 0 ? ' db-kpi-danger' : ''}`} onClick={() => navigate('/inventory')} style={{ cursor: 'pointer' }}>
               <div className="db-kpi-icon">⚠️</div>
@@ -221,44 +296,51 @@ export default function HomePage() {
               <div className="db-kpi-icon">📥</div>
               <div className="db-kpi-label">오늘 입고</div>
               <div className="db-kpi-value text-success">{todayInCount}건</div>
-              {inTrendPct !== null && (
-                <div style={{ fontSize: 11, color: inTrendPct >= 0 ? 'var(--success)' : 'var(--danger)' }}>
-                  {inTrendPct >= 0 ? '↑' : '↓'} 전월대비 {Math.abs(inTrendPct)}%
-                </div>
-              )}
+              <TrendBadge pct={inTrendPct} />
               <Sparkline data={weekData.map(d => d.inQty)} color="var(--success)" />
             </div>
             <div className="db-kpi-card" onClick={() => navigate('/out')} style={{ cursor: 'pointer' }}>
               <div className="db-kpi-icon">📤</div>
               <div className="db-kpi-label">오늘 출고</div>
               <div className="db-kpi-value text-danger">{todayOutCount}건</div>
-              {outTrendPct !== null && (
-                <div style={{ fontSize: 11, color: outTrendPct >= 0 ? 'var(--success)' : 'var(--danger)' }}>
-                  {outTrendPct >= 0 ? '↑' : '↓'} 전월대비 {Math.abs(outTrendPct)}%
-                </div>
-              )}
+              <TrendBadge pct={outTrendPct} />
               <Sparkline data={weekData.map(d => d.outQty)} color="var(--danger)" />
             </div>
-            <div className={`db-kpi-card${deadStockItems.length > 0 ? ' db-kpi-warn' : ''}`} onClick={() => navigate('/inventory')} style={{ cursor: 'pointer' }}>
+            <div className={`db-kpi-card${deadStockItems.length > 0 ? ' db-kpi-warn' : ''}`} style={{ cursor: deadStockItems.length > 0 ? 'pointer' : 'default' }}>
               <div className="db-kpi-icon">🕰️</div>
               <div className="db-kpi-label">정체 재고(30일)</div>
               <div className={`db-kpi-value${deadStockItems.length > 0 ? ' text-warning' : ''}`}>
                 {deadStockItems.length}건
               </div>
+              {deadStockItems.length > 0 && (
+                <button
+                  className="btn btn-sm btn-outline"
+                  style={{ marginTop: 6, fontSize: 11, color: 'var(--warning)', borderColor: 'var(--warning)', padding: '2px 8px' }}
+                  onClick={(e) => { e.stopPropagation(); navigate('/auto-order'); }}
+                >
+                  발주 바로가기 →
+                </button>
+              )}
             </div>
           </div>
 
           {/* 재고 부족 경고 바 */}
           {lowStockItems.length > 0 && (
-            <div className="db-alert-bar" onClick={() => navigate('/inventory')} style={{ cursor: 'pointer' }}>
-              <span className="db-alert-title">⚠️ 재고 부족 {lowStockItems.length}건</span>
-              <span className="db-alert-items">
+            <div className="db-alert-bar" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span className="db-alert-title" style={{ cursor: 'pointer' }} onClick={() => navigate('/inventory')}>⚠️ 재고 부족 {lowStockItems.length}건</span>
+              <span className="db-alert-items" style={{ flex: 1, cursor: 'pointer' }} onClick={() => navigate('/inventory')}>
                 {lowStockItems.slice(0, 3).map(item =>
                   `${item.itemName} (현재 ${toNumber(item.quantity)} / 안전 ${toNumber(safetyStock[item.itemName])})`
                 ).join(' · ')}
                 {lowStockItems.length > 3 ? ` 외 ${lowStockItems.length - 3}건` : ''}
               </span>
-              <span className="db-alert-cta">바로가기 →</span>
+              <button
+                className="btn btn-sm btn-outline"
+                style={{ flexShrink: 0, fontSize: 11, color: 'var(--danger)', borderColor: 'var(--danger)', padding: '2px 10px' }}
+                onClick={() => navigate('/auto-order')}
+              >
+                발주 바로가기 →
+              </button>
             </div>
           )}
 
@@ -297,10 +379,23 @@ export default function HomePage() {
               )}
             </div>
 
-            {/* 최근 7일 차트 */}
+            {/* 입출고 흐름 차트 + 기간 필터 */}
             <div className="card">
-              <div className="card-title">최근 7일 입출고 흐름</div>
-              <div style={{ height: '220px', position: 'relative' }}>
+              <div className="card-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span>{chartTitle} 입출고 흐름 <span style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 400 }}>클릭 → 출고내역</span></span>
+                <div style={{ display: 'flex', gap: 3 }}>
+                  {PERIOD_OPTS.map(opt => (
+                    <button
+                      key={opt.v}
+                      className={`btn btn-sm ${chartPeriod === opt.v ? 'btn-primary' : 'btn-ghost'}`}
+                      onClick={() => setChartPeriod(opt.v)}
+                    >
+                      {opt.l}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div style={{ height: '220px', position: 'relative', cursor: 'pointer' }}>
                 <canvas id={CHART_WEEKLY_ID} />
               </div>
             </div>
