@@ -69,7 +69,7 @@ function buildLedger(items, transactions, from, to, itemFilter, openingOverrides
       weightedAvgCost,
       closingQty, closingValue: Math.round(closingQty * (weightedAvgCost || unitPrice)),
     };
-  }).filter(r => r.openingQty > 0 || r.inQty > 0 || r.outQty > 0 || r.closingQty > 0);
+  });
 }
 
 function sortRows(rows, sort) {
