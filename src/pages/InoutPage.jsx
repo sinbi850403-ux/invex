@@ -487,19 +487,15 @@ function BulkUploadModal({ items, modeDefault, onClose, onSuccess }) {
             onDragOver={e => e.preventDefault()}
             onClick={() => fileInputRef.current?.click()}
             style={{
-              border: '2px solid var(--accent)',
+              border: '2px dashed var(--border-color)',
               borderRadius: '8px',
               padding: '32px',
               textAlign: 'center',
               cursor: 'pointer',
-              background: 'var(--accent-light)',
-              transition: 'background 0.15s',
             }}
-            onMouseEnter={e => e.currentTarget.style.background = 'rgba(37,99,235,0.10)'}
-            onMouseLeave={e => e.currentTarget.style.background = 'var(--accent-light)'}
           >
             <div style={{ fontSize: '28px', marginBottom: '8px' }}>📁</div>
-            <div style={{ fontSize: '13px', color: 'var(--accent)', fontWeight: 600 }}>엑셀 파일을 끌어오거나 클릭해서 선택해 주세요</div>
+            <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>엑셀 파일을 끌어오거나 클릭해서 선택해 주세요</div>
             <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>지원 형식: .xlsx, .xls</div>
             <input ref={fileInputRef} type="file" accept=".xlsx,.xls" style={{ display: 'none' }} onChange={handleFileChange} />
           </div>
@@ -603,8 +599,6 @@ export function InoutPage({ mode = 'all' }) {
   const [modal, setModal] = useState(null); // null | { type: 'add', txType: 'in'|'out' } | { type: 'bulk' }
   const [selectedIds, setSelectedIds] = useState(new Set());
   const tableRef = useRef(null);
-  const outRow1Ref = useRef(null);
-  const [outRow1H, setOutRow1H] = useState(36);
 
   const today = todayStr();
   const month = monthStr();
@@ -814,9 +808,7 @@ export function InoutPage({ mode = 'all' }) {
     });
   }, [filtered, sort, itemMap, wacMap]);
 
-  const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
-  const safePage = Math.min(page, totalPages);
-  const pageData = sorted.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+  const pageData = sorted;
 
   // 입고 합계 (필터링된 전체 기준)
   const inTotals = useMemo(() => {
@@ -982,7 +974,7 @@ export function InoutPage({ mode = 'all' }) {
     setPage(1);
   };
 
-  const SortTh = ({ sortKey, children, className = '', rowSpan, colSpan, style = {}, ...rest }) => {
+  const SortTh = ({ sortKey, children, className = '', rowSpan, colSpan, style = {} }) => {
     const isActive = sort.key === sortKey;
     const indicator = !isActive ? '↕' : sort.dir === 'asc' ? '↑' : '↓';
     return (
@@ -992,30 +984,15 @@ export function InoutPage({ mode = 'all' }) {
         className={`sortable-header ${isActive ? 'is-active' : ''} ${className}`}
         style={{ cursor: 'pointer', userSelect: 'none', verticalAlign: 'middle', textTransform: 'none', fontSize: '13px', ...style }}
         onClick={() => toggleSort(sortKey)}
-        {...rest}
       >
         {children} <span className="sort-indicator" style={{ fontSize: '10px', opacity: 0.6 }}>{indicator}</span>
       </th>
     );
   };
 
-  // 필터 결과가 줄어서 현재 페이지가 범위 초과하면 마지막 페이지로 보정
-  useEffect(() => {
-    if (page > totalPages) setPage(totalPages);
-  }, [totalPages, page]);
-
-  // 출고 헤더 1행 높이 측정 (2행 sticky top 계산용)
-  useEffect(() => {
-    if (outRow1Ref.current && isOutMode) {
-      const h = outRow1Ref.current.offsetHeight;
-      if (h > 0) setOutRow1H(h);
-    }
-  }, [isOutMode, pageData]);
-
-  // 컬럼 넓이 수동 조절 (outRow1H 변경 시에도 재적용)
   useEffect(() => {
     if (tableRef.current) enableColumnResize(tableRef.current);
-  }, [pageData, outRow1H]);
+  }, [pageData]);
 
   // ── 리셋 ───────────────────────────────────────────────────────────────────
   const handleReset = () => {
@@ -1050,11 +1027,10 @@ export function InoutPage({ mode = 'all' }) {
           <div className="page-desc">{pageDesc}</div>
         </div>
         <div className="page-actions">
-          <button className="btn btn-ghost btn-sm" onClick={handleExport}>📊 내보내기</button>
+          <button className="btn btn-outline" onClick={handleExport}>📊 이력 내보내기</button>
           {canBulk && (
-            <button className="btn btn-ghost btn-sm" onClick={() => setModal({ type: 'bulk' })}>📂 일괄 등록</button>
+            <button className="btn btn-outline" onClick={() => setModal({ type: 'bulk' })}>📂 엑셀 일괄 등록</button>
           )}
-          {(canBulk || true) && <div style={{ width: '1px', height: '22px', background: 'var(--border)', margin: '0 2px', alignSelf: 'center' }} />}
           {!isOutMode && (
             <button
               className="btn btn-success"
@@ -1062,7 +1038,9 @@ export function InoutPage({ mode = 'all' }) {
                 if (!canCreate) { showToast('등록 권한이 없습니다. 직원 이상만 가능합니다.', 'warning'); return; }
                 setModal({ type: 'add', txType: 'in' });
               }}
-            >+ 입고 등록</button>
+            >
+              + 입고 등록
+            </button>
           )}
           {!isInMode && (
             <button
@@ -1071,7 +1049,9 @@ export function InoutPage({ mode = 'all' }) {
                 if (!canCreate) { showToast('등록 권한이 없습니다. 직원 이상만 가능합니다.', 'warning'); return; }
                 setModal({ type: 'add', txType: 'out' });
               }}
-            >+ 출고 등록</button>
+            >
+              + 출고 등록
+            </button>
           )}
         </div>
       </div>
@@ -1096,82 +1076,103 @@ export function InoutPage({ mode = 'all' }) {
         </div>
       </div>
 
-      {/* 통합 필터 영역 */}
-      <div className="card" style={{ padding: '12px 16px', marginBottom: '12px' }}>
-        {/* 검색 + 필터 컨트롤 */}
-        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center', marginBottom: '10px' }}>
-          <input
-            type="text"
-            className="search-input"
-            style={{ flex: '1 1 180px', minWidth: 0 }}
-            placeholder="품목명, 코드, 거래처 검색..."
-            value={keyword}
-            onChange={e => { setKeyword(e.target.value); setPage(1); }}
-          />
-          {!isInMode && !isOutMode && (
-            <select className="filter-select" style={{ flex: '0 0 auto' }} value={typeFilter} onChange={e => { setTypeFilter(e.target.value); setPage(1); }}>
-              <option value="">전체</option>
-              <option value="in">입고만</option>
-              <option value="out">출고만</option>
-            </select>
-          )}
-          <select className="filter-select" style={{ flex: '0 0 auto' }} value={vendorFilter} onChange={e => { setVendorFilter(e.target.value); setPage(1); }}>
-            <option value="">전체 거래처</option>
-            {vendorOptions.map(v => <option key={v} value={v}>{v}</option>)}
-          </select>
-          <input type="date" className="filter-select" style={{ padding: '7px 10px', flex: '0 0 auto' }} value={dateFilter} onChange={e => { setDateFilter(e.target.value); setPage(1); }} />
-          <select className="filter-select" style={{ flex: '0 0 auto' }} value={`${sort.key}:${sort.dir}`} onChange={e => { const [key, dir] = e.target.value.split(':'); setSort({ key, dir }); setPage(1); }}>
-            <option value="date:desc">최신 날짜 순</option>
-            <option value="date:asc">오래된 날짜 순</option>
-            <option value="quantity:desc">수량 많은 순</option>
-            <option value="quantity:asc">수량 적은 순</option>
-            <option value="itemName:asc">품목명 가나다순</option>
-            <option value="vendor:asc">거래처 가나다순</option>
-          </select>
-          <button className="btn btn-ghost btn-sm" onClick={handleReset} style={{ flex: '0 0 auto' }}>초기화</button>
-        </div>
-        {/* 빠른 필터 + 건수 */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-          <span style={{ fontSize: '12px', color: 'var(--text-muted)', flexShrink: 0 }}>빠른 필터</span>
-          <div style={{ width: '1px', height: '14px', background: 'var(--border)', flexShrink: 0 }} />
-          {quickChips.map(chip => (
-            <button
-              key={chip.value}
-              className={`scan-mode-btn${quick === chip.value ? ' active' : ''}`}
-              style={{ padding: '3px 10px', fontSize: '12px' }}
-              onClick={() => handleQuickChange(chip.value)}
-            >{chip.label}</button>
-          ))}
-          <span style={{ marginLeft: 'auto', fontSize: '12px', color: 'var(--text-muted)', flexShrink: 0 }}>
-            {sorted.length.toLocaleString()}건 표시 · 전체 {transactions.length.toLocaleString()}건
-          </span>
-        </div>
-        {mappedData.length === 0 && (
-          <div style={{ marginTop: '10px', padding: '9px 12px', background: 'rgba(234,179,8,0.08)', border: '1px solid rgba(234,179,8,0.25)', borderRadius: '7px', fontSize: '13px', color: 'var(--text-muted)' }}>
-            등록된 품목이 없습니다. 재고 현황에서 품목을 등록하거나 파일을 업로드해 주세요.
-          </div>
-        )}
+      {/* 빠른 필터 칩 */}
+      <div className="scan-mode-bar" style={{ marginBottom: '12px' }}>
+        {quickChips.map(chip => (
+          <button
+            key={chip.value}
+            className={`scan-mode-btn${quick === chip.value ? ' active' : ''}`}
+            onClick={() => handleQuickChange(chip.value)}
+          >
+            {chip.label}
+          </button>
+        ))}
       </div>
+
+      {/* 검색 툴바 */}
+      <div className="toolbar">
+        <input
+          type="text"
+          className="search-input"
+          placeholder="품목명, 코드, 거래처 검색..."
+          value={keyword}
+          onChange={e => { setKeyword(e.target.value); setPage(1); }}
+        />
+        {!isInMode && !isOutMode && (
+          <select
+            className="filter-select"
+            value={typeFilter}
+            onChange={e => { setTypeFilter(e.target.value); setPage(1); }}
+          >
+            <option value="">전체</option>
+            <option value="in">입고만</option>
+            <option value="out">출고만</option>
+          </select>
+        )}
+        <select
+          className="filter-select"
+          value={vendorFilter}
+          onChange={e => { setVendorFilter(e.target.value); setPage(1); }}
+        >
+          <option value="">전체 거래처</option>
+          {vendorOptions.map(v => <option key={v} value={v}>{v}</option>)}
+        </select>
+        <input
+          type="date"
+          className="filter-select"
+          style={{ padding: '7px 10px' }}
+          value={dateFilter}
+          onChange={e => { setDateFilter(e.target.value); setPage(1); }}
+        />
+        <select
+          className="filter-select"
+          value={`${sort.key}:${sort.dir}`}
+          onChange={e => {
+            const [key, dir] = e.target.value.split(':');
+            setSort({ key, dir }); setPage(1);
+          }}
+        >
+          <option value="date:desc">최신 날짜 순</option>
+          <option value="date:asc">오래된 날짜 순</option>
+          <option value="quantity:desc">수량 많은 순</option>
+          <option value="quantity:asc">수량 적은 순</option>
+          <option value="itemName:asc">품목명 가나다순</option>
+          <option value="vendor:asc">거래처 가나다순</option>
+        </select>
+        <button className="btn btn-ghost btn-sm" onClick={handleReset}>초기화</button>
+      </div>
+
+      {/* 필터 요약 */}
+      <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '8px', padding: '0 4px' }}>
+        표시 {sorted.length}건 / 전체 {transactions.length}건
+      </div>
+
+      {/* 품목 없음 경고 */}
+      {mappedData.length === 0 && (
+        <div className="alert alert-warning" style={{ marginBottom: '12px' }}>
+          등록된 품목이 없습니다. 먼저 재고 현황에서 품목을 등록하거나 파일을 업로드해 주세요.
+        </div>
+      )}
 
       {/* 테이블 */}
       <div className="card card-flush">
-        {/* 선택 액션 바: 선택한 항목이 있을 때만 표시 */}
-        {selectedIds.size > 0 && (
-          <div style={{
-            padding: '8px 16px', display: 'flex', justifyContent: 'space-between',
-            alignItems: 'center', borderBottom: '1px solid var(--border)',
-            background: 'rgba(37,99,235,0.06)',
-          }}>
-            <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--accent)' }}>
-              {selectedIds.size}건 선택됨
-            </div>
-            {canBulk && (
-              <button className="btn btn-danger btn-sm" onClick={handleBulkDelete}>
-                선택 삭제
-              </button>
-            )}
-          </div>
-        )}
+        {/* 선택 액션 바 */}
+        <div style={{
+          padding: '10px 16px', display: 'flex', justifyContent: 'space-between',
+          alignItems: 'center', borderBottom: '1px solid var(--border-color)',
+          background: 'var(--bg-lighter)',
+        }}>
+          <div style={{ fontSize: '13px', fontWeight: 600 }}>선택 {selectedIds.size}건</div>
+          {canBulk && (
+            <button
+              className="btn btn-danger btn-sm"
+              disabled={selectedIds.size === 0}
+              onClick={handleBulkDelete}
+            >
+              선택 삭제
+            </button>
+          )}
+        </div>
 
         {sorted.length === 0 ? (
           <EmptyState
@@ -1184,50 +1185,38 @@ export function InoutPage({ mode = 'all' }) {
             <table className="data-table" ref={tableRef}>
               <thead>
                 {isOutMode ? (
-                  <>
-                    <tr ref={outRow1Ref}>
-                      <th rowSpan={2} style={{ width: '40px', textAlign: 'center', verticalAlign: 'middle', position: 'sticky', top: 0, zIndex: 4, textTransform: 'none' }}>
-                        <input type="checkbox" checked={allOnPageSelected} onChange={toggleSelectAll} />
-                      </th>
-                      <th rowSpan={2} className="col-num" style={{ verticalAlign: 'middle', position: 'sticky', top: 0, zIndex: 4, textTransform: 'none', fontSize: '13px' }}>#</th>
-                      <SortTh sortKey="category" rowSpan={2} style={{ position: 'sticky', top: 0, zIndex: 4 }}>자산</SortTh>
-                      <SortTh sortKey="date" rowSpan={2} style={{ position: 'sticky', top: 0, zIndex: 4 }}>출고일자</SortTh>
-                      <SortTh sortKey="vendor" rowSpan={2} style={{ position: 'sticky', top: 0, zIndex: 4 }}>거래처</SortTh>
-                      <SortTh sortKey="itemCode" rowSpan={2} style={{ position: 'sticky', top: 0, zIndex: 4 }}>상품코드</SortTh>
-                      <SortTh sortKey="itemName" className="col-fill" rowSpan={2} style={{ position: 'sticky', top: 0, zIndex: 4 }}>품명</SortTh>
-                      <SortTh sortKey="spec" rowSpan={2} style={{ position: 'sticky', top: 0, zIndex: 4 }}>규격</SortTh>
-                      <SortTh sortKey="unit" rowSpan={2} style={{ position: 'sticky', top: 0, zIndex: 4 }}>단위</SortTh>
-                      <SortTh sortKey="quantity" className="text-right" rowSpan={2} style={{ position: 'sticky', top: 0, zIndex: 4 }}>출고수량</SortTh>
-                      <th colSpan={3} style={{ textAlign: 'center', background: 'rgba(37,99,235,0.15)', color: '#000', fontWeight: 700, padding: '6px', position: 'sticky', top: 0, zIndex: 4 }}>판매</th>
-                      <th colSpan={3} style={{ textAlign: 'center', background: 'rgba(139,98,20,0.15)', color: '#000', fontWeight: 700, padding: '6px', position: 'sticky', top: 0, zIndex: 4 }}>매입</th>
-                      <th colSpan={3} style={{ textAlign: 'center', background: 'rgba(30,122,72,0.15)', color: '#000', fontWeight: 700, padding: '6px', position: 'sticky', top: 0, zIndex: 4 }}>이익 분석</th>
-                      <th rowSpan={2} style={{ verticalAlign: 'middle', position: 'sticky', top: 0, zIndex: 4, textTransform: 'none', fontSize: '13px' }}>관리</th>
-                    </tr>
-                    <tr className="out-col-subheader">
-                      {[
-                        { key: 'sellingPrice', label: '출고단가',   grp: 'sale' },
-                        { key: 'outAmt',       label: '판매가',     grp: 'sale' },
-                        { key: 'outTotal',     label: '출고합계',   grp: 'sale' },
-                        { key: 'supply',       label: '매입원가',   grp: 'buy'  },
-                        { key: 'vat',          label: '부가세',     grp: 'buy'  },
-                        { key: 'totalPrice',   label: '공급합계',   grp: 'buy'  },
-                        { key: 'profit',       label: '이익액',     grp: 'prof' },
-                        { key: 'profitMargin', label: '이익율',     grp: 'prof' },
-                        { key: 'cogsMargin',   label: '원가율',     grp: 'prof' },
-                      ].map(({ key, label, grp }) => {
-                        const bg = grp === 'sale' ? 'rgba(37,99,235,0.10)' : grp === 'buy' ? 'rgba(139,98,20,0.10)' : 'rgba(30,122,72,0.10)';
-                        return (
-                          <SortTh key={key} sortKey={key} className="text-right" data-grp={grp} style={{
-                            position: 'sticky', top: outRow1H, zIndex: 3,
-                            background: bg, color: '#000',
-                            fontSize: '12px', fontWeight: 600,
-                            textTransform: 'none', padding: '6px 10px',
-                            whiteSpace: 'nowrap',
-                          }}>{label}</SortTh>
-                        );
-                      })}
-                    </tr>
-                  </>
+                  <tr>
+                    <th style={{ width: '40px', textAlign: 'center', textTransform: 'none' }}>
+                      <input type="checkbox" checked={allOnPageSelected} onChange={toggleSelectAll} />
+                    </th>
+                    <th className="col-num" style={{ textTransform: 'none', fontSize: '13px' }}>#</th>
+                    <SortTh sortKey="category">자산</SortTh>
+                    <SortTh sortKey="date">출고일자</SortTh>
+                    <SortTh sortKey="vendor">거래처</SortTh>
+                    <SortTh sortKey="itemCode">상품코드</SortTh>
+                    <SortTh sortKey="itemName" className="col-fill">품명</SortTh>
+                    <SortTh sortKey="spec">규격</SortTh>
+                    <SortTh sortKey="unit">단위</SortTh>
+                    <SortTh sortKey="quantity" className="text-right">출고수량</SortTh>
+                    {[
+                      { key: 'sellingPrice', label: '출고단가 [판매]',   bg: 'rgba(37,99,235,0.12)',  color: '#2563eb' },
+                      { key: 'outAmt',       label: '판매가 [판매]',     bg: 'rgba(37,99,235,0.18)',  color: '#2563eb' },
+                      { key: 'outTotal',     label: '출고합계 [판매]',   bg: 'rgba(37,99,235,0.12)',  color: '#2563eb' },
+                      { key: 'supply',       label: '매입원가 [매입]',   bg: 'rgba(139,98,20,0.12)', color: '#8b6214' },
+                      { key: 'vat',          label: '부가세 [매입]',     bg: 'rgba(139,98,20,0.08)', color: '#8b6214' },
+                      { key: 'totalPrice',   label: '공급합계 [매입]',   bg: 'rgba(139,98,20,0.12)', color: '#8b6214' },
+                      { key: 'profit',       label: '이익액 [이익]',     bg: 'rgba(30,122,72,0.12)', color: '#1e7a48' },
+                      { key: 'profitMargin', label: '이익율 [이익]',     bg: 'rgba(30,122,72,0.08)', color: '#1e7a48' },
+                      { key: 'cogsMargin',   label: '원가율 [이익]',     bg: 'rgba(30,122,72,0.08)', color: '#1e7a48' },
+                    ].map(({ key, label, bg, color }) => (
+                      <SortTh key={key} sortKey={key} className="text-right" style={{
+                        background: bg, color, fontWeight: 700,
+                        fontSize: '11px', textTransform: 'none', whiteSpace: 'nowrap',
+                        minWidth: 72,
+                      }}>{label}</SortTh>
+                    ))}
+                    <th style={{ textTransform: 'none', fontSize: '13px' }}>관리</th>
+                  </tr>
                 ) : (
                   <tr>
                     <th style={{ width: '40px', textAlign: 'center', textTransform: 'none' }}>
@@ -1302,30 +1291,30 @@ export function InoutPage({ mode = 'all' }) {
                       )}
                       {isOutMode ? (
                         <>
-                          <td style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{category || '-'}</td>
-                          <td>{formatDate(tx.date)}</td>
-                          <td>{tx.vendor || '-'}</td>
-                          <td style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{itemCode || '-'}</td>
+                          <td style={{ fontSize: '12px' }}>{category || '-'}</td>
+                          <td style={{ fontSize: '12px' }}>{formatDate(tx.date)}</td>
+                          <td style={{ fontSize: '12px' }}>{tx.vendor || '-'}</td>
+                          <td style={{ fontSize: '12px' }}>{itemCode || '-'}</td>
                           <td className="col-fill"><strong>{tx.itemName || '-'}</strong></td>
-                          <td style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{spec || '-'}</td>
-                          <td style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{unit || '-'}</td>
-                          <td className="text-right" style={{ fontWeight: 600 }}>
+                          <td style={{ fontSize: '12px' }}>{spec || '-'}</td>
+                          <td style={{ fontSize: '12px' }}>{unit || '-'}</td>
+                          <td className="text-right" style={{ color: '#ef4444', fontWeight: 600 }}>
                             {qty ? qty.toLocaleString('ko-KR') : '-'}
                           </td>
                           {/* 판매 그룹 */}
                           <td className="text-right" style={{ background: 'rgba(37,99,235,0.08)' }}>{salePrice ? W(salePrice) : '-'}</td>
-                          <td className="text-right" style={{ background: 'rgba(37,99,235,0.12)' }}>{outAmt ? W(outAmt) : '-'}</td>
+                          <td className="text-right" style={{ background: 'rgba(37,99,235,0.12)', fontWeight: 600 }}>{outAmt ? W(outAmt) : '-'}</td>
                           <td className="text-right" style={{ background: 'rgba(37,99,235,0.08)' }}>{outAmt ? W(Math.round(outAmt * 1.1)) : '-'}</td>
                           {/* 매입 그룹 */}
                           <td className="text-right" style={{ background: 'rgba(139,98,20,0.12)' }}>{wacSupply ? W(wacSupply) : '-'}</td>
-                          <td className="text-right" style={{ background: 'rgba(139,98,20,0.07)' }}>{wacSupply ? W(wacVat) : '-'}</td>
-                          <td className="text-right" style={{ background: 'rgba(139,98,20,0.12)' }}>{wacSupply ? W(wacTotal) : '-'}</td>
+                          <td className="text-right" style={{ background: 'rgba(139,98,20,0.07)', color: '#fff' }}>{wacSupply ? W(wacVat) : '-'}</td>
+                          <td className="text-right" style={{ background: 'rgba(139,98,20,0.12)', fontWeight: 600 }}>{wacSupply ? W(wacTotal) : '-'}</td>
                           {/* 이익 분석 그룹 */}
-                          <td className="text-right" style={{ background: 'rgba(30,122,72,0.12)', fontWeight: 700 }}>
+                          <td className="text-right" style={{ background: 'rgba(30,122,72,0.12)', color: profit > 0 ? '#4ade80' : profit < 0 ? '#f87171' : 'var(--text-muted)', fontWeight: profit !== 0 ? 700 : 400 }}>
                             {outAmt ? W(profit) : '-'}
                           </td>
-                          <td className="text-right" style={{ background: 'rgba(30,122,72,0.10)', fontWeight: 700 }}>{profitMargin || '-'}</td>
-                          <td className="text-right" style={{ background: 'rgba(30,122,72,0.07)', fontWeight: 700 }}>{cogsMargin || '-'}</td>
+                          <td className="text-right" style={{ background: 'rgba(30,122,72,0.10)', color: profit > 0 ? '#4ade80' : profit < 0 ? '#f87171' : 'var(--text-muted)' }}>{profitMargin || '-'}</td>
+                          <td className="text-right" style={{ background: 'rgba(30,122,72,0.07)', color: '#fff' }}>{cogsMargin || '-'}</td>
                         </>
                       ) : isInMode ? (
                         <>
@@ -1427,33 +1416,8 @@ export function InoutPage({ mode = 'all' }) {
         )}
 
         {sorted.length > 0 && (
-          <div style={{ padding: '8px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid var(--border)', flexWrap: 'wrap', gap: '8px' }}>
-            <div style={{ color: 'var(--text-muted)', fontSize: '12px' }}>
-              총 {sorted.length.toLocaleString()}건 · {safePage}/{totalPages} 페이지
-            </div>
-            {totalPages > 1 && (
-              <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
-                <button className="btn btn-ghost btn-sm" onClick={() => setPage(1)} disabled={safePage === 1} style={{ padding: '3px 8px', fontSize: '12px' }}>«</button>
-                <button className="btn btn-ghost btn-sm" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={safePage === 1} style={{ padding: '3px 8px', fontSize: '12px' }}>‹</button>
-                {Array.from({ length: Math.min(7, totalPages) }, (_, i) => {
-                  let p;
-                  if (totalPages <= 7) p = i + 1;
-                  else if (safePage <= 4) p = i + 1;
-                  else if (safePage >= totalPages - 3) p = totalPages - 6 + i;
-                  else p = safePage - 3 + i;
-                  return (
-                    <button
-                      key={p}
-                      className={`btn btn-sm ${safePage === p ? 'btn-primary' : 'btn-ghost'}`}
-                      onClick={() => setPage(p)}
-                      style={{ padding: '3px 8px', fontSize: '12px', minWidth: '30px' }}
-                    >{p}</button>
-                  );
-                })}
-                <button className="btn btn-ghost btn-sm" onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={safePage === totalPages} style={{ padding: '3px 8px', fontSize: '12px' }}>›</button>
-                <button className="btn btn-ghost btn-sm" onClick={() => setPage(totalPages)} disabled={safePage === totalPages} style={{ padding: '3px 8px', fontSize: '12px' }}>»</button>
-              </div>
-            )}
+          <div style={{ padding: '8px 4px', color: 'var(--text-muted)', fontSize: '13px' }}>
+            총 {sorted.length.toLocaleString()}건
           </div>
         )}
       </div>
