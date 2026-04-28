@@ -83,7 +83,7 @@ export default function MyPage() {
 
   return (
     <div style={{ maxWidth: '700px', margin: '0 auto', padding: '24px' }}>
-      <h2 style={{ fontSize: '22px', fontWeight: '800', marginBottom: '24px' }}>👤 마이페이지</h2>
+      <h2 style={{ fontSize: '22px', fontWeight: '800', marginBottom: '24px' }}> 마이페이지</h2>
 
       {/* 프로필 카드 */}
       <div className="card" style={{ padding: '24px', marginBottom: '20px' }}>
@@ -95,7 +95,7 @@ export default function MyPage() {
             <div style={{ fontSize: '18px', fontWeight: '700' }}>{profile?.name || user?.displayName || '사용자'}</div>
             <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '2px' }}>{user?.email || '-'}</div>
             <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
-              가입일: {joinDate} · {isGoogleUser ? '🌐 Google 계정' : '📧 이메일 가입'}
+              가입일: {joinDate} · {isGoogleUser ? ' Google 계정' : ' 이메일 가입'}
             </div>
           </div>
         </div>
@@ -130,7 +130,7 @@ export default function MyPage() {
 
       {/* 비밀번호 변경 */}
       <div className="card" style={{ padding: '24px', marginBottom: '20px', opacity: isGoogleUser ? 0.5 : 1 }}>
-        <h3 style={{ fontSize: '15px', fontWeight: '700', marginBottom: '16px' }}>🔒 비밀번호 변경</h3>
+        <h3 style={{ fontSize: '15px', fontWeight: '700', marginBottom: '16px' }}> 비밀번호 변경</h3>
         {isGoogleUser ? (
           <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Google 계정은 Google에서 비밀번호를 관리합니다.</p>
         ) : (

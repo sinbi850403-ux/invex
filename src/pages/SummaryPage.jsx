@@ -107,7 +107,7 @@ function buildSummary(data, transactions, safetyStock) {
   return { totalQty, totalPrice, categories, warehouses, vendors, topByQty, warnings, dailyTrend };
 }
 
-const MEDAL = ['🥇', '🥈', '🥉'];
+const MEDAL = ['', '', ''];
 
 export default function SummaryPage() {
   const navigate = useNavigate();
@@ -147,7 +147,7 @@ export default function SummaryPage() {
         <div className="page-header"><h1 className="page-title">요약 보고</h1></div>
         <div className="card">
           <div className="empty-state">
-            <div className="icon">📊</div>
+            <div className="icon"></div>
             <div className="msg">아직 보고할 데이터가 없습니다.</div>
             <div className="sub">파일을 업로드하거나 품목을 등록하면 요약 보고가 자동으로 생성됩니다.</div>
             <br />

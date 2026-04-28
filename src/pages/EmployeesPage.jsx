@@ -164,7 +164,7 @@ export default function EmployeesPage() {
     <div>
       <div className="page-header">
         <div>
-          <h1 className="page-title">👥 직원 관리</h1>
+          <h1 className="page-title"> 직원 관리</h1>
           <div className="page-desc">직원 등록·수정·조회. 주민번호는 암호화 저장되며 admin만 평문 열람 가능합니다.</div>
         </div>
         <div className="page-actions">
@@ -185,7 +185,7 @@ export default function EmployeesPage() {
 
       <div className="card">
         {loading ? <div style={{ textAlign: 'center', padding: 40, color: 'var(--text-muted)' }}>불러오는 중…</div>
-        : filtered.length === 0 ? <div className="empty-state"><div className="icon">👤</div><div className="msg">등록된 직원이 없습니다</div></div>
+        : filtered.length === 0 ? <div className="empty-state"><div className="icon"></div><div className="msg">등록된 직원이 없습니다</div></div>
         : (
           <div className="table-wrapper">
             <table className="data-table">
@@ -206,11 +206,11 @@ export default function EmployeesPage() {
                     <td className="text-right">{fmtWon(e.baseSalary)}</td>
                     <td style={{ fontFamily: 'monospace', fontSize: 12 }}>
                       {e.rrnMask || '-'}
-                      {e.rrnMask && <button className="btn-icon" title="평문 조회(admin)" onClick={() => handleViewRRN(e.id)}>👁️</button>}
+                      {e.rrnMask && <button className="btn-icon" title="평문 조회(admin)" onClick={() => handleViewRRN(e.id)}></button>}
                     </td>
                     <td>
-                      <button className="btn-icon" onClick={() => setModalEmp(e)}>✏️</button>
-                      <button className="btn-icon btn-icon-danger" onClick={() => handleDelete(e.id)}>🗑️</button>
+                      <button className="btn-icon" onClick={() => setModalEmp(e)}></button>
+                      <button className="btn-icon btn-icon-danger" onClick={() => handleDelete(e.id)}></button>
                     </td>
                   </tr>
                 ))}

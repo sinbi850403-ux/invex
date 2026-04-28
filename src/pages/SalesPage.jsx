@@ -141,8 +141,8 @@ function SalesModal({ editOrder, orders, vendors, itemsMaster, onClose, onSave }
     <div className="modal-overlay" style={{ display: 'flex' }}>
       <div className="modal" style={{ maxWidth: '760px', width: '95vw', maxHeight: '92vh', overflowY: 'auto' }}>
         <div className="modal-header">
-          <h3 className="modal-title">{isEdit ? `✏️ 수주 수정 - ${e.orderNo}` : '📋 견적/수주 작성'}</h3>
-          <button className="modal-close" onClick={onClose}>✕</button>
+          <h3 className="modal-title">{isEdit ? ` 수주 수정 - ${e.orderNo}` : ' 견적/수주 작성'}</h3>
+          <button className="modal-close" onClick={onClose}></button>
         </div>
         <div className="modal-body">
           {/* 기본 정보 */}
@@ -190,7 +190,7 @@ function SalesModal({ editOrder, orders, vendors, itemsMaster, onClose, onSave }
           </div>
 
           {/* 품목 테이블 */}
-          <div style={{ marginBottom: '8px', fontWeight: 600, fontSize: '14px' }}>📦 품목</div>
+          <div style={{ marginBottom: '8px', fontWeight: 600, fontSize: '14px' }}> 품목</div>
           <datalist id="sp-item-list">
             {itemsMaster.map((it, i) => <option key={i} value={it.itemName || ''} />)}
           </datalist>
@@ -262,7 +262,7 @@ function SalesModal({ editOrder, orders, vendors, itemsMaster, onClose, onSave }
                           className="btn btn-xs btn-outline"
                           style={{ color: 'var(--danger)', borderColor: 'var(--danger)' }}
                           onClick={() => removeItem(idx)}
-                        >✕</button>
+                        ></button>
                       </td>
                     </tr>
                   );
@@ -290,7 +290,7 @@ function SalesModal({ editOrder, orders, vendors, itemsMaster, onClose, onSave }
 
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '20px', borderTop: '1px solid var(--border)', paddingTop: '12px' }}>
             <button className="btn btn-outline" onClick={onClose}>취소</button>
-            <button className="btn btn-primary" onClick={handleSave}>{isEdit ? '수정 저장' : '💾 저장'}</button>
+            <button className="btn btn-primary" onClick={handleSave}>{isEdit ? '수정 저장' : ' 저장'}</button>
           </div>
         </div>
       </div>
@@ -334,8 +334,8 @@ function ShipModal({ order, onClose, onShip }) {
     <div className="modal-overlay" style={{ display: 'flex' }}>
       <div className="modal" style={{ maxWidth: '640px', width: '95vw' }}>
         <div className="modal-header">
-          <h3 className="modal-title">🚚 출고 처리 - {order.orderNo}</h3>
-          <button className="modal-close" onClick={onClose}>✕</button>
+          <h3 className="modal-title"> 출고 처리 - {order.orderNo}</h3>
+          <button className="modal-close" onClick={onClose}></button>
         </div>
         <div className="modal-body">
           <div style={{ marginBottom: '12px', fontSize: '13px', color: 'var(--text-muted)' }}>
@@ -398,7 +398,7 @@ function ShipModal({ order, onClose, onShip }) {
 
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', borderTop: '1px solid var(--border)', paddingTop: '12px' }}>
             <button className="btn btn-outline" onClick={onClose}>취소</button>
-            <button className="btn btn-primary" onClick={handleConfirm}>🚚 출고 처리</button>
+            <button className="btn btn-primary" onClick={handleConfirm}> 출고 처리</button>
           </div>
         </div>
       </div>
@@ -425,7 +425,7 @@ function SalesDetail({ order, onClose }) {
             <h2 style={{ fontSize: '20px', fontWeight: 700, margin: '6px 0 2px' }}>{order.orderNo}</h2>
             <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>발행일: {order.orderDate || '-'}</div>
           </div>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: '22px', cursor: 'pointer', color: 'var(--text-muted)' }}>✕</button>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: '22px', cursor: 'pointer', color: 'var(--text-muted)' }}></button>
         </div>
 
         {/* 날짜 그리드 */}
@@ -503,12 +503,12 @@ function SalesDetail({ order, onClose }) {
 
           {order.taxInvoiceId && (
             <div style={{ padding: '8px 12px', background: 'rgba(124,58,237,0.1)', borderRadius: '6px', fontSize: '12px', color: '#7c3aed', marginBottom: '12px' }}>
-              ✅ 세금계산서 발행 완료 (TI-{order.orderNo})
+               세금계산서 발행 완료 (TI-{order.orderNo})
             </div>
           )}
           {order.receivableEntryId && (
             <div style={{ padding: '8px 12px', background: 'rgba(22,163,74,0.1)', borderRadius: '6px', fontSize: '12px', color: '#16a34a', marginBottom: '12px' }}>
-              💰 미수금 등록 완료
+               미수금 등록 완료
             </div>
           )}
         </div>
@@ -702,7 +702,7 @@ export default function SalesPage() {
     <div>
       <div className="page-header">
         <div>
-          <h1 className="page-title">🧾 수주 관리</h1>
+          <h1 className="page-title"> 수주 관리</h1>
           <div className="page-desc">견적 → 수주확정 → 출고 → 세금계산서 → 미수금 파이프라인을 관리합니다.</div>
         </div>
         <div className="page-actions">
@@ -751,7 +751,7 @@ export default function SalesPage() {
       <div className="card card-flush">
         {filteredOrders.length === 0 ? (
           <div className="empty-state">
-            <div className="icon">📭</div>
+            <div className="icon"></div>
             <div className="msg">수주 내역이 없습니다</div>
             <div className="sub">오른쪽 상단 '견적/수주 작성'으로 시작하세요.</div>
           </div>

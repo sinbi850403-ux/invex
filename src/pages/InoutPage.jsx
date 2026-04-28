@@ -134,8 +134,8 @@ function TxModal({ txType, items, vendors, onClose, onSave }) {
     <div className="modal-overlay" style={{ display: 'flex' }} onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="modal" style={{ maxWidth: '680px' }}>
         <div className="modal-header">
-          <h3 className="modal-title">{txType === 'in' ? '📥 입고 등록' : '📤 출고 등록'}</h3>
-          <button className="modal-close" onClick={onClose}>✕</button>
+          <h3 className="modal-title">{txType === 'in' ? ' 입고 등록' : ' 출고 등록'}</h3>
+          <button className="modal-close" onClick={onClose}></button>
         </div>
         <div className="modal-body">
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 260px', gap: '16px' }}>
@@ -467,8 +467,8 @@ function BulkUploadModal({ items, modeDefault, onClose, onSuccess }) {
     <div className="modal-overlay" style={{ display: 'flex' }} onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="modal" style={{ maxWidth: '700px' }}>
         <div className="modal-header">
-          <h3 className="modal-title">📂 {modalTitle}</h3>
-          <button className="modal-close" onClick={onClose}>✕</button>
+          <h3 className="modal-title"> {modalTitle}</h3>
+          <button className="modal-close" onClick={onClose}></button>
         </div>
         <div className="modal-body">
           <div className="alert alert-info" style={{ marginBottom: '16px', fontSize: '13px' }}>
@@ -478,7 +478,7 @@ function BulkUploadModal({ items, modeDefault, onClose, onSuccess }) {
             3. 저장한 엑셀 파일을 끌어놓거나 선택하면 미리보기 후 한 번에 등록할 수 있습니다.
           </div>
           <button className="btn btn-outline" onClick={handleDownloadTemplate} style={{ marginBottom: '16px' }}>
-            📥 엑셀 양식 다운로드
+             엑셀 양식 다운로드
           </button>
 
           {/* 드롭존 */}
@@ -494,7 +494,7 @@ function BulkUploadModal({ items, modeDefault, onClose, onSuccess }) {
               cursor: 'pointer',
             }}
           >
-            <div style={{ fontSize: '28px', marginBottom: '8px' }}>📁</div>
+            <div style={{ fontSize: '28px', marginBottom: '8px' }}></div>
             <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>엑셀 파일을 끌어오거나 클릭해서 선택해 주세요</div>
             <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>지원 형식: .xlsx, .xls</div>
             <input ref={fileInputRef} type="file" accept=".xlsx,.xls" style={{ display: 'none' }} onChange={handleFileChange} />
@@ -578,7 +578,7 @@ export function InoutPage({ mode = 'all' }) {
   const canBulk = canAction('inout:bulk');
 
   const pageTitle = isInMode ? '입고 관리' : isOutMode ? '출고 관리' : '입출고 관리';
-  const pageIcon = isInMode ? '📥' : isOutMode ? '📤' : '📦';
+  const pageIcon = isInMode ? '' : isOutMode ? '' : '';
   const pageDesc = isInMode
     ? '입고 기록을 등록하면 재고 수량이 자동으로 증가합니다.'
     : isOutMode
@@ -1038,9 +1038,9 @@ export function InoutPage({ mode = 'all' }) {
           <div className="page-desc">{pageDesc}</div>
         </div>
         <div className="page-actions">
-          <button className="btn btn-outline" onClick={handleExport}>📊 이력 내보내기</button>
+          <button className="btn btn-outline" onClick={handleExport}> 이력 내보내기</button>
           {canBulk && (
-            <button className="btn btn-outline" onClick={() => setModal({ type: 'bulk' })}>📂 엑셀 일괄 등록</button>
+            <button className="btn btn-outline" onClick={() => setModal({ type: 'bulk' })}> 엑셀 일괄 등록</button>
           )}
           {!isOutMode && (
             <button
@@ -1105,11 +1105,11 @@ export function InoutPage({ mode = 'all' }) {
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0' }}>
           <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>필터 적용 중:</span>
           <span className="badge badge-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-            📅 {monthFilter}
+             {monthFilter}
             <button
               style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', padding: 0, lineHeight: 1 }}
               onClick={() => { setMonthFilter(''); setPage(1); }}
-            >✕</button>
+            ></button>
           </span>
         </div>
       )}
@@ -1201,7 +1201,7 @@ export function InoutPage({ mode = 'all' }) {
 
         {sorted.length === 0 ? (
           <EmptyState
-            icon="📭"
+            icon=""
             msg={transactions.length === 0 ? '아직 입출고 기록이 없습니다.' : '검색 결과가 없습니다.'}
             sub={transactions.length === 0 ? '위 버튼으로 입고 또는 출고를 등록해 주세요.' : ''}
           />

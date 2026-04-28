@@ -1,11 +1,10 @@
 /**
  * LedgerPage.jsx - 수불부 (재고수불대장)
  */
-import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { useStore } from '../hooks/useStore.js';
 import { showToast } from '../toast.js';
 import { downloadExcel } from '../excel.js';
-import { enableColumnResize } from '../ux-toolkit.js';
 import { jsPDF } from 'jspdf';
 import { applyPlugin } from 'jspdf-autotable';
 import { applyKoreanFont, getKoreanFontStyle } from '../pdf-font.js';
@@ -103,7 +102,7 @@ function OpeningModal({ items, openingOverrides, onClose, onSave }) {
       <div className="modal" style={{ maxWidth: '760px' }}>
         <div className="modal-header">
           <h3 className="modal-title">기초재고 입력</h3>
-          <button className="modal-close" onClick={onClose}>✕</button>
+          <button className="modal-close" onClick={onClose}></button>
         </div>
         <div className="modal-body">
           <div style={{ display: 'flex', gap: '12px', alignItems: 'center', marginBottom: '12px' }}>
@@ -166,13 +165,6 @@ export default function LedgerPage() {
     [items, transactions, fromDate, toDate, itemFilter, openingOverrides]
   );
   const rows = useMemo(() => sortRows(rawRows, sort), [rawRows, sort]);
-  const tableRef = useRef(null);
-
-  useEffect(() => {
-    if (showTable && rows.length > 0 && tableRef.current) {
-      enableColumnResize(tableRef.current);
-    }
-  }, [showTable, rows]);
 
   const handleSort = (key) => {
     setSort(prev => ({
@@ -261,13 +253,13 @@ export default function LedgerPage() {
     <div>
       <div className="page-header">
         <div>
-          <h1 className="page-title">📒 수불부 (재고수불대장)</h1>
+          <h1 className="page-title"> 수불부 (재고수불대장)</h1>
           <div className="page-desc">기간별 품목의 입고, 출고, 잔량을 장부 형식으로 자동 생성합니다.</div>
         </div>
         <div className="page-actions">
           <button className="btn btn-outline" onClick={() => setShowOpening(true)}>기초재고 입력</button>
-          <button className="btn btn-outline" onClick={handleExcelExport}>📊 엑셀 다운로드</button>
-          <button className="btn btn-primary" onClick={handlePdfExport}>📄 PDF 다운로드</button>
+          <button className="btn btn-outline" onClick={handleExcelExport}> 엑셀 다운로드</button>
+          <button className="btn btn-primary" onClick={handlePdfExport}> PDF 다운로드</button>
         </div>
       </div>
 
@@ -304,13 +296,13 @@ export default function LedgerPage() {
         ) : (
           <>
             <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', background: 'var(--bg-card)' }}>
-              <strong>📒 수불대장</strong>
+              <strong> 수불대장</strong>
               <span style={{ color: 'var(--text-muted)', fontSize: '13px', marginLeft: '8px' }}>
                 {fromDate} ~ {toDate} ({rows.length}개 품목)
               </span>
             </div>
             <div className="table-wrapper" style={{ border: 'none', borderRadius: 0 }}>
-              <table className="data-table" ref={tableRef}>
+              <table className="data-table">
                 <thead>
                   <tr>
                     <th style={{ width: '40px' }}>#</th>

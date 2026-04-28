@@ -7,14 +7,14 @@ import React, { useMemo } from 'react';
 import { useStore } from '../hooks/useStore.js';
 
 const CONFIDENCE_LABELS = {
-  high:   { text: '높음', color: 'var(--success)', icon: '🟢' },
-  medium: { text: '보통', color: '#d29922',         icon: '🟡' },
-  low:    { text: '낮음', color: 'var(--text-muted)', icon: '⚪' },
+  high:   { text: '높음', color: 'var(--success)', icon: '' },
+  medium: { text: '보통', color: '#d29922',         icon: '' },
+  low:    { text: '낮음', color: 'var(--text-muted)', icon: '' },
 };
 const TREND_LABELS = {
-  up:     { text: '증가', icon: '📈', color: 'var(--success)' },
-  down:   { text: '감소', icon: '📉', color: 'var(--danger)' },
-  stable: { text: '안정', icon: '➡️', color: 'var(--text-muted)' },
+  up:     { text: '증가', icon: '', color: 'var(--success)' },
+  down:   { text: '감소', icon: '', color: 'var(--danger)' },
+  stable: { text: '안정', icon: '', color: 'var(--text-muted)' },
 };
 
 /** 미니 바차트 */
@@ -135,7 +135,7 @@ export default function ForecastPage() {
       {forecasts.length === 0 ? (
         <div className="card" style={{ marginTop: '16px' }}>
           <div className="empty-state">
-            <div className="icon">🤖</div>
+            <div className="icon"></div>
             <div className="msg">예측할 데이터가 아직 없습니다</div>
             <div className="sub">출고 이력이 쌓이면 자동으로 수요를 예측합니다.<br />입출고 관리에서 출고를 기록해주세요.</div>
           </div>
@@ -145,7 +145,7 @@ export default function ForecastPage() {
           {/* 예측 테이블 */}
           <div className="card" style={{ marginTop: '16px' }}>
             <div className="card-title">
-              🤖 {nextYear}년 {nextMonthLabel} 수요 예측
+               {nextYear}년 {nextMonthLabel} 수요 예측
               <span className="card-subtitle">{forecasts.length}개 품목</span>
             </div>
             <div className="table-wrapper">
@@ -192,7 +192,7 @@ export default function ForecastPage() {
 
           {/* 알고리즘 설명 */}
           <div className="card" style={{ borderLeft: '3px solid var(--accent)' }}>
-            <div className="card-title">📐 예측 알고리즘 설명</div>
+            <div className="card-title"> 예측 알고리즘 설명</div>
             <div style={{ fontSize: '13px', color: 'var(--text-muted)', lineHeight: '1.8' }}>
               <ul style={{ margin: '0', paddingLeft: '16px' }}>
                 <li><strong>가중 이동평균</strong>: 최근 6개월 출고량에 가중치를 부여 (최근일수록 높은 가중치)</li>

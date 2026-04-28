@@ -75,7 +75,7 @@ export default function AttendancePage() {
     <div>
       <div className="page-header">
         <div>
-          <h1 className="page-title">🕐 근태 관리</h1>
+          <h1 className="page-title"> 근태 관리</h1>
           <div className="page-desc">월 단위 출퇴근 기록. 연장·야간·휴일 근무는 자동 분류됩니다.</div>
         </div>
       </div>
@@ -125,7 +125,7 @@ export default function AttendancePage() {
           <>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
               <div style={{ color: 'var(--text-muted)', fontSize: 12 }}>시간 입력 후 "일괄 저장"을 누르면 연장/야간/휴일 근무가 자동 분류됩니다.</div>
-              <button className="btn btn-primary" onClick={saveAll}>💾 일괄 저장</button>
+              <button className="btn btn-primary" onClick={saveAll}> 일괄 저장</button>
             </div>
             <div className="table-wrapper">
               <table className="data-table">

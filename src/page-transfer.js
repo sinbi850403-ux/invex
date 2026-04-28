@@ -256,7 +256,7 @@ export function renderTransferPage(container, navigateTo) {
     }
 
     const newTransfer = {
-      id: crypto.randomUUID(), // ★ Supabase upsert 멱등성 보장
+      id: crypto.randomUUID(), //  Supabase upsert 멱등성 보장
       date: now.toISOString().split('T')[0],
       time: now.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }),
       itemName: sourceItem.itemName,

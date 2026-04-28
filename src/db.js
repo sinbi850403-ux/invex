@@ -392,7 +392,7 @@ export const transactions = {
   async bulkCreate(txArray) {
     const userId = await getUserId();
     const rows = txArray.map(tx => ({ ...tx, user_id: userId }));
-    // ★ insert → upsert(onConflict: 'id')
+    //  insert → upsert(onConflict: 'id')
     //   클라이언트 UUID가 id로 전달되므로 재시도 시 중복 생성 없음 (멱등)
     const { data, error } = await supabase
       .from('transactions')
@@ -758,7 +758,7 @@ export const stocktakes = {
 export const settings = {
   async get(key) {
     const userId = await getUserId();
-    // ★ .single() → .maybeSingle() : 행이 없으면 HTTP 406 대신 null 반환
+    //  .single() → .maybeSingle() : 행이 없으면 HTTP 406 대신 null 반환
     //   .single()은 0행이면 PGRST116(406)을 발생시켜 브라우저 콘솔에 에러가 찍힘
     const { data, error } = await supabase
       .from('user_settings')

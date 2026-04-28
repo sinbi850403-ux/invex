@@ -44,7 +44,7 @@ export default function SeverancePage() {
     <div>
       <div className="page-header">
         <div>
-          <h1 className="page-title">📋 퇴직금 계산</h1>
+          <h1 className="page-title"> 퇴직금 계산</h1>
           <div className="page-desc">직원의 퇴직금을 자동으로 계산합니다. (평균임금 × 30일 × 근속년수)</div>
         </div>
       </div>
@@ -98,7 +98,7 @@ export default function SeverancePage() {
 
       <div className="card">
         <h3 style={{ marginBottom: 12 }}>퇴직금 지급 이력</h3>
-        <div className="empty-state"><div className="icon">📋</div><div className="msg">지급된 퇴직금 이력이 없습니다</div></div>
+        <div className="empty-state"><div className="icon"></div><div className="msg">지급된 퇴직금 이력이 없습니다</div></div>
       </div>
     </div>
   );

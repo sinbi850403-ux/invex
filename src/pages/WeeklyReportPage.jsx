@@ -156,7 +156,7 @@ export default function WeeklyReportPage() {
       {/* TOP 5 */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginTop: '16px' }}>
         <div className="card">
-          <div className="card-title">📤 이번 주 출고 TOP 5</div>
+          <div className="card-title"> 이번 주 출고 TOP 5</div>
           {topOutItems.length === 0 ? (
             <div style={{ color: 'var(--text-muted)', fontSize: '13px', padding: '12px' }}>이번 주 출고 내역이 없습니다.</div>
           ) : (
@@ -173,7 +173,7 @@ export default function WeeklyReportPage() {
         </div>
 
         <div className="card">
-          <div className="card-title">📥 이번 주 입고 TOP 5</div>
+          <div className="card-title"> 이번 주 입고 TOP 5</div>
           {topInItems.length === 0 ? (
             <div style={{ color: 'var(--text-muted)', fontSize: '13px', padding: '12px' }}>이번 주 입고 내역이 없습니다.</div>
           ) : (
@@ -193,7 +193,7 @@ export default function WeeklyReportPage() {
       {/* 재고 부족 알림 */}
       {lowStockItems.length > 0 && (
         <div className="card" style={{ marginTop: '16px', borderLeft: '3px solid var(--danger)' }}>
-          <div className="card-title">⚠️ 재고 부족 품목 ({lowStockItems.length}건)</div>
+          <div className="card-title"> 재고 부족 품목 ({lowStockItems.length}건)</div>
           <div className="table-wrapper">
             <table className="data-table">
               <thead>
@@ -214,7 +214,7 @@ export default function WeeklyReportPage() {
                       <td className="text-right" style={{ color: 'var(--danger)', fontWeight: '700' }}>{qty}</td>
                       <td className="text-right">{min}</td>
                       <td style={{ color: 'var(--danger)', fontSize: '12px' }}>
-                        {qty === 0 ? '🚫 재고 없음' : '⚠️ 부족'}
+                        {qty === 0 ? ' 재고 없음' : ' 부족'}
                       </td>
                     </tr>
                   );
@@ -227,17 +227,17 @@ export default function WeeklyReportPage() {
 
       {/* 인사이트 */}
       <div className="card" style={{ marginTop: '16px', borderLeft: '3px solid var(--accent)' }}>
-        <div className="card-title">💡 이번 주 인사이트</div>
+        <div className="card-title"> 이번 주 인사이트</div>
         <ul style={{ fontSize: '13px', color: 'var(--text-muted)', lineHeight: '2', margin: '0', paddingLeft: '16px' }}>
           {thisWeekTx.length === 0 && <li>이번 주에 등록된 거래가 없습니다. 입출고를 기록해보세요!</li>}
-          {salesChange > 20 && <li style={{ color: 'var(--success)' }}>🎉 이번 주 매출이 전주 대비 크게 증가했습니다!</li>}
-          {salesChange < -20 && <li style={{ color: 'var(--danger)' }}>📉 이번 주 매출이 전주 대비 크게 감소했습니다. 원인을 확인해보세요.</li>}
+          {salesChange > 20 && <li style={{ color: 'var(--success)' }}> 이번 주 매출이 전주 대비 크게 증가했습니다!</li>}
+          {salesChange < -20 && <li style={{ color: 'var(--danger)' }}> 이번 주 매출이 전주 대비 크게 감소했습니다. 원인을 확인해보세요.</li>}
           {lowStockItems.length > 0
-            ? <li style={{ color: 'var(--danger)' }}>⚠️ {lowStockItems.length}개 품목의 재고가 부족합니다. 발주를 검토하세요.</li>
-            : <li style={{ color: 'var(--success)' }}>✅ 재고 부족 품목이 없습니다.</li>
+            ? <li style={{ color: 'var(--danger)' }}> {lowStockItems.length}개 품목의 재고가 부족합니다. 발주를 검토하세요.</li>
+            : <li style={{ color: 'var(--success)' }}> 재고 부족 품목이 없습니다.</li>
           }
           {topOutItems.length > 0 && (
-            <li>📦 이번 주 가장 많이 출고된 품목: <strong>{topOutItems[0][0]}</strong> ({topOutItems[0][1]}개)</li>
+            <li> 이번 주 가장 많이 출고된 품목: <strong>{topOutItems[0][0]}</strong> ({topOutItems[0][1]}개)</li>
           )}
         </ul>
       </div>

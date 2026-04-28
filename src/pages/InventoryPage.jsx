@@ -702,7 +702,7 @@ export default function InventoryPage() {
       <div>
         <div className="page-header">
           <div>
-            <h1 className="page-title">📦 재고 현황</h1>
+            <h1 className="page-title"> 재고 현황</h1>
             <div className="page-desc">품목별 재고 수량과 금액을 관리합니다.</div>
           </div>
           <div className="page-actions">
@@ -711,7 +711,7 @@ export default function InventoryPage() {
         </div>
         <div className="card">
           <div className="empty-state">
-            <div className="icon">📦</div>
+            <div className="icon"></div>
             <div className="msg">아직 등록된 품목이 없습니다</div>
             <div className="sub">엑셀 파일을 업로드하거나 품목을 직접 등록해 주세요.</div>
           </div>
@@ -731,17 +731,17 @@ export default function InventoryPage() {
       {/* 헤더 */}
       <div className="page-header">
         <div>
-          <h1 className="page-title">📦 재고 현황</h1>
-          <div className="page-desc">{state.fileName ? `📎 ${state.fileName} ` : ''}총 {data.length}개 품목</div>
+          <h1 className="page-title"> 재고 현황</h1>
+          <div className="page-desc">{state.fileName ? ` ${state.fileName} ` : ''}총 {data.length}개 품목</div>
         </div>
         <div className="page-actions">
           {canBulk && (
             <button className="btn btn-outline" onClick={() => { rebuildInventoryFromTransactions(); showToast('재고 재계산 완료', 'success'); }}>
-              🔄 재고 재계산
+               재고 재계산
             </button>
           )}
-          <button className="btn btn-outline" onClick={handleExportExcel}>📊 엑셀</button>
-          <button className="btn btn-outline" onClick={handleExportPDF}>📄 PDF</button>
+          <button className="btn btn-outline" onClick={handleExportExcel}> 엑셀</button>
+          <button className="btn btn-outline" onClick={handleExportPDF}> PDF</button>
           {canCreate && <button className="btn btn-primary" onClick={() => setModal({ type: 'add' })}>+ 품목 추가</button>}
         </div>
       </div>
@@ -786,7 +786,7 @@ export default function InventoryPage() {
             onChange={e => setFilter({ keyword: e.target.value })}
           />
           <button className="filter-toggle-btn" onClick={() => setShowFilters(p => !p)}>
-            🔽 상세 필터
+             상세 필터
           </button>
           <button className="btn btn-ghost btn-sm" onClick={() => setFilter({ keyword: '', category: '', warehouse: '', stock: '', itemCode: '', vendor: '', focus: 'all' })}>
             초기화
@@ -909,7 +909,7 @@ export default function InventoryPage() {
                       return (
                         <td key={key} className={f?.numeric ? 'text-right' : ''}>
                           {isLow && key === 'quantity' ? (
-                            <span style={{ color: 'var(--danger)' }}>⚠️ {val}</span>
+                            <span style={{ color: 'var(--danger)' }}> {val}</span>
                           ) : val}
                         </td>
                       );

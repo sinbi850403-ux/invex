@@ -65,7 +65,7 @@ export default function BackupPage() {
         const itemCount = (data.mappedData || []).length;
         const txCount = (data.transactions || []).length;
         const summary = `품목 ${itemCount}건, 거래이력 ${txCount}건`;
-        if (!confirm(`다음 데이터를 복원하시겠습니까?\n\n${summary}\n\n⚠️ 현재 데이터가 대체됩니다.`)) return;
+        if (!confirm(`다음 데이터를 복원하시겠습니까?\n\n${summary}\n\n 현재 데이터가 대체됩니다.`)) return;
         setStore(data);
         showToast(`복원 완료! (${summary})`, 'success');
       } catch (err) {
@@ -123,7 +123,7 @@ export default function BackupPage() {
         {/* 백업 */}
         <div className="card" style={{ borderTop: '3px solid var(--success)' }}>
           <div style={{ textAlign: 'center', padding: '16px 0' }}>
-            <div style={{ fontSize: '48px', marginBottom: '12px' }}>💾</div>
+            <div style={{ fontSize: '48px', marginBottom: '12px' }}></div>
             <h3 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '8px' }}>데이터 백업</h3>
             <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '20px' }}>
               현재 모든 데이터를 JSON 파일로 다운로드합니다.<br />
@@ -141,7 +141,7 @@ export default function BackupPage() {
               style={{ width: '100%' }}
               onClick={() => handleDownload(getState(), '전체백업')}
             >
-              📥 전체 백업 다운로드
+               전체 백업 다운로드
             </button>
 
             <div style={{ marginTop: '12px' }}>
@@ -155,11 +155,11 @@ export default function BackupPage() {
         {/* 복원 */}
         <div className="card" style={{ borderTop: '3px solid var(--accent)' }}>
           <div style={{ textAlign: 'center', padding: '16px 0' }}>
-            <div style={{ fontSize: '48px', marginBottom: '12px' }}>📂</div>
+            <div style={{ fontSize: '48px', marginBottom: '12px' }}></div>
             <h3 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '8px' }}>데이터 복원</h3>
             <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '20px' }}>
               이전에 백업한 JSON 파일을 업로드하여 데이터를 복원합니다.<br />
-              <strong style={{ color: 'var(--danger)' }}>⚠️ 복원 시 현재 데이터가 대체됩니다.</strong>
+              <strong style={{ color: 'var(--danger)' }}> 복원 시 현재 데이터가 대체됩니다.</strong>
             </p>
 
             <div
@@ -174,7 +174,7 @@ export default function BackupPage() {
               onDragLeave={() => setIsDragging(false)}
               onDrop={handleDrop}
             >
-              <div style={{ fontSize: '24px', marginBottom: '8px' }}>📁</div>
+              <div style={{ fontSize: '24px', marginBottom: '8px' }}></div>
               <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
                 백업 파일을 여기에 드래그하거나<br />클릭하여 선택하세요
               </div>
@@ -187,7 +187,7 @@ export default function BackupPage() {
 
       {/* 백업 팁 */}
       <div className="card" style={{ marginTop: '16px', borderLeft: '3px solid var(--accent)' }}>
-        <div className="card-title">📌 백업 가이드</div>
+        <div className="card-title"> 백업 가이드</div>
         <div style={{ fontSize: '13px', color: 'var(--text-muted)', lineHeight: '1.8' }}>
           <ul style={{ margin: '0', paddingLeft: '16px' }}>
             <li>매주 1회 이상 정기 백업을 권장합니다</li>

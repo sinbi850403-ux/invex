@@ -267,7 +267,7 @@ async function syncToSupabase() {
       promises.push(
         managedQuery(() => db.items.bulkUpsert(items))
           .then((savedItems) => {
-            // ★ Supabase가 반환한 UUID를 state.mappedData._id에 반영
+            //  Supabase가 반환한 UUID를 state.mappedData._id에 반영
             // → 같은 세션 내 deleteItem이 정확한 UUID로 Supabase 삭제 가능
             if (Array.isArray(savedItems) && savedItems.length > 0) {
               savedItems.forEach(saved => {
@@ -293,7 +293,7 @@ async function syncToSupabase() {
       const newTxs = (state.transactions || [])
         .filter(tx => !tx._synced)
         .map(tx => ({
-          id: tx.id,            // ★ 클라이언트 UUID → Supabase와 동일 ID 공유 (upsert 멱등성 보장)
+          id: tx.id,            //  클라이언트 UUID → Supabase와 동일 ID 공유 (upsert 멱등성 보장)
           type: tx.type,
           item_name: tx.itemName,
           item_code: tx.itemCode || null,
@@ -329,7 +329,7 @@ async function syncToSupabase() {
     }
 
     // 거래처 동기화 — upsert(onConflict: user_id,name)로 수정 내용도 반영
-    // ★ _id(UUID)를 id로 포함: 이름 변경 시 같은 row를 업데이트 (중복 생성 방지)
+    //  _id(UUID)를 id로 포함: 이름 변경 시 같은 row를 업데이트 (중복 생성 방지)
     if (keysToSync.has('vendorMaster')) {
       const vendors = (state.vendorMaster || []).map(v => {
         const payload = {
@@ -355,7 +355,7 @@ async function syncToSupabase() {
         );
       }
 
-      // ★ 삭제된 거래처 Supabase에서도 제거
+      //  삭제된 거래처 Supabase에서도 제거
       // _deletedVendors: setState로 전달된 삭제 목록 (store에서 추적)
       const deletedVendors = state._deletedVendors || [];
       if (deletedVendors.length > 0) {
@@ -460,8 +460,8 @@ async function syncToSupabase() {
       'safetyStock', 'beginnerMode', 'dashboardMode', 'visibleColumns',
       'inventoryViewPrefs', 'inoutViewPrefs', 'tableSortPrefs',
       'costMethod', 'currency',
-      'notificationReadMap', // ★ 알림 읽음 상태 — 새로고침 후에도 유지
-      'ledgerOpeningOverrides', // ★ 수불부 기초재고 수동 입력값 — 다기기 동기화
+      'notificationReadMap', //  알림 읽음 상태 — 새로고침 후에도 유지
+      'ledgerOpeningOverrides', //  수불부 기초재고 수동 입력값 — 다기기 동기화
     ];
     for (const key of settingKeys) {
       if (keysToSync.has(key) && state[key] !== undefined) {
@@ -696,7 +696,7 @@ export async function restoreState(userId = null) {
           (cloudData.mappedData?.length ?? 0) > 0 ||
           (cloudData.transactions?.length ?? 0) > 0;
 
-        // ★ 오프라인에서 입력한 미동기화 트랜잭션 보호
+        //  오프라인에서 입력한 미동기화 트랜잭션 보호
         // Supabase에 기존 데이터가 있어도 로컬의 _synced:false 건은 유실되지 않도록 merge
         const localTxs = localData?.transactions || [];
         const unsyncedLocal = localTxs.filter(tx => !tx._synced);
@@ -718,7 +718,7 @@ export async function restoreState(userId = null) {
         if ((safeCloudData.transactions?.length ?? 0) === 0 && (localData?.transactions?.length ?? 0) > 0) {
           delete safeCloudData.transactions;
         }
-        // ★ 주요 데이터 추가 보호 (빈 배열/객체로 덮어쓰기 방지)
+        //  주요 데이터 추가 보호 (빈 배열/객체로 덮어쓰기 방지)
         // vendorMaster, transfers, accountEntries, purchaseOrders, stocktakeHistory는 배열 → .length 사용
         // safetyStock은 객체({품목명: 수량}) → Object.keys().length 사용
         const protectArrayKeys = ['vendorMaster', 'transfers', 'accountEntries', 'purchaseOrders', 'stocktakeHistory'];
@@ -816,7 +816,7 @@ export function recalcItemAmounts(item) {
  * @param {object} tx - {type:'in'|'out', itemName, quantity, date, note, unitPrice}
  */
 export function addTransaction(tx) {
-  // ★ 클라이언트 UUID 사용 → Supabase와 동일 ID 공유 → 삭제/upsert 정확히 동작
+  //  클라이언트 UUID 사용 → Supabase와 동일 ID 공유 → 삭제/upsert 정확히 동작
   const clientId = (typeof crypto !== 'undefined' && crypto.randomUUID)
     ? crypto.randomUUID()
     : `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
@@ -994,7 +994,7 @@ export function updateTransactionPrices(id, fields) {
   saveToDB();
   if (_syncCallback) _syncCallback();
 
-  // ★ Supabase에도 즉시 반영 (snake_case로 변환)
+  //  Supabase에도 즉시 반영 (snake_case로 변환)
   if (isSupabaseConfigured) {
     const dbFields = {};
     if ('sellingPrice' in fields)       dbFields.selling_price        = fields.sellingPrice;
@@ -1101,7 +1101,7 @@ export function deleteItem(index) {
         console.warn('[Store] 품목 삭제 동기화 실패(_id):', err.message)
       );
     } else if (deleted?.itemName) {
-      // ★ 같은 세션 내 _id 미설정 시 item_name으로 폴백 삭제
+      //  같은 세션 내 _id 미설정 시 item_name으로 폴백 삭제
       // (bulkUpsert UUID가 아직 반영되기 전에 삭제하는 경우)
       supabase.auth.getSession().then(({ data: { session } }) => {
         const uid = session?.user?.id;

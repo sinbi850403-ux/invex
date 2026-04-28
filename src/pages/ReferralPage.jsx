@@ -85,7 +85,7 @@ export default function ReferralPage() {
 
       {/* 보상 배너 */}
       <div className="card" style={{ background: 'linear-gradient(135deg, rgba(37,99,235,0.15), rgba(124,58,237,0.15))', border: '1px solid rgba(37,99,235,0.3)', padding: '32px', textAlign: 'center' }}>
-        <div style={{ fontSize: '48px', marginBottom: '12px' }}>🎁</div>
+        <div style={{ fontSize: '48px', marginBottom: '12px' }}></div>
         <h2 style={{ fontSize: '22px', fontWeight: '800', margin: '0 0 8px' }}>친구 1명 초대 = Pro 1개월 무료!</h2>
         <p style={{ color: 'var(--text-muted)', fontSize: '14px', margin: '0 0 20px' }}>
           추천 코드를 공유하세요. 친구가 가입하면<br />
@@ -100,9 +100,9 @@ export default function ReferralPage() {
 
         {/* 공유 버튼들 */}
         <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', marginTop: '16px', flexWrap: 'wrap' }}>
-          <button className="btn btn-primary" onClick={handleCopyCode}>📋 코드 복사</button>
-          <button className="btn btn-outline" onClick={handleCopyLink}>🔗 링크 복사</button>
-          <button className="btn btn-outline" onClick={handleShare} style={{ background: '#FEE500', color: '#3C1E1E', borderColor: '#FEE500' }}>💬 카카오톡</button>
+          <button className="btn btn-primary" onClick={handleCopyCode}> 코드 복사</button>
+          <button className="btn btn-outline" onClick={handleCopyLink}> 링크 복사</button>
+          <button className="btn btn-outline" onClick={handleShare} style={{ background: '#FEE500', color: '#3C1E1E', borderColor: '#FEE500' }}> 카카오톡</button>
         </div>
       </div>
 
@@ -128,7 +128,7 @@ export default function ReferralPage() {
 
       {/* 추천 코드 입력 */}
       <div className="card" style={{ marginTop: '16px' }}>
-        <div className="card-title">🎟️ 추천 코드 입력</div>
+        <div className="card-title"> 추천 코드 입력</div>
         <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '12px' }}>
           친구에게 받은 추천 코드가 있으신가요?
         </p>
@@ -140,7 +140,7 @@ export default function ReferralPage() {
             placeholder="추천 코드 입력 (예: INV-A1B2C3)"
           />
           <button className="btn btn-primary" disabled={!!data.appliedCode} onClick={handleApplyCode}>
-            {data.appliedCode ? '✅ 적용됨' : '적용'}
+            {data.appliedCode ? ' 적용됨' : '적용'}
           </button>
         </div>
       </div>
@@ -148,7 +148,7 @@ export default function ReferralPage() {
       {/* 초대 이력 */}
       {invited.length > 0 && (
         <div className="card" style={{ marginTop: '16px' }}>
-          <div className="card-title">📜 초대 이력</div>
+          <div className="card-title"> 초대 이력</div>
           <div className="table-wrapper">
             <table className="data-table">
               <thead>
@@ -170,7 +170,7 @@ export default function ReferralPage() {
                         background: inv.status === 'joined' ? 'rgba(63,185,80,0.15)' : 'rgba(139,148,158,0.15)',
                         color: inv.status === 'joined' ? 'var(--success)' : 'var(--text-muted)',
                       }}>
-                        {inv.status === 'joined' ? '✅ 가입완료' : '⏳ 대기중'}
+                        {inv.status === 'joined' ? ' 가입완료' : '⏳ 대기중'}
                       </span>
                     </td>
                     <td style={{ fontWeight: '600', color: inv.status === 'joined' ? 'var(--success)' : 'var(--text-muted)' }}>
@@ -186,7 +186,7 @@ export default function ReferralPage() {
 
       {/* 안내 */}
       <div className="card" style={{ marginTop: '16px', borderLeft: '3px solid var(--accent)' }}>
-        <div className="card-title">📌 이용 안내</div>
+        <div className="card-title"> 이용 안내</div>
         <ul style={{ fontSize: '13px', color: 'var(--text-muted)', lineHeight: '2', margin: '0', paddingLeft: '16px' }}>
           <li>초대받은 친구가 <strong>회원가입을 완료</strong>하면 보상이 지급됩니다.</li>
           <li>나도, 친구도 각각 <strong>Pro 1개월 무료</strong>를 받습니다.</li>

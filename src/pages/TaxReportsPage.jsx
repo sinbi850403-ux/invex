@@ -135,12 +135,12 @@ function downloadReport(filename, rows) {
 }
 
 const DOC_CARDS = [
-  { id: 'monthly', icon: '📋', title: '월마감 보고서', desc: '월별 입출고 요약 · 재고 현황 · 매입매출 집계', color: 'var(--accent)', btnCls: 'btn-primary', btnText: '📥 월마감 보고서 다운로드', items: ['입고/출고 수량 및 금액 합계', '품목별 기초재고 → 기말재고 변동', '거래처별 매입/매출 집계'] },
-  { id: 'journal', icon: '📒', title: '매입매출장', desc: '일자별 매입·매출 내역 (세무사 제출용)', color: 'var(--success)', btnCls: 'btn-success', btnText: '📥 매입매출장 다운로드', items: ['날짜 · 거래처 · 품목 · 수량 · 단가 · 공급가액 · 부가세', '매입/매출 구분 자동 분류', '월합계 자동 계산'] },
-  { id: 'vat', icon: '🧾', title: '부가세 신고 기초자료', desc: '매입처별·매출처별 세금계산서 합계표', color: '#8b5cf6', btnCls: '', btnText: '📥 부가세 기초자료 다운로드', btnStyle: { background: '#8b5cf6', color: '#fff' }, items: ['분기별 매입처 합계 (공급가액 + 부가세)', '분기별 매출처 합계 (공급가액 + 부가세)', '부가세 예상 납부세액 자동 계산'] },
-  { id: 'valuation', icon: '📦', title: '재고자산 평가표', desc: '기말 재고 가치 평가 (원가법 기준)', color: '#d29922', btnCls: '', btnText: '📥 재고자산 평가표 다운로드', btnStyle: { background: '#d29922', color: '#fff' }, items: ['품목별 수량 · 단가 · 재고 금액', '분류별 소계', '총 재고자산 가치 합계'] },
-  { id: 'ledger', icon: '📑', title: '거래처 원장', desc: '거래처별 거래 내역 · 잔액 조회', color: '#58a6ff', btnCls: '', btnText: '📥 거래처 원장 다운로드', btnStyle: { background: '#58a6ff', color: '#fff' }, items: ['거래처별 입고/출고 이력', '거래 금액 누적 합계', '미결제·미수금 파악용'] },
-  { id: 'all', icon: '📂', title: '전체 서류 일괄 다운로드', desc: '위 서류를 모두 포함한 통합 엑셀 파일', color: 'var(--danger)', btnCls: 'btn-danger btn-lg', btnText: '📥 전체 서류 통합 다운로드', items: ['세무사에게 한 번에 전달', '모든 서류를 시트별로 나눈 엑셀 파일'] },
+  { id: 'monthly', icon: '', title: '월마감 보고서', desc: '월별 입출고 요약 · 재고 현황 · 매입매출 집계', color: 'var(--accent)', btnCls: 'btn-primary', btnText: ' 월마감 보고서 다운로드', items: ['입고/출고 수량 및 금액 합계', '품목별 기초재고 → 기말재고 변동', '거래처별 매입/매출 집계'] },
+  { id: 'journal', icon: '', title: '매입매출장', desc: '일자별 매입·매출 내역 (세무사 제출용)', color: 'var(--success)', btnCls: 'btn-success', btnText: ' 매입매출장 다운로드', items: ['날짜 · 거래처 · 품목 · 수량 · 단가 · 공급가액 · 부가세', '매입/매출 구분 자동 분류', '월합계 자동 계산'] },
+  { id: 'vat', icon: '', title: '부가세 신고 기초자료', desc: '매입처별·매출처별 세금계산서 합계표', color: '#8b5cf6', btnCls: '', btnText: ' 부가세 기초자료 다운로드', btnStyle: { background: '#8b5cf6', color: '#fff' }, items: ['분기별 매입처 합계 (공급가액 + 부가세)', '분기별 매출처 합계 (공급가액 + 부가세)', '부가세 예상 납부세액 자동 계산'] },
+  { id: 'valuation', icon: '', title: '재고자산 평가표', desc: '기말 재고 가치 평가 (원가법 기준)', color: '#d29922', btnCls: '', btnText: ' 재고자산 평가표 다운로드', btnStyle: { background: '#d29922', color: '#fff' }, items: ['품목별 수량 · 단가 · 재고 금액', '분류별 소계', '총 재고자산 가치 합계'] },
+  { id: 'ledger', icon: '', title: '거래처 원장', desc: '거래처별 거래 내역 · 잔액 조회', color: '#58a6ff', btnCls: '', btnText: ' 거래처 원장 다운로드', btnStyle: { background: '#58a6ff', color: '#fff' }, items: ['거래처별 입고/출고 이력', '거래 금액 누적 합계', '미결제·미수금 파악용'] },
+  { id: 'all', icon: '', title: '전체 서류 일괄 다운로드', desc: '위 서류를 모두 포함한 통합 엑셀 파일', color: 'var(--danger)', btnCls: 'btn-danger btn-lg', btnText: ' 전체 서류 통합 다운로드', items: ['세무사에게 한 번에 전달', '모든 서류를 시트별로 나눈 엑셀 파일'] },
 ];
 
 export default function TaxReportsPage() {
@@ -179,14 +179,14 @@ export default function TaxReportsPage() {
     <div>
       <div className="page-header">
         <div>
-          <h1 className="page-title">🧾 세무/회계 서류</h1>
+          <h1 className="page-title"> 세무/회계 서류</h1>
           <div className="page-desc">월마감, 부가세 신고, 재고 평가 등 세무 서류를 자동으로 생성합니다.</div>
         </div>
       </div>
 
       {/* 기간 설정 */}
       <div className="card" style={{ marginBottom: '20px' }}>
-        <div className="card-title">📅 기간 설정</div>
+        <div className="card-title"> 기간 설정</div>
         <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', alignItems: 'flex-end' }}>
           <div className="form-group" style={{ marginBottom: 0 }}>
             <label className="form-label">연도</label>

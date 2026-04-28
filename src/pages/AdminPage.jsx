@@ -82,8 +82,8 @@ function UserDetailModal({ user: u, onClose }) {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, fontSize: 13 }}>
             {[
               { label: '요금제', val: <span style={{ fontWeight: 700, color: planInfo.color }}>{planInfo.icon} {planInfo.name}</span> },
-              { label: '상태', val: <span style={{ fontWeight: 700, color: isActive ? '#22c55e' : '#ef4444' }}>{isActive ? '✅ 활성' : '🚫 정지'}</span> },
-              { label: '역할', val: u.role === 'admin' ? '👑 관리자' : u.role === 'manager' ? '⭐ 매니저' : '👤 일반' },
+              { label: '상태', val: <span style={{ fontWeight: 700, color: isActive ? '#22c55e' : '#ef4444' }}>{isActive ? ' 활성' : ' 정지'}</span> },
+              { label: '역할', val: u.role === 'admin' ? ' 관리자' : u.role === 'manager' ? '⭐ 매니저' : ' 일반' },
               { label: 'UID', val: <span style={{ fontSize: 10, wordBreak: 'break-all' }}>{u.id || '-'}</span> },
             ].map(({ label, val }) => (
               <div key={label} style={{ padding: 12, background: 'var(--bg-secondary)', borderRadius: 8 }}>
@@ -93,7 +93,7 @@ function UserDetailModal({ user: u, onClose }) {
             ))}
           </div>
           <div style={{ marginTop: 16, fontSize: 12, lineHeight: 2.2 }}>
-            {[['가입일', fmtDate(u.createdAt)], ['최근 접속', fmtDate(u.lastLogin)], ['접속 방법', u.photoURL ? '🔐 Google' : '📧 이메일']].map(([label, val]) => (
+            {[['가입일', fmtDate(u.createdAt)], ['최근 접속', fmtDate(u.lastLogin)], ['접속 방법', u.photoURL ? ' Google' : ' 이메일']].map(([label, val]) => (
               <div key={label} style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--border)' }}>
                 <span style={{ color: 'var(--text-muted)' }}>{label}</span>
                 <strong>{val}</strong>
@@ -122,7 +122,7 @@ function PlanChangeModal({ user: u, onClose, onRefresh, currentUser }) {
     <div className="modal-overlay" style={{ display: 'flex' }} onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="modal" style={{ maxWidth: 500 }}>
         <div className="modal-header">
-          <h3>💎 요금제 변경 — {u.name || '사용자'}</h3>
+          <h3> 요금제 변경 — {u.name || '사용자'}</h3>
           <button className="btn btn-ghost btn-sm modal-close" onClick={onClose} />
         </div>
         <div className="modal-body">
@@ -139,7 +139,7 @@ function PlanChangeModal({ user: u, onClose, onRefresh, currentUser }) {
                   <div style={{ fontSize: 24 }}>{p.icon}</div>
                   <div style={{ fontSize: 13, fontWeight: 700, margin: '4px 0' }}>{p.name}</div>
                   <div style={{ fontSize: 15, fontWeight: 800, color: p.color }}>{p.price}</div>
-                  {isCurrent && <div style={{ fontSize: 10, color: 'var(--success)', marginTop: 4 }}>✓ 현재</div>}
+                  {isCurrent && <div style={{ fontSize: 10, color: 'var(--success)', marginTop: 4 }}> 현재</div>}
                 </div>
               );
             })}
@@ -158,7 +158,7 @@ function NoticeModal({ onClose, onSave }) {
     <div className="modal-overlay" style={{ display: 'flex' }} onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="modal" style={{ maxWidth: 450 }}>
         <div className="modal-header">
-          <h3>📢 공지사항 작성</h3>
+          <h3> 공지사항 작성</h3>
           <button className="btn btn-ghost btn-sm modal-close" onClick={onClose} />
         </div>
         <div className="modal-body">
@@ -176,7 +176,7 @@ function NoticeModal({ onClose, onSave }) {
           <button className="btn btn-primary" onClick={() => {
             if (!title.trim()) { showToast('제목을 입력하세요.', 'warning'); return; }
             onSave({ id: 'n' + Date.now(), title: title.trim(), content: content.trim(), date: new Date().toISOString() });
-          }}>📢 게시</button>
+          }}> 게시</button>
         </div>
       </div>
     </div>
@@ -200,7 +200,7 @@ function ReplyModal({ ticket, onClose, onSaved }) {
     <div className="modal-overlay" style={{ display: 'flex' }} onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="modal" style={{ maxWidth: 560 }}>
         <div className="modal-header">
-          <h3>💬 문의 답변</h3>
+          <h3> 문의 답변</h3>
           <button className="modal-close" onClick={onClose}>×</button>
         </div>
         <div className="modal-body" style={{ padding: 20 }}>
@@ -241,13 +241,13 @@ function UserCard({ u, onDetail, onPlan, onSuspend }) {
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
           <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 4, background: `${planInfo.color}15`, color: planInfo.color, fontWeight: 600 }}>{planInfo.icon} {(u.plan || 'free').toUpperCase()}</span>
           <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 4, background: isActive ? '#22c55e15' : '#ef444415', color: isActive ? '#22c55e' : '#ef4444', fontWeight: 600 }}>{isActive ? '● 활성' : '● 정지'}</span>
-          {isOnline ? <span style={{ fontSize: 10, color: '#22c55e' }}>🟢 온라인</span> : <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>{timeAgo(u.lastLogin)}</span>}
+          {isOnline ? <span style={{ fontSize: 10, color: '#22c55e' }}> 온라인</span> : <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>{timeAgo(u.lastLogin)}</span>}
         </div>
       </div>
       <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
-        <button style={{ padding: '6px 10px', borderRadius: 6, border: '1px solid var(--border)', background: 'var(--bg-primary)', cursor: 'pointer', fontSize: 12, color: 'var(--text-primary)', whiteSpace: 'nowrap' }} onClick={() => onDetail(u)}>👤 상세</button>
-        <button style={{ padding: '6px 10px', borderRadius: 6, border: '1px solid var(--border)', background: 'var(--bg-primary)', cursor: 'pointer', fontSize: 12, color: 'var(--text-primary)', whiteSpace: 'nowrap' }} onClick={() => onPlan(u)}>💎 요금제</button>
-        <button style={{ padding: '6px 10px', borderRadius: 6, border: `1px solid ${isActive ? '#ef444430' : '#22c55e30'}`, background: isActive ? '#ef444410' : '#22c55e10', cursor: 'pointer', fontSize: 12, color: isActive ? '#ef4444' : '#22c55e', whiteSpace: 'nowrap' }} onClick={() => onSuspend(u)}>{isActive ? '🚫 정지' : '✅ 활성화'}</button>
+        <button style={{ padding: '6px 10px', borderRadius: 6, border: '1px solid var(--border)', background: 'var(--bg-primary)', cursor: 'pointer', fontSize: 12, color: 'var(--text-primary)', whiteSpace: 'nowrap' }} onClick={() => onDetail(u)}> 상세</button>
+        <button style={{ padding: '6px 10px', borderRadius: 6, border: '1px solid var(--border)', background: 'var(--bg-primary)', cursor: 'pointer', fontSize: 12, color: 'var(--text-primary)', whiteSpace: 'nowrap' }} onClick={() => onPlan(u)}> 요금제</button>
+        <button style={{ padding: '6px 10px', borderRadius: 6, border: `1px solid ${isActive ? '#ef444430' : '#22c55e30'}`, background: isActive ? '#ef444410' : '#22c55e10', cursor: 'pointer', fontSize: 12, color: isActive ? '#ef4444' : '#22c55e', whiteSpace: 'nowrap' }} onClick={() => onSuspend(u)}>{isActive ? ' 정지' : ' 활성화'}</button>
       </div>
     </div>
   );
@@ -345,7 +345,7 @@ export default function AdminPage() {
     return (
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', textAlign: 'center' }}>
         <div>
-          <div style={{ fontSize: 64, marginBottom: 16 }}>🔒</div>
+          <div style={{ fontSize: 64, marginBottom: 16 }}></div>
           <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 8 }}>접근 권한이 없습니다</h2>
           <p style={{ color: 'var(--text-muted)' }}>총관리자만 접근할 수 있는 페이지입니다.</p>
         </div>
@@ -376,12 +376,12 @@ export default function AdminPage() {
     : users;
 
   const kpiCards = [
-    { icon: '👥', label: '전체 사용자', value: totalUsers, unit: '명', color: '#3b82f6', sub: `오늘 +${todaySignups}` },
-    { icon: '✅', label: '활성 사용자', value: activeUsers, unit: '명 (7일)', color: '#22c55e', sub: `${totalUsers > 0 ? Math.round((activeUsers / totalUsers) * 100) : 0}% 활동` },
-    { icon: '💎', label: '유료 전환율', value: `${conversionRate}%`, unit: '', color: '#8b5cf6', sub: `Pro ${proUsers} / ENT ${entUsers}` },
-    { icon: '💰', label: '예상 월 매출', value: '₩' + monthlyRevenue.toLocaleString(), unit: '', color: '#f59e0b', sub: '월간' },
-    { icon: '📦', label: '등록 품목', value: totalItems.toLocaleString(), unit: '건', color: '#06b6d4', sub: '전체' },
-    { icon: '📊', label: '총 거래', value: totalTransactions.toLocaleString(), unit: '건', color: '#ec4899', sub: '누적' },
+    { icon: '', label: '전체 사용자', value: totalUsers, unit: '명', color: '#3b82f6', sub: `오늘 +${todaySignups}` },
+    { icon: '', label: '활성 사용자', value: activeUsers, unit: '명 (7일)', color: '#22c55e', sub: `${totalUsers > 0 ? Math.round((activeUsers / totalUsers) * 100) : 0}% 활동` },
+    { icon: '', label: '유료 전환율', value: `${conversionRate}%`, unit: '', color: '#8b5cf6', sub: `Pro ${proUsers} / ENT ${entUsers}` },
+    { icon: '', label: '예상 월 매출', value: '₩' + monthlyRevenue.toLocaleString(), unit: '', color: '#f59e0b', sub: '월간' },
+    { icon: '', label: '등록 품목', value: totalItems.toLocaleString(), unit: '건', color: '#06b6d4', sub: '전체' },
+    { icon: '', label: '총 거래', value: totalTransactions.toLocaleString(), unit: '건', color: '#ec4899', sub: '누적' },
   ];
 
   return (
@@ -389,14 +389,14 @@ export default function AdminPage() {
       <div className="page-header" style={{ marginBottom: 20 }}>
         <div>
           <h1 className="page-title" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <span style={{ background: 'linear-gradient(135deg,#f59e0b,#ef4444)', padding: 8, borderRadius: 10, fontSize: 20, lineHeight: 1 }}>🛡️</span>
+            <span style={{ background: 'linear-gradient(135deg,#f59e0b,#ef4444)', padding: 8, borderRadius: 10, fontSize: 20, lineHeight: 1 }}></span>
             총관리자 대시보드
           </h1>
           <div className="page-desc">INVEX 서비스 전체 관리 · {user?.email || ''}</div>
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>마지막 새로고침: {new Date().toLocaleTimeString('ko-KR')}</span>
-          <button className="btn btn-ghost btn-sm" onClick={loadUsers} style={{ gap: 4 }}>🔄 새로고침</button>
+          <button className="btn btn-ghost btn-sm" onClick={loadUsers} style={{ gap: 4 }}> 새로고침</button>
         </div>
       </div>
 
@@ -427,19 +427,19 @@ export default function AdminPage() {
             <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
               <div style={{ padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <span style={{ fontSize: 16 }}>👥</span>
+                  <span style={{ fontSize: 16 }}></span>
                   <div>
                     <div style={{ fontWeight: 700, fontSize: 14 }}>사용자 관리</div>
                     <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>총 {totalUsers}명 등록</div>
                   </div>
                 </div>
-                <input className="form-input" placeholder="🔍 이름 / 이메일 검색" style={{ width: 200, fontSize: 12, padding: '6px 10px', borderRadius: 6 }}
+                <input className="form-input" placeholder=" 이름 / 이메일 검색" style={{ width: 200, fontSize: 12, padding: '6px 10px', borderRadius: 6 }}
                   value={searchQ} onChange={e => setSearchQ(e.target.value.toLowerCase())} />
               </div>
               <div style={{ maxHeight: 500, overflowY: 'auto', padding: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {filteredUsers.length > 0
                   ? filteredUsers.map(u => <UserCard key={u.id} u={u} onDetail={setDetailUser} onPlan={setPlanUser} onSuspend={handleSuspend} />)
-                  : <div style={{ textAlign: 'center', padding: 48, color: 'var(--text-muted)' }}><div style={{ fontSize: 36, marginBottom: 12 }}>👤</div><div style={{ fontSize: 14, fontWeight: 600 }}>가입된 사용자가 없습니다</div></div>
+                  : <div style={{ textAlign: 'center', padding: 48, color: 'var(--text-muted)' }}><div style={{ fontSize: 36, marginBottom: 12 }}></div><div style={{ fontSize: 14, fontWeight: 600 }}>가입된 사용자가 없습니다</div></div>
                 }
               </div>
             </div>
@@ -449,7 +449,7 @@ export default function AdminPage() {
               {/* 요금제 분포 */}
               <div className="card">
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-                  <div style={{ fontWeight: 700, fontSize: 14 }}>📊 요금제 분포</div>
+                  <div style={{ fontWeight: 700, fontSize: 14 }}> 요금제 분포</div>
                 </div>
                 {totalUsers > 0 ? (
                   <>
@@ -459,7 +459,7 @@ export default function AdminPage() {
                       {entUsers > 0 && <div style={{ flex: entUsers, background: '#8b5cf6' }} title={`Enterprise ${entUsers}명`} />}
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 8, fontSize: 12 }}>
-                      {[['', 'Free', freeUsers, '#64748b'], ['⭐', 'Pro', proUsers, '#3b82f6'], ['🏆', 'Enterprise', entUsers, '#8b5cf6']].map(([icon, name, count, color]) => (
+                      {[['', 'Free', freeUsers, '#64748b'], ['⭐', 'Pro', proUsers, '#3b82f6'], ['', 'Enterprise', entUsers, '#8b5cf6']].map(([icon, name, count, color]) => (
                         <div key={name} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                           <span>{icon}</span>
                           <span style={{ width: 70 }}>{name}</span>
@@ -477,7 +477,7 @@ export default function AdminPage() {
 
               {/* 최근 활동 */}
               <div className="card">
-                <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 14 }}>🕐 최근 활동</div>
+                <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 14 }}> 최근 활동</div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 2, maxHeight: 220, overflowY: 'auto' }}>
                   {recentUsers.length > 0 ? recentUsers.map(u => (
                     <div key={u.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 0', borderBottom: '1px solid var(--border)', fontSize: 12 }}>
@@ -501,7 +501,7 @@ export default function AdminPage() {
             {/* 공지사항 */}
             <div className="card">
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-                <div style={{ fontWeight: 700, fontSize: 14 }}>📢 공지사항</div>
+                <div style={{ fontWeight: 700, fontSize: 14 }}> 공지사항</div>
                 <button className="btn btn-ghost btn-sm" style={{ fontSize: 11 }} onClick={() => setShowNotice(true)}>+ 작성</button>
               </div>
               {notices.length > 0 ? notices.slice(0, 4).map(n => (
@@ -517,7 +517,7 @@ export default function AdminPage() {
 
             {/* 최근 결제 */}
             <div className="card">
-              <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 14 }}>💳 최근 결제</div>
+              <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 14 }}> 최근 결제</div>
               {paymentHistory.length > 0 ? paymentHistory.slice(0, 5).map((p, i) => (
                 <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid var(--border)', fontSize: 12 }}>
                   <div>
@@ -534,7 +534,7 @@ export default function AdminPage() {
 
             {/* 시스템 정보 */}
             <div className="card">
-              <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 14 }}>⚙️ 시스템 정보</div>
+              <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 14 }}> 시스템 정보</div>
               <div style={{ fontSize: 12, lineHeight: 2 }}>
                 {[
                   ['도메인', <a key="d" href="https://invex.io.kr" target="_blank" rel="noreferrer" style={{ color: 'var(--accent)' }}>invex.io.kr</a>],
@@ -558,13 +558,13 @@ export default function AdminPage() {
           <div className="card" style={{ padding: 0, overflow: 'hidden', marginBottom: 20 }}>
             <div style={{ padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <span style={{ fontSize: 16 }}>💬</span>
+                <span style={{ fontSize: 16 }}></span>
                 <div>
                   <div style={{ fontWeight: 700, fontSize: 14 }}>고객 문의 관리</div>
                   <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>접수된 문의에 답변하세요</div>
                 </div>
               </div>
-              <button className="btn btn-ghost btn-sm" onClick={() => setTicketsKey(k => k + 1)}>🔄 새로고침</button>
+              <button className="btn btn-ghost btn-sm" onClick={() => setTicketsKey(k => k + 1)}> 새로고침</button>
             </div>
             <div style={{ maxHeight: 500, overflowY: 'auto', padding: 16 }}>
               <TicketsArea reloadKey={ticketsKey} />

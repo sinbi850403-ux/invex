@@ -168,7 +168,7 @@ export function renderBulkPage(container, navigateTo) {
       return;
     }
 
-    // ★ 단건 루프(N번 IndexedDB 쓰기) 대신 한 번에 처리
+    //  단건 루프(N번 IndexedDB 쓰기) 대신 한 번에 처리
     addTransactionsBulk(txBatch);
 
     showToast(`${bulkType === 'in' ? '입고' : '출고'} ${txBatch.length}건 일괄 처리 완료`, 'success');

@@ -123,11 +123,11 @@ export default function CostingPage() {
     <div>
       <div className="page-header">
         <div>
-          <h1 className="page-title">💰 원가 분석</h1>
+          <h1 className="page-title"> 원가 분석</h1>
           <div className="page-desc">매입 원가와 예상 마진을 한눈에 정리합니다.</div>
         </div>
         <div className="page-actions">
-          <button className="btn btn-outline" onClick={handleExport}>📊 원가표 내보내기</button>
+          <button className="btn btn-outline" onClick={handleExport}> 원가표 내보내기</button>
         </div>
       </div>
 
@@ -159,7 +159,7 @@ export default function CostingPage() {
       {/* 테이블 */}
       <div className="card card-flush">
         <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', background: 'var(--bg-card)' }}>
-          <strong>📦 품목별 원가 분석</strong>
+          <strong> 품목별 원가 분석</strong>
           <span style={{ color: 'var(--text-muted)', fontSize: '12px', marginLeft: '8px' }}>({sortedData.length}개 품목)</span>
         </div>
         <div className="table-wrapper" style={{ border: 'none', borderRadius: 0 }}>

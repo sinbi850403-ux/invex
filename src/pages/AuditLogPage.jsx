@@ -5,13 +5,13 @@ import React, { useState, useMemo } from 'react';
 import { useStore } from '../hooks/useStore.js';
 
 const ACTION_ICONS = {
-  '입고': '📥', '출고': '📤', '삭제': '🗑️', '수정': '✏️', '등록': '➕',
-  '재고조정': '⚖️', '이동': '🔄', '발주': '📋', '백업': '💾', '복원': '♻️',
-  '설정변경': '⚙️', '거래처등록': '🏢', '거래처삭제': '🏚️',
+  '입고': '', '출고': '', '삭제': '', '수정': '', '등록': '',
+  '재고조정': '', '이동': '', '발주': '', '백업': '', '복원': '',
+  '설정변경': '', '거래처등록': '', '거래처삭제': '',
 };
 
 function getActionIcon(action) {
-  return ACTION_ICONS[action] || '📌';
+  return ACTION_ICONS[action] || '';
 }
 
 function formatDetail(detail) {
@@ -93,7 +93,7 @@ export default function AuditLogPage() {
           <div style={{ flex: 1, minWidth: '180px' }}>
             <input
               className="form-input"
-              placeholder="🔍 대상, 행위 검색..."
+              placeholder=" 대상, 행위 검색..."
               value={keyword}
               onChange={e => setKeyword(e.target.value)}
             />
@@ -120,7 +120,7 @@ export default function AuditLogPage() {
             <div key={date}>
               {/* 날짜 헤더 */}
               <div style={{ padding: '8px 16px', background: 'var(--bg-main)', fontSize: '12px', fontWeight: '600', color: 'var(--text-muted)', borderBottom: '1px solid var(--border-light)' }}>
-                📅 {date} ({items.length}건)
+                 {date} ({items.length}건)
               </div>
               {/* 로그 항목 */}
               {items.slice(0, 50).map(l => {

@@ -819,7 +819,7 @@ export async function logout() {
     googleLoginTimeoutId = null;
   }
 
-  // ★ 로컬 상태를 즉시 초기화 → UI가 바로 로그인 화면으로 전환 (대기 없음)
+  //  로컬 상태를 즉시 초기화 → UI가 바로 로그인 화면으로 전환 (대기 없음)
   purgeAuthStorage({ includeSupabaseSession: true });
   try { localStorage.removeItem(_BS_BLOCKED_KEY); } catch (_) {}
   currentUser = null;

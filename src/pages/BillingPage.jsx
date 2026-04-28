@@ -47,12 +47,12 @@ function ContactModal({ onClose }) {
     <div className="modal-overlay" style={{ display: 'flex' }} onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="modal" style={{ maxWidth: '450px' }}>
         <div className="modal-header">
-          <h3>🏢 Enterprise 상담 신청</h3>
-          <button className="btn btn-ghost btn-sm" onClick={onClose}>✕</button>
+          <h3> Enterprise 상담 신청</h3>
+          <button className="btn btn-ghost btn-sm" onClick={onClose}></button>
         </div>
         <div className="modal-body">
           <div style={{ textAlign: 'center', padding: '16px 0' }}>
-            <div style={{ fontSize: '32px', marginBottom: '8px' }}>🤝</div>
+            <div style={{ fontSize: '32px', marginBottom: '8px' }}></div>
             <div style={{ fontSize: '14px', marginBottom: '16px', color: 'var(--text-muted)' }}>
               Enterprise 요금제는 맞춤 상담을 통해 진행됩니다.
             </div>
@@ -76,7 +76,7 @@ function ContactModal({ onClose }) {
         </div>
         <div className="modal-footer" style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
           <button className="btn btn-ghost" onClick={onClose}>닫기</button>
-          <button className="btn btn-primary" onClick={handleSubmit}>📨 상담 신청</button>
+          <button className="btn btn-primary" onClick={handleSubmit}> 상담 신청</button>
         </div>
       </div>
     </div>
@@ -281,7 +281,7 @@ export default function BillingPage() {
 
       {/* 요금제 비교 */}
       <div className="card" style={{ marginBottom: '20px' }}>
-        <div className="card-title">💳 요금제 비교</div>
+        <div className="card-title"> 요금제 비교</div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
           {Object.values(PLANS).map(p => {
             const isCurrent = currentPlan === p.id;
@@ -311,9 +311,9 @@ export default function BillingPage() {
                 <div style={{ fontSize: '28px', fontWeight: '800', color: p.color, marginBottom: '4px' }}>{p.price}</div>
                 <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '16px' }}>{p.period}</div>
                 <div style={{ textAlign: 'left', fontSize: '13px', lineHeight: '2' }}>
-                  {p.id === 'free' && <>✅ 품목 100개까지<br />✅ 기본 재고 관리<br />✅ 입출고 관리<br />✅ 엑셀 업로드<br />✅ 다크 모드</>}
-                  {p.id === 'pro' && <>✅ 품목 <strong>무제한</strong><br />✅ AI 자동 발주 추천<br />✅ 원가 분석 (FIFO)<br />✅ 매출/매입 장부<br />✅ 감사 추적<br />✅ 바코드 라벨 인쇄<br />✅ 사용자 5명</>}
-                  {p.id === 'enterprise' && <>✅ Pro 전체 기능<br />✅ 다중 창고 관리<br />✅ 사용자 <strong>무제한</strong><br />✅ 권한 관리 (RBAC)<br />✅ API 연동<br />✅ 전담 고객 지원<br />✅ SLA 99.9%</>}
+                  {p.id === 'free' && <> 품목 100개까지<br /> 기본 재고 관리<br /> 입출고 관리<br /> 엑셀 업로드<br /> 다크 모드</>}
+                  {p.id === 'pro' && <> 품목 <strong>무제한</strong><br /> AI 자동 발주 추천<br /> 원가 분석 (FIFO)<br /> 매출/매입 장부<br /> 감사 추적<br /> 바코드 라벨 인쇄<br /> 사용자 5명</>}
+                  {p.id === 'enterprise' && <> Pro 전체 기능<br /> 다중 창고 관리<br /> 사용자 <strong>무제한</strong><br /> 권한 관리 (RBAC)<br /> API 연동<br /> 전담 고객 지원<br /> SLA 99.9%</>}
                 </div>
                 <div style={{ marginTop: '16px' }}>
                   {isCurrent ? (
@@ -339,12 +339,12 @@ export default function BillingPage() {
       {/* 결제 수단 */}
       <div className="card" style={{ marginBottom: '20px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-          <div className="card-title" style={{ margin: 0 }}>💳 결제 수단</div>
-          <button className="btn btn-ghost btn-sm" onClick={handleAddCard}>➕ 카드 추가</button>
+          <div className="card-title" style={{ margin: 0 }}> 결제 수단</div>
+          <button className="btn btn-ghost btn-sm" onClick={handleAddCard}> 카드 추가</button>
         </div>
         {subscription.cardLast4 ? (
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', background: 'var(--bg-secondary)', borderRadius: '8px' }}>
-            <div style={{ fontSize: '24px' }}>💳</div>
+            <div style={{ fontSize: '24px' }}></div>
             <div>
               <div style={{ fontWeight: '600' }}>{subscription.cardBrand || '카드'} •••• {subscription.cardLast4}</div>
               <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>만료: {subscription.cardExpiry || '-'}</div>
@@ -353,7 +353,7 @@ export default function BillingPage() {
           </div>
         ) : (
           <div style={{ textAlign: 'center', padding: '24px', color: 'var(--text-muted)' }}>
-            <div style={{ fontSize: '28px', marginBottom: '8px' }}>💳</div>
+            <div style={{ fontSize: '28px', marginBottom: '8px' }}></div>
             <div>등록된 결제 수단이 없습니다.</div>
             <div style={{ fontSize: '12px', marginTop: '4px' }}>구독 결제를 위해 카드를 등록하세요.</div>
           </div>
@@ -362,7 +362,7 @@ export default function BillingPage() {
 
       {/* 결제 이력 */}
       <div className="card">
-        <div className="card-title">📋 결제 이력</div>
+        <div className="card-title"> 결제 이력</div>
         {paymentHistory.length > 0 ? (
           <div className="table-wrapper" style={{ border: 'none' }}>
             <table className="data-table">
@@ -394,7 +394,7 @@ export default function BillingPage() {
           </div>
         ) : (
           <div style={{ textAlign: 'center', padding: '24px', color: 'var(--text-muted)' }}>
-            <div style={{ fontSize: '28px', marginBottom: '8px' }}>📋</div>
+            <div style={{ fontSize: '28px', marginBottom: '8px' }}></div>
             <div>결제 이력이 없습니다.</div>
           </div>
         )}
@@ -402,7 +402,7 @@ export default function BillingPage() {
 
       {/* 보안 안내 */}
       <div style={{ marginTop: '16px', padding: '12px', borderRadius: '8px', background: 'var(--bg-secondary)', fontSize: '12px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-        <span style={{ fontSize: '16px' }}>🔒</span>
+        <span style={{ fontSize: '16px' }}></span>
         <span>모든 결제는 <strong>토스페이먼츠</strong>를 통해 안전하게 처리됩니다. 카드 정보는 INVEX 서버에 저장되지 않습니다.</span>
       </div>
     </div>

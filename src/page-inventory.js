@@ -439,7 +439,7 @@ export function renderInventoryPage(container, navigateTo) {
   let persistTimer = null;
   let selectedIndexes = new Set();
   let focusedItemKey = data[0] ? getItemKey(data[0]) : '';
-  let lastTimelineKey = null; // ★ 타임라인 마지막 렌더 품목 키 (차트 불필요한 재생성 방지)
+  let lastTimelineKey = null; //  타임라인 마지막 렌더 품목 키 (차트 불필요한 재생성 방지)
   const expandedInvGroups = new Set(); // 재고 테이블 펼쳐진 그룹 키
   const COLLAPSE_STORAGE_KEY = 'invex:inventory:collapsed-sections:v1';
   const collapsedSections = loadCollapsedSections();
@@ -876,7 +876,7 @@ export function renderInventoryPage(container, navigateTo) {
         persistInventoryPrefs();
         currentPageNum = 1;
 
-        // ★ 깜빡임 방지 3단계:
+        //  깜빡임 방지 3단계:
         // 1) 정렬 헤더 표시 즉시 갱신 (thead 재작성 없음)
         updateSortHeaderState();
         // 2) 레이아웃 고정: 필터 요약 & 테이블 래퍼 높이를 잠가 레이아웃 시프트 차단
@@ -985,7 +985,7 @@ export function renderInventoryPage(container, navigateTo) {
     const start = (currentPageNum - 1) * PAGE_SIZE;
     const pageData = sorted.slice(start, start + PAGE_SIZE);
 
-    // ★ 필터 요약을 tbody 갱신 전에 먼저 업데이트
+    //  필터 요약을 tbody 갱신 전에 먼저 업데이트
     // → 정렬 칩 추가/변경으로 생기는 레이아웃 시프트가 tbody 리페인트와 겹치지 않도록 순서를 앞으로
     renderFilterSummary(sorted.length, data.length);
 
@@ -1259,7 +1259,7 @@ export function renderInventoryPage(container, navigateTo) {
     const focusedRow = rows.find(row => getItemKey(row) === focusedItemKey) || rows[0];
     focusedItemKey = getItemKey(focusedRow);
 
-    // ★ 같은 품목이 포커스된 상태면 Chart.js 파괴→재생성을 건너뜀
+    //  같은 품목이 포커스된 상태면 Chart.js 파괴→재생성을 건너뜀
     // 정렬 클릭 시 포커스 품목은 바뀌지 않으므로, 차트를 매번 재생성하면 캔버스가 깜빡임
     if (focusedItemKey === lastTimelineKey) return;
     lastTimelineKey = focusedItemKey;
@@ -1346,7 +1346,7 @@ export function renderInventoryPage(container, navigateTo) {
         // 편집 중인 input, 버튼 등은 무시 (더블클릭 편집과 충돌 방지)
         if (event.target.closest('button, input, select, a, label')) return;
         focusedItemKey = rowEl.dataset.rowKey || focusedItemKey;
-        lastTimelineKey = null; // ★ 행 클릭 시 강제 재렌더 (캐시 무효화)
+        lastTimelineKey = null; //  행 클릭 시 강제 재렌더 (캐시 무효화)
         renderItemTimelinePanel(sortRows(getFilteredData()));
         // 포커스 행 하이라이트 갱신
         container.querySelectorAll('#inventory-body tr[data-row-key]').forEach(r => {
@@ -1805,7 +1805,7 @@ export function renderInventoryPage(container, navigateTo) {
 
   // 입출고 변경 시 재고 현황 즉시 자동 반영
   // renderTable은 클로저 내 data를 쓰므로 전체 페이지를 재렌더링
-  // ★ 재렌더 전후 스크롤 위치 복원 — 정렬 후 Supabase 동기화(~2초)로 스크롤이 최상단으로
+  //  재렌더 전후 스크롤 위치 복원 — 정렬 후 Supabase 동기화(~2초)로 스크롤이 최상단으로
   //   튀는 현상 방지 (container.innerHTML 교체 시 scrollTop이 0으로 초기화됨)
   setSyncCallback(() => {
     if (container.dataset.page !== 'inventory') return;

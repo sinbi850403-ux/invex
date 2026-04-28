@@ -84,7 +84,7 @@ function VendorModal({ initial, vendors, onClose, onSave }) {
       <div className="modal" style={{ maxWidth: '680px', width: '95vw' }}>
         <div className="modal-header">
           <h2 className="modal-title">{isEdit ? '거래처 수정' : '거래처 등록'}</h2>
-          <button className="modal-close" onClick={onClose}>✕</button>
+          <button className="modal-close" onClick={onClose}></button>
         </div>
         <div className="modal-body">
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '20px' }}>
@@ -194,8 +194,8 @@ function VendorDetail({ vendor, transactions, onClose, onEdit }) {
             {vendor.ceoName && <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>대표: {vendor.ceoName}</div>}
           </div>
           <div style={{ display: 'flex', gap: '8px' }}>
-            <button className="btn btn-sm btn-outline" onClick={onEdit}>✏️ 수정</button>
-            <button style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', color: 'var(--text-muted)' }} onClick={onClose}>✕</button>
+            <button className="btn btn-sm btn-outline" onClick={onEdit}> 수정</button>
+            <button style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', color: 'var(--text-muted)' }} onClick={onClose}></button>
           </div>
         </div>
 
@@ -383,8 +383,8 @@ export default function VendorsPage() {
           <div className="page-desc">공급처·고객사 마스터 데이터를 관리합니다. 발주서·거래명세서·세금계산서에 자동 연동됩니다.</div>
         </div>
         <div className="page-actions">
-          <button className="btn btn-outline" onClick={() => showToast('엑셀 가져오기 기능은 준비 중입니다.', 'info')}>📥 엑셀 가져오기</button>
-          <button className="btn btn-outline" onClick={handleExport}>📤 내보내기</button>
+          <button className="btn btn-outline" onClick={() => showToast('엑셀 가져오기 기능은 준비 중입니다.', 'info')}> 엑셀 가져오기</button>
+          <button className="btn btn-outline" onClick={handleExport}> 내보내기</button>
           <button className="btn btn-primary" onClick={() => setEditVendor({ ...EMPTY_FORM })}>+ 거래처 등록</button>
         </div>
       </div>
@@ -414,14 +414,14 @@ export default function VendorsPage() {
               </button>
             ))}
           </div>
-          <input className="form-input" placeholder="🔍 거래처명·코드·담당자·사업자번호 검색..." value={keyword} onChange={e => setKeyword(e.target.value)} style={{ flex: 1, minWidth: '200px' }} />
+          <input className="form-input" placeholder=" 거래처명·코드·담당자·사업자번호 검색..." value={keyword} onChange={e => setKeyword(e.target.value)} style={{ flex: 1, minWidth: '200px' }} />
         </div>
       </div>
 
       {/* 거래처 목록 */}
       {filtered.length === 0 ? (
         <div className="card" style={{ padding: '48px', textAlign: 'center', color: 'var(--text-muted)' }}>
-          <div style={{ fontSize: '40px', marginBottom: '12px' }}>🏢</div>
+          <div style={{ fontSize: '40px', marginBottom: '12px' }}></div>
           <div style={{ fontSize: '15px' }}>{keyword ? '검색 결과가 없습니다.' : '등록된 거래처가 없습니다.'}</div>
           {!keyword && <div style={{ marginTop: '8px', fontSize: '13px' }}>위 [+ 거래처 등록] 버튼을 눌러 추가하세요.</div>}
         </div>

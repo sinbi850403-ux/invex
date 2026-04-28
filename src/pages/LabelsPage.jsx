@@ -122,7 +122,7 @@ export default function LabelsPage() {
           <div className="page-desc">품목 라벨을 생성하고 인쇄합니다. 바코드/QR 코드 포함.</div>
         </div>
         <div className="page-actions">
-          <button className="btn btn-primary" onClick={handlePrint}>🖨️ 선택 항목 인쇄</button>
+          <button className="btn btn-primary" onClick={handlePrint}> 선택 항목 인쇄</button>
         </div>
       </div>
 
@@ -147,7 +147,7 @@ export default function LabelsPage() {
       {/* 품목 선택 */}
       <div className="card" style={{ marginBottom: '12px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
-          <div className="card-title" style={{ margin: 0 }}>🏷️ 라벨 출력 품목 선택</div>
+          <div className="card-title" style={{ margin: 0 }}> 라벨 출력 품목 선택</div>
           <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', cursor: 'pointer' }}>
             <input type="checkbox" checked={selected.size === items.length && items.length > 0} onChange={e => toggleAll(e.target.checked)} /> 전체 선택
           </label>
@@ -167,7 +167,7 @@ export default function LabelsPage() {
 
       {/* 미리보기 */}
       <div className="card">
-        <div className="card-title">🔍 라벨 미리보기</div>
+        <div className="card-title"> 라벨 미리보기</div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', padding: '8px' }}>
           {selectedItems.length === 0
             ? <div style={{ color: 'var(--text-muted)', fontSize: '13px' }}>위에서 품목을 선택하면 미리보기가 표시됩니다.</div>

@@ -519,7 +519,7 @@ export default function HomePage() {
             className={`btn btn-sm ${editMode ? 'btn-primary' : 'btn-ghost'}`}
             style={{ fontSize: 12 }}
             onClick={() => setEditMode(v => !v)}
-          >{editMode ? '✓ 완료' : '⠿ 편집'}</button>
+          >{editMode ? ' 완료' : '⠿ 편집'}</button>
 
           {notifications.length > 0 && (
             <button type="button" className="badge badge-danger dashboard-notif-trigger"
@@ -553,7 +553,7 @@ export default function HomePage() {
 
       {!hasData ? (
         <div className="card" style={{ textAlign: 'center', padding: '48px 24px' }}>
-          <div style={{ fontSize: 48, marginBottom: 12 }}>📦</div>
+          <div style={{ fontSize: 48, marginBottom: 12 }}></div>
           <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>아직 등록된 데이터가 없습니다</h2>
           <p style={{ color: 'var(--text-muted)', marginBottom: 20 }}>
             엑셀 파일을 업로드하거나 품목을 직접 등록하면<br />여기에 핵심 경영 지표가 자동으로 표시됩니다.
@@ -568,13 +568,11 @@ export default function HomePage() {
           {/* KPI */}
           <div className={`db-kpi-grid${dashRole === 'staff' ? ' db-kpi-grid-compact' : ''}`}>
             <div className="db-kpi-card" onClick={() => navigate('/inventory')} style={{ cursor: 'pointer' }}>
-              <div className="db-kpi-icon">📦</div>
               <div className="db-kpi-label">총 품목</div>
               <div className="db-kpi-value text-accent">{totalItems.toLocaleString('ko-KR')}</div>
             </div>
             {dashRole === 'manager' && (
               <div className="db-kpi-card" onClick={() => navigate('/inventory')} style={{ cursor: 'pointer' }}>
-                <div className="db-kpi-icon">💰</div>
                 <div className="db-kpi-label">재고 금액</div>
                 <div className="db-kpi-value text-success">{formatCurrency(totalSupplyValue)}</div>
                 {gmroi !== null && (
@@ -586,21 +584,18 @@ export default function HomePage() {
               </div>
             )}
             <div className={`db-kpi-card${lowStockItems.length > 0 ? ' db-kpi-danger' : ''}`} onClick={() => navigate('/inventory')} style={{ cursor: 'pointer' }}>
-              <div className="db-kpi-icon">⚠️</div>
               <div className="db-kpi-label">부족 품목</div>
               <div className={`db-kpi-value${lowStockItems.length > 0 ? ' text-danger' : ''}`}>
                 {lowStockItems.length > 0 ? `${lowStockItems.length}건` : '없음'}
               </div>
             </div>
             <div className="db-kpi-card" onClick={() => navigate('/in')} style={{ cursor: 'pointer' }}>
-              <div className="db-kpi-icon">📥</div>
               <div className="db-kpi-label">오늘 입고</div>
               <div className="db-kpi-value text-success">{todayInCount}건</div>
               <TrendBadge pct={inTrendPct} />
               <Sparkline data={weekData.map(d => d.inQty)} color="var(--success)" />
             </div>
             <div className="db-kpi-card" onClick={() => navigate('/out')} style={{ cursor: 'pointer' }}>
-              <div className="db-kpi-icon">📤</div>
               <div className="db-kpi-label">오늘 출고</div>
               <div className="db-kpi-value text-danger">{todayOutCount}건</div>
               <TrendBadge pct={outTrendPct} />
@@ -608,7 +603,6 @@ export default function HomePage() {
             </div>
             {dashRole === 'manager' && (
               <div className={`db-kpi-card${deadStockItems.length > 0 ? ' db-kpi-warn' : ''}`}>
-                <div className="db-kpi-icon">🕰️</div>
                 <div className="db-kpi-label">정체 재고(30일)</div>
                 <div className={`db-kpi-value${deadStockItems.length > 0 ? ' text-warning' : ''}`}>{deadStockItems.length}건</div>
                 {deadStockItems.length > 0 && (
@@ -626,9 +620,9 @@ export default function HomePage() {
           {dashRole === 'staff' && (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginBottom: 12 }}>
               {[
-                { icon: '📥', label: '입고 등록', desc: '상품 입고 처리', color: 'var(--success)', bg: 'rgba(34,197,94,0.08)', border: 'rgba(34,197,94,0.3)', route: '/in' },
-                { icon: '📤', label: '출고 등록', desc: '상품 출고 처리', color: 'var(--danger)',  bg: 'rgba(239,68,68,0.08)',  border: 'rgba(239,68,68,0.3)',  route: '/out' },
-                { icon: '📦', label: '재고 조회', desc: '현재 재고 확인',  color: 'var(--accent)',  bg: 'rgba(88,166,255,0.08)', border: 'rgba(88,166,255,0.3)', route: '/inventory' },
+                { icon: '', label: '입고 등록', desc: '상품 입고 처리', color: 'var(--success)', bg: 'rgba(34,197,94,0.08)', border: 'rgba(34,197,94,0.3)', route: '/in' },
+                { icon: '', label: '출고 등록', desc: '상품 출고 처리', color: 'var(--danger)',  bg: 'rgba(239,68,68,0.08)',  border: 'rgba(239,68,68,0.3)',  route: '/out' },
+                { icon: '', label: '재고 조회', desc: '현재 재고 확인',  color: 'var(--accent)',  bg: 'rgba(88,166,255,0.08)', border: 'rgba(88,166,255,0.3)', route: '/inventory' },
               ].map(item => (
                 <button key={item.route}
                   onClick={() => navigate(item.route)}
@@ -655,7 +649,7 @@ export default function HomePage() {
           {/* 재고 부족 경고 바 */}
           {lowStockItems.length > 0 && (
             <div className="db-alert-bar" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span className="db-alert-title" style={{ cursor: 'pointer' }} onClick={() => navigate('/inventory')}>⚠️ 재고 부족 {lowStockItems.length}건</span>
+              <span className="db-alert-title" style={{ cursor: 'pointer' }} onClick={() => navigate('/inventory')}> 재고 부족 {lowStockItems.length}건</span>
               <span className="db-alert-items" style={{ flex: 1, cursor: 'pointer' }} onClick={() => navigate('/inventory')}>
                 {lowStockItems.slice(0, 3).map(item =>
                   `${item.itemName} (현재 ${toNumber(item.quantity)} / 안전 ${toNumber(safetyStock[item.itemName])})`
@@ -674,7 +668,7 @@ export default function HomePage() {
           {roleConf.showWinners && (winners.length > 0 || losers.length > 0) && (
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
               <div className="card" style={{ padding: '14px 16px' }}>
-                <div className="card-title" style={{ marginBottom: 10, fontSize: 13 }}>🏆 판매 TOP (최근 30일)</div>
+                <div className="card-title" style={{ marginBottom: 10, fontSize: 13 }}> 판매 TOP (최근 30일)</div>
                 {winners.length === 0
                   ? <div style={{ color: 'var(--text-muted)', fontSize: 12 }}>데이터 없음</div>
                   : winners.map((w, i) => {
@@ -696,7 +690,7 @@ export default function HomePage() {
                 }
               </div>
               <div className="card" style={{ padding: '14px 16px' }}>
-                <div className="card-title" style={{ marginBottom: 10, fontSize: 13 }}>💤 정체 재고 (30일 미출고)</div>
+                <div className="card-title" style={{ marginBottom: 10, fontSize: 13 }}> 정체 재고 (30일 미출고)</div>
                 {losers.length === 0
                   ? <div style={{ color: 'var(--text-muted)', fontSize: 12 }}>정체 재고 없음</div>
                   : <>

@@ -7,24 +7,24 @@ import { showToast } from '../toast.js';
 
 const DEFAULT_ROLES = [
   {
-    id: 'admin', name: '관리자', icon: '🔑', color: '#f59e0b',
+    id: 'admin', name: '관리자', icon: '', color: '#f59e0b',
     description: '모든 기능에 접근 가능. 사용자/역할 관리 권한 보유.',
     permissions: ['*'], isSystem: true,
   },
   {
-    id: 'manager', name: '매니저', icon: '👔', color: '#3b82f6',
+    id: 'manager', name: '매니저', icon: '', color: '#3b82f6',
     description: '데이터 조회/편집 가능. 설정 및 사용자 관리 불가.',
     permissions: ['dashboard','inventory','in','scanner','documents','transfer','vendors','summary','ledger','costing','accounts','warehouses','stocktake','bulk','labels'],
     isSystem: true,
   },
   {
-    id: 'editor', name: '편집자', icon: '✏️', color: '#10b981',
+    id: 'editor', name: '편집자', icon: '', color: '#10b981',
     description: '재고 입출고, 문서 생성 등 일상 업무 수행.',
     permissions: ['dashboard','inventory','in','scanner','documents','transfer','labels','ledger'],
     isSystem: true,
   },
   {
-    id: 'viewer', name: '뷰어', icon: '👁️', color: '#8b5cf6',
+    id: 'viewer', name: '뷰어', icon: '', color: '#8b5cf6',
     description: '데이터 조회만 가능. 편집/삭제 불가.',
     permissions: ['dashboard','inventory','summary','ledger','costing'],
     isSystem: true,
@@ -32,27 +32,27 @@ const DEFAULT_ROLES = [
 ];
 
 const ALL_PERMISSIONS = [
-  { id: 'dashboard', name: '대시보드', icon: '📊', group: '기본' },
-  { id: 'upload', name: '파일 업로드', icon: '📤', group: '데이터' },
-  { id: 'mapping', name: '데이터 확인', icon: '📋', group: '데이터' },
-  { id: 'inventory', name: '재고 현황', icon: '📦', group: '관리' },
-  { id: 'in', name: '입출고 관리', icon: '🔄', group: '관리' },
-  { id: 'bulk', name: '일괄 처리', icon: '⚡', group: '관리' },
-  { id: 'scanner', name: '바코드 스캔', icon: '📷', group: '관리' },
-  { id: 'labels', name: '라벨 인쇄', icon: '🏷️', group: '관리' },
-  { id: 'warehouses', name: '다중 창고', icon: '🏢', group: '관리' },
-  { id: 'transfer', name: '창고 이동', icon: '🚛', group: '관리' },
-  { id: 'stocktake', name: '수불관리', icon: '🔍', group: '관리' },
-  { id: 'vendors', name: '거래처 관리', icon: '🤝', group: '관리' },
-  { id: 'summary', name: '요약 보고', icon: '📈', group: '보고' },
-  { id: 'costing', name: '원가 분석', icon: '💰', group: '보고' },
-  { id: 'accounts', name: '매출/매입', icon: '📒', group: '보고' },
-  { id: 'ledger', name: '수불부', icon: '📜', group: '보고' },
-  { id: 'documents', name: '문서 생성', icon: '📑', group: '보고' },
-  { id: 'auditlog', name: '감사 추적', icon: '🔎', group: '보고' },
-  { id: 'settings', name: '설정', icon: '⚙️', group: '시스템' },
-  { id: 'roles', name: '권한 관리', icon: '🛡️', group: '시스템' },
-  { id: 'api', name: 'API 연동', icon: '🔗', group: '시스템' },
+  { id: 'dashboard', name: '대시보드', icon: '', group: '기본' },
+  { id: 'upload', name: '파일 업로드', icon: '', group: '데이터' },
+  { id: 'mapping', name: '데이터 확인', icon: '', group: '데이터' },
+  { id: 'inventory', name: '재고 현황', icon: '', group: '관리' },
+  { id: 'in', name: '입출고 관리', icon: '', group: '관리' },
+  { id: 'bulk', name: '일괄 처리', icon: '', group: '관리' },
+  { id: 'scanner', name: '바코드 스캔', icon: '', group: '관리' },
+  { id: 'labels', name: '라벨 인쇄', icon: '', group: '관리' },
+  { id: 'warehouses', name: '다중 창고', icon: '', group: '관리' },
+  { id: 'transfer', name: '창고 이동', icon: '', group: '관리' },
+  { id: 'stocktake', name: '수불관리', icon: '', group: '관리' },
+  { id: 'vendors', name: '거래처 관리', icon: '', group: '관리' },
+  { id: 'summary', name: '요약 보고', icon: '', group: '보고' },
+  { id: 'costing', name: '원가 분석', icon: '', group: '보고' },
+  { id: 'accounts', name: '매출/매입', icon: '', group: '보고' },
+  { id: 'ledger', name: '수불부', icon: '', group: '보고' },
+  { id: 'documents', name: '문서 생성', icon: '', group: '보고' },
+  { id: 'auditlog', name: '감사 추적', icon: '', group: '보고' },
+  { id: 'settings', name: '설정', icon: '', group: '시스템' },
+  { id: 'roles', name: '권한 관리', icon: '', group: '시스템' },
+  { id: 'api', name: 'API 연동', icon: '', group: '시스템' },
 ];
 
 const PERM_GROUPS = ALL_PERMISSIONS.reduce((acc, p) => {
@@ -61,7 +61,7 @@ const PERM_GROUPS = ALL_PERMISSIONS.reduce((acc, p) => {
   return acc;
 }, {});
 
-const ICONS = ['👤','📦','🏭','🚀','💼','🎯','📊','🔧','🌟','⭐'];
+const ICONS = ['','','','','','','','','','⭐'];
 
 function randomColor() {
   return '#' + Math.floor(Math.random() * 16777215).toString(16).padStart(6, '0');
@@ -96,7 +96,7 @@ function PermModal({ role, onSave, onClose }) {
       <div className="modal" style={{ maxWidth: '600px' }}>
         <div className="modal-header">
           <h3>{role.icon} {role.name} — 권한 설정</h3>
-          <button className="btn btn-ghost btn-sm" onClick={onClose}>✕</button>
+          <button className="btn btn-ghost btn-sm" onClick={onClose}></button>
         </div>
         <div className="modal-body" style={{ maxHeight: '450px', overflowY: 'auto' }}>
           <div style={{ marginBottom: '16px' }}>
@@ -144,7 +144,7 @@ function RoleModal({ roles, onSave, onClose }) {
       <div className="modal" style={{ maxWidth: '450px' }}>
         <div className="modal-header">
           <h3>역할 추가</h3>
-          <button className="btn btn-ghost btn-sm" onClick={onClose}>✕</button>
+          <button className="btn btn-ghost btn-sm" onClick={onClose}></button>
         </div>
         <div className="modal-body">
           <div className="form-group">
@@ -197,8 +197,8 @@ function MemberModal({ roles, members, onSave, onClose }) {
     <div className="modal-overlay" style={{ display: 'flex' }} onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div className="modal" style={{ maxWidth: '450px' }}>
         <div className="modal-header">
-          <h3>👥 팀원 초대</h3>
-          <button className="btn btn-ghost btn-sm" onClick={onClose}>✕</button>
+          <h3> 팀원 초대</h3>
+          <button className="btn btn-ghost btn-sm" onClick={onClose}></button>
         </div>
         <div className="modal-body">
           <div className="form-group">
@@ -296,12 +296,12 @@ export default function RolesPage() {
     <div>
       <div className="page-header">
         <div>
-          <h1 className="page-title">🛡️ 권한 관리</h1>
+          <h1 className="page-title"> 권한 관리</h1>
           <div className="page-desc">Enterprise — 역할별 접근 권한을 설정하고 팀원을 관리합니다.</div>
         </div>
         <div style={{ display: 'flex', gap: '8px' }}>
           <button className="btn btn-primary" onClick={() => setShowRoleModal(true)}>+ 역할 추가</button>
-          <button className="btn btn-accent" onClick={() => setShowMemberModal(true)}>👥 팀원 초대</button>
+          <button className="btn btn-accent" onClick={() => setShowMemberModal(true)}> 팀원 초대</button>
         </div>
       </div>
 
@@ -314,7 +314,7 @@ export default function RolesPage() {
             <div key={role.id} className="card" style={{ borderTop: `3px solid ${role.color}`, position: 'relative' }}>
               {role.isSystem
                 ? <div style={{ position: 'absolute', top: '8px', right: '8px', fontSize: '10px', color: 'var(--text-muted)' }}>시스템</div>
-                : <button className="btn btn-ghost btn-sm" onClick={() => handleDeleteRole(role.id)} style={{ position: 'absolute', top: '4px', right: '4px' }}>🗑️</button>
+                : <button className="btn btn-ghost btn-sm" onClick={() => handleDeleteRole(role.id)} style={{ position: 'absolute', top: '4px', right: '4px' }}></button>
               }
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
                 <div style={{ fontSize: '28px' }}>{role.icon}</div>
@@ -334,7 +334,7 @@ export default function RolesPage() {
                 </div>
               </div>
               <button className="btn btn-ghost btn-sm" style={{ width: '100%' }} onClick={() => setPermEditRole(role)}>
-                🔧 권한 설정
+                 권한 설정
               </button>
             </div>
           );
@@ -343,7 +343,7 @@ export default function RolesPage() {
 
       {/* 팀원 목록 */}
       <div className="card">
-        <div className="card-title">👥 팀원 목록 <span className="card-subtitle">({members.length}명)</span></div>
+        <div className="card-title"> 팀원 목록 <span className="card-subtitle">({members.length}명)</span></div>
         {members.length > 0 ? (
           <div className="table-wrapper" style={{ border: 'none' }}>
             <table className="data-table">
@@ -376,7 +376,7 @@ export default function RolesPage() {
                       </td>
                       <td style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{m.joinedAt || '-'}</td>
                       <td>
-                        <button className="btn btn-ghost btn-sm" onClick={() => handleRemoveMember(m.id)}>🗑️</button>
+                        <button className="btn btn-ghost btn-sm" onClick={() => handleRemoveMember(m.id)}></button>
                       </td>
                     </tr>
                   );
@@ -386,7 +386,7 @@ export default function RolesPage() {
           </div>
         ) : (
           <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
-            <div style={{ fontSize: '32px', marginBottom: '8px' }}>👤</div>
+            <div style={{ fontSize: '32px', marginBottom: '8px' }}></div>
             <div>아직 등록된 팀원이 없습니다.</div>
             <div style={{ fontSize: '12px', marginTop: '4px' }}>팀원을 초대하여 역할을 배정하세요.</div>
           </div>

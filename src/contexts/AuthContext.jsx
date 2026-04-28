@@ -62,17 +62,9 @@ export function AuthProvider({ children }) {
     }
 
     // ── 최대 대기 타이머 ─────────────────────────────────────────────────────
-    // localStorage에 저장된 세션이 있으면 세션 복원 완료까지 대기 (로그인 화면 깜빡임 방지)
-    // 세션 없으면 2초, 있으면 6초 (loadProfile 타임아웃 4초 + 여유)
-    const hasStoredSession = (() => {
-      try {
-        const raw = localStorage.getItem('invex-supabase-auth');
-        if (!raw) return false;
-        const d = JSON.parse(raw);
-        return Boolean(d?.access_token || d?.currentSession?.access_token);
-      } catch { return false; }
-    })();
-    const readyFallback = setTimeout(() => setIsReady(true), hasStoredSession ? 6000 : 2000);
+    // Supabase cold-start(2~5초) 대응: initAuth 콜백이 늦게 오더라도
+    // 최대 2초 후에는 반드시 ready 상태로 전환 (로그인 화면 표시)
+    const readyFallback = setTimeout(() => setIsReady(true), 2000);
 
     initAuth(async (newUser, newProfile) => {
       clearTimeout(readyFallback);

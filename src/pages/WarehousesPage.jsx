@@ -8,7 +8,7 @@ import { showToast } from '../toast.js';
 import { canAction } from '../auth.js';
 
 const WH_TYPE_LABELS = { main: '본사 창고', branch: '지점 창고', factory: '공장/생산', temp: '임시 보관', returns: '반품 창고', other: '기타' };
-const WH_TYPE_ICONS  = { main: '🏢', branch: '🏬', factory: '🏭', temp: '📦', returns: '↩️', other: '🏗️' };
+const WH_TYPE_ICONS  = { main: '', branch: '', factory: '', temp: '', returns: '↩', other: '' };
 const WH_TYPE_COLORS = { main: 'var(--accent)', branch: 'var(--success)', factory: '#f59e0b', temp: 'var(--text-muted)', returns: 'var(--danger)', other: 'var(--text-muted)' };
 
 function fmt(n) { return Math.round(n || 0).toLocaleString('ko-KR'); }
@@ -31,7 +31,7 @@ function WarehouseModal({ initial, onClose, onSave }) {
       <div className="modal" style={{ maxWidth: '500px' }}>
         <div className="modal-header">
           <h3>{form.id ? '창고 수정' : '창고 추가'}</h3>
-          <button className="btn btn-ghost btn-sm" onClick={onClose}>✕</button>
+          <button className="btn btn-ghost btn-sm" onClick={onClose}></button>
         </div>
         <div className="modal-body">
           <div className="form-group">
@@ -41,12 +41,12 @@ function WarehouseModal({ initial, onClose, onSave }) {
           <div className="form-group">
             <label className="form-label">창고 유형</label>
             <select className="form-select" value={form.type} onChange={e => set('type', e.target.value)}>
-              <option value="main">🏢 본사 창고</option>
-              <option value="branch">🏬 지점 창고</option>
-              <option value="factory">🏭 공장/생산</option>
-              <option value="temp">📦 임시 보관</option>
-              <option value="returns">↩️ 반품 창고</option>
-              <option value="other">🏗️ 기타</option>
+              <option value="main"> 본사 창고</option>
+              <option value="branch"> 지점 창고</option>
+              <option value="factory"> 공장/생산</option>
+              <option value="temp"> 임시 보관</option>
+              <option value="returns">↩ 반품 창고</option>
+              <option value="other"> 기타</option>
             </select>
           </div>
           <div className="form-group">
@@ -83,14 +83,14 @@ function AssignModal({ items, warehouses, onClose, onAssign }) {
     <div className="modal-overlay" style={{ display: 'flex' }} onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="modal" style={{ maxWidth: '700px' }}>
         <div className="modal-header">
-          <h3>📦 미배정 품목 일괄 배정</h3>
-          <button className="btn btn-ghost btn-sm" onClick={onClose}>✕</button>
+          <h3> 미배정 품목 일괄 배정</h3>
+          <button className="btn btn-ghost btn-sm" onClick={onClose}></button>
         </div>
         <div className="modal-body" style={{ maxHeight: '400px', overflowY: 'auto' }}>
           <div className="form-group" style={{ marginBottom: '12px' }}>
             <label className="form-label">배정할 창고</label>
             <select className="form-select" value={target} onChange={e => setTarget(e.target.value)}>
-              {warehouses.map(w => <option key={w.id} value={w.name}>{WH_TYPE_ICONS[w.type] || '🏗️'} {w.name}</option>)}
+              {warehouses.map(w => <option key={w.id} value={w.name}>{WH_TYPE_ICONS[w.type] || ''} {w.name}</option>)}
             </select>
           </div>
           <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '8px' }}>
@@ -232,12 +232,12 @@ export default function WarehousesPage() {
           <button className="btn btn-primary" onClick={() => {
             if (!canAction('warehouse:create')) { showToast('창고 추가 권한이 없습니다. 관리자만 가능합니다.', 'warning'); return; }
             setEditModal({ ...EMPTY_FORM });
-          }}>🏢 창고 추가</button>
+          }}> 창고 추가</button>
           <button className="btn btn-ghost" title="미배정 품목을 창고에 배정" onClick={() => {
             if (unassigned.length === 0) { showToast('미배정 품목이 없습니다.', 'info'); return; }
             if (warehouses.length === 0) { showToast('먼저 창고를 추가해 주세요.', 'warning'); return; }
             setShowAssign(true);
-          }}>📦 미배정 품목 ({unassigned.length})</button>
+          }}> 미배정 품목 ({unassigned.length})</button>
         </div>
       </div>
 
@@ -255,7 +255,7 @@ export default function WarehousesPage() {
       {/* 창고 카드 그리드 */}
       {warehouseStats.length === 0 ? (
         <div className="card" style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
-          <div style={{ fontSize: '36px', marginBottom: '12px' }}>🏢</div>
+          <div style={{ fontSize: '36px', marginBottom: '12px' }}></div>
           <div>등록된 창고가 없습니다. 창고를 추가해 주세요.</div>
         </div>
       ) : (
@@ -273,15 +273,15 @@ export default function WarehousesPage() {
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
                 <div>
-                  <div style={{ fontSize: '24px', marginBottom: '4px' }}>{WH_TYPE_ICONS[wh.type] || '🏗️'}</div>
+                  <div style={{ fontSize: '24px', marginBottom: '4px' }}>{WH_TYPE_ICONS[wh.type] || ''}</div>
                   <div style={{ fontSize: '16px', fontWeight: 700 }}>{wh.name}</div>
                   <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{WH_TYPE_LABELS[wh.type] || wh.type}{wh.manager ? ' · ' + wh.manager : ''}</div>
-                  {wh.address && <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>📍 {wh.address}</div>}
+                  {wh.address && <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}> {wh.address}</div>}
                 </div>
                 <div style={{ display: 'flex', gap: '4px' }}>
-                  <button className="btn btn-ghost btn-sm btn-edit-wh" title="수정" onClick={e => { e.stopPropagation(); setEditModal({ ...wh }); }}>✏️</button>
+                  <button className="btn btn-ghost btn-sm btn-edit-wh" title="수정" onClick={e => { e.stopPropagation(); setEditModal({ ...wh }); }}></button>
                   {wh.type !== 'main' && (
-                    <button className="btn btn-ghost btn-sm btn-delete-wh" title="삭제" onClick={e => { e.stopPropagation(); handleDeleteWarehouse(wh); }}>🗑️</button>
+                    <button className="btn btn-ghost btn-sm btn-delete-wh" title="삭제" onClick={e => { e.stopPropagation(); handleDeleteWarehouse(wh); }}></button>
                   )}
                 </div>
               </div>
@@ -302,7 +302,7 @@ export default function WarehousesPage() {
 
               {wh.lowStockCount > 0 && (
                 <div style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '6px', padding: '8px', fontSize: '12px', color: 'var(--danger)' }}>
-                  ⚠️ 재고 부족 {wh.lowStockCount}건
+                   재고 부족 {wh.lowStockCount}건
                 </div>
               )}
 

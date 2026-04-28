@@ -125,18 +125,18 @@ function UploadModal({ onClose, onConfirm }) {
     <div className="modal-overlay" onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="modal" style={{ maxWidth: 800 }}>
         <div className="modal-header">
-          <h3 className="modal-title">📤 POS 매출 데이터 업로드</h3>
+          <h3 className="modal-title"> POS 매출 데이터 업로드</h3>
           <button className="modal-close" onClick={onClose} />
         </div>
         <div className="modal-body">
           <div className="alert alert-info" style={{ marginBottom: 16, fontSize: 12 }}>
-            <strong>📋 사용 방법:</strong><br />
+            <strong> 사용 방법:</strong><br />
             ① 아래 '양식 다운로드'로 POS 엑셀 양식을 받으세요<br />
             ② POS 시스템 데이터를 업로드하세요<br />
             ③ 매핑 결과를 확인하고 '등록' 버튼을 누르세요
           </div>
           <div style={{ marginBottom: 16 }}>
-            <button className="btn btn-outline" onClick={downloadPosTemplate}>📥 POS 양식 다운로드</button>
+            <button className="btn btn-outline" onClick={downloadPosTemplate}> POS 양식 다운로드</button>
           </div>
           <div
             style={{ border: `2px dashed ${dragOver ? 'var(--accent)' : 'var(--border)'}`, borderRadius: 8, padding: 40, textAlign: 'center', cursor: 'pointer', transition: 'border-color 0.2s' }}
@@ -145,7 +145,7 @@ function UploadModal({ onClose, onConfirm }) {
             onDragLeave={() => setDragOver(false)}
             onDrop={e => { e.preventDefault(); setDragOver(false); const f = e.dataTransfer.files[0]; if (f) processFile(f); }}
           >
-            <div style={{ fontSize: 36, marginBottom: 8 }}>📂</div>
+            <div style={{ fontSize: 36, marginBottom: 8 }}></div>
             <div style={{ fontSize: 14, fontWeight: 500 }}>POS 엑셀 파일을 여기에 드래그하거나 클릭</div>
             <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>.xlsx, .xls 파일 지원</div>
             <input ref={fileInputRef} type="file" accept=".xlsx,.xls,.csv" style={{ display: 'none' }}
@@ -161,12 +161,12 @@ function UploadModal({ onClose, onConfirm }) {
           {preview && preview.rows && (
             <div style={{ marginTop: 16 }}>
               <div className="alert alert-success" style={{ marginBottom: 12 }}>
-                ✅ <strong>{preview.rows.length}건</strong> 인식 완료 |
+                 <strong>{preview.rows.length}건</strong> 인식 완료 |
                 매핑된 필드: <strong>{preview.mappedCount}/{preview.headers.length}</strong> |
                 총 매출: <strong>{fmt(preview.totalSales)}</strong>
               </div>
               <div style={{ marginBottom: 12 }}>
-                <strong style={{ fontSize: 13 }}>🔗 자동 매핑 결과:</strong>
+                <strong style={{ fontSize: 13 }}> 자동 매핑 결과:</strong>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 6 }}>
                   {POS_FIELDS.map(field => {
                     const idx = preview.mapping[field.key];
@@ -195,7 +195,7 @@ function UploadModal({ onClose, onConfirm }) {
               {preview.rows.length > 10 && <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 12 }}>... 외 {preview.rows.length - 10}건</div>}
               <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
                 <button className="btn btn-outline" onClick={() => setPreview(null)}>취소</button>
-                <button className="btn btn-primary" onClick={() => onConfirm(preview.rows)}>✅ {preview.rows.length}건 등록</button>
+                <button className="btn btn-primary" onClick={() => onConfirm(preview.rows)}> {preview.rows.length}건 등록</button>
               </div>
             </div>
           )}
@@ -254,22 +254,22 @@ function PosDashboard({ posData }) {
       </div>
 
       <div className="card" style={{ marginBottom: 16 }}>
-        <div className="card-title">💳 결제 수단 비율</div>
+        <div className="card-title"> 결제 수단 비율</div>
         <div style={{ display: 'flex', height: 32, borderRadius: 8, overflow: 'hidden', marginBottom: 8 }}>
           {totalCard > 0 && <div style={{ width: `${cardPct}%`, background: 'linear-gradient(135deg, #3b82f6, #2563eb)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 11, fontWeight: 600 }}>카드 {cardPct}%</div>}
           {totalCash > 0 && <div style={{ width: `${cashPct}%`, background: 'linear-gradient(135deg, #22c55e, #16a34a)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 11, fontWeight: 600 }}>현금 {cashPct}%</div>}
           {totalPoint > 0 && <div style={{ width: `${pointPct}%`, background: 'linear-gradient(135deg, #f59e0b, #d97706)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 11, fontWeight: 600 }}>포인트 {pointPct}%</div>}
         </div>
         <div style={{ display: 'flex', gap: 16, fontSize: 12, color: 'var(--text-muted)' }}>
-          <span>💳 카드: {fmt(totalCard)}</span>
-          <span>💵 현금: {fmt(totalCash)}</span>
-          <span>🎁 포인트: {fmt(totalPoint)}</span>
+          <span> 카드: {fmt(totalCard)}</span>
+          <span> 현금: {fmt(totalCash)}</span>
+          <span> 포인트: {fmt(totalPoint)}</span>
         </div>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
         <div className="card">
-          <div className="card-title">📅 일자별 매출 추이</div>
+          <div className="card-title"> 일자별 매출 추이</div>
           {dateTrend.length > 0 ? (
             <div style={{ maxHeight: 300, overflowY: 'auto' }}>
               {dateTrend.map(([date, amount]) => (
@@ -288,7 +288,7 @@ function PosDashboard({ posData }) {
         <div>
           {storeRanking.length > 1 && (
             <div className="card" style={{ marginBottom: 16 }}>
-              <div className="card-title">🏪 매장별 매출</div>
+              <div className="card-title"> 매장별 매출</div>
               {storeRanking.slice(0, 10).map(([name, amount], i) => (
                 <div key={name} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid var(--border-light)', fontSize: 13 }}>
                   <span><span style={{ color: 'var(--text-muted)', marginRight: 4 }}>{i + 1}</span>{name}</span>
@@ -299,7 +299,7 @@ function PosDashboard({ posData }) {
           )}
           {catRanking.length > 0 && (
             <div className="card">
-              <div className="card-title">🏷️ 구분별 매출</div>
+              <div className="card-title"> 구분별 매출</div>
               {catRanking.slice(0, 10).map(([name, amount], i) => (
                 <div key={name} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid var(--border-light)', fontSize: 13 }}>
                   <span><span style={{ color: 'var(--text-muted)', marginRight: 4 }}>{i + 1}</span>{name}</span>
@@ -312,7 +312,7 @@ function PosDashboard({ posData }) {
       </div>
 
       <div className="card card-flush">
-        <div className="card-title" style={{ padding: '12px 16px' }}>📋 상세 데이터 <span className="card-subtitle">{posData.length}건</span></div>
+        <div className="card-title" style={{ padding: '12px 16px' }}> 상세 데이터 <span className="card-subtitle">{posData.length}건</span></div>
         <div className="table-wrapper" style={{ border: 'none', maxHeight: 400, overflowY: 'auto' }}>
           <table className="data-table" style={{ fontSize: 12 }}>
             <thead>
@@ -373,7 +373,7 @@ export default function PosPage() {
     return (
       <div>
         <div className="page-header"><h1 className="page-title">접근 제한</h1></div>
-        <div className="alert alert-danger" style={{ marginTop: 16 }}>🔒 이 기능은 관리자만 사용할 수 있습니다.</div>
+        <div className="alert alert-danger" style={{ marginTop: 16 }}> 이 기능은 관리자만 사용할 수 있습니다.</div>
       </div>
     );
   }
@@ -381,7 +381,7 @@ export default function PosPage() {
   function handleConfirm(rows) {
     const totalSales = rows.reduce((s, r) => s + (parseFloat(r.totalSales) || parseFloat(r.salesAmount) || 0), 0);
     setState({ posData: [...posData, ...rows] });
-    showToast(`✅ POS 매출 ${rows.length}건 등록 완료! (총 매출: ${fmt(totalSales)})`, 'success');
+    showToast(` POS 매출 ${rows.length}건 등록 완료! (총 매출: ${fmt(totalSales)})`, 'success');
     setShowUpload(false);
   }
 
@@ -402,15 +402,15 @@ export default function PosPage() {
     <div>
       <div className="page-header">
         <div>
-          <h1 className="page-title">🖥️ POS 매출 분석</h1>
+          <h1 className="page-title"> POS 매출 분석</h1>
           <div className="page-desc">POS 매출 데이터를 업로드하여 매출 현황을 분석합니다. <span className="badge badge-danger" style={{ fontSize: 10 }}>관리자 전용</span></div>
         </div>
         <div className="page-actions">
           {posData.length > 0 && <>
-            <button className="btn btn-outline" onClick={handleExport}>📥 내보내기</button>
-            <button className="btn btn-outline" onClick={handleClear}>🗑️ 데이터 초기화</button>
+            <button className="btn btn-outline" onClick={handleExport}> 내보내기</button>
+            <button className="btn btn-outline" onClick={handleClear}> 데이터 초기화</button>
           </>}
-          <button className="btn btn-primary" onClick={() => setShowUpload(true)}>📤 POS 엑셀 업로드</button>
+          <button className="btn btn-primary" onClick={() => setShowUpload(true)}> POS 엑셀 업로드</button>
         </div>
       </div>
 
@@ -418,14 +418,14 @@ export default function PosPage() {
         <PosDashboard posData={posData} />
       ) : (
         <div className="card" style={{ textAlign: 'center', padding: '60px 20px' }}>
-          <div style={{ fontSize: 48, marginBottom: 16 }}>🖥️</div>
+          <div style={{ fontSize: 48, marginBottom: 16 }}></div>
           <h3 style={{ marginBottom: 8 }}>POS 매출 데이터를 업로드해 주세요</h3>
           <p style={{ color: 'var(--text-muted)', fontSize: 13, marginBottom: 24 }}>
             POS 시스템에서 엑셀로 내보낸 매출 데이터를 업로드하면<br />
             자동으로 헤더를 인식하고 매출 현황을 분석합니다.
           </p>
           <div className="alert alert-info" style={{ maxWidth: 500, margin: '0 auto', textAlign: 'left', fontSize: 12 }}>
-            <strong>📌 지원되는 POS 헤더:</strong><br />
+            <strong> 지원되는 POS 헤더:</strong><br />
             판매일자, 매장명, 구분, 총매출액, 매출금액, 부가세, 카드, 현금, 포인트 등<br />
             → 헤더 이름이 조금 달라도 자동으로 인식합니다!
           </div>

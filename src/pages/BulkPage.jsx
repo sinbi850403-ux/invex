@@ -109,7 +109,7 @@ export default function BulkPage() {
     <div>
       <div className="page-header">
         <div>
-          <h1 className="page-title">🔁 일괄 처리 & 자동 발주</h1>
+          <h1 className="page-title"> 일괄 처리 & 자동 발주</h1>
           <div className="page-desc">여러 품목을 한번에 입고/출고하고, 발주 시점을 자동 추천받습니다.</div>
         </div>
       </div>
@@ -117,23 +117,23 @@ export default function BulkPage() {
       {/* 탭 */}
       <div className="scan-mode-bar" style={{ marginBottom: '16px' }}>
         <button className={`scan-mode-btn${activeTab === 'bulk' ? ' active' : ''}`} onClick={() => setActiveTab('bulk')}>
-          📦 일괄 입출고
+           일괄 입출고
         </button>
         <button className={`scan-mode-btn${activeTab === 'reorder' ? ' active' : ''}`} onClick={() => setActiveTab('reorder')}>
-          🛒 자동 발주 추천 {reorderItems.length > 0 && <span className="badge badge-danger" style={{ marginLeft: '4px' }}>{reorderItems.length}</span>}
+           자동 발주 추천 {reorderItems.length > 0 && <span className="badge badge-danger" style={{ marginLeft: '4px' }}>{reorderItems.length}</span>}
         </button>
       </div>
 
       {/* 일괄 입출고 탭 */}
       {activeTab === 'bulk' && (
         items.length === 0 ? (
-          <div className="card"><div className="empty-state"><div className="icon">📦</div><div className="msg">품목을 먼저 등록해주세요</div></div></div>
+          <div className="card"><div className="empty-state"><div className="icon"></div><div className="msg">품목을 먼저 등록해주세요</div></div></div>
         ) : (
           <div className="card">
-            <div className="card-title">📦 일괄 입출고</div>
+            <div className="card-title"> 일괄 입출고</div>
             <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
-              <button className={`btn btn-success${bulkType === 'in' ? ' active' : ''}`} style={{ flex: 1 }} onClick={() => setBulkType('in')}>📥 일괄 입고</button>
-              <button className={`btn btn-outline${bulkType === 'out' ? ' active' : ''}`} style={{ flex: 1, color: 'var(--danger)', borderColor: 'var(--danger)' }} onClick={() => setBulkType('out')}>📤 일괄 출고</button>
+              <button className={`btn btn-success${bulkType === 'in' ? ' active' : ''}`} style={{ flex: 1 }} onClick={() => setBulkType('in')}> 일괄 입고</button>
+              <button className={`btn btn-outline${bulkType === 'out' ? ' active' : ''}`} style={{ flex: 1, color: 'var(--danger)', borderColor: 'var(--danger)' }} onClick={() => setBulkType('out')}> 일괄 출고</button>
             </div>
             <div className="table-wrapper" style={{ border: 'none', marginBottom: '12px' }}>
               <table className="data-table">
@@ -185,7 +185,7 @@ export default function BulkPage() {
                           />
                         </td>
                         <td>
-                          <button className="btn-icon btn-icon-danger" onClick={() => removeRow(idx)}>✕</button>
+                          <button className="btn-icon btn-icon-danger" onClick={() => removeRow(idx)}></button>
                         </td>
                       </tr>
                     );
@@ -195,7 +195,7 @@ export default function BulkPage() {
             </div>
             <div style={{ display: 'flex', gap: '8px', justifyContent: 'space-between' }}>
               <button className="btn btn-outline" onClick={addRow}>+ 행 추가</button>
-              <button className="btn btn-primary btn-lg" onClick={handleExecute}>⚡ 일괄 처리 실행</button>
+              <button className="btn btn-primary btn-lg" onClick={handleExecute}> 일괄 처리 실행</button>
             </div>
           </div>
         )
@@ -206,14 +206,14 @@ export default function BulkPage() {
         reorderItems.length === 0 ? (
           <div className="card">
             <div className="empty-state">
-              <div className="icon" style={{ fontSize: '40px' }}>✅</div>
+              <div className="icon" style={{ fontSize: '40px' }}></div>
               <div className="msg">현재 발주가 필요한 품목이 없습니다</div>
               <div className="sub">모든 품목이 충분한 재고를 보유하고 있습니다.</div>
             </div>
           </div>
         ) : (
           <div className="card" style={{ borderLeft: '3px solid var(--danger)' }}>
-            <div className="card-title">🛒 자동 발주 추천 <span className="badge badge-danger">{reorderItems.length}건</span></div>
+            <div className="card-title"> 자동 발주 추천 <span className="badge badge-danger">{reorderItems.length}건</span></div>
             <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '16px' }}>
               과거 출고 패턴과 안전재고 설정을 분석하여 발주가 필요한 품목을 추천합니다.
             </div>
@@ -261,7 +261,7 @@ export default function BulkPage() {
               </table>
             </div>
             <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-              <button className="btn btn-primary btn-lg" onClick={handleReorderAll}>📋 발주서 작성으로 이동</button>
+              <button className="btn btn-primary btn-lg" onClick={handleReorderAll}> 발주서 작성으로 이동</button>
             </div>
           </div>
         )

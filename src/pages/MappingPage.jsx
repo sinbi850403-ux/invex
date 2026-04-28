@@ -26,7 +26,7 @@ export default function MappingPage() {
       const previewRows = mappedDataFallback.slice(0, 100);
       return (
         <div>
-          <div className="page-header"><h1 className="page-title">📋 데이터 확인</h1></div>
+          <div className="page-header"><h1 className="page-title"> 데이터 확인</h1></div>
           <div className="alert alert-info">
             업로드 원본(rawData)이 없어 저장된 데이터 기준으로 표시합니다. 총 {mappedDataFallback.length}건
           </div>
@@ -70,10 +70,10 @@ export default function MappingPage() {
 
     return (
       <div>
-        <div className="page-header"><h1 className="page-title">📋 데이터 확인</h1></div>
+        <div className="page-header"><h1 className="page-title"> 데이터 확인</h1></div>
         <div className="card">
           <div className="empty-state">
-            <div className="icon">📂</div>
+            <div className="icon"></div>
             <div className="msg">먼저 파일을 업로드해 주세요</div>
             <div className="sub">엑셀 파일을 올리면 자동으로 이 화면에서 데이터를 확인할 수 있습니다.</div>
             <br />
@@ -133,20 +133,20 @@ export default function MappingPage() {
     <div>
       <div className="page-header">
         <div>
-          <h1 className="page-title">📋 데이터 확인</h1>
+          <h1 className="page-title"> 데이터 확인</h1>
           <div className="page-desc">엑셀 컬럼과 ERP 항목을 연결합니다.</div>
         </div>
       </div>
 
       {/* 진행 단계 */}
       <div className="steps">
-        <div className="step done"><span className="step-num">✓</span> 파일 올리기</div>
+        <div className="step done"><span className="step-num"></span> 파일 올리기</div>
         <div className="step active"><span className="step-num">2</span> 컬럼 매핑</div>
         <div className="step"><span className="step-num">3</span> 확인 완료</div>
       </div>
 
       <div className="alert alert-info">
-        📄 <strong>{state.fileName}</strong> | {dataRows.length}건의 데이터
+         <strong>{state.fileName}</strong> | {dataRows.length}건의 데이터
         {sheetNames.length > 1 && (
           <>
             {' '}| 시트:{' '}
@@ -221,7 +221,7 @@ export default function MappingPage() {
 
       <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '16px' }}>
         <button className="btn btn-outline" onClick={() => navigate('/upload')}>← 다시 업로드</button>
-        <button className="btn btn-success btn-lg" onClick={handleConfirm}>✅ 매핑 확인 완료</button>
+        <button className="btn btn-success btn-lg" onClick={handleConfirm}> 매핑 확인 완료</button>
       </div>
     </div>
   );

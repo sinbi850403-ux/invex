@@ -463,7 +463,7 @@ function bindTableActions(container, vendors, txs, statsMap, navigateTo) {
       const idx = parseInt(btn.dataset.idx);
       const v = vendors[idx];
       if (!confirm(`"${v.name}" 거래처를 삭제하시겠습니까?`)) return;
-      // ★ _deletedVendors: syncToSupabase가 읽어서 Supabase에서도 삭제
+      //  _deletedVendors: syncToSupabase가 읽어서 Supabase에서도 삭제
       const _prev = (getState()._deletedVendors || []);
       setState({
         vendorMaster: vendors.filter((_, i) => i !== idx),

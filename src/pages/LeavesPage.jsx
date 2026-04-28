@@ -44,7 +44,7 @@ function LeaveModal({ emps, onClose, onSaved }) {
   return (
     <div className="modal-overlay" onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="modal" style={{ maxWidth: 480 }}>
-        <div className="modal-header"><h3>🌴 휴가 신청</h3><button className="btn-close" onClick={onClose} /></div>
+        <div className="modal-header"><h3> 휴가 신청</h3><button className="btn-close" onClick={onClose} /></div>
         <div className="modal-body">
           <div className="form-group">
             <label>직원 *</label>
@@ -130,7 +130,7 @@ export default function LeavesPage() {
     <div>
       <div className="page-header">
         <div>
-          <h1 className="page-title">🌴 휴가·연차 관리</h1>
+          <h1 className="page-title"> 휴가·연차 관리</h1>
           <div className="page-desc">휴가 신청과 승인. (연차 자동 부여 로직은 Phase C 배포)</div>
         </div>
         <div className="page-actions">
@@ -140,7 +140,7 @@ export default function LeavesPage() {
 
       <div className="card">
         {loading ? <div style={{ textAlign: 'center', padding: 40, color: 'var(--text-muted)' }}>불러오는 중…</div>
-        : leaves.length === 0 ? <div className="empty-state"><div className="icon">🌴</div><div className="msg">신청된 휴가가 없습니다</div></div>
+        : leaves.length === 0 ? <div className="empty-state"><div className="icon"></div><div className="msg">신청된 휴가가 없습니다</div></div>
         : (
           <div className="table-wrapper">
             <table className="data-table">
@@ -160,10 +160,10 @@ export default function LeavesPage() {
                       <td>{statusBadge(l.status)}</td>
                       <td>
                         {l.status === '신청' && <>
-                          <button className="btn-icon" title="승인" onClick={() => approve(l.id)}>✅</button>
-                          <button className="btn-icon btn-icon-danger" title="반려" onClick={() => reject(l.id)}>❌</button>
+                          <button className="btn-icon" title="승인" onClick={() => approve(l.id)}></button>
+                          <button className="btn-icon btn-icon-danger" title="반려" onClick={() => reject(l.id)}></button>
                         </>}
-                        <button className="btn-icon btn-icon-danger" title="삭제" onClick={() => del(l.id)}>🗑️</button>
+                        <button className="btn-icon btn-icon-danger" title="삭제" onClick={() => del(l.id)}></button>
                       </td>
                     </tr>
                   );

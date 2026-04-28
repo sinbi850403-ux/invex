@@ -115,7 +115,7 @@ export default function YearendSettlementPage() {
     <div>
       <div className="page-header">
         <div>
-          <h1 className="page-title">📅 연말정산 보조</h1>
+          <h1 className="page-title"> 연말정산 보조</h1>
           <div className="page-desc">연간 급여를 기반으로 환급액을 자동 계산합니다.</div>
         </div>
       </div>

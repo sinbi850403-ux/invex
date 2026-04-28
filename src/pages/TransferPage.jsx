@@ -105,7 +105,7 @@ export default function TransferPage() {
 
       {/* 이동 등록 폼 */}
       <div className="card">
-        <div className="card-title">🔄 재고 이동 등록</div>
+        <div className="card-title"> 재고 이동 등록</div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', gap: '16px', alignItems: 'end', marginBottom: '16px' }}>
           <div className="form-group" style={{ margin: 0 }}>
             <label className="form-label">출발 창고 <span className="required">*</span></label>
@@ -150,12 +150,12 @@ export default function TransferPage() {
           <input className="form-input" placeholder="이동 사유 (선택)" value={note} onChange={e => setNote(e.target.value)} />
         </div>
 
-        <button className="btn btn-primary btn-lg" onClick={handleTransfer}>🔄 재고 이동 실행</button>
+        <button className="btn btn-primary btn-lg" onClick={handleTransfer}> 재고 이동 실행</button>
       </div>
 
       {/* 이동 이력 */}
       <div className="card">
-        <div className="card-title">📋 이동 이력 <span className="card-subtitle">({transfers.length}건)</span></div>
+        <div className="card-title"> 이동 이력 <span className="card-subtitle">({transfers.length}건)</span></div>
         {transfers.length > 0 ? (
           <div className="table-wrapper" style={{ border: 'none' }}>
             <table className="data-table">

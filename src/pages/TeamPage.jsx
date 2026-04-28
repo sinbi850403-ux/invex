@@ -20,11 +20,11 @@ import {
 } from '../workspace.js';
 
 const ROLE_LABELS = {
-  owner:   { text: '대표',   color: 'var(--accent)',            icon: '👑' },
-  admin:   { text: '관리자', color: 'var(--success)',           icon: '🛡️' },
-  manager: { text: '매니저', color: 'var(--info, #58a6ff)',     icon: '📋' },
-  staff:   { text: '직원',   color: 'var(--text-muted)',        icon: '👤' },
-  viewer:  { text: '열람자', color: 'var(--text-muted)',        icon: '👁️' },
+  owner:   { text: '대표',   color: 'var(--accent)',            icon: '' },
+  admin:   { text: '관리자', color: 'var(--success)',           icon: '' },
+  manager: { text: '매니저', color: 'var(--info, #58a6ff)',     icon: '' },
+  staff:   { text: '직원',   color: 'var(--text-muted)',        icon: '' },
+  viewer:  { text: '열람자', color: 'var(--text-muted)',        icon: '' },
 };
 
 /** 초대 모달 */
@@ -51,8 +51,8 @@ function InviteModal({ onClose, onInvited }) {
     <div className="modal-overlay" style={{ display: 'flex' }} onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="modal" style={{ maxWidth: '440px' }}>
         <div className="modal-header">
-          <h3 className="modal-title">✉️ 팀원 초대</h3>
-          <button className="modal-close" onClick={onClose}>✕</button>
+          <h3 className="modal-title"> 팀원 초대</h3>
+          <button className="modal-close" onClick={onClose}></button>
         </div>
         <div className="modal-body">
           <div className="alert alert-info" style={{ marginBottom: '16px', fontSize: '13px' }}>
@@ -74,10 +74,10 @@ function InviteModal({ onClose, onInvited }) {
           <div className="form-group">
             <label className="form-label">역할</label>
             <select className="form-select" value={role} onChange={e => setRole(e.target.value)}>
-              <option value="staff">👤 직원 — 입출고 등록, 재고 조회</option>
-              <option value="manager">📋 매니저 — 직원 권한 + 보고서, 거래처 관리</option>
-              <option value="admin">🛡️ 관리자 — 모든 기능 사용 가능</option>
-              <option value="viewer">👁️ 열람자 — 조회만 가능</option>
+              <option value="staff"> 직원 — 입출고 등록, 재고 조회</option>
+              <option value="manager"> 매니저 — 직원 권한 + 보고서, 거래처 관리</option>
+              <option value="admin"> 관리자 — 모든 기능 사용 가능</option>
+              <option value="viewer"> 열람자 — 조회만 가능</option>
             </select>
           </div>
           <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '16px' }}>
@@ -132,7 +132,7 @@ export default function TeamPage() {
         <div className="page-header"><h1 className="page-title">팀 관리</h1></div>
         <div className="card">
           <div className="empty-state">
-            <div className="icon">🔐</div>
+            <div className="icon"></div>
             <div className="msg">로그인이 필요합니다</div>
             <div className="sub">팀 기능을 사용하려면 먼저 로그인해 주세요.</div>
           </div>
@@ -215,7 +215,7 @@ export default function TeamPage() {
       {myPendingInvite && (
         <div className="card" style={{ border: '2px solid var(--accent)', background: 'linear-gradient(135deg, rgba(37,99,235,0.05), rgba(139,92,246,0.05))' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
-            <div style={{ fontSize: '36px' }}>✉️</div>
+            <div style={{ fontSize: '36px' }}></div>
             <div style={{ flex: 1, minWidth: '200px' }}>
               <div style={{ fontSize: '16px', fontWeight: '700', marginBottom: '4px' }}>팀 초대장이 도착했습니다!</div>
               <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '2px' }}>
@@ -241,7 +241,7 @@ export default function TeamPage() {
       <div className="card" style={{ background: 'linear-gradient(135deg, rgba(37,99,235,0.1), rgba(139,92,246,0.1))', border: '1px solid rgba(37,99,235,0.2)' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
           <div>
-            <div style={{ fontSize: '16px', fontWeight: '700', marginBottom: '4px' }}>🎁 1년 무료 이용 중</div>
+            <div style={{ fontSize: '16px', fontWeight: '700', marginBottom: '4px' }}> 1년 무료 이용 중</div>
             <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
               가입일: {freePeriod.startDate} → 무료 종료: {freePeriod.endDate}
             </div>
@@ -274,13 +274,13 @@ export default function TeamPage() {
         </div>
         <div className="stat-card">
           <div className="stat-label">요금제</div>
-          <div className="stat-value" style={{ fontSize: '16px' }}>🎁 무료</div>
+          <div className="stat-value" style={{ fontSize: '16px' }}> 무료</div>
         </div>
       </div>
 
       {/* 활성 팀원 목록 */}
       <div className="card">
-        <div className="card-title">👥 팀원 목록 <span className="card-subtitle">{activeMembers.length}명</span></div>
+        <div className="card-title"> 팀원 목록 <span className="card-subtitle">{activeMembers.length}명</span></div>
         <div className="table-wrapper" style={{ border: 'none' }}>
           <table className="data-table">
             <thead>
@@ -319,7 +319,7 @@ export default function TeamPage() {
                             className="btn-icon btn-icon-danger"
                             title="제거"
                             onClick={() => handleRemoveMember(m.uid, m.name)}
-                          >🗑️</button>
+                          ></button>
                         )}
                       </td>
                     )}
@@ -370,7 +370,7 @@ export default function TeamPage() {
                           className="btn-icon btn-icon-danger"
                           title="초대 취소"
                           onClick={() => handleCancelInvite(m.uid, m.name)}
-                        >🗑️</button>
+                        ></button>
                       </td>
                     </tr>
                   );
@@ -384,7 +384,7 @@ export default function TeamPage() {
       {/* 실시간 동기화 안내 */}
       <div className="card" style={{ borderLeft: '3px solid var(--success)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <span style={{ fontSize: '24px' }}>🔄</span>
+          <span style={{ fontSize: '24px' }}></span>
           <div>
             <div style={{ fontWeight: '600', marginBottom: '2px' }}>실시간 데이터 공유</div>
             <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>

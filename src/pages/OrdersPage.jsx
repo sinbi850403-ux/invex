@@ -12,13 +12,13 @@ import { generatePurchaseOrderPDF } from '../pdf-generator.js';
 
 /* ── 상수 ──────────────────────────────────────────────── */
 const STATUS = {
-  draft:     { text: '작성중',   icon: '✏️', color: 'var(--text-muted)',  bg: 'rgba(139,148,158,.15)' },
-  confirmed: { text: '발주확정', icon: '✅', color: '#58a6ff',            bg: 'rgba(88,166,255,.15)' },
-  partial:   { text: '부분입고', icon: '📦', color: '#d29922',            bg: 'rgba(210,153,34,.15)' },
-  complete:  { text: '입고완료', icon: '🎉', color: 'var(--success)',      bg: 'rgba(63,185,80,.15)' },
-  cancelled: { text: '취소',     icon: '❌', color: 'var(--danger)',       bg: 'rgba(248,81,73,.15)' },
-  pending:   { text: '작성중',   icon: '✏️', color: 'var(--text-muted)',  bg: 'rgba(139,148,158,.15)' },
-  sent:      { text: '발주확정', icon: '✅', color: '#58a6ff',            bg: 'rgba(88,166,255,.15)' },
+  draft:     { text: '작성중',   icon: '', color: 'var(--text-muted)',  bg: 'rgba(139,148,158,.15)' },
+  confirmed: { text: '발주확정', icon: '', color: '#58a6ff',            bg: 'rgba(88,166,255,.15)' },
+  partial:   { text: '부분입고', icon: '', color: '#d29922',            bg: 'rgba(210,153,34,.15)' },
+  complete:  { text: '입고완료', icon: '', color: 'var(--success)',      bg: 'rgba(63,185,80,.15)' },
+  cancelled: { text: '취소',     icon: '', color: 'var(--danger)',       bg: 'rgba(248,81,73,.15)' },
+  pending:   { text: '작성중',   icon: '', color: 'var(--text-muted)',  bg: 'rgba(139,148,158,.15)' },
+  sent:      { text: '발주확정', icon: '', color: '#58a6ff',            bg: 'rgba(88,166,255,.15)' },
 };
 
 const fmt = v => v ? '₩' + Math.round(Number(v) || 0).toLocaleString('ko-KR') : '-';
@@ -131,8 +131,8 @@ function OrderModal({ editOrder, orders, vendors, itemsMaster, onClose, onSave }
     <div className="modal-overlay" style={{ display: 'flex' }}>
       <div className="modal" style={{ maxWidth: '720px', width: '95vw' }}>
         <div className="modal-header">
-          <h3 className="modal-title">{isEdit ? `✏️ 발주서 수정 - ${e.orderNo}` : '📋 신규 발주서 작성'}</h3>
-          <button className="modal-close" onClick={onClose}>✕</button>
+          <h3 className="modal-title">{isEdit ? ` 발주서 수정 - ${e.orderNo}` : ' 신규 발주서 작성'}</h3>
+          <button className="modal-close" onClick={onClose}></button>
         </div>
         <div className="modal-body">
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
@@ -171,7 +171,7 @@ function OrderModal({ editOrder, orders, vendors, itemsMaster, onClose, onSave }
           {/* 품목 테이블 */}
           <div style={{ marginBottom: '12px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-              <strong style={{ fontSize: '14px' }}>📦 발주 품목</strong>
+              <strong style={{ fontSize: '14px' }}> 발주 품목</strong>
               <button type="button" className="btn btn-sm btn-outline" onClick={addItem}>+ 품목 추가</button>
             </div>
             <datalist id="om-item-list">
@@ -244,7 +244,7 @@ function OrderModal({ editOrder, orders, vendors, itemsMaster, onClose, onSave }
                             className="btn-icon btn-icon-danger"
                             style={{ fontSize: '12px' }}
                             onClick={() => removeItem(idx)}
-                          >✕</button>
+                          ></button>
                         </td>
                       </tr>
                     );
@@ -306,7 +306,7 @@ function OrderDetail({ order, onClose }) {
             <h2 style={{ fontSize: '20px', fontWeight: 700, margin: '0 0 2px' }}>{order.orderNo || ''}</h2>
             <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>거래처: <strong>{order.vendor || '-'}</strong></div>
           </div>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', color: 'var(--text-muted)' }}>✕</button>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', color: 'var(--text-muted)' }}></button>
         </div>
 
         {/* 날짜 */}
@@ -377,12 +377,12 @@ function OrderDetail({ order, onClose }) {
 
           {order.note && (
             <div style={{ background: 'var(--bg-input)', borderRadius: '6px', padding: '10px', fontSize: '13px', color: 'var(--text-muted)', marginBottom: '16px' }}>
-              📝 {order.note}
+               {order.note}
             </div>
           )}
           {order.taxInvoiceId && (
             <div style={{ background: 'rgba(63,185,80,.1)', border: '1px solid var(--success)', borderRadius: '6px', padding: '10px', fontSize: '13px', color: 'var(--success)' }}>
-              ✅ 세금계산서 발행 완료 ({order.taxInvoiceId})
+               세금계산서 발행 완료 ({order.taxInvoiceId})
             </div>
           )}
         </div>
@@ -430,8 +430,8 @@ function ReceiveModal({ order, onClose, onReceive }) {
     <div className="modal-overlay" style={{ display: 'flex' }}>
       <div className="modal" style={{ maxWidth: '620px', width: '95vw' }}>
         <div className="modal-header">
-          <h3 className="modal-title">📥 입고 처리 - {order.orderNo}</h3>
-          <button className="modal-close" onClick={onClose}>✕</button>
+          <h3 className="modal-title"> 입고 처리 - {order.orderNo}</h3>
+          <button className="modal-close" onClick={onClose}></button>
         </div>
         <div className="modal-body">
           <div style={{ marginBottom: '12px', fontSize: '13px', color: 'var(--text-muted)' }}>
@@ -707,7 +707,7 @@ export default function OrdersPage() {
     <div>
       <div className="page-header">
         <div>
-          <h1 className="page-title">📋 발주 관리</h1>
+          <h1 className="page-title"> 발주 관리</h1>
           <div className="page-desc">발주서 작성 → 발주 확정 → 입고 처리 → 세금계산서 생성까지 전체 구매 플로우를 관리합니다.</div>
         </div>
         <div className="page-actions">
@@ -754,7 +754,7 @@ export default function OrdersPage() {
       <div className="card card-flush">
         {filteredOrders.length === 0 ? (
           <div style={{ padding: '48px', textAlign: 'center', color: 'var(--text-muted)' }}>
-            <div style={{ fontSize: '40px', marginBottom: '12px' }}>📭</div>
+            <div style={{ fontSize: '40px', marginBottom: '12px' }}></div>
             <div>발주 이력이 없습니다. [+ 신규 발주] 버튼으로 시작하세요.</div>
           </div>
         ) : (

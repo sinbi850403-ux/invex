@@ -14,12 +14,12 @@ function ScanConfirmModal({ payload, onConfirm, onClose }) {
       <div className="modal" style={{ maxWidth: '520px' }}>
         <div className="modal-header">
           <h3 className="modal-title">스캔 등록 확인</h3>
-          <button className="modal-close" onClick={onClose}>✕</button>
+          <button className="modal-close" onClick={onClose}></button>
         </div>
         <div className="modal-body">
           <div style={{ display: 'grid', gap: '10px' }}>
             <div><strong>{payload.item.itemName}</strong> ({payload.item.itemCode || '-'})</div>
-            <div>유형: <strong>{payload.type === 'in' ? '📥 입고' : '📤 출고'}</strong></div>
+            <div>유형: <strong>{payload.type === 'in' ? ' 입고' : ' 출고'}</strong></div>
             <div>수량: <strong>{payload.qty.toLocaleString('ko-KR')}개</strong></div>
             <div>기준 재고: {payload.currentQty.toLocaleString('ko-KR')}개 → {
               payload.type === 'in'
@@ -147,7 +147,7 @@ export default function ScannerPage() {
     <div>
       <div className="page-header">
         <div>
-          <h1 className="page-title">📷 바코드/QR 스캔</h1>
+          <h1 className="page-title"> 바코드/QR 스캔</h1>
           <div className="page-desc">카메라로 바코드를 스캔하면 자동으로 품목을 찾아 입출고를 등록합니다.</div>
         </div>
       </div>
@@ -156,21 +156,21 @@ export default function ScannerPage() {
       <div className="scan-mode-bar">
         <button
           className={`scan-mode-btn${scanType === 'in' ? ' active' : ''}`}
-          onClick={() => { setScanType('in'); showToast('📥 입고 모드로 전환', 'info'); }}
-        >📥 입고 모드</button>
+          onClick={() => { setScanType('in'); showToast(' 입고 모드로 전환', 'info'); }}
+        > 입고 모드</button>
         <button
           className={`scan-mode-btn${scanType === 'out' ? ' active' : ''}`}
-          onClick={() => { setScanType('out'); showToast('📤 출고 모드로 전환', 'info'); }}
-        >📤 출고 모드</button>
+          onClick={() => { setScanType('out'); showToast(' 출고 모드로 전환', 'info'); }}
+        > 출고 모드</button>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
         {/* 카메라 영역 */}
         <div className="card">
-          <div className="card-title">📷 카메라 스캔</div>
+          <div className="card-title"> 카메라 스캔</div>
           <div id={regionId} style={{ width: '100%', minHeight: '300px', background: '#000', borderRadius: '8px', overflow: 'hidden' }} />
           <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
-            <button className="btn btn-primary" onClick={handleStartScan} disabled={scanning}>📷 스캔 시작</button>
+            <button className="btn btn-primary" onClick={handleStartScan} disabled={scanning}> 스캔 시작</button>
             <button className="btn btn-outline" onClick={handleStopScan} disabled={!scanning}>⏹ 스캔 중지</button>
           </div>
           <div style={{ marginTop: '12px' }}>
@@ -192,10 +192,10 @@ export default function ScannerPage() {
         <div>
           {scanResult && (
             <div className="card" style={{ marginBottom: '16px' }}>
-              <div className="card-title">🔍 스캔 결과</div>
+              <div className="card-title"> 스캔 결과</div>
               {scanResult.notFound ? (
                 <div className="alert alert-warning" style={{ margin: 0 }}>
-                  ⚠️ 코드 "{scanResult.code}"에 해당하는 품목을 찾지 못했습니다.<br />
+                   코드 "{scanResult.code}"에 해당하는 품목을 찾지 못했습니다.<br />
                   <small>품목코드가 정확한지 확인해 주세요.</small>
                 </div>
               ) : (
@@ -206,7 +206,7 @@ export default function ScannerPage() {
                       <div style={{ color: 'var(--text-muted)', fontSize: '13px' }}>코드: {scanResult.item.itemCode} | 분류: {scanResult.item.category || '-'}</div>
                     </div>
                     <span className={`badge ${scanType === 'in' ? 'badge-success' : 'badge-danger'}`} style={{ fontSize: '13px', padding: '4px 12px' }}>
-                      {scanType === 'in' ? '📥 입고' : '📤 출고'}
+                      {scanType === 'in' ? ' 입고' : ' 출고'}
                     </span>
                   </div>
                   <div className="stat-grid" style={{ gridTemplateColumns: '1fr 1fr 1fr', marginBottom: '12px' }}>
@@ -243,7 +243,7 @@ export default function ScannerPage() {
                     style={{ width: '100%' }}
                     onClick={handleRegister}
                   >
-                    {scanType === 'in' ? '📥 입고' : '📤 출고'}
+                    {scanType === 'in' ? ' 입고' : ' 출고'}
                   </button>
                 </div>
               )}
@@ -252,16 +252,16 @@ export default function ScannerPage() {
 
           {/* 최근 스캔 이력 */}
           <div className="card">
-            <div className="card-title">📋 최근 스캔 이력 <span className="card-subtitle">({scanHistory.length}건)</span></div>
+            <div className="card-title"> 최근 스캔 이력 <span className="card-subtitle">({scanHistory.length}건)</span></div>
             {scanHistory.length === 0 ? (
               <div className="empty-state" style={{ padding: '24px' }}>
-                <div className="icon" style={{ fontSize: '32px' }}>📭</div>
+                <div className="icon" style={{ fontSize: '32px' }}></div>
                 <div className="msg" style={{ fontSize: '13px' }}>스캔한 이력이 없습니다</div>
               </div>
             ) : (
               scanHistory.map((h, i) => (
                 <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 0', borderBottom: '1px solid var(--border-light)' }}>
-                  <span style={{ fontSize: '16px' }}>{h.type === 'in' ? '📥' : '📤'}</span>
+                  <span style={{ fontSize: '16px' }}>{h.type === 'in' ? '' : ''}</span>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontWeight: 500, fontSize: '13px' }}>{h.name}</div>
                     <div style={{ color: 'var(--text-muted)', fontSize: '11px' }}>{h.code} | {h.time}</div>
@@ -278,7 +278,7 @@ export default function ScannerPage() {
 
       {items.length === 0 && (
         <div className="alert alert-warning" style={{ marginTop: '12px' }}>
-          ⚠️ 등록된 품목이 없습니다. 먼저 재고 현황에서 품목을 등록하거나 파일을 업로드해 주세요.
+           등록된 품목이 없습니다. 먼저 재고 현황에서 품목을 등록하거나 파일을 업로드해 주세요.
           바코드 스캔 시 품목코드로 매칭됩니다.
         </div>
       )}

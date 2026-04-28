@@ -27,22 +27,22 @@ const WEBHOOK_EVENTS = [
 ];
 
 const API_ENDPOINTS = [
-  { group: '📦 재고 관리', items: [
+  { group: ' 재고 관리', items: [
     { method: 'GET', path: '/api/v1/items', desc: '전체 품목 조회' },
     { method: 'POST', path: '/api/v1/items', desc: '품목 추가' },
     { method: 'PUT', path: '/api/v1/items/:id', desc: '품목 수정' },
     { method: 'DEL', path: '/api/v1/items/:id', desc: '품목 삭제' },
   ]},
-  { group: '🔄 입출고', items: [
+  { group: ' 입출고', items: [
     { method: 'GET', path: '/api/v1/transactions', desc: '이력 조회' },
     { method: 'POST', path: '/api/v1/inbound', desc: '입고 등록' },
     { method: 'POST', path: '/api/v1/outbound', desc: '출고 등록' },
   ]},
-  { group: '🏢 창고', items: [
+  { group: ' 창고', items: [
     { method: 'GET', path: '/api/v1/warehouses', desc: '창고 목록' },
     { method: 'POST', path: '/api/v1/transfers', desc: '창고 이동' },
   ]},
-  { group: '🤝 거래처', items: [
+  { group: ' 거래처', items: [
     { method: 'GET', path: '/api/v1/vendors', desc: '거래처 목록' },
     { method: 'POST', path: '/api/v1/vendors', desc: '거래처 추가' },
   ]},
@@ -69,8 +69,8 @@ function KeyModal({ onSave, onClose }) {
     <div className="modal-overlay" style={{ display: 'flex' }} onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="modal" style={{ maxWidth: '450px' }}>
         <div className="modal-header">
-          <h3>🔑 API 키 생성</h3>
-          <button className="btn btn-ghost btn-sm" onClick={onClose}>✕</button>
+          <h3> API 키 생성</h3>
+          <button className="btn btn-ghost btn-sm" onClick={onClose}></button>
         </div>
         <div className="modal-body">
           <div className="form-group">
@@ -80,13 +80,13 @@ function KeyModal({ onSave, onClose }) {
           <div className="form-group">
             <label className="form-label">권한 범위</label>
             <select className="form-select" value={scope} onChange={e => setScope(e.target.value)}>
-              <option value="read">👁️ 읽기 전용 (조회만 가능)</option>
-              <option value="write">✏️ 읽기/쓰기 (조회 + 등록/수정)</option>
-              <option value="full">⚡ 전체 (삭제 포함)</option>
+              <option value="read"> 읽기 전용 (조회만 가능)</option>
+              <option value="write"> 읽기/쓰기 (조회 + 등록/수정)</option>
+              <option value="full"> 전체 (삭제 포함)</option>
             </select>
           </div>
           <div style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '6px', padding: '10px', fontSize: '12px', color: 'var(--danger)' }}>
-            ⚠️ API 키 생성 후에는 키 값을 다시 확인할 수 없습니다. 반드시 안전한 곳에 보관하세요.
+             API 키 생성 후에는 키 값을 다시 확인할 수 없습니다. 반드시 안전한 곳에 보관하세요.
           </div>
         </div>
         <div className="modal-footer" style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
@@ -122,8 +122,8 @@ function WebhookModal({ onSave, onClose }) {
     <div className="modal-overlay" style={{ display: 'flex' }} onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="modal" style={{ maxWidth: '500px' }}>
         <div className="modal-header">
-          <h3>🔗 Webhook 추가</h3>
-          <button className="btn btn-ghost btn-sm" onClick={onClose}>✕</button>
+          <h3> Webhook 추가</h3>
+          <button className="btn btn-ghost btn-sm" onClick={onClose}></button>
         </div>
         <div className="modal-body">
           <div className="form-group">
@@ -226,7 +226,7 @@ export default function ApiPage() {
     <div>
       <div className="page-header">
         <div>
-          <h1 className="page-title">🔗 API 연동</h1>
+          <h1 className="page-title"> API 연동</h1>
           <div className="page-desc">Enterprise — 외부 시스템과 데이터를 연동하고 API 키를 관리합니다.</div>
         </div>
       </div>
@@ -234,7 +234,7 @@ export default function ApiPage() {
       {/* API 키 관리 */}
       <div className="card" style={{ marginBottom: '20px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-          <div className="card-title" style={{ margin: 0 }}>🔑 API 키</div>
+          <div className="card-title" style={{ margin: 0 }}> API 키</div>
           <button className="btn btn-primary btn-sm" onClick={() => setShowKeyModal(true)}>+ 새 API 키 생성</button>
         </div>
         {apiKeys.length > 0 ? (
@@ -262,9 +262,9 @@ export default function ApiPage() {
                           {visible ? k.key : `${k.key.substring(0, 10)}${'•'.repeat(22)}`}
                         </code>
                         <button className="btn btn-ghost btn-sm" onClick={() => toggleKeyVisibility(k.id)} title="키 표시/숨김" style={{ marginLeft: '4px' }}>
-                          {visible ? '🙈' : '👁️'}
+                          {visible ? '' : ''}
                         </button>
-                        <button className="btn btn-ghost btn-sm" onClick={() => handleCopyKey(k.key)} title="복사" style={{ marginLeft: '2px' }}>📋</button>
+                        <button className="btn btn-ghost btn-sm" onClick={() => handleCopyKey(k.key)} title="복사" style={{ marginLeft: '2px' }}></button>
                       </td>
                       <td><span className={`badge ${badge.cls}`}>{badge.text}</span></td>
                       <td style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{formatDate(k.createdAt)}</td>
@@ -280,7 +280,7 @@ export default function ApiPage() {
           </div>
         ) : (
           <div style={{ textAlign: 'center', padding: '32px', color: 'var(--text-muted)' }}>
-            <div style={{ fontSize: '28px', marginBottom: '8px' }}>🔑</div>
+            <div style={{ fontSize: '28px', marginBottom: '8px' }}></div>
             <div>아직 생성된 API 키가 없습니다.</div>
           </div>
         )}
@@ -289,7 +289,7 @@ export default function ApiPage() {
       {/* Webhook 설정 */}
       <div className="card" style={{ marginBottom: '20px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-          <div className="card-title" style={{ margin: 0 }}>🔗 Webhook</div>
+          <div className="card-title" style={{ margin: 0 }}> Webhook</div>
           <button className="btn btn-accent btn-sm" onClick={() => setShowWebhookModal(true)}>+ Webhook 추가</button>
         </div>
         {webhooks.length > 0 ? (
@@ -309,7 +309,7 @@ export default function ApiPage() {
                       <span key={e} className="badge badge-default" style={{ margin: '1px' }}>{e}</span>
                     ))}</td>
                     <td><span className={`badge ${wh.active ? 'badge-success' : 'badge-default'}`}>{wh.active ? '활성' : '비활성'}</span></td>
-                    <td><button className="btn btn-ghost btn-sm" onClick={() => handleDeleteWebhook(wh.id)}>🗑️</button></td>
+                    <td><button className="btn btn-ghost btn-sm" onClick={() => handleDeleteWebhook(wh.id)}></button></td>
                   </tr>
                 ))}
               </tbody>
@@ -317,7 +317,7 @@ export default function ApiPage() {
           </div>
         ) : (
           <div style={{ textAlign: 'center', padding: '32px', color: 'var(--text-muted)' }}>
-            <div style={{ fontSize: '28px', marginBottom: '8px' }}>🔗</div>
+            <div style={{ fontSize: '28px', marginBottom: '8px' }}></div>
             <div>등록된 Webhook이 없습니다.</div>
             <div style={{ fontSize: '12px', marginTop: '4px' }}>재고 변동, 입출고 발생 등의 이벤트를 외부로 알릴 수 있습니다.</div>
           </div>
@@ -326,7 +326,7 @@ export default function ApiPage() {
 
       {/* API 레퍼런스 */}
       <div className="card">
-        <div className="card-title">📖 API 레퍼런스</div>
+        <div className="card-title"> API 레퍼런스</div>
         <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '16px' }}>
           INVEX API를 사용하여 외부 시스템과 재고 데이터를 연동하세요.
         </div>
@@ -350,7 +350,7 @@ export default function ApiPage() {
         </div>
 
         <div style={{ background: 'var(--bg-secondary)', borderRadius: '8px', padding: '16px', marginBottom: '12px' }}>
-          <div style={{ fontWeight: 700, marginBottom: '8px' }}>🔐 인증 방식</div>
+          <div style={{ fontWeight: 700, marginBottom: '8px' }}> 인증 방식</div>
           <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '8px' }}>
             모든 API 요청에 <code>Authorization</code> 헤더를 포함해야 합니다.
           </div>
@@ -362,7 +362,7 @@ export default function ApiPage() {
         </div>
 
         <div style={{ background: 'var(--bg-secondary)', borderRadius: '8px', padding: '16px' }}>
-          <div style={{ fontWeight: 700, marginBottom: '8px' }}>📄 응답 예시</div>
+          <div style={{ fontWeight: 700, marginBottom: '8px' }}> 응답 예시</div>
           <pre style={{ background: 'var(--bg-primary)', padding: '12px', borderRadius: '6px', fontSize: '12px', overflowX: 'auto', color: 'var(--text-primary)', margin: 0 }}>
 {`{
   "success": true,

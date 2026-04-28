@@ -188,7 +188,7 @@ export default function DashboardPage() {
         <div className="page-header"><h1 className="page-title">고급 분석</h1></div>
         <div className="card">
           <div className="empty-state">
-            <div className="icon">📊</div>
+            <div className="icon"></div>
             <div className="msg">분석할 데이터가 없습니다.</div>
             <div className="sub">품목을 등록하면 ABC 분석과 회전율을 바로 확인할 수 있습니다.</div>
           </div>
@@ -215,7 +215,7 @@ export default function DashboardPage() {
     <div>
       <div className="page-header">
         <div>
-          <h1 className="page-title">📊 고급 분석</h1>
+          <h1 className="page-title"> 고급 분석</h1>
           <div className="page-desc">재고 데이터를 바탕으로 운영 판단에 필요한 핵심 지표를 보여줍니다.</div>
         </div>
         <div className="page-actions">
@@ -295,7 +295,7 @@ export default function DashboardPage() {
                   title={`${d.itemName} 재고현황 보기`}
                 >
                   <td style={{ textAlign: 'center', fontWeight: 600, color: 'var(--text-muted)' }}>
-                    {i < 3 ? ['🥇','🥈','🥉'][i] : i + 1}
+                    {i < 3 ? ['','',''][i] : i + 1}
                   </td>
                   <td>
                     <span className={`badge ${d.grade === 'A' ? 'badge-success' : d.grade === 'B' ? 'badge-warning' : 'badge-default'}`}>{d.grade}</span>

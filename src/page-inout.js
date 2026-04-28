@@ -64,7 +64,7 @@ export function renderInoutPage(container, navigateTo, mode = 'all') {
   const isInMode  = mode === 'in';
   const isOutMode = mode === 'out';
   const pageTitle  = isInMode ? '입고 관리' : isOutMode ? '출고 관리' : '입출고 관리';
-  const pageIcon   = isInMode ? '📥' : isOutMode ? '📤' : '📥';
+  const pageIcon   = isInMode ? '' : isOutMode ? '' : '';
   const initialQuick = isInMode ? 'in' : isOutMode ? 'out' : 'all';
 
   const state = getState();
@@ -1167,7 +1167,7 @@ function openBulkUploadModal(container, navigateTo, items, modeDefault = null) {
     <div class="modal" style="max-width:700px;">
       <div class="modal-header">
         <h3 class="modal-title">${modalTitle}</h3>
-        <button class="modal-close" id="bulk-close">✕</button>
+        <button class="modal-close" id="bulk-close"></button>
       </div>
       <div class="modal-body" id="bulk-body">
         <div class="alert alert-info" style="margin-bottom:16px;">
@@ -1182,7 +1182,7 @@ function openBulkUploadModal(container, navigateTo, items, modeDefault = null) {
         </div>
 
         <div style="border:2px dashed var(--border); border-radius:8px; padding:32px; text-align:center; cursor:pointer; transition:border-color 0.2s;" id="bulk-dropzone">
-          <div style="font-size:28px; margin-bottom:8px;">📥</div>
+          <div style="font-size:28px; margin-bottom:8px;"></div>
           <div style="font-size:13px; color:var(--text-muted);">엑셀 파일을 여기로 끌어오거나 클릭해서 선택해 주세요.</div>
           <div style="font-size:11px; color:var(--text-muted); margin-top:4px;">지원 형식: .xlsx, .xls</div>
           <input type="file" id="bulk-file-input" accept=".xlsx,.xls" style="display:none;" />
@@ -1591,7 +1591,7 @@ function openTxModal(container, navigateTo, type, items) {
     <div class="modal" style="max-width:980px;">
       <div class="modal-header">
         <h3 class="modal-title">${type === 'in' ? '입고 등록' : '출고 등록'}</h3>
-        <button class="modal-close" id="modal-close">✕</button>
+        <button class="modal-close" id="modal-close"></button>
       </div>
       <div class="modal-body">
         <div class="form-shell">

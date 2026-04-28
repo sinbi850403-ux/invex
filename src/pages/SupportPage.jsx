@@ -67,7 +67,7 @@ function ListView({ onWrite, onDetail, user }) {
           <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)', fontSize: '13px' }}>로그인 후 이용해주세요.</div>
         ) : tickets.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '60px 20px' }}>
-            <div style={{ fontSize: '36px', marginBottom: '12px', opacity: 0.4 }}>📭</div>
+            <div style={{ fontSize: '36px', marginBottom: '12px', opacity: 0.4 }}></div>
             <div style={{ color: 'var(--text-muted)', fontSize: '14px' }}>아직 문의 내역이 없습니다.</div>
             <div style={{ color: 'var(--text-muted)', fontSize: '12px', marginTop: '4px' }}>궁금한 점이 있으시면 문의를 남겨주세요.</div>
           </div>
@@ -215,7 +215,7 @@ function DetailView({ ticketId, data, onBack, onDelete }) {
       {data.reply ? (
         <div className="card" style={{ padding: '24px', borderLeft: '3px solid #10b981' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-            <span style={{ fontSize: '13px', fontWeight: '700' }}>✅ 관리자 답변</span>
+            <span style={{ fontSize: '13px', fontWeight: '700' }}> 관리자 답변</span>
             <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{replyDate}</span>
           </div>
           <div style={{ fontSize: '13px', lineHeight: '1.8', whiteSpace: 'pre-wrap', color: 'var(--text-secondary)' }}>{data.reply}</div>

@@ -188,7 +188,7 @@ function getPageLabel(pageId) {
 
 async function resolveRenderer(pageName) {
   // 한 번 로드한 렌더러는 캐싱해서 재로딩 방지
-  // ★ 실패한 Promise는 캐시에 저장하지 않음 — 재시도 가능하도록
+  //  실패한 Promise는 캐시에 저장하지 않음 — 재시도 가능하도록
   if (!_cache[pageName]) {
     const promise = PAGE_LOADERS[pageName]();
     _cache[pageName] = promise;
@@ -295,7 +295,7 @@ export async function navigateTo(pageName) {
   } catch (err) {
     console.error('[Router] 페이지 로드 실패:', pageName, err);
 
-    // ★ 스테일 캐시 자동 복구
+    //  스테일 캐시 자동 복구
     // 배포 후 브라우저가 오래된 main.js(캐시)를 사용하면 새 배포의 청크 해시와 불일치.
     // "Failed to fetch dynamically imported module" 또는 "text/html MIME type" 오류가 발생.
     // → 이 경우 페이지를 강제 리로드해서 새 index.html + 새 main.js를 받아오게 함.

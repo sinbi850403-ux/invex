@@ -67,7 +67,7 @@ export default function SettingsPage() {
   };
 
   const handleClearAll = async () => {
-    if (!confirm('⚠️ 모든 데이터(품목, 거래, 설정)를 초기화하시겠습니까?\n이 작업은 되돌릴 수 없습니다.')) return;
+    if (!confirm(' 모든 데이터(품목, 거래, 설정)를 초기화하시겠습니까?\n이 작업은 되돌릴 수 없습니다.')) return;
     if (!confirm('정말로 전체 초기화하시겠습니까? (최종 확인)')) return;
     setClearingAll(true);
     try {
@@ -95,7 +95,7 @@ export default function SettingsPage() {
 
       {/* 사용성 설정 */}
       <div className="card">
-        <div className="card-title">⚙️ 사용성 설정</div>
+        <div className="card-title"> 사용성 설정</div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
           <div style={{ minWidth: '220px' }}>
             <div style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-primary)' }}>초보자 도움 모드</div>
@@ -113,16 +113,16 @@ export default function SettingsPage() {
 
       {/* 데이터 관리 */}
       <div className="card" style={{ marginTop: '16px' }}>
-        <div className="card-title">🗄️ 데이터 관리</div>
+        <div className="card-title"> 데이터 관리</div>
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
           <button className="btn btn-outline" onClick={handleClearTx} disabled={clearingTx}>
-            {clearingTx ? '삭제 중...' : '🔄 입출고 기록 초기화'}
+            {clearingTx ? '삭제 중...' : ' 입출고 기록 초기화'}
           </button>
           <button className="btn btn-outline" onClick={handleClearTransfers} disabled={clearingTransfers}>
-            {clearingTransfers ? '삭제 중...' : '🚛 이동 이력 초기화'}
+            {clearingTransfers ? '삭제 중...' : ' 이동 이력 초기화'}
           </button>
           <button className="btn btn-danger" onClick={handleClearAll} disabled={clearingAll}>
-            {clearingAll ? '초기화 중...' : '⚠️ 전체 데이터 초기화'}
+            {clearingAll ? '초기화 중...' : ' 전체 데이터 초기화'}
           </button>
         </div>
       </div>

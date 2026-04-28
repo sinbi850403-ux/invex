@@ -137,11 +137,11 @@ function PurchasePanel({ items, safetyStock, documentDraft }) {
 
   return (
     <div>
-      <div className="card-title">📋 발주서 작성</div>
+      <div className="card-title"> 발주서 작성</div>
       {draftItems.length > 0 ? (
         <div className="alert alert-info" style={{ marginBottom: '16px' }}>선택한 발주 추천 품목 <strong>{draftItems.length}건</strong>을 가져왔습니다.</div>
       ) : lowStockItems.length > 0 ? (
-        <div className="alert alert-warning" style={{ marginBottom: '16px' }}>⚠️ 안전재고 부족 품목 <strong>{lowStockItems.length}건</strong>을 자동 추천합니다.</div>
+        <div className="alert alert-warning" style={{ marginBottom: '16px' }}> 안전재고 부족 품목 <strong>{lowStockItems.length}건</strong>을 자동 추천합니다.</div>
       ) : null}
 
       <div className="form-row" style={{ marginBottom: '16px' }}>
@@ -209,7 +209,7 @@ function PurchasePanel({ items, safetyStock, documentDraft }) {
         <input className="form-input" value={poNote} onChange={e => setPoNote(e.target.value)} placeholder="추가 메모 (선택)" />
       </div>
       <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-        <button className="btn btn-primary btn-lg" onClick={handleGenerate}>📄 발주서 PDF 생성</button>
+        <button className="btn btn-primary btn-lg" onClick={handleGenerate}> 발주서 PDF 생성</button>
       </div>
     </div>
   );
@@ -248,7 +248,7 @@ function QuotePanel({ items }) {
 
   return (
     <div>
-      <div className="card-title">💼 견적서 작성</div>
+      <div className="card-title"> 견적서 작성</div>
       <div className="form-row" style={{ marginBottom: '16px' }}>
         <div className="form-group">
           <label className="form-label">견적일자</label>
@@ -304,7 +304,7 @@ function QuotePanel({ items }) {
                   </td>
                   <td className="text-right">₩{price.toLocaleString('ko-KR')}</td>
                   <td className="text-right">₩{(price*item.qty).toLocaleString('ko-KR')}</td>
-                  <td className="text-center"><button className="btn btn-ghost btn-sm" onClick={() => removeItem(i)}>✕</button></td>
+                  <td className="text-center"><button className="btn btn-ghost btn-sm" onClick={() => removeItem(i)}></button></td>
                 </tr>
               );
             })}
@@ -319,7 +319,7 @@ function QuotePanel({ items }) {
         </table>
       </div>
       <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-        <button className="btn btn-primary btn-lg" onClick={handleGenerate}>📄 견적서 PDF 생성</button>
+        <button className="btn btn-primary btn-lg" onClick={handleGenerate}> 견적서 PDF 생성</button>
       </div>
     </div>
   );
@@ -341,7 +341,7 @@ function StatementPanel({ transactions }) {
 
   return (
     <div>
-      <div className="card-title">📑 거래명세서 작성</div>
+      <div className="card-title"> 거래명세서 작성</div>
       <div className="form-row" style={{ marginBottom: '16px' }}>
         <div className="form-group">
           <label className="form-label">기간 (시작)</label>
@@ -367,7 +367,7 @@ function StatementPanel({ transactions }) {
         <span className="badge badge-info">{filteredTx.length}건</span>
       </div>
       <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-        <button className="btn btn-primary btn-lg" onClick={handleGenerate}>📄 거래명세서 PDF 생성</button>
+        <button className="btn btn-primary btn-lg" onClick={handleGenerate}> 거래명세서 PDF 생성</button>
       </div>
     </div>
   );
@@ -389,16 +389,16 @@ export default function DocumentsPage() {
   const [docType, setDocType] = useState('purchase');
 
   const DOC_TYPES = [
-    { id: 'purchase', icon: '📋', label: '발주서', desc: '부족 품목을 기준으로 자동 추천합니다.', badge: lowStockCount > 0 ? { text: `${lowStockCount}건 부족`, cls: 'badge-danger' } : null },
-    { id: 'quote',    icon: '💼', label: '견적서', desc: '품목을 선택해 바로 금액을 계산합니다.' },
-    { id: 'statement',icon: '📑', label: '거래명세서', desc: '입출고 기록을 기준으로 문서를 만듭니다.' },
+    { id: 'purchase', icon: '', label: '발주서', desc: '부족 품목을 기준으로 자동 추천합니다.', badge: lowStockCount > 0 ? { text: `${lowStockCount}건 부족`, cls: 'badge-danger' } : null },
+    { id: 'quote',    icon: '', label: '견적서', desc: '품목을 선택해 바로 금액을 계산합니다.' },
+    { id: 'statement',icon: '', label: '거래명세서', desc: '입출고 기록을 기준으로 문서를 만듭니다.' },
   ];
 
   return (
     <div>
       <div className="page-header">
         <div>
-          <h1 className="page-title">📄 문서 자동생성</h1>
+          <h1 className="page-title"> 문서 자동생성</h1>
           <div className="page-desc">발주서, 견적서, 거래명세서를 자동으로 생성하고 PDF로 다운로드합니다.</div>
         </div>
       </div>

@@ -386,7 +386,7 @@ export default function ProfitPage() {
     <div>
       <div className="page-header">
         <div>
-          <h1 className="page-title">📊 손익 분석</h1>
+          <h1 className="page-title"> 손익 분석</h1>
           <div className="page-desc">재고 기준 예상 손익과 기간 거래 손익을 한 화면에서 확인합니다.</div>
         </div>
         <div className="page-actions" style={{ gap: '8px' }}>
@@ -456,7 +456,7 @@ export default function ProfitPage() {
       {/* 판매가 입력률 경고 */}
       {salePriceRate < 70 && (
         <div className="alert alert-warning">
-          ⚠️ 판매가 입력률이 <strong>{fmtPct(salePriceRate)}</strong>입니다. 정확한 손익 분석을 위해 재고 화면에서 판매가를 보완해 주세요.
+           판매가 입력률이 <strong>{fmtPct(salePriceRate)}</strong>입니다. 정확한 손익 분석을 위해 재고 화면에서 판매가를 보완해 주세요.
         </div>
       )}
 
@@ -475,7 +475,7 @@ export default function ProfitPage() {
 
       {/* 계산식 보기 */}
       <details className="card card-compact" style={{ marginTop: '12px' }}>
-        <summary style={{ cursor: 'pointer', fontWeight: 700 }}>📐 계산식 보기 (이익률/원가율 기준)</summary>
+        <summary style={{ cursor: 'pointer', fontWeight: 700 }}> 계산식 보기 (이익률/원가율 기준)</summary>
         <div style={{ marginTop: '10px', fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.8 }}>
           <div>매출금액 = (판매단가 × 수량) - 할인금액</div>
           <div>매출원가 = 원가단가 × 수량</div>

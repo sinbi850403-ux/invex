@@ -145,8 +145,8 @@ export default function Sidebar({ isOpen, onClose }) {
     const isDark = document.documentElement.classList.contains('dark-mode');
     const btn = document.getElementById('btn-theme-toggle');
     if (btn) {
-      btn.textContent = isDark ? '🌙' : '☀️';
-      btn.setAttribute('title', isDark ? '다크 모드' : '라이트 모드');
+      btn.textContent = isDark ? '' : '';
+      btn.setAttribute('title', isDark ? '라이트 모드' : '다크 모드');
     }
   }, []);
 

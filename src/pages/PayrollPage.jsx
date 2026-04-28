@@ -51,7 +51,7 @@ function PayrollDetailModal({ payroll: p, year, month, onClose }) {
           </table>
         </div>
         <div className="modal-footer" style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-          <button className="btn btn-ghost" onClick={() => generatePayslipPDF(p, year, month)}>📄 PDF 출력</button>
+          <button className="btn btn-ghost" onClick={() => generatePayslipPDF(p, year, month)}> PDF 출력</button>
           <button className="btn btn-primary" onClick={onClose}>닫기</button>
         </div>
       </div>
@@ -133,7 +133,7 @@ export default function PayrollPage() {
     <div>
       <div className="page-header">
         <div>
-          <h1 className="page-title">💰 급여 계산 & 확정</h1>
+          <h1 className="page-title"> 급여 계산 & 확정</h1>
           <div className="page-desc">월별 급여를 자동 계산·검토·확정합니다. Admin만 확정 및 명세서 발행 가능합니다.</div>
         </div>
       </div>
@@ -220,8 +220,8 @@ export default function PayrollPage() {
 
       {payrolls.length > 0 && (
         <div className="card" style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-          <button className="btn btn-primary" style={{ flex: 1 }} onClick={confirmPayroll} disabled={confirming}>{confirming ? '저장 중…' : '✅ 급여 확정'}</button>
-          <button className="btn btn-ghost" style={{ flex: 1 }} onClick={() => generatePayslipBulkPDF(payrolls, calcYear, calcMonth)}>📄 명세서 다운로드</button>
+          <button className="btn btn-primary" style={{ flex: 1 }} onClick={confirmPayroll} disabled={confirming}>{confirming ? '저장 중…' : ' 급여 확정'}</button>
+          <button className="btn btn-ghost" style={{ flex: 1 }} onClick={() => generatePayslipBulkPDF(payrolls, calcYear, calcMonth)}> 명세서 다운로드</button>
         </div>
       )}
 

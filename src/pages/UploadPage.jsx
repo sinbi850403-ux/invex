@@ -90,7 +90,7 @@ export default function UploadPage() {
     <div>
       <div className="page-header">
         <div>
-          <h1 className="page-title">📤 파일 업로드</h1>
+          <h1 className="page-title"> 파일 업로드</h1>
           <div className="page-desc">엑셀 파일을 올리면 자동으로 데이터를 읽고 재고에 등록합니다.</div>
         </div>
       </div>
@@ -112,7 +112,7 @@ export default function UploadPage() {
           onDragLeave={() => zoneRef.current?.classList.remove('dragover')}
           onDrop={handleDrop}
         >
-          <div className="icon">📁</div>
+          <div className="icon"></div>
           <div className="label">엑셀 파일을 여기에 끌어다 놓거나 클릭하세요</div>
           <div className="hint">.xlsx, .xls, .csv 파일 지원 · 업로드 즉시 자동 매핑됩니다</div>
           <input
@@ -128,7 +128,7 @@ export default function UploadPage() {
       {/* 현재 불러온 파일 */}
       {state.fileName && (
         <div className="alert alert-info" style={{ marginTop: '16px' }}>
-          📄 현재 불러온 파일: <strong>{state.fileName}</strong>
+           현재 불러온 파일: <strong>{state.fileName}</strong>
           ({(state.mappedData || []).length}건 등록됨)
           <button className="btn btn-outline btn-sm" onClick={handleClear} style={{ marginLeft: '12px' }}>
             새 파일로 교체
@@ -141,7 +141,7 @@ export default function UploadPage() {
 
       {/* 엑셀 양식 다운로드 */}
       <div className="card" style={{ marginTop: '24px' }}>
-        <h3 style={{ fontSize: '16px', fontWeight: 700, marginBottom: '4px' }}>📋 엑셀 양식 다운로드</h3>
+        <h3 style={{ fontSize: '16px', fontWeight: 700, marginBottom: '4px' }}> 엑셀 양식 다운로드</h3>
         <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '16px' }}>
           업종에 맞는 양식을 다운받아 데이터를 입력하고 업로드하세요. 샘플 데이터가 포함되어 있습니다.
         </p>
@@ -153,7 +153,7 @@ export default function UploadPage() {
               title={tpl.desc}
               onClick={() => {
                 downloadTemplate(tpl.key);
-                showToast('엑셀 양식을 다운로드합니다 📥', 'success');
+                showToast('엑셀 양식을 다운로드합니다 ', 'success');
               }}
             >
               <div style={{ fontSize: '14px', fontWeight: 600, marginBottom: '2px' }}>{tpl.name}</div>

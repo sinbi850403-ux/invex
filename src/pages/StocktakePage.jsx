@@ -145,25 +145,25 @@ export default function StocktakePage() {
     <div>
       <div className="page-header">
         <div>
-          <h1 className="page-title">📋 재고 실사</h1>
+          <h1 className="page-title"> 재고 실사</h1>
           <div className="page-desc">실제 재고와 시스템 재고를 비교하고 차이를 조정합니다.</div>
         </div>
         <div className="page-actions">
-          <button className="btn btn-outline" onClick={showHistory}>📅 실사 이력 ({stocktakeHistory.length}건)</button>
-          <button className="btn btn-primary" onClick={() => { setActualCounts({}); setNoteCounts({}); }}>🆕 새 실사 시작</button>
+          <button className="btn btn-outline" onClick={showHistory}> 실사 이력 ({stocktakeHistory.length}건)</button>
+          <button className="btn btn-primary" onClick={() => { setActualCounts({}); setNoteCounts({}); }}> 새 실사 시작</button>
         </div>
       </div>
 
       {items.length === 0 ? (
         <div className="card">
           <div className="empty-state">
-            <div className="icon">📦</div>
+            <div className="icon"></div>
             <div className="msg">등록된 품목이 없습니다</div>
           </div>
         </div>
       ) : (
         <div className="card">
-          <div className="card-title">📋 재고 실사표</div>
+          <div className="card-title"> 재고 실사표</div>
 
           {/* 헤더 필터 */}
           <div style={{ display: 'flex', gap: '12px', marginBottom: '16px', alignItems: 'center' }}>
@@ -279,7 +279,7 @@ export default function StocktakePage() {
           )}
 
           <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '16px' }}>
-            <button className="btn btn-outline" onClick={handleExport}>📊 실사표 내보내기</button>
+            <button className="btn btn-outline" onClick={handleExport}> 실사표 내보내기</button>
             <button
               className="btn btn-danger"
               onClick={handleAdjust}
@@ -287,7 +287,7 @@ export default function StocktakePage() {
               title={!canAdjust ? '매니저 이상만 재고 조정이 가능합니다.' : undefined}
               style={!canAdjust ? { opacity: 0.4, cursor: 'not-allowed' } : undefined}
             >
-              ⚖️ 재고 조정 반영
+               재고 조정 반영
             </button>
           </div>
         </div>

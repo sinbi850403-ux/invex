@@ -228,43 +228,28 @@ export function renderQuickFilterRow({
 
 export function enableColumnResize(table) {
   if (!table) return;
-  const apply = () => {
-    if (!table.isConnected) return;
-    // 첫 적용 시: 현재 너비 고정 후 fixed layout 전환 → 내용 무관하게 자유롭게 축소
-    if (table.style.tableLayout !== 'fixed') {
-      table.querySelectorAll('thead th').forEach(th => {
-        const w = th.offsetWidth;
-        if (w > 0 && !th.style.width) th.style.width = w + 'px';
-      });
-      if ([...table.querySelectorAll('thead th')].some(th => th.offsetWidth > 0)) {
-        table.style.tableLayout = 'fixed';
-      }
-    }
-    table.querySelectorAll('th').forEach(th => {
-      if (th.querySelector('.col-resize-handle')) return;
-      const handle = document.createElement('div');
-      handle.className = 'col-resize-handle';
-      handle.addEventListener('mousedown', e => {
-        e.preventDefault();
-        e.stopPropagation();
-        const startX = e.pageX;
-        const startWidth = th.offsetWidth;
-        const onMove = mv => {
-          const newWidth = Math.max(50, startWidth + mv.pageX - startX);
-          th.style.width = newWidth + 'px';
-          th.style.minWidth = newWidth + 'px';
-        };
-        const onUp = () => {
-          document.removeEventListener('mousemove', onMove);
-          document.removeEventListener('mouseup', onUp);
-        };
-        document.addEventListener('mousemove', onMove);
-        document.addEventListener('mouseup', onUp);
-      });
-      if (getComputedStyle(th).position === 'static') th.style.position = 'relative';
-      th.appendChild(handle);
+  table.querySelectorAll('th').forEach(th => {
+    if (th.querySelector('.col-resize-handle')) return;
+    const handle = document.createElement('div');
+    handle.className = 'col-resize-handle';
+    handle.addEventListener('mousedown', e => {
+      e.preventDefault();
+      e.stopPropagation();
+      const startX = e.pageX;
+      const startWidth = th.offsetWidth;
+      const onMove = mv => {
+        const newWidth = Math.max(40, startWidth + mv.pageX - startX);
+        th.style.width = newWidth + 'px';
+        th.style.minWidth = newWidth + 'px';
+      };
+      const onUp = () => {
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup', onUp);
+      };
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', onUp);
     });
-  };
-  // 브라우저 페인트 이후 실행하여 offsetWidth 정확히 확보
-  requestAnimationFrame(apply);
+    if (getComputedStyle(th).position === 'static') th.style.position = 'relative';
+    th.appendChild(handle);
+  });
 }

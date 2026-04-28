@@ -26,25 +26,6 @@ function isValidHttpsUrl(url) {
   }
 }
 
-// ── 새로고침 시 세션 초기화 ───────────────────────────────────────────────────
-// 강력새로고침(Ctrl+Shift+R) 포함 모든 페이지 리로드 시 Supabase 세션을 삭제하여
-// 자동 로그인 방지. Supabase 클라이언트 생성 전에 실행해야 효과 있음.
-if (typeof window !== 'undefined') {
-  const navEntry = window.performance?.getEntriesByType?.('navigation')?.[0];
-  if (navEntry?.type === 'reload') {
-    try {
-      const authKeys = [];
-      for (let i = 0; i < localStorage.length; i++) {
-        const k = localStorage.key(i);
-        if (k && (k === 'invex-supabase-auth' || /^sb-.*-auth-token$/.test(k) || k.startsWith('supabase.auth.'))) {
-          authKeys.push(k);
-        }
-      }
-      authKeys.forEach(k => localStorage.removeItem(k));
-    } catch (_) {}
-  }
-}
-
 // Vite 환경변수에서 Supabase 설정 로드 (따옴표/공백 오입력 방어)
 const SUPABASE_URL = normalizeEnv(import.meta.env.VITE_SUPABASE_URL);
 const SUPABASE_ANON_KEY = normalizeEnv(import.meta.env.VITE_SUPABASE_ANON_KEY);
