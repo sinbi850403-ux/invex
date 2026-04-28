@@ -208,6 +208,7 @@ function TxModal({ txType, items, vendors, onClose, onSave }) {
                   <input
                     className="form-input"
                     type="number"
+                    min="0"
                     value={form.unitPrice}
                     onChange={e => setForm(f => ({ ...f, unitPrice: e.target.value }))}
                     placeholder="선택 사항"
@@ -221,6 +222,7 @@ function TxModal({ txType, items, vendors, onClose, onSave }) {
                 <input
                   className="form-input"
                   type="number"
+                  min="0"
                   value={form.sellingPrice}
                   onChange={e => setForm(f => ({ ...f, sellingPrice: e.target.value }))}
                   placeholder="선택 사항"

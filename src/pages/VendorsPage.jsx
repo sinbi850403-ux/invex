@@ -7,8 +7,8 @@ import { showToast } from '../toast.js';
 import { downloadExcel } from '../excel.js';
 import { getState as getRawState } from '../store.js';
 
-const TYPE_LABEL = { supplier: '매입처', customer: '매출처', both: '양방향' };
-const TYPE_BADGE = { supplier: 'badge-info', customer: 'badge-success', both: 'badge-warning' };
+const TYPE_LABEL = { supplier: '매입처', customer: '매출처', both: '양방향', transfer: '창고이동', adjust: '조정', return: '반품' };
+const TYPE_BADGE = { supplier: 'badge-info', customer: 'badge-success', both: 'badge-warning', transfer: 'badge-secondary', adjust: 'badge-secondary', return: 'badge-secondary' };
 const PAYMENT_TERMS = [
   { value: '', label: '-- 선택 --' },
   { value: 'cash', label: '현금' },
@@ -24,7 +24,7 @@ function toNum(v) { return parseFloat(String(v || '').replace(/,/g, '')) || 0; }
 function fmt(v) { const n = parseFloat(String(v || '').replace(/,/g, '')) || 0; if (!n) return '-'; return '₩' + Math.round(n).toLocaleString('ko-KR'); }
 
 function genVendorCode(vendors, type) {
-  const prefix = type === 'customer' ? 'C' : type === 'both' ? 'B' : 'S';
+  const prefix = type === 'customer' ? 'C' : type === 'both' ? 'B' : type === 'transfer' ? 'T' : type === 'adjust' ? 'A' : type === 'return' ? 'R' : 'S';
   const existing = vendors.filter(v => (v.code || '').startsWith(prefix)).map(v => parseInt((v.code || '').slice(1)) || 0);
   const next = existing.length > 0 ? Math.max(...existing) + 1 : 1;
   return `${prefix}${String(next).padStart(4, '0')}`;
@@ -98,6 +98,9 @@ function VendorModal({ initial, vendors, onClose, onSave }) {
                     <option value="supplier">매입처 (공급처)</option>
                     <option value="customer">매출처 (고객사)</option>
                     <option value="both">양방향 (매입+매출)</option>
+                    <option value="transfer">창고이동처</option>
+                    <option value="adjust">조정처</option>
+                    <option value="return">반품처</option>
                   </select>
                 </div>
                 <F label="거래처 코드" id="code" placeholder="자동생성" />
@@ -295,6 +298,9 @@ export default function VendorsPage() {
     supplier: vendors.filter(v => v.type === 'supplier').length,
     customer: vendors.filter(v => v.type === 'customer').length,
     both: vendors.filter(v => v.type === 'both').length,
+    transfer: vendors.filter(v => v.type === 'transfer').length,
+    adjust: vendors.filter(v => v.type === 'adjust').length,
+    return: vendors.filter(v => v.type === 'return').length,
   }), [vendors]);
 
   const totalIn = useMemo(() => { let t = 0; statsMap.forEach(s => { t += s.inAmt; }); return t; }, [statsMap]);
@@ -402,7 +408,7 @@ export default function VendorsPage() {
       <div className="card card-compact" style={{ marginBottom: '12px' }}>
         <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
           <div style={{ display: 'flex', gap: '4px', background: 'var(--bg-input)', borderRadius: '8px', padding: '4px' }}>
-            {[{ key: 'all', label: `전체 (${counts.all})` }, { key: 'supplier', label: `매입처 (${counts.supplier})` }, { key: 'customer', label: `매출처 (${counts.customer})` }, { key: 'both', label: `양방향 (${counts.both})` }].map(t => (
+            {[{ key: 'all', label: `전체 (${counts.all})` }, { key: 'supplier', label: `매입처 (${counts.supplier})` }, { key: 'customer', label: `매출처 (${counts.customer})` }, { key: 'both', label: `양방향 (${counts.both})` }, { key: 'transfer', label: `창고이동 (${counts.transfer})` }, { key: 'adjust', label: `조정 (${counts.adjust})` }, { key: 'return', label: `반품 (${counts.return})` }].map(t => (
               <button key={t.key} onClick={() => setTab(t.key)} style={{ padding: '6px 14px', borderRadius: '6px', border: 'none', cursor: 'pointer', fontSize: '13px', background: tab === t.key ? 'var(--accent)' : 'transparent', color: tab === t.key ? '#fff' : 'var(--text-muted)' }}>
                 {t.label}
               </button>

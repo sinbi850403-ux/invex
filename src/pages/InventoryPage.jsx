@@ -268,6 +268,7 @@ function applySort(data, sort) {
 function ItemModal({ item, editIdx, onClose, onSaved }) {
   const isEdit = editIdx != null;
   const [state] = useStore();
+  const safetyStock = state.safetyStock || {};
   const vendors    = (state.vendorMaster || []).filter(v => v.type === 'supplier' || v.type === 'both');
   const existingCats   = [...new Set((state.mappedData || []).map(d => d.category).filter(Boolean))].sort();
   const existingUnits  = [...new Set((state.mappedData || []).map(d => d.unit).filter(Boolean))].sort();
@@ -283,9 +284,10 @@ function ItemModal({ item, editIdx, onClose, onSaved }) {
     unitPrice:   String(item?.unitPrice   ?? ''),
     salePrice:   String(item?.salePrice   ?? ''),
     vendor:      item?.vendor      ?? '',
-    warehouse:   item?.warehouse   ?? '',
-    note:        item?.note        ?? '',
-    lockedUntil: item?.lockedUntil ?? '',
+    warehouse:       item?.warehouse   ?? '',
+    note:            item?.note        ?? '',
+    lockedUntil:     item?.lockedUntil ?? '',
+    safetyStockMin:  String(item?.itemName ? (safetyStock[item.itemName] ?? '') : ''),
   });
   const [errors, setErrors] = useState({});
 
@@ -357,6 +359,8 @@ function ItemModal({ item, editIdx, onClose, onSaved }) {
       addItem(newItem);
       showToast(`"${name}" 품목을 추가했습니다.`, 'success');
     }
+    const ssv = parseFloat(form.safetyStockMin);
+    if (!isNaN(ssv) && ssv >= 0) setSafetyStock(name, ssv);
     onSaved();
   }
 
@@ -410,7 +414,7 @@ function ItemModal({ item, editIdx, onClose, onSaved }) {
               <div className="form-row">
                 <div className="form-group">
                   <label className="form-label">수량 <span className="required">*</span></label>
-                  <input className={`form-input${errors.quantity ? ' is-error' : ''}`} type="number" {...f('quantity')} placeholder="0" />
+                  <input className={`form-input${errors.quantity ? ' is-error' : ''}`} type="number" min="0" {...f('quantity')} placeholder="0" />
                   {errors.quantity && <div className="field-error">{errors.quantity}</div>}
                 </div>
                 <div className="form-group">
@@ -422,12 +426,12 @@ function ItemModal({ item, editIdx, onClose, onSaved }) {
               <div className="form-row">
                 <div className="form-group">
                   <label className="form-label">매입가(원가)</label>
-                  <input className={`form-input${errors.unitPrice ? ' is-error' : ''}`} type="number" {...f('unitPrice')} placeholder="0" />
+                  <input className={`form-input${errors.unitPrice ? ' is-error' : ''}`} type="number" min="0" {...f('unitPrice')} placeholder="0" />
                   {errors.unitPrice && <div className="field-error">{errors.unitPrice}</div>}
                 </div>
                 <div className="form-group">
                   <label className="form-label">판매단가</label>
-                  <input className={`form-input${errors.salePrice ? ' is-error' : ''}`} type="number" {...f('salePrice')} placeholder="미입력 시 손익 정확도 저하" />
+                  <input className={`form-input${errors.salePrice ? ' is-error' : ''}`} type="number" min="0" {...f('salePrice')} placeholder="미입력 시 손익 정확도 저하" />
                   {sp > 0 && up > 0 && sp < up && <div className="form-warn-msg">판매가가 원가보다 낮습니다.</div>}
                 </div>
               </div>
@@ -458,6 +462,13 @@ function ItemModal({ item, editIdx, onClose, onSaved }) {
                       <label className="form-label">품목 잠금 해제일</label>
                       <input className="form-input" type="date" {...f('lockedUntil')} />
                     </div>
+                  </div>
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label className="form-label">안전재고 기준 수량</label>
+                      <input className="form-input" type="number" min="0" {...f('safetyStockMin')} placeholder="이 이하면 경고 표시" />
+                    </div>
+                    <div className="form-group" />
                   </div>
                 </div>
               </details>
@@ -730,9 +741,10 @@ export default function InventoryPage() {
         <div className="stat-card"><div className="stat-label">공급가액 합계</div><div className="stat-value text-accent">{stats.supply}</div></div>
         <div className="stat-card"><div className="stat-label">부가세 합계</div><div className="stat-value text-accent">{stats.vat}</div></div>
         <div className="stat-card"><div className="stat-label">합계금액</div><div className="stat-value text-success">{stats.price}</div></div>
-        <div className="stat-card">
+        <div className="stat-card" style={stats.warnings > 0 ? { cursor: 'pointer' } : {}} onClick={stats.warnings > 0 ? () => navigateTo('orders') : undefined} title={stats.warnings > 0 ? '발주 관리로 이동' : ''}>
           <div className="stat-label">재고 부족 경고</div>
-          <div className={`stat-value${stats.warnings > 0 ? ' text-danger' : ''}`}>{stats.warnings > 0 ? `${stats.warnings}건` : '없음'}</div>
+          <div className={`stat-value${stats.warnings > 0 ? ' text-danger' : ''}`}>{stats.warnings > 0 ? `${stats.warnings}건 ↗` : '없음'}</div>
+          {stats.warnings > 0 && <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>클릭 → 발주 관리</div>}
         </div>
       </div>
 
@@ -757,6 +769,7 @@ export default function InventoryPage() {
             type="text"
             className="search-input"
             placeholder="스마트 검색: 품목명, 분류:식품, 창고:본사, 재고>=10, 부족, 품절"
+            title={"스마트 검색 문법\n품목명 자유 입력\n분류:식품  — 카테고리 일치\n창고:본사  — 창고 일치\n거래처:ABC — 거래처 일치\n재고>=10  — 수량 이상\n재고<=5   — 수량 이하\n부족       — 안전재고 미달\n품절       — 수량 = 0\n거래처없음 — 거래처 미입력\n창고없음   — 창고 미입력\n여러 조건은 공백으로 구분"}
             value={filter.keyword}
             onChange={e => setFilter({ keyword: e.target.value })}
           />
