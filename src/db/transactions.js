@@ -43,7 +43,28 @@ export const transactions = {
 
   async bulkCreate(txArray) {
     const userId = await getUserId();
-    const rows = txArray.map(tx => ({ ...tx, user_id: userId }));
+    const rows = txArray.map(tx => ({
+      id: tx.id,
+      user_id: userId,
+      type: tx.type,
+      item_name: tx.itemName,
+      item_code: tx.itemCode,
+      quantity: tx.quantity,
+      unit_price: tx.unitPrice,
+      supply_value: tx.supplyValue,
+      vat: tx.vat,
+      total_amount: tx.totalAmount,
+      selling_price: tx.sellingPrice,
+      actual_selling_price: tx.actualSellingPrice,
+      spec: tx.spec,
+      unit: tx.unit,
+      category: tx.category,
+      color: tx.color,
+      date: tx.date,
+      vendor: tx.vendor,
+      warehouse: tx.warehouse,
+      note: tx.note,
+    }));
     //  insert → upsert(onConflict: 'id')
     //   클라이언트 UUID가 id로 전달되므로 재시도 시 중복 생성 없음 (멱등)
     const { data, error } = await supabase
