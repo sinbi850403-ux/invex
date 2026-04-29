@@ -102,8 +102,7 @@ export const itemStocks = {
         .select('item_id, warehouse_id, quantity, last_updated_at')
         .eq('user_id', userId)
         .order('created_at', { ascending: false })
-        .limit(pageSize)
-        .offset(offset);
+        .range(offset, offset + pageSize - 1);
 
       handleError(error, '현재고 조회');
       if (!data || data.length === 0) break;
@@ -134,8 +133,7 @@ export const itemStocks = {
         .eq('user_id', userId)
         .eq('item_id', itemId)
         .order('created_at', { ascending: false })
-        .limit(pageSize)
-        .offset(offset);
+        .range(offset, offset + pageSize - 1);
 
       handleError(error, '품목 현재고 조회');
       if (!data || data.length === 0) break;

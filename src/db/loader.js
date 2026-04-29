@@ -40,15 +40,12 @@ async function _fetchAllPages(table, maxLimit = 100000) {
   const orderField = orderFields[table] || 'created_at';
 
   while (true) {
-    let query = supabase
+    const { data, error } = await supabase
       .from(table)
       .select('*')
       .eq('user_id', userId)
       .order(orderField, { ascending: false })
-      .limit(pageSize)
-      .offset(offset);
-
-    const { data, error } = await query;
+      .range(offset, offset + pageSize - 1);
     if (error) {
       console.error(`[_fetchAllPages] ${table} 조회 실패:`, error.message);
       throw error;
