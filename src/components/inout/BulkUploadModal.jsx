@@ -105,14 +105,15 @@ export function BulkUploadModal({ items, modeDefault, onClose, onSuccess }) {
         }
       }
 
-      // 3. 데이터 저장
-      addTransactionsBulk(previewRows.map(r => {
+      // 3. 데이터 DB 저장 + 메모리 저장
+      const txsToSave = previewRows.map(r => {
         const qty = parseFloat(r.quantity) || 0;
         const unitPrice = parseFloat(r.unitPrice) || 0;
         const sellingPrice = parseFloat(r.sellingPrice) || 0;
         const supplyValue = Math.round(unitPrice * qty);
         const vat = Math.ceil(supplyValue * 0.1);
         return {
+          id: crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`,
           type: r.type, vendor: r.vendor, itemName: r.itemName, itemCode: r.itemCode,
           quantity: qty, unitPrice, sellingPrice,
           supplyValue, vat, totalAmount: supplyValue + vat,
@@ -120,7 +121,13 @@ export function BulkUploadModal({ items, modeDefault, onClose, onSuccess }) {
           date: r.date, warehouse: r.warehouse || '본사 창고', note: r.note,
           spec: r.spec, unit: r.unit, color: r.color, category: r.category,
         };
-      }));
+      });
+
+      // DB에 저장
+      await db.transactions.bulkCreate(txsToSave);
+
+      // 메모리에도 동기화 (UI 즉시 반영)
+      addTransactionsBulk(txsToSave);
       const inCount = previewRows.filter(r => r.type === 'in').length;
       const outCount = previewRows.filter(r => r.type === 'out').length;
       showToast(`일괄 등록 완료: 총 ${previewRows.length}건 (입고 ${inCount}, 출고 ${outCount})`, 'success');
