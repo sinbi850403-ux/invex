@@ -2,7 +2,7 @@
  * inventoryOps.js - 입출고·재고 도메인 연산
  */
 
-import { stateHolder } from './stateRef.js';
+import { stateHolder, dispatchUpdate } from './stateRef.js';
 import { saveToDB } from './indexedDb.js';
 import { scheduleSyncToSupabase } from './supabaseSync.js';
 import { isSupabaseConfigured, supabase } from '../supabase-client.js';
@@ -137,6 +137,7 @@ export function addTransaction(tx) {
   }
 
   saveToDB();
+  dispatchUpdate(['transactions', 'mappedData']);
   // UI 즉시 갱신 (재고 현황 자동 반영)
   if (_syncCallback) _syncCallback();
   // Supabase에 입출고 + 품목 수량 변경 동기화
@@ -213,6 +214,7 @@ export function addTransactionsBulk(txList) {
 
   // IndexedDB 1번, sync 1번
   saveToDB();
+  dispatchUpdate(['transactions', 'mappedData']);
   if (_syncCallback) _syncCallback();
   if (isSupabaseConfigured) {
     scheduleSyncToSupabase(['transactions', 'mappedData']);
@@ -282,6 +284,7 @@ export function deleteTransaction(id) {
 
   stateHolder.current.transactions.splice(index, 1);
   saveToDB();
+  dispatchUpdate(['transactions', 'mappedData']);
   if (isSupabaseConfigured) {
     // transactions도 함께 동기화 (삭제 반영)
     scheduleSyncToSupabase(['transactions', 'mappedData']);
@@ -376,6 +379,7 @@ export function restoreItem(item, index = 0) {
     : 0;
   stateHolder.current.mappedData.splice(safeIndex, 0, item);
   saveToDB();
+  dispatchUpdate(['mappedData']);
   if (isSupabaseConfigured) {
     scheduleSyncToSupabase(['mappedData']);
   }
@@ -412,6 +416,7 @@ export function restoreTransaction(tx, index = 0) {
   }
 
   saveToDB();
+  dispatchUpdate(['transactions', 'mappedData']);
   if (isSupabaseConfigured) {
     scheduleSyncToSupabase(['transactions', 'mappedData']);
   }
