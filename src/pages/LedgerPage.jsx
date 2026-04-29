@@ -347,6 +347,7 @@ export default function LedgerPage() {
               <table className="data-table inv-table" style={{ minWidth: '1200px' }}>
                 <thead>
                   <tr>
+                    <th rowSpan={2} style={{ verticalAlign: 'middle', textAlign: 'center', width: '36px' }}>#</th>
                     <th rowSpan={2} style={{ verticalAlign: 'middle', textAlign: 'center', minWidth: '90px' }}>거래처</th>
                     <th rowSpan={2} style={{ verticalAlign: 'middle', textAlign: 'center', minWidth: '80px' }}>상품코드</th>
                     <th rowSpan={2} style={{ verticalAlign: 'middle', textAlign: 'center', minWidth: '140px' }}>상품명</th>
@@ -374,6 +375,7 @@ export default function LedgerPage() {
                 <tbody>
                   {rows.map((row, i) => (
                     <tr key={i}>
+                      <td className="col-num" style={{ textAlign: 'center', color: 'var(--text-muted)' }}>{i + 1}</td>
                       <td style={{ color: 'var(--text-muted)', fontSize: '12px' }}>{row.vendor || '-'}</td>
                       <td style={{ color: 'var(--text-muted)', fontSize: '12px' }}>{row.itemCode || '-'}</td>
                       <td><strong>{row.itemName}</strong></td>
@@ -398,7 +400,7 @@ export default function LedgerPage() {
                 </tbody>
                 <tfoot>
                   <tr style={{ fontWeight: 700, background: 'var(--bg-card)' }}>
-                    <td colSpan={4} className="text-right" style={{ color: 'var(--text-muted)' }}>합계</td>
+                    <td colSpan={5} className="text-right" style={{ color: 'var(--text-muted)' }}>합계</td>
                     <td className="text-right">{totals.openingQty.toLocaleString('ko-KR')}</td>
                     <td className="text-right">{fmt(totals.openingAmt)}</td>
                     <td className="text-right type-in">{n(totals.inQty)}</td>
