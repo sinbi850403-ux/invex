@@ -41,7 +41,7 @@ export function buildColMap(headers, modeDefault) {
     quantity:     modeDefault === 'out'
       ? findCol('출고수량', '입고수량', '수량')
       : findCol('입고수량', '출고수량', '수량'),
-    unitPrice:    findCol('단가', '원가'),
+    unitPrice:    findCol('매입원가', '매입가', '단가', '원가'),
     sellingPrice: findCol('판매가', '출고단가'),
     date:         modeDefault === 'out'
       ? findCol('출고일자', '입고일자', '날짜')
