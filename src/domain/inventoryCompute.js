@@ -26,7 +26,13 @@ export function computeData(rawData, transactions) {
     const outQty     = agg.outQty || 0;
     const outAmt     = agg.outAmt || 0;
     const unitPrice  = parseFloat(item.unitPrice) || 0;
-    const qty        = parseFloat(item.quantity)  || 0;
+    const storedQty  = parseFloat(item.quantity)  || 0;
+    // item.quantity가 0이지만 트랜잭션 net이 양수면 트랜잭션 기준으로 표시 (Supabase sync 실패 복원)
+    // qty는 아래 inQty/outQty 계산 후 확정 → 임시로 storedQty 사용
+    let qty          = storedQty;
+
+    // storedQty=0이지만 트랜잭션 net>0 → sync 실패로 인한 수량 손실 복원
+    if (storedQty === 0 && inQty - outQty > 0) qty = Math.round((inQty - outQty) * 1000) / 1000;
 
     const weightedAvgCost = inAmt > 0 && inQty > 0 ? inAmt / inQty : unitPrice;
 
@@ -57,6 +63,7 @@ export function computeData(rawData, transactions) {
 
     return {
       ...item,
+      quantity:             qty,          // ...item의 quantity(0)를 보정값으로 덮어씀
       color:                item.color || '',
       year,
       supplyValue:          supplyValue || '',
