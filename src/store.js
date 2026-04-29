@@ -28,6 +28,37 @@ import { saveToDB, loadFromDB, getUnsyncedTxsFromLS, clearUnsyncedTxsLS } from '
 import { scheduleSyncToSupabase, cleanupDirtyKeys } from './store/supabaseSync.js';
 import { setInventorySyncCallback } from './store/inventoryOps.js';
 
+/**
+ * restoreState 후 items.quantity=0이지만 transactions 합계가 >0인 품목 보정
+ * Supabase 초기 업로드 시 수량=0으로 등록된 뒤 sync가 한 번도 성공하지 못한 경우 복원
+ */
+function _recalcMissingQuantities() {
+  const items = stateHolder.current.mappedData;
+  const txs = stateHolder.current.transactions;
+  if (!Array.isArray(items) || !Array.isArray(txs) || items.length === 0 || txs.length === 0) return false;
+
+  // 품목명 기준 순재고 계산
+  const netMap = {};
+  for (const tx of txs) {
+    const k = String(tx.itemName || '').trim();
+    if (!k) continue;
+    if (netMap[k] === undefined) netMap[k] = 0;
+    const qty = parseFloat(tx.quantity) || 0;
+    netMap[k] += tx.type === 'in' ? qty : -qty;
+  }
+
+  let changed = false;
+  for (const item of items) {
+    const k = String(item.itemName || '').trim();
+    const net = netMap[k];
+    if (net > 0 && (item.quantity === 0 || item.quantity == null)) {
+      item.quantity = Math.round(net * 1000) / 1000;
+      changed = true;
+    }
+  }
+  return changed;
+}
+
 import {
   setupRealtimeSync as _setupRealtimeSync,
   cleanupRealtimeSync as _cleanupRealtimeSync,
@@ -229,8 +260,10 @@ export async function restoreState(userId = null) {
         }
 
         stateHolder.current = { ...DEFAULT_STATE, ...(localData || {}), ...safeCloudData };
+        const _q1 = _recalcMissingQuantities();
         dispatchUpdate(['*']);
         saveToDB();
+        if (_q1 && isSupabaseConfigured) scheduleSyncToSupabase(['mappedData']);
         return;
       }
     } catch (err) {
@@ -257,7 +290,9 @@ export async function restoreState(userId = null) {
     }
     clearUnsyncedTxsLS();
     stateHolder.current = { ...DEFAULT_STATE, ...saved };
+    const _q2 = _recalcMissingQuantities();
     dispatchUpdate(['*']);
+    if (_q2 && isSupabaseConfigured) scheduleSyncToSupabase(['mappedData']);
     return;
   }
 
@@ -276,10 +311,13 @@ export async function restoreState(userId = null) {
         }
       }
       stateHolder.current = { ...DEFAULT_STATE, ...parsed };
+      const _q3 = _recalcMissingQuantities();
       dispatchUpdate(['*']);
+      if (_q3 && isSupabaseConfigured) scheduleSyncToSupabase(['mappedData']);
     } else if (lsUnsynced.length > 0) {
       // invex-fallback도 없지만 미동기화 트랜잭션은 있는 경우
       stateHolder.current = { ...DEFAULT_STATE, transactions: lsUnsynced };
+      _recalcMissingQuantities();
       dispatchUpdate(['*']);
     }
     clearUnsyncedTxsLS();
