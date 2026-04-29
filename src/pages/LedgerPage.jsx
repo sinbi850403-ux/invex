@@ -89,6 +89,7 @@ function buildLedger(items, transactions, from, to, vendorFilter, itemFilter, op
     let periodLossQty = 0, periodLossAmt = 0;
     let openingQty = currentQty;
     let primaryVendor = item.vendor || '';
+    let itemColor = item.color || '';
     const itemTxs = txByItem.get(item.itemName) || [];
 
     itemTxs.forEach(tx => {
@@ -98,6 +99,8 @@ function buildLedger(items, transactions, from, to, vendorFilter, itemFilter, op
         if (tx.type === 'in' || tx.type === 'loss') openingQty -= qty;
         else openingQty += qty;
       }
+      // 색상: 트랜잭션에서 보완
+      if (tx.color && !itemColor) itemColor = tx.color;
       if (tx.date >= from && tx.date <= to) {
         if (tx.type === 'in') {
           periodInQty += qty;
@@ -107,6 +110,8 @@ function buildLedger(items, transactions, from, to, vendorFilter, itemFilter, op
           periodOutQty += qty;
           periodOutAmt  += Math.round((parseFloat(tx.sellingPrice) || 0) * qty);
           periodCostAmt += Math.round((parseFloat(tx.unitPrice)    || 0) * qty);
+          // 입고 거래처가 없으면 출고 거래처로 보완
+          if (tx.vendor && !primaryVendor) primaryVendor = tx.vendor;
         } else if (tx.type === 'loss' || tx.type === 'adjust') {
           periodLossQty += qty;
           periodLossAmt += Math.round((parseFloat(tx.unitPrice) || 0) * qty);
@@ -121,10 +126,12 @@ function buildLedger(items, transactions, from, to, vendorFilter, itemFilter, op
 
     const closingQty = Math.max(0, finalOpeningQty + periodInQty - periodOutQty - periodLossQty);
 
-    // 가중평균 단가: 실제 거래 기반 우선, 없으면 품목 마스터 단가
+    // 가중평균 단가: 입고 기반 → 출고 원가 기반 → 품목 마스터 단가 순으로 fallback
     const weightedAvgCost = periodInAmt > 0 && periodInQty > 0
       ? periodInAmt / periodInQty
-      : unitPrice;
+      : periodCostAmt > 0 && periodOutQty > 0
+        ? periodCostAmt / periodOutQty
+        : unitPrice;
 
     const openingAmt = Math.round(finalOpeningQty * (weightedAvgCost || unitPrice));
     const closingValue = Math.round(closingQty * (weightedAvgCost || unitPrice));
@@ -142,7 +149,7 @@ function buildLedger(items, transactions, from, to, vendorFilter, itemFilter, op
       vendor: primaryVendor,
       itemCode: item.itemCode || '',
       itemName: item.itemName,
-      color: item.color || '',
+      color: itemColor,
       year: fromYear,
       unitPrice: Math.round(weightedAvgCost || unitPrice),
       openingQty: Math.max(0, finalOpeningQty),
