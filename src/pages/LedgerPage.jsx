@@ -13,6 +13,57 @@ import { fmtWon as fmt } from '../utils/formatters.js';
 
 applyPlugin(jsPDF);
 
+const TEXT_COLLATOR = new Intl.Collator('ko', { numeric: true, sensitivity: 'base' });
+
+const SORT_COLS = [
+  { key: 'vendor',       label: '거래처',      numeric: false },
+  { key: 'itemCode',     label: '상품코드',    numeric: false },
+  { key: 'itemName',     label: '상품명',      numeric: false },
+  { key: 'openingQty',   label: '전월이월수량', numeric: true  },
+  { key: 'openingAmt',   label: '전월이월금액', numeric: true  },
+  { key: 'inQty',        label: '입고수량',    numeric: true  },
+  { key: 'inAmt',        label: '입고금액',    numeric: true  },
+  { key: 'outQty',       label: '출고수량',    numeric: true  },
+  { key: 'outAmt',       label: '출고금액',    numeric: true  },
+  { key: 'lossQty',      label: '로스수량',    numeric: true  },
+  { key: 'lossAmt',      label: '로스금액',    numeric: true  },
+  { key: 'closingQty',   label: '기말재고수량', numeric: true  },
+  { key: 'closingValue', label: '기말재고금액', numeric: true  },
+  { key: 'unitPrice',    label: '단가',        numeric: true  },
+];
+
+function sortRows(rows, sort) {
+  if (!sort.key) return rows;
+  return [...rows].sort((a, b) => {
+    const col = SORT_COLS.find(c => c.key === sort.key);
+    const av = col?.numeric ? Number(a[sort.key]) : a[sort.key] ?? '';
+    const bv = col?.numeric ? Number(b[sort.key]) : b[sort.key] ?? '';
+    const r = col?.numeric
+      ? av - bv
+      : TEXT_COLLATOR.compare(String(av), String(bv));
+    return sort.direction === 'desc' ? -r : r;
+  });
+}
+
+function SortTh({ colKey, sort, onSort, children, style = {}, rowSpan, colSpan }) {
+  const active = sort.key === colKey;
+  return (
+    <th
+      rowSpan={rowSpan}
+      colSpan={colSpan}
+      style={{ ...style, cursor: 'pointer', userSelect: 'none', whiteSpace: 'nowrap' }}
+      onClick={() => onSort(colKey)}
+    >
+      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '2px' }}>
+        {children}
+        <span style={{ fontSize: '10px', color: active ? 'var(--primary)' : 'var(--text-muted)', marginLeft: '1px' }}>
+          {active ? (sort.direction === 'asc' ? '↑' : '↓') : '↕'}
+        </span>
+      </span>
+    </th>
+  );
+}
+
 function buildLedger(items, transactions, from, to, vendorFilter, itemFilter, openingOverrides = {}) {
   const txByItem = new Map();
   transactions.forEach(tx => {
@@ -182,6 +233,14 @@ export default function LedgerPage() {
   const [vendorFilter, setVendorFilter] = useState('');
   const [itemFilter, setItemFilter] = useState('');
   const [showOpening, setShowOpening] = useState(false);
+  const [sort, setSort] = useState({ key: 'closingValue', direction: 'desc' });
+
+  const handleSort = (key) => {
+    setSort(prev => ({
+      key,
+      direction: prev.key === key ? (prev.direction === 'asc' ? 'desc' : 'asc') : (SORT_COLS.find(c => c.key === key)?.numeric ? 'desc' : 'asc'),
+    }));
+  };
 
   // 거래처 목록 (입고 트랜잭션 기준)
   const vendorList = useMemo(() => {
@@ -190,10 +249,11 @@ export default function LedgerPage() {
     return Array.from(set).sort();
   }, [transactions]);
 
-  const rows = useMemo(
+  const rawRows = useMemo(
     () => buildLedger(items, transactions, fromDate, toDate, vendorFilter, itemFilter, openingOverrides),
     [items, transactions, fromDate, toDate, vendorFilter, itemFilter, openingOverrides]
   );
+  const rows = useMemo(() => sortRows(rawRows, sort), [rawRows, sort]);
 
   const totals = useMemo(() => rows.reduce((acc, r) => ({
     openingQty:   acc.openingQty   + r.openingQty,
@@ -348,28 +408,28 @@ export default function LedgerPage() {
                 <thead>
                   <tr>
                     <th rowSpan={2} style={{ verticalAlign: 'middle', textAlign: 'center', width: '36px' }}>#</th>
-                    <th rowSpan={2} style={{ verticalAlign: 'middle', textAlign: 'center', minWidth: '90px' }}>거래처</th>
-                    <th rowSpan={2} style={{ verticalAlign: 'middle', textAlign: 'center', minWidth: '80px' }}>상품코드</th>
-                    <th rowSpan={2} style={{ verticalAlign: 'middle', textAlign: 'center', minWidth: '140px' }}>상품명</th>
+                    <SortTh colKey="vendor"     sort={sort} onSort={handleSort} rowSpan={2} style={{ verticalAlign: 'middle', textAlign: 'center', minWidth: '90px' }}>거래처</SortTh>
+                    <SortTh colKey="itemCode"   sort={sort} onSort={handleSort} rowSpan={2} style={{ verticalAlign: 'middle', textAlign: 'center', minWidth: '80px' }}>상품코드</SortTh>
+                    <SortTh colKey="itemName"   sort={sort} onSort={handleSort} rowSpan={2} style={{ verticalAlign: 'middle', textAlign: 'center', minWidth: '140px' }}>상품명</SortTh>
                     <th rowSpan={2} style={{ verticalAlign: 'middle', textAlign: 'center', width: '55px' }}>년도</th>
                     <th colSpan={2} style={{ textAlign: 'center', background: 'var(--bg-muted)' }}>전월이월</th>
                     <th colSpan={2} style={{ textAlign: 'center', color: 'var(--success)' }}>입고</th>
                     <th colSpan={2} style={{ textAlign: 'center', color: 'var(--danger)' }}>출고</th>
                     <th colSpan={2} style={{ textAlign: 'center', color: 'var(--warning)' }}>로스</th>
                     <th colSpan={2} style={{ textAlign: 'center', fontWeight: 700 }}>기말재고</th>
-                    <th rowSpan={2} style={{ verticalAlign: 'middle', textAlign: 'right', minWidth: '80px' }}>단가</th>
+                    <SortTh colKey="unitPrice"  sort={sort} onSort={handleSort} rowSpan={2} style={{ verticalAlign: 'middle', textAlign: 'right', minWidth: '80px' }}>단가</SortTh>
                   </tr>
                   <tr>
-                    <th style={{ textAlign: 'right', fontSize: '11px', background: 'var(--bg-muted)' }}>수량</th>
-                    <th style={{ textAlign: 'right', fontSize: '11px', background: 'var(--bg-muted)' }}>금액</th>
-                    <th style={{ textAlign: 'right', fontSize: '11px', color: 'var(--success)' }}>수량</th>
-                    <th style={{ textAlign: 'right', fontSize: '11px', color: 'var(--success)' }}>금액</th>
-                    <th style={{ textAlign: 'right', fontSize: '11px', color: 'var(--danger)' }}>수량</th>
-                    <th style={{ textAlign: 'right', fontSize: '11px', color: 'var(--danger)' }}>금액</th>
-                    <th style={{ textAlign: 'right', fontSize: '11px', color: 'var(--warning)' }}>수량</th>
-                    <th style={{ textAlign: 'right', fontSize: '11px', color: 'var(--warning)' }}>금액</th>
-                    <th style={{ textAlign: 'right', fontSize: '11px', fontWeight: 700 }}>수량</th>
-                    <th style={{ textAlign: 'right', fontSize: '11px', fontWeight: 700 }}>금액</th>
+                    <SortTh colKey="openingQty" sort={sort} onSort={handleSort} style={{ textAlign: 'right', fontSize: '11px', background: 'var(--bg-muted)' }}>수량</SortTh>
+                    <SortTh colKey="openingAmt" sort={sort} onSort={handleSort} style={{ textAlign: 'right', fontSize: '11px', background: 'var(--bg-muted)' }}>금액</SortTh>
+                    <SortTh colKey="inQty"      sort={sort} onSort={handleSort} style={{ textAlign: 'right', fontSize: '11px', color: 'var(--success)' }}>수량</SortTh>
+                    <SortTh colKey="inAmt"      sort={sort} onSort={handleSort} style={{ textAlign: 'right', fontSize: '11px', color: 'var(--success)' }}>금액</SortTh>
+                    <SortTh colKey="outQty"     sort={sort} onSort={handleSort} style={{ textAlign: 'right', fontSize: '11px', color: 'var(--danger)' }}>수량</SortTh>
+                    <SortTh colKey="outAmt"     sort={sort} onSort={handleSort} style={{ textAlign: 'right', fontSize: '11px', color: 'var(--danger)' }}>금액</SortTh>
+                    <SortTh colKey="lossQty"    sort={sort} onSort={handleSort} style={{ textAlign: 'right', fontSize: '11px', color: 'var(--warning)' }}>수량</SortTh>
+                    <SortTh colKey="lossAmt"    sort={sort} onSort={handleSort} style={{ textAlign: 'right', fontSize: '11px', color: 'var(--warning)' }}>금액</SortTh>
+                    <SortTh colKey="closingQty" sort={sort} onSort={handleSort} style={{ textAlign: 'right', fontSize: '11px', fontWeight: 700 }}>수량</SortTh>
+                    <SortTh colKey="closingValue" sort={sort} onSort={handleSort} style={{ textAlign: 'right', fontSize: '11px', fontWeight: 700 }}>금액</SortTh>
                   </tr>
                 </thead>
                 <tbody>
