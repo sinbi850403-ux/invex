@@ -24,7 +24,7 @@ import * as db from './db.js';
 import { managedQuery } from './traffic-manager.js';
 import { DEFAULT_STATE } from './store/defaultState.js';
 import { stateHolder, dispatchUpdate } from './store/stateRef.js';
-import { saveToDB, loadFromDB } from './store/indexedDb.js';
+import { saveToDB, loadFromDB, getUnsyncedTxsFromLS, clearUnsyncedTxsLS } from './store/indexedDb.js';
 import { scheduleSyncToSupabase, cleanupDirtyKeys } from './store/supabaseSync.js';
 import { setInventorySyncCallback } from './store/inventoryOps.js';
 
@@ -192,6 +192,18 @@ export async function restoreState(userId = null) {
           }
         }
 
+        // localStorage 백업에서도 미동기화 트랜잭션 병합
+        // — IDB 비동기 쓰기가 강력새로고침 전 완료되지 않았을 때 데이터 보호
+        const lsUnsynced = getUnsyncedTxsFromLS();
+        if (lsUnsynced.length > 0) {
+          const mergedIds = new Set((cloudData.transactions || []).map(t => t.id));
+          const lsMissing = lsUnsynced.filter(tx => !mergedIds.has(tx.id));
+          if (lsMissing.length > 0) {
+            cloudData.transactions = [...lsMissing, ...(cloudData.transactions || [])];
+          }
+        }
+        clearUnsyncedTxsLS();
+
         // Supabase가 빈 배열을 반환했지만 로컬에 실제 데이터가 있으면 보호
         // — 토큰 갱신 타이밍, RLS 일시 차단, 네트워크 오류로 인한 데이터 소실 방지
         const safeCloudData = { ...cloudData };
@@ -234,6 +246,16 @@ export async function restoreState(userId = null) {
   // 2. IndexedDB에서 복원 (오프라인 or Supabase 미설정)
   const saved = await loadFromDB();
   if (saved) {
+    // IDB에도 없는 미동기화 트랜잭션을 localStorage 백업에서 병합
+    const lsUnsynced = getUnsyncedTxsFromLS();
+    if (lsUnsynced.length > 0) {
+      const idbIds = new Set((saved.transactions || []).map(t => t.id));
+      const missing = lsUnsynced.filter(tx => !idbIds.has(tx.id));
+      if (missing.length > 0) {
+        saved.transactions = [...missing, ...(saved.transactions || [])];
+      }
+    }
+    clearUnsyncedTxsLS();
     stateHolder.current = { ...DEFAULT_STATE, ...saved };
     dispatchUpdate(['*']);
     return;
@@ -241,11 +263,25 @@ export async function restoreState(userId = null) {
 
   // 3. localStorage 폴백 (최후 수단)
   try {
+    const lsUnsynced = getUnsyncedTxsFromLS();
     const fallback = localStorage.getItem('invex-fallback');
     if (fallback) {
       const parsed = JSON.parse(fallback);
+      // lsUnsynced 병합
+      if (lsUnsynced.length > 0) {
+        const ids = new Set((parsed.transactions || []).map(t => t.id));
+        const missing = lsUnsynced.filter(tx => !ids.has(tx.id));
+        if (missing.length > 0) {
+          parsed.transactions = [...missing, ...(parsed.transactions || [])];
+        }
+      }
       stateHolder.current = { ...DEFAULT_STATE, ...parsed };
       dispatchUpdate(['*']);
+    } else if (lsUnsynced.length > 0) {
+      // invex-fallback도 없지만 미동기화 트랜잭션은 있는 경우
+      stateHolder.current = { ...DEFAULT_STATE, transactions: lsUnsynced };
+      dispatchUpdate(['*']);
     }
+    clearUnsyncedTxsLS();
   } catch (_) { /* 무시 */ }
 }

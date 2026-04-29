@@ -23,7 +23,37 @@ export function openDB() {
   });
 }
 
+const LS_UNSYNCED_KEY = 'invex-unsynced-txs';
+
+// IDB 비동기 쓰기 완료 전 강력새로고침이 발생해도 미동기화 트랜잭션 보호
+// localStorage 쓰기는 동기 → 페이지 언로드 전 반드시 완료됨
+function backupUnsyncedTxs() {
+  if (!stateHolder.current) return;
+  try {
+    const unsynced = (stateHolder.current.transactions || []).filter(tx => !tx._synced);
+    if (unsynced.length > 0) {
+      localStorage.setItem(LS_UNSYNCED_KEY, JSON.stringify(unsynced));
+    } else {
+      localStorage.removeItem(LS_UNSYNCED_KEY);
+    }
+  } catch (_) {}
+}
+
+export function getUnsyncedTxsFromLS() {
+  try {
+    const raw = localStorage.getItem(LS_UNSYNCED_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (_) { return []; }
+}
+
+export function clearUnsyncedTxsLS() {
+  try { localStorage.removeItem(LS_UNSYNCED_KEY); } catch (_) {}
+}
+
 export async function saveToDB() {
+  backupUnsyncedTxs(); // 동기 localStorage 백업 — IDB 쓰기 앞에 반드시 실행
   try {
     const idb = await openDB();
     const tx = idb.transaction(STORE_NAME, 'readwrite');
