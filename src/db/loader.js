@@ -4,6 +4,8 @@
  * 전체 데이터 로드 (초기화용) — store.js 호환
  * 왜? → 기존 getState()가 전체 데이터를 메모리에 갖고 있는 구조라서
  * → 점진적 전환을 위해 한번에 전체 로딩 후 캐시하는 함수 제공
+ *
+ * 주의: Supabase PostREST API는 RLS 적용 시 1000행 하드 제한 → 페이지네이션 필수
  */
 
 import { supabase } from '../supabase-client.js';
@@ -17,6 +19,56 @@ import { settings, customFields } from './settings.js';
 import { dbItemToStoreItem, dbTxToStoreTx, dbVendorToStore, dbTransferToStore } from './converters.js';
 import { enrichItemsWithQty } from '../domain/inventoryStockCalc.js';
 
+// Supabase PostREST API 페이지네이션 (1000행 제한)
+async function _fetchAllPages(table, maxLimit = 100000) {
+  const userId = await getUserId();
+  const pageSize = 1000;
+  let allData = [];
+  let offset = 0;
+
+  // 테이블별 정렬 필드 정의
+  const orderFields = {
+    transactions: 'date',
+    transfers: 'date',
+    stocktakes: 'created_at',
+    items: 'created_at',
+    vendors: 'created_at',
+    account_entries: 'created_at',
+    purchase_orders: 'created_at',
+    safety_stocks: 'created_at',
+  };
+  const orderField = orderFields[table] || 'created_at';
+
+  while (true) {
+    let query = supabase
+      .from(table)
+      .select('*')
+      .eq('user_id', userId)
+      .order(orderField, { ascending: false })
+      .limit(pageSize)
+      .offset(offset);
+
+    const { data, error } = await query;
+    if (error) {
+      console.error(`[_fetchAllPages] ${table} 조회 실패:`, error.message);
+      throw error;
+    }
+    if (!data || data.length === 0) break;
+
+    allData = allData.concat(data);
+    if (allData.length >= maxLimit) {
+      console.warn(`[loadAllData] ${table}: ${maxLimit}행 제한으로 로드 중단`);
+      return allData.slice(0, maxLimit);
+    }
+
+    if (data.length < pageSize) break;
+    offset += pageSize;
+  }
+
+  console.log(`[loadAllData] ${table}: 총 ${allData.length}행 로드됨`);
+  return allData;
+}
+
 // ============================================================
 // 전체 데이터 로드 (초기화용) — store.js 호환
 // ============================================================
@@ -27,28 +79,32 @@ export async function loadAllData() {
     'customFields', 'settings', 'itemStocks', 'safetyStocks',
   ];
 
-  // Supabase PostREST API의 기본 limit은 1000개
-  // 그 이상의 데이터는 명시적으로 높은 limit 설정 필요
-  const ALL_ROWS = { limit: 999999 };
-
+  // 모든 대용량 테이블은 페이지네이션으로 로드
   const results = await Promise.allSettled([
-    items.list(ALL_ROWS),
-    transactions.list(ALL_ROWS),
-    vendors.list({ limit: 999999 }),
-    transfers.list({ limit: 999999 }),
-    stocktakes.list({ limit: 999999 }),
+    _fetchAllPages('items', 100000),
+    _fetchAllPages('transactions', 100000),
+    _fetchAllPages('vendors', 50000),
+    _fetchAllPages('transfers', 50000),
+    _fetchAllPages('stocktakes', 50000),
     auditLogs.list({ limit: 200 }),
-    accountEntries.list({ limit: 999999 }),
-    purchaseOrders.list({ limit: 999999 }),
+    _fetchAllPages('account_entries', 100000),
+    _fetchAllPages('purchase_orders', 50000),
     posSales.list({ limit: 1000 }),
     customFields.list({ limit: 999999 }),
     settings.getAll(),
     itemStocks.listAll(),
-    safetyStocks.list({ limit: 999999 }),
+    _fetchAllPages('safety_stocks', 50000),
   ]);
+
   const pick = (idx, fallback) => {
     const r = results[idx];
-    if (r.status === 'fulfilled') return r.value;
+    if (r.status === 'fulfilled') {
+      const value = r.value;
+      if (Array.isArray(value) && labels[idx]) {
+        console.log(`[loadAllData] ${labels[idx]}: ${value.length}행`);
+      }
+      return value;
+    }
     console.warn(`[loadAllData] ${labels[idx]} 로드 실패:`, r.reason?.message || r.reason);
     return fallback;
   };
@@ -73,11 +129,20 @@ export async function loadAllData() {
   // itemStocks 기반으로 quantity 채우기 (단일 진실 공급원)
   const enrichedMappedData = enrichItemsWithQty(mappedData, itemStocksData);
 
+  // 안전재고 데이터 변환 (safety_stocks는 정규화 테이블)
+  const convertedSafetyStocks = safetyStocksData.map(r => ({
+    id: r.id,
+    itemId: r.item_id,
+    warehouseId: r.warehouse_id,
+    minQty: r.min_qty,
+    updatedAt: r.updated_at,
+  }));
+
   return {
     mappedData:       enrichedMappedData,
     transactions:     txData.map(dbTxToStoreTx),
     vendorMaster:     vendorsData.map(dbVendorToStore),
-    transfers:        transfersData.map ? transfersData.map(dbTransferToStore) : transfersData,
+    transfers:        transfersData.map(dbTransferToStore),
     stocktakeHistory: stocktakeData,
     auditLogs:        auditData,
     accountEntries:   accountData,
@@ -86,7 +151,7 @@ export async function loadAllData() {
     customFields:     fieldData,
     // 신규: 창고별 현재고 + 안전재고 (정규화 테이블)
     itemStocks:       itemStocksData,
-    safetyStocks:     safetyStocksData,
+    safetyStocks:     convertedSafetyStocks,
     // 설정값
     safetyStock:      settingsData.safetyStock || {},
     beginnerMode:     settingsData.beginnerMode ?? true,
