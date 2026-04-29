@@ -95,13 +95,23 @@ export function BulkUploadModal({ items, modeDefault, onClose, onSuccess }) {
 
       for (const iname of itemNames) {
         if (!itemMap.has(iname)) {
-          const newItem = await db.items.create({
-            itemName: iname,
-            category: '',
-            unit: 'EA',
-            warehouseName: '본사 창고',
-          });
-          itemMap.set(iname, newItem.id);
+          try {
+            const newItem = await db.items.create({
+              itemName: iname,
+              category: '',
+              unit: 'EA',
+            });
+            if (newItem?.id) {
+              itemMap.set(iname, newItem.id);
+            }
+          } catch (err) {
+            // 중복 생성 시 무시하고 기존 항목 사용
+            if (err.message?.includes('duplicate')) {
+              console.warn(`[BulkUploadModal] 상품 중복: ${iname}`);
+            } else {
+              throw err;
+            }
+          }
         }
       }
 
