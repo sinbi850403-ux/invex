@@ -553,6 +553,7 @@ export async function loginWithEmail(email, password) {
     return null;
   }
   isLoggingIn = true;
+  applySessionSeq += 1; // 진행 중인 INITIAL_SESSION applySession 무효화
 
   const loginBtn = document.getElementById('gate-email-login');
   const originalText = loginBtn?.textContent || '이메일로 로그인';

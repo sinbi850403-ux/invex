@@ -65,9 +65,21 @@ export function AuthProvider({ children }) {
     }
 
     // ── 최대 대기 타이머 ─────────────────────────────────────────────────────
-    // Supabase cold-start(2~5초) 대응: initAuth 콜백이 늦게 오더라도
-    // 최대 2초 후에는 반드시 ready 상태로 전환 (로그인 화면 표시)
-    const readyFallback = setTimeout(() => setIsReady(true), 2000);
+    // 저장된 세션이 있으면 INITIAL_SESSION 복원을 기다려야 하므로 5초,
+    // 없으면 Supabase cold-start 대응으로 2초 후 로그인 화면 표시
+    const hasStoredSession = (() => {
+      try {
+        for (let i = 0; i < localStorage.length; i++) {
+          const k = localStorage.key(i);
+          if (k && /^sb-.+-auth-token$/.test(k)) {
+            const v = localStorage.getItem(k);
+            if (v && v !== 'null' && v !== '{}') return true;
+          }
+        }
+      } catch { /* ignore */ }
+      return false;
+    })();
+    const readyFallback = setTimeout(() => setIsReady(true), hasStoredSession ? 5000 : 2000);
 
     initAuth(async (newUser, newProfile) => {
       clearTimeout(readyFallback);
