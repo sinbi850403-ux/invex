@@ -1,4 +1,4 @@
-import { ALL_FIELDS, ALWAYS_VISIBLE, toNum } from './inventoryConfig.js';
+import { ALL_FIELDS, DEFAULT_VISIBLE, toNum } from './inventoryConfig.js';
 
 export function computeData(rawData, transactions) {
   const txAgg = {};
@@ -52,8 +52,13 @@ export function computeData(rawData, transactions) {
       : (outQty > 0 ? Math.round(weightedAvgCost * outQty) : 0);
     const profit  = outAmt - costAmt;
 
+    const inDate = item.inDate || item.date || '';
+    const year   = item.year  || (inDate ? String(inDate).slice(0, 4) : '');
+
     return {
       ...item,
+      color:                item.color || '',
+      year,
       supplyValue:          supplyValue || '',
       vat:                  vat || '',
       totalPrice:           totalPrice || '',
@@ -71,17 +76,13 @@ export function computeData(rawData, transactions) {
 }
 
 export function getVisibleFields(data, visibleColumns) {
-  const hasData = new Set(
-    ALL_FIELDS.map(f => f.key).filter(key =>
-      (data || []).some(row => row[key] !== '' && row[key] != null)
-    )
-  );
   if (visibleColumns && Array.isArray(visibleColumns)) {
     const validCols = [...visibleColumns];
-    if (!validCols.includes('category')) validCols.push('category');
+    if (!validCols.includes('itemName')) validCols.push('itemName');
     return ALL_FIELDS.filter(f => validCols.includes(f.key)).map(f => f.key);
   }
-  return ALL_FIELDS.filter(f => ALWAYS_VISIBLE.includes(f.key) && hasData.has(f.key)).map(f => f.key);
+  // 기본: DEFAULT_VISIBLE 순서 그대로, 데이터 유무 체크 없이 항상 표시
+  return ALL_FIELDS.filter(f => DEFAULT_VISIBLE.includes(f.key)).map(f => f.key);
 }
 
 export function applySmartSearch(data, safetyStock, keyword) {

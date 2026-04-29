@@ -1,38 +1,42 @@
 import React from 'react';
 
 export const ALL_FIELDS = [
-  { key: 'category',             label: '자산',         numeric: false },
-  { key: 'inDate',               label: '입고일자',     numeric: false },
-  { key: 'itemCode',             label: '상품코드',     numeric: false },
-  { key: 'vendor',               label: '거래처',       numeric: false },
-  { key: 'itemName',             label: '품명',         numeric: false },
-  { key: 'spec',                 label: '규격',         numeric: false },
-  { key: 'unit',                 label: '단위',         numeric: false },
-  { key: 'inQty',                label: '입고수량',     numeric: true  },
-  { key: 'unitPrice',            label: '원가',         numeric: true  },
-  { key: 'supplyValue',          label: '매입원가',     numeric: true  },
-  { key: 'vat',                  label: '부가세',       numeric: true  },
-  { key: 'totalPrice',           label: '합계금액',     numeric: true  },
-  { key: 'salePrice',            label: '출고단가',     numeric: true  },
-  { key: 'outQty',               label: '출고수량',     numeric: true  },
-  { key: 'outTotalPrice',        label: '출고합계',     numeric: true  },
-  { key: 'purchaseCost',         label: '매입원가',     numeric: true  },
-  { key: 'profit',               label: '이익액',       numeric: true  },
-  { key: 'profitMargin',         label: '이익률',       numeric: false },
-  { key: 'cogsMargin',           label: '원가율',       numeric: false },
-  { key: 'quantity',             label: '기말재고수량', numeric: true  },
-  { key: 'endingInventoryValue', label: '기말재고액',   numeric: true  },
-  { key: 'warehouse',            label: '창고/위치',    numeric: false },
-  { key: 'expiryDate',           label: '유통기한',     numeric: false },
-  { key: 'lotNumber',            label: 'LOT번호',      numeric: false },
-  { key: 'note',                 label: '비고',         numeric: false },
+  { key: 'category',             label: '자산',     numeric: false },
+  { key: 'vendor',               label: '거래처',   numeric: false },
+  { key: 'itemCode',             label: '상품코드', numeric: false },
+  { key: 'itemName',             label: '상품명',   numeric: false },
+  { key: 'color',                label: '색상',     numeric: false },
+  { key: 'spec',                 label: '규격',     numeric: false },
+  { key: 'year',                 label: '년도',     numeric: false },
+  { key: 'quantity',             label: '재고수량', numeric: true  },
+  { key: 'salePrice',            label: '판매원가', numeric: true  },
+  { key: 'outTotalPrice',        label: '판매금액', numeric: true  },
+  { key: 'unitPrice',            label: '매입원가', numeric: true  },
+  { key: 'supplyValue',          label: '매입금액', numeric: true  },
+  { key: 'inDate',               label: '입고일자', numeric: false },
+  { key: 'unit',                 label: '단위',     numeric: false },
+  { key: 'inQty',                label: '입고수량', numeric: true  },
+  { key: 'outQty',               label: '출고수량', numeric: true  },
+  { key: 'vat',                  label: '부가세',   numeric: true  },
+  { key: 'totalPrice',           label: '합계금액', numeric: true  },
+  { key: 'purchaseCost',         label: '매출원가', numeric: true  },
+  { key: 'profit',               label: '이익액',   numeric: true  },
+  { key: 'profitMargin',         label: '이익률',   numeric: false },
+  { key: 'cogsMargin',           label: '원가율',   numeric: false },
+  { key: 'endingInventoryValue', label: '기말재고액', numeric: true },
+  { key: 'warehouse',            label: '창고/위치', numeric: false },
+  { key: 'expiryDate',           label: '유통기한', numeric: false },
+  { key: 'lotNumber',            label: 'LOT번호',  numeric: false },
+  { key: 'note',                 label: '비고',     numeric: false },
 ];
 
-export const ALWAYS_VISIBLE = [
-  'category','itemCode','itemName','spec','unit',
-  'outTotalPrice','supplyValue','profit','profitMargin',
-  'cogsMargin','quantity','endingInventoryValue',
+// 기본 표시 컬럼 — 데이터 유무와 무관하게 항상 이 순서로 표시
+export const DEFAULT_VISIBLE = [
+  'category', 'vendor', 'itemCode', 'itemName', 'color', 'spec', 'year',
+  'quantity', 'salePrice', 'outTotalPrice', 'unitPrice', 'supplyValue',
 ];
+
+export const ALWAYS_VISIBLE = DEFAULT_VISIBLE;
 
 export const SORT_OPTIONS = [
   { value: 'default',          label: '정렬 없음 (원본 순서)' },
