@@ -130,6 +130,7 @@ async function syncToSupabase() {
           spec: tx.spec || null,
           unit: tx.unit || null,
           category: tx.category || null,
+          color: tx.color || null,
           date: tx.date,
           vendor: tx.vendor,
           warehouse: tx.warehouse,
