@@ -72,10 +72,6 @@ export default function HomePage() {
     setRefreshing(false);
   }, []);
 
-  useEffect(() => {
-    const id = setInterval(handleRefresh, 60_000);
-    return () => clearInterval(id);
-  }, [handleRefresh]);
 
   function handleDragStart(e, id) {
     dragId.current = id;
@@ -223,11 +219,12 @@ export default function HomePage() {
           <h1 className="page-title">대시보드</h1>
           <div className="page-desc" style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
             <span>{dateStr}</span>
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, color: 'var(--text-muted)' }}>
-              <span style={{ width: 6, height: 6, borderRadius: '50%', background: refreshing ? 'var(--warning)' : 'var(--success)', display: 'inline-block', animation: refreshing ? 'pulse 0.8s ease-in-out infinite' : 'none' }} />
-              {refreshing ? '갱신 중...' : `${Math.floor((Date.now() - lastRefresh) / 1000 / 60) === 0 ? '방금' : `${Math.floor((Date.now() - lastRefresh) / 1000 / 60)}분 전`} 갱신`}
+            <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+              {refreshing ? '갱신 중...' : `마지막 갱신: ${lastRefresh.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}`}
             </span>
-            <button className="btn btn-sm btn-ghost" style={{ fontSize: 11, padding: '1px 6px' }} onClick={handleRefresh} disabled={refreshing}>새로고침</button>
+            <button className="btn btn-sm btn-ghost" style={{ fontSize: 11, padding: '1px 6px' }} onClick={handleRefresh} disabled={refreshing}>
+              수동 갱신
+            </button>
           </div>
         </div>
         <div className="page-actions" style={{ flexWrap: 'wrap', gap: 6 }}>
