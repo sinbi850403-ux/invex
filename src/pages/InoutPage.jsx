@@ -386,6 +386,7 @@ export function InoutPage({ mode = 'all' }) {
                     <SortTh sortKey="vendor" sort={sort} onSort={toggleSort}>거래처</SortTh>
                     <SortTh sortKey="itemCode" sort={sort} onSort={toggleSort}>상품코드</SortTh>
                     <SortTh sortKey="itemName" className="col-fill" sort={sort} onSort={toggleSort}>품명</SortTh>
+                    <SortTh sortKey="color" sort={sort} onSort={toggleSort}>색상</SortTh>
                     <SortTh sortKey="spec" sort={sort} onSort={toggleSort}>규격</SortTh>
                     <SortTh sortKey="unit" sort={sort} onSort={toggleSort}>단위</SortTh>
                     <SortTh sortKey="quantity" className="text-right" sort={sort} onSort={toggleSort}>출고수량</SortTh>
@@ -417,6 +418,7 @@ export function InoutPage({ mode = 'all' }) {
                         <SortTh sortKey="vendor" sort={sort} onSort={toggleSort}>거래처</SortTh>
                         <SortTh sortKey="itemCode" sort={sort} onSort={toggleSort} style={{ color: 'var(--text-muted)' }}>상품코드</SortTh>
                         <SortTh sortKey="itemName" className="col-fill" sort={sort} onSort={toggleSort}>품명</SortTh>
+                        <SortTh sortKey="color" sort={sort} onSort={toggleSort} style={{ color: 'var(--text-muted)' }}>색상</SortTh>
                         <SortTh sortKey="spec" sort={sort} onSort={toggleSort} style={{ color: 'var(--text-muted)' }}>규격</SortTh>
                         <SortTh sortKey="unit" sort={sort} onSort={toggleSort} style={{ color: 'var(--text-muted)' }}>단위</SortTh>
                         <SortTh sortKey="quantity" className="text-right" sort={sort} onSort={toggleSort}>입고수량</SortTh>
@@ -430,6 +432,7 @@ export function InoutPage({ mode = 'all' }) {
                         <SortTh sortKey="date" sort={sort} onSort={toggleSort}>날짜</SortTh>
                         <SortTh sortKey="vendor" sort={sort} onSort={toggleSort}>거래처</SortTh>
                         <SortTh sortKey="itemName" className="col-fill" sort={sort} onSort={toggleSort}>품목명</SortTh>
+                        <SortTh sortKey="color" sort={sort} onSort={toggleSort} style={{ color: 'var(--text-muted)' }}>색상</SortTh>
                         <SortTh sortKey="quantity" className="text-right" sort={sort} onSort={toggleSort} style={{ color: 'var(--danger)', fontWeight: 700 }}>수량</SortTh>
                         <SortTh sortKey="unitPrice" className="text-right" sort={sort} onSort={toggleSort}>원가</SortTh>
                         <SortTh sortKey="sellingPrice" className="text-right" sort={sort} onSort={toggleSort} style={{ color: 'var(--success)', fontWeight: 700 }}>판매가</SortTh>
@@ -476,6 +479,7 @@ export function InoutPage({ mode = 'all' }) {
                           <td style={{ fontSize: '12px' }}>{tx.vendor || '-'}</td>
                           <td style={{ fontSize: '12px' }}>{itemCode || '-'}</td>
                           <td className="col-fill"><strong>{tx.itemName || '-'}</strong></td>
+                          <td style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{tx.color || itemData.color || '-'}</td>
                           <td style={{ fontSize: '12px' }}>{spec || '-'}</td>
                           <td style={{ fontSize: '12px' }}>{unit || '-'}</td>
                           <td className="text-right" style={{ fontWeight: 600 }}>
@@ -496,6 +500,7 @@ export function InoutPage({ mode = 'all' }) {
                           <td style={{ fontSize: '13px' }}>{tx.vendor || '-'}</td>
                           <td style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{itemCode || '-'}</td>
                           <td className="col-fill"><strong>{tx.itemName || '-'}</strong></td>
+                          <td style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{tx.color || itemData.color || '-'}</td>
                           <td style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{spec || '-'}</td>
                           <td style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{unit || '-'}</td>
                           <td className="text-right" style={{ fontWeight: 600, fontSize: '13px' }}>
@@ -514,6 +519,7 @@ export function InoutPage({ mode = 'all' }) {
                             <strong>{tx.itemName || '-'}</strong>
                             {itemCode && <span style={{ fontSize: '11px', color: 'var(--text-muted)', marginLeft: '6px' }}>{itemCode}</span>}
                           </td>
+                          <td style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{tx.color || itemData.color || '-'}</td>
                           <td className="text-right">
                             <span style={{ color: tx.type === 'in' ? '#16a34a' : '#ef4444', fontWeight: 600 }}>
                               {tx.type === 'in' ? '+' : '-'}{fmt(qty)}
@@ -545,7 +551,7 @@ export function InoutPage({ mode = 'all' }) {
                 return (
                   <tfoot>
                     <tr style={{ background: 'var(--bg-lighter)', fontWeight: 700 }}>
-                      <td colSpan={9} className="text-right" style={{ ...S, color: 'var(--text-muted)', fontSize: '12px' }}>
+                      <td colSpan={10} className="text-right" style={{ ...S, color: 'var(--text-muted)', fontSize: '12px' }}>
                         합계 ({sorted.length.toLocaleString()}건)
                       </td>
                       <td className="text-right" style={{ ...S, fontSize: '13px' }}>
@@ -565,7 +571,7 @@ export function InoutPage({ mode = 'all' }) {
                 return (
                   <tfoot>
                     <tr style={{ background: 'var(--bg-lighter)', fontWeight: 700 }}>
-                      <td colSpan={10} className="text-right" style={{ ...S, color: 'var(--text-muted)', fontSize: '12px' }}>
+                      <td colSpan={11} className="text-right" style={{ ...S, color: 'var(--text-muted)', fontSize: '12px' }}>
                         합계 ({sorted.length.toLocaleString()}건)
                       </td>
                       <td className="text-right" style={{ ...S, fontWeight: 400 }}>-</td>

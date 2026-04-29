@@ -192,6 +192,9 @@ export function useInoutFilters({ transactions, mappedData, mode }) {
         av = (a.note || '').toLowerCase(); bv = (b.note || '').toLowerCase();
       } else if (sort.key === 'itemName') {
         av = (a.itemName || '').toLowerCase(); bv = (b.itemName || '').toLowerCase();
+      } else if (sort.key === 'color') {
+        av = (a.color || itemMap.get(a.itemName)?.color || '').toLowerCase();
+        bv = (b.color || itemMap.get(b.itemName)?.color || '').toLowerCase();
       } else if (sort.key === 'vendor') {
         av = (a.vendor || '').toLowerCase(); bv = (b.vendor || '').toLowerCase();
       } else if (sort.key === 'category') {

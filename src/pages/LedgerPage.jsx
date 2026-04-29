@@ -19,6 +19,7 @@ const SORT_COLS = [
   { key: 'vendor',       label: '거래처',      numeric: false },
   { key: 'itemCode',     label: '상품코드',    numeric: false },
   { key: 'itemName',     label: '상품명',      numeric: false },
+  { key: 'color',        label: '색상',        numeric: false },
   { key: 'openingQty',   label: '전월이월수량', numeric: true  },
   { key: 'openingAmt',   label: '전월이월금액', numeric: true  },
   { key: 'inQty',        label: '입고수량',    numeric: true  },
@@ -141,6 +142,7 @@ function buildLedger(items, transactions, from, to, vendorFilter, itemFilter, op
       vendor: primaryVendor,
       itemCode: item.itemCode || '',
       itemName: item.itemName,
+      color: item.color || '',
       year: fromYear,
       unitPrice: Math.round(weightedAvgCost || unitPrice),
       openingQty: Math.max(0, finalOpeningQty),
@@ -286,6 +288,7 @@ export default function LedgerPage() {
       '거래처':       row.vendor || '-',
       '상품코드':     row.itemCode || '-',
       '상품명':       row.itemName,
+      '색상':         row.color || '',
       '년도':         row.year,
       '전월이월_수량': row.openingQty,
       '전월이월_금액': row.openingAmt,
@@ -317,13 +320,13 @@ export default function LedgerPage() {
       doc.autoTable({
         startY: 32,
         head: [[
-          '거래처', '상품코드', '상품명', '년도',
+          '거래처', '상품코드', '상품명', '색상', '년도',
           '전월이월(수)', '전월이월(금)', '입고(수)', '입고(금)',
           '출고(수)', '출고(금)', '로스(수)', '로스(금)',
           '기말재고(수)', '기말재고(금)', '단가',
         ]],
         body: rows.map(row => [
-          row.vendor || '-', row.itemCode || '-', row.itemName, row.year,
+          row.vendor || '-', row.itemCode || '-', row.itemName, row.color || '-', row.year,
           row.openingQty.toLocaleString('ko-KR'), fmt(row.openingAmt),
           row.inQty > 0 ? row.inQty.toLocaleString('ko-KR') : '-', row.inAmt > 0 ? fmt(row.inAmt) : '-',
           row.outQty > 0 ? row.outQty.toLocaleString('ko-KR') : '-', row.outAmt > 0 ? fmt(row.outAmt) : '-',
@@ -411,6 +414,7 @@ export default function LedgerPage() {
                     <SortTh colKey="vendor"     sort={sort} onSort={handleSort} rowSpan={2} style={{ verticalAlign: 'middle', textAlign: 'center', minWidth: '90px' }}>거래처</SortTh>
                     <SortTh colKey="itemCode"   sort={sort} onSort={handleSort} rowSpan={2} style={{ verticalAlign: 'middle', textAlign: 'center', minWidth: '80px' }}>상품코드</SortTh>
                     <SortTh colKey="itemName"   sort={sort} onSort={handleSort} rowSpan={2} style={{ verticalAlign: 'middle', textAlign: 'center', minWidth: '140px' }}>상품명</SortTh>
+                    <SortTh colKey="color"      sort={sort} onSort={handleSort} rowSpan={2} style={{ verticalAlign: 'middle', textAlign: 'center', minWidth: '70px' }}>색상</SortTh>
                     <th rowSpan={2} style={{ verticalAlign: 'middle', textAlign: 'center', width: '55px' }}>년도</th>
                     <th colSpan={2} style={{ textAlign: 'center', background: 'var(--bg-muted)' }}>전월이월</th>
                     <th colSpan={2} style={{ textAlign: 'center', color: 'var(--success)' }}>입고</th>
@@ -439,6 +443,7 @@ export default function LedgerPage() {
                       <td style={{ color: 'var(--text-muted)', fontSize: '12px' }}>{row.vendor || '-'}</td>
                       <td style={{ color: 'var(--text-muted)', fontSize: '12px' }}>{row.itemCode || '-'}</td>
                       <td><strong>{row.itemName}</strong></td>
+                      <td style={{ color: 'var(--text-muted)', fontSize: '12px' }}>{row.color || '-'}</td>
                       <td style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: '12px' }}>{row.year}</td>
                       <td className="text-right">{n(row.openingQty)}</td>
                       <td className="text-right">{n(row.openingAmt)}</td>
@@ -460,7 +465,7 @@ export default function LedgerPage() {
                 </tbody>
                 <tfoot>
                   <tr style={{ fontWeight: 700, background: 'var(--bg-card)' }}>
-                    <td colSpan={5} className="text-right" style={{ color: 'var(--text-muted)' }}>합계</td>
+                    <td colSpan={6} className="text-right" style={{ color: 'var(--text-muted)' }}>합계</td>
                     <td className="text-right">{totals.openingQty.toLocaleString('ko-KR')}</td>
                     <td className="text-right">{fmt(totals.openingAmt)}</td>
                     <td className="text-right type-in">{n(totals.inQty)}</td>
