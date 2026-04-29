@@ -110,6 +110,8 @@ export function BulkUploadModal({ items, modeDefault, onClose, onSuccess }) {
              엑셀 양식 다운로드
           </button>
 
+          <hr style={{ border: 'none', borderTop: '1px solid var(--border-color)', margin: '0 0 16px' }} />
+
           {/* 드롭존 */}
           <div
             onDrop={handleDrop}
