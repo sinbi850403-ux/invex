@@ -390,11 +390,11 @@ export function InoutPage({ mode = 'all' }) {
                     <SortTh sortKey="unit" sort={sort} onSort={toggleSort}>단위</SortTh>
                     <SortTh sortKey="quantity" className="text-right" sort={sort} onSort={toggleSort}>출고수량</SortTh>
                     {[
-                      { key: 'sellingPrice', label: '출고단가', cls: 'th-section-out' },
-                      { key: 'outAmt',       label: '판매가',   cls: 'th-section-out' },
-                      { key: 'outTotal',     label: '출고합계', cls: 'th-section-out' },
-                    ].map(({ key, label, cls }) => (
-                      <SortTh key={key} sortKey={key} sort={sort} onSort={toggleSort} className={`text-right ${cls}`} style={{
+                      { key: 'sellingPrice', label: '출고단가' },
+                      { key: 'outAmt',       label: '판매가'   },
+                      { key: 'outTotal',     label: '출고합계' },
+                    ].map(({ key, label }) => (
+                      <SortTh key={key} sortKey={key} sort={sort} onSort={toggleSort} className="text-right" style={{
                         fontWeight: 700, fontSize: '11px', textTransform: 'none', whiteSpace: 'nowrap', minWidth: 72,
                       }}>{label}</SortTh>
                     ))}
