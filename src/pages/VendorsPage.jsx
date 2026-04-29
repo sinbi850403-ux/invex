@@ -106,16 +106,27 @@ export default function VendorsPage() {
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '12px', marginBottom: '16px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '12px', marginBottom: '8px' }}>
         {[
-          { label: '전체 거래처', value: vendors.length, color: 'var(--accent)' },
-          { label: '매입처',     value: counts.supplier + counts.both, color: 'var(--info)' },
-          { label: '매출처',     value: counts.customer + counts.both, color: 'var(--success)' },
-          { label: '거래 발생',  value: activeCount },
+          { label: '전체 거래처', value: vendors.length,                   unit: '개', color: 'var(--accent)' },
+          { label: '매입처',     value: counts.supplier + counts.both,    unit: '개', color: 'var(--info)' },
+          { label: '매출처',     value: counts.customer + counts.both,    unit: '개', color: 'var(--success)' },
         ].map(c => (
           <div key={c.label} className="card card-compact" style={{ textAlign: 'center' }}>
             <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px' }}>{c.label}</div>
-            <div style={{ fontSize: '24px', fontWeight: 700, color: c.color }}>{c.value}</div>
+            <div style={{ fontSize: '24px', fontWeight: 700, color: c.color }}>{c.value}<span style={{ fontSize: '13px', fontWeight: 400 }}> {c.unit}</span></div>
+          </div>
+        ))}
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '12px', marginBottom: '16px' }}>
+        {[
+          { label: '거래 발생',    value: activeCount,  unit: '개', color: undefined },
+          { label: '누적 매입금액', value: fmt(totalIn),  unit: '',   color: 'var(--info)' },
+          { label: '누적 매출금액', value: fmt(totalOut), unit: '',   color: 'var(--success)' },
+        ].map(c => (
+          <div key={c.label} className="card card-compact" style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px' }}>{c.label}</div>
+            <div style={{ fontSize: c.label === '거래 발생' ? '24px' : '18px', fontWeight: 700, color: c.color }}>{c.value}{c.unit && <span style={{ fontSize: '13px', fontWeight: 400 }}> {c.unit}</span>}</div>
           </div>
         ))}
       </div>

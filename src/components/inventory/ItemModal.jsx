@@ -18,6 +18,8 @@ export function ItemModal({ item, editIdx, onClose, onSaved }) {
     itemCode:       item?.itemCode    ?? '',
     spec:           item?.spec        ?? '',
     category:       item?.category    ?? '',
+    color:          item?.color       ?? '',
+    year:           item?.year        ?? '',
     quantity:       String(item?.quantity    ?? ''),
     unit:           item?.unit        ?? '',
     unitPrice:      String(item?.unitPrice   ?? ''),
@@ -73,6 +75,8 @@ export function ItemModal({ item, editIdx, onClose, onSaved }) {
       itemCode:    form.itemCode.trim(),
       spec:        form.spec.trim(),
       category:    form.category.trim(),
+      color:       form.color.trim(),
+      year:        form.year.trim(),
       vendor:      form.vendor,
       quantity:    parseFloat(form.quantity) || 0,
       unit:        form.unit.trim(),
@@ -190,6 +194,16 @@ export function ItemModal({ item, editIdx, onClose, onSaved }) {
                     <div className="form-group">
                       <label className="form-label">창고/위치</label>
                       <input className="form-input" {...f('warehouse')} placeholder="예: 본사 1층 A-03" />
+                    </div>
+                  </div>
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label className="form-label">색상</label>
+                      <input className="form-input" {...f('color')} placeholder="예: 블랙, White, #FF0000" />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">년도</label>
+                      <input className="form-input" {...f('year')} placeholder="예: 2024" />
                     </div>
                   </div>
                   <div className="form-row">
