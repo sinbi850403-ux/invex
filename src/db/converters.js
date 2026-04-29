@@ -81,6 +81,7 @@ export function dbTxToStoreTx(dbTx) {
     spec: dbTx.spec,                                // 규격
     unit: dbTx.unit,                                // 단위
     category: dbTx.category,                        // 자산구분
+    color: dbTx.color || '',                        // 색상
     date: dbTx.date,
     vendor: dbTx.vendor,
     warehouse: dbTx.warehouse,

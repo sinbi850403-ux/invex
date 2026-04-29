@@ -185,6 +185,7 @@ ALTER TABLE transactions ADD COLUMN IF NOT EXISTS actual_selling_price NUMERIC D
 ALTER TABLE transactions ADD COLUMN IF NOT EXISTS spec TEXT;
 ALTER TABLE transactions ADD COLUMN IF NOT EXISTS unit TEXT;
 ALTER TABLE transactions ADD COLUMN IF NOT EXISTS category TEXT;
+ALTER TABLE transactions ADD COLUMN IF NOT EXISTS color TEXT;
 
 CREATE INDEX IF NOT EXISTS idx_tx_user ON transactions(user_id);
 CREATE INDEX IF NOT EXISTS idx_tx_date ON transactions(user_id, date DESC);
