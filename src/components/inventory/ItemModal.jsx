@@ -26,6 +26,9 @@ export function ItemModal({ item, editIdx, onClose, onSaved }) {
     salePrice:      String(item?.salePrice   ?? ''),
     vendor:         item?.vendor      ?? '',
     warehouse:      item?.warehouse   ?? '',
+    inDate:         item?.inDate      ?? '',
+    expiryDate:     item?.expiryDate  ?? '',
+    lotNumber:      item?.lotNumber   ?? '',
     note:           item?.note        ?? '',
     lockedUntil:    item?.lockedUntil ?? '',
     safetyStockMin: String(item?.itemName ? (safetyStock[item.itemName] ?? '') : ''),
@@ -83,6 +86,9 @@ export function ItemModal({ item, editIdx, onClose, onSaved }) {
       unitPrice:   up,
       salePrice:   sp,
       warehouse:   form.warehouse.trim(),
+      inDate:      form.inDate || '',
+      expiryDate:  form.expiryDate || '',
+      lotNumber:   form.lotNumber.trim(),
       note:        form.note.trim(),
       lockedUntil: form.lockedUntil || null,
     };
@@ -208,12 +214,22 @@ export function ItemModal({ item, editIdx, onClose, onSaved }) {
                   </div>
                   <div className="form-row">
                     <div className="form-group">
-                      <label className="form-label">비고</label>
-                      <input className="form-input" {...f('note')} placeholder="메모" />
+                      <label className="form-label">입고일자</label>
+                      <input className="form-input" type="date" {...f('inDate')} />
                     </div>
                     <div className="form-group">
-                      <label className="form-label">품목 잠금 해제일</label>
-                      <input className="form-input" type="date" {...f('lockedUntil')} />
+                      <label className="form-label">유통기한</label>
+                      <input className="form-input" type="date" {...f('expiryDate')} />
+                    </div>
+                  </div>
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label className="form-label">LOT번호</label>
+                      <input className="form-input" {...f('lotNumber')} placeholder="예: LOT-2024-001" />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">비고</label>
+                      <input className="form-input" {...f('note')} placeholder="메모" />
                     </div>
                   </div>
                   <div className="form-row">
@@ -221,7 +237,10 @@ export function ItemModal({ item, editIdx, onClose, onSaved }) {
                       <label className="form-label">안전재고 기준 수량</label>
                       <input className="form-input" type="number" min="0" {...f('safetyStockMin')} placeholder="이 이하면 경고 표시" />
                     </div>
-                    <div className="form-group" />
+                    <div className="form-group">
+                      <label className="form-label">품목 잠금 해제일</label>
+                      <input className="form-input" type="date" {...f('lockedUntil')} />
+                    </div>
                   </div>
                 </div>
               </details>
