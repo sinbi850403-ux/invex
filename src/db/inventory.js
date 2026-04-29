@@ -92,12 +92,28 @@ export const stocktakes = {
 export const itemStocks = {
   async listAll() {
     const userId = await getUserId();
-    const { data, error } = await supabase
-      .from('item_stocks')
-      .select('item_id, warehouse_id, quantity, last_updated_at')
-      .eq('user_id', userId);
-    handleError(error, '현재고 조회');
-    return (data || []).map(r => ({
+    const pageSize = 1000;
+    let allData = [];
+    let offset = 0;
+
+    while (true) {
+      const { data, error } = await supabase
+        .from('item_stocks')
+        .select('item_id, warehouse_id, quantity, last_updated_at')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(pageSize)
+        .offset(offset);
+
+      handleError(error, '현재고 조회');
+      if (!data || data.length === 0) break;
+
+      allData = allData.concat(data);
+      if (data.length < pageSize) break;
+      offset += pageSize;
+    }
+
+    return allData.map(r => ({
       itemId:        r.item_id,
       warehouseId:   r.warehouse_id,
       quantity:      r.quantity,
@@ -107,13 +123,29 @@ export const itemStocks = {
 
   async byItem(itemId) {
     const userId = await getUserId();
-    const { data, error } = await supabase
-      .from('item_stocks')
-      .select('item_id, warehouse_id, quantity, last_updated_at')
-      .eq('user_id', userId)
-      .eq('item_id', itemId);
-    handleError(error, '품목 현재고 조회');
-    return (data || []).map(r => ({
+    const pageSize = 1000;
+    let allData = [];
+    let offset = 0;
+
+    while (true) {
+      const { data, error } = await supabase
+        .from('item_stocks')
+        .select('item_id, warehouse_id, quantity, last_updated_at')
+        .eq('user_id', userId)
+        .eq('item_id', itemId)
+        .order('created_at', { ascending: false })
+        .limit(pageSize)
+        .offset(offset);
+
+      handleError(error, '품목 현재고 조회');
+      if (!data || data.length === 0) break;
+
+      allData = allData.concat(data);
+      if (data.length < pageSize) break;
+      offset += pageSize;
+    }
+
+    return allData.map(r => ({
       itemId:        r.item_id,
       warehouseId:   r.warehouse_id,
       quantity:      r.quantity,

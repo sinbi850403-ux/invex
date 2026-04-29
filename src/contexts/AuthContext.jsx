@@ -39,7 +39,9 @@ export function AuthProvider({ children }) {
       const lastPage = localStorage.getItem(LAST_PAGE_KEY);
       const page = (lastPage && lastPage in PAGE_LOADERS) ? lastPage : 'home';
       setStartPage(page);
-      setupRealtimeSync();
+      // Realtime 자동 동기화 비활성화 (2026-04-29)
+      // 사용자가 수동으로 새로고침 버튼을 눌러야만 데이터 업데이트됨
+      // setupRealtimeSync();
 
       // 워크스페이스 소속 시 오너 UID로 전환
       if (uid) {
