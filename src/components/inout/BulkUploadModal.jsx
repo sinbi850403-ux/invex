@@ -4,6 +4,7 @@ import { downloadExcelSheets, readExcelFile } from '../../excel.js';
 import { addTransactionsBulk } from '../../store.js';
 import { buildColMap, parseExcelRows } from '../../domain/inoutExcelParser.js';
 import { fmtNum as fmt, fmtWon as W } from '../../utils/formatters.js';
+import * as db from '../../db.js';
 
 const todayStr = () => new Date().toISOString().slice(0, 10);
 
@@ -72,28 +73,65 @@ export function BulkUploadModal({ items, modeDefault, onClose, onSuccess }) {
     if (file) processFile(file);
   };
 
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
     if (!previewRows) return;
-    addTransactionsBulk(previewRows.map(r => {
-      const qty = parseFloat(r.quantity) || 0;
-      const unitPrice = parseFloat(r.unitPrice) || 0;
-      const sellingPrice = parseFloat(r.sellingPrice) || 0;
-      const supplyValue = Math.round(unitPrice * qty);
-      const vat = Math.ceil(supplyValue * 0.1);
-      return {
-        type: r.type, vendor: r.vendor, itemName: r.itemName, itemCode: r.itemCode,
-        quantity: qty, unitPrice, sellingPrice,
-        supplyValue, vat, totalAmount: supplyValue + vat,
-        actualSellingPrice: sellingPrice,
-        date: r.date, warehouse: r.warehouse || '본사 창고', note: r.note,
-        spec: r.spec, unit: r.unit, color: r.color, category: r.category,
-      };
-    }));
-    const inCount = previewRows.filter(r => r.type === 'in').length;
-    const outCount = previewRows.filter(r => r.type === 'out').length;
-    showToast(`일괄 등록 완료: 총 ${previewRows.length}건 (입고 ${inCount}, 출고 ${outCount})`, 'success');
-    onSuccess();
-    onClose();
+    setLoading(true);
+    try {
+      // 1. 없는 거래처 자동 생성
+      const vendorNames = new Set(previewRows.map(r => r.vendor).filter(Boolean));
+      const vendors = await db.vendors.list({ limit: 999999 });
+      const vendorMap = new Map(vendors.map(v => [v.name, v.id]));
+
+      for (const vname of vendorNames) {
+        if (!vendorMap.has(vname)) {
+          const newVendor = await db.vendors.create({ name: vname });
+          vendorMap.set(vname, newVendor.id);
+        }
+      }
+
+      // 2. 없는 상품 자동 생성
+      const itemNames = new Set(previewRows.map(r => r.itemName).filter(Boolean));
+      const itemMap = new Map(items.map(it => [it.itemName, it.id]));
+
+      for (const iname of itemNames) {
+        if (!itemMap.has(iname)) {
+          const newItem = await db.items.create({
+            itemName: iname,
+            category: '',
+            unit: 'EA',
+            warehouseName: '본사 창고',
+          });
+          itemMap.set(iname, newItem.id);
+        }
+      }
+
+      // 3. 데이터 저장
+      addTransactionsBulk(previewRows.map(r => {
+        const qty = parseFloat(r.quantity) || 0;
+        const unitPrice = parseFloat(r.unitPrice) || 0;
+        const sellingPrice = parseFloat(r.sellingPrice) || 0;
+        const supplyValue = Math.round(unitPrice * qty);
+        const vat = Math.ceil(supplyValue * 0.1);
+        return {
+          type: r.type, vendor: r.vendor, itemName: r.itemName, itemCode: r.itemCode,
+          quantity: qty, unitPrice, sellingPrice,
+          supplyValue, vat, totalAmount: supplyValue + vat,
+          actualSellingPrice: sellingPrice,
+          date: r.date, warehouse: r.warehouse || '본사 창고', note: r.note,
+          spec: r.spec, unit: r.unit, color: r.color, category: r.category,
+        };
+      }));
+      const inCount = previewRows.filter(r => r.type === 'in').length;
+      const outCount = previewRows.filter(r => r.type === 'out').length;
+      showToast(`일괄 등록 완료: 총 ${previewRows.length}건 (입고 ${inCount}, 출고 ${outCount})`, 'success');
+      onSuccess();
+      onClose();
+    } catch (err) {
+      showToast(`등록 중 오류: ${err.message}`, 'error');
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
