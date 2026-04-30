@@ -79,13 +79,21 @@ export function BulkUploadModal({ items, modeDefault, onClose, onSuccess }) {
     try {
       // 1. 없는 거래처 자동 생성
       const vendorNames = new Set(previewRows.map(r => r.vendor).filter(Boolean));
-      const vendors = await db.vendors.list({ limit: 999999 });
-      const vendorMap = new Map(vendors.map(v => [v.name, v.id]));
+      const vendorMap = new Map();
+      try {
+        const vendors = await db.vendors.list({ limit: 999999 });
+        vendors.forEach(v => vendorMap.set(v.name, v.id));
+      } catch (err) {
+        console.warn('[BulkUploadModal] vendor list failed, continuing upload:', err);
+      }
 
       for (const vname of vendorNames) {
-        if (!vendorMap.has(vname)) {
+        if (vendorMap.has(vname)) continue;
+        try {
           const newVendor = await db.vendors.create({ name: vname });
-          vendorMap.set(vname, newVendor.id);
+          if (newVendor?.id) vendorMap.set(vname, newVendor.id);
+        } catch (err) {
+          console.warn(`[BulkUploadModal] vendor create failed (${vname}), continuing upload:`, err);
         }
       }
 
