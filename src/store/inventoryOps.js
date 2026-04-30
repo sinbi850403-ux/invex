@@ -173,6 +173,14 @@ export function addTransactionsBulk(txList) {
   if (!txList || txList.length === 0) return [];
   const newTxs = [];
 
+  // 인덱싱: O(1) 조회를 위해 itemName과 itemCode로 사전 구성
+  const itemByName = new Map();
+  const itemByCode = new Map();
+  for (const item of stateHolder.current.mappedData) {
+    if (item.itemName) itemByName.set(item.itemName, item);
+    if (item.itemCode) itemByCode.set(item.itemCode, item);
+  }
+
   for (const tx of txList) {
     const clientId = (typeof crypto !== 'undefined' && crypto.randomUUID)
       ? crypto.randomUUID()
@@ -198,10 +206,7 @@ export function addTransactionsBulk(txList) {
     newTxs.push(newTx);
 
     // 재고 수량 반영
-    const item = stateHolder.current.mappedData.find(d =>
-      String(d.itemName || '').trim() === String(tx.itemName || '').trim() ||
-      (d.itemCode && tx.itemCode && String(d.itemCode).trim() === String(tx.itemCode).trim())
-    );
+    const item = itemByName.get(tx.itemName) || itemByCode.get(tx.itemCode);
     if (item) {
       const qty = toNum(tx.quantity);
       const currentQty = toNum(item.quantity);
@@ -229,13 +234,26 @@ export function addTransactionsBulk(txList) {
       const price = toNum(tx.unitPrice);
       const supplyValue = qty * price;
       const vat = Math.floor(supplyValue * 0.1);
-      stateHolder.current.mappedData = [
-        { itemName: tx.itemName, itemCode: tx.itemCode || '', category: tx.category || '미분류',
-          spec: tx.spec || '', quantity: qty, unit: tx.unit || 'EA', unitPrice: price,
-          salePrice: 0, supplyValue, vat, totalPrice: supplyValue + vat,
-          warehouse: tx.warehouse || '', note: '입출고 등록에 의한 자동 생성', safetyStock: 0 },
-        ...stateHolder.current.mappedData,
-      ];
+      const newItem = {
+        itemName: tx.itemName,
+        itemCode: tx.itemCode || '',
+        category: tx.category || '미분류',
+        spec: tx.spec || '',
+        quantity: qty,
+        unit: tx.unit || 'EA',
+        unitPrice: price,
+        salePrice: 0,
+        supplyValue,
+        vat,
+        totalPrice: supplyValue + vat,
+        warehouse: tx.warehouse || '',
+        note: '입출고 등록에 의한 자동 생성',
+        safetyStock: 0
+      };
+      stateHolder.current.mappedData = [newItem, ...stateHolder.current.mappedData];
+      // 새 품목을 인덱스에 추가해서 같은 배치 내 다음 거래도 찾을 수 있도록
+      if (newItem.itemName) itemByName.set(newItem.itemName, newItem);
+      if (newItem.itemCode) itemByCode.set(newItem.itemCode, newItem);
     }
   }
 

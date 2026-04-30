@@ -60,6 +60,14 @@ export function parseExcelRows(sheetData, colMap, modeDefault, items) {
   const todayStr = () => new Date().toISOString().slice(0, 10);
   const rows = [];
 
+  // 인덱싱: O(1) 조회를 위해 itemName과 itemCode로 사전 구성
+  const itemByName = new Map();
+  const itemByCode = new Map();
+  for (const item of items) {
+    if (item.itemName) itemByName.set(item.itemName, item);
+    if (item.itemCode) itemByCode.set(item.itemCode, item);
+  }
+
   for (let i = 1; i < sheetData.length; i++) {
     const row = sheetData[i];
     if (!row || !row.length) continue;
@@ -68,10 +76,7 @@ export function parseExcelRows(sheetData, colMap, modeDefault, items) {
     const rawItemCode = colMap.itemCode >= 0 ? String(row[colMap.itemCode] ?? '').trim() : '';
     const quantity = parseBulkNumber(row[colMap.quantity]);
 
-    const matchedItem = items.find(it =>
-      (itemName && it.itemName === itemName) ||
-      (rawItemCode && it.itemCode && it.itemCode === rawItemCode)
-    );
+    const matchedItem = itemByName.get(itemName) || itemByCode.get(rawItemCode);
     if (!itemName && matchedItem) itemName = matchedItem.itemName;
     if (!itemName || quantity <= 0) continue;
 
