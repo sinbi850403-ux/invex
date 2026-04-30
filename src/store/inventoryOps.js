@@ -62,9 +62,11 @@ export function setInventorySyncCallback(fn) { _syncCallback = fn; }
  */
 export function addTransaction(tx) {
   //  클라이언트 UUID 사용 → Supabase와 동일 ID 공유 → 삭제/upsert 정확히 동작
-  const clientId = (typeof crypto !== 'undefined' && crypto.randomUUID)
-    ? crypto.randomUUID()
-    : `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+  const clientId = tx?.id || (
+    (typeof crypto !== 'undefined' && crypto.randomUUID)
+      ? crypto.randomUUID()
+      : `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
+  );
 
   // 계산 필드 보정 (미제공 시 계산)
   const qty = toNum(tx.quantity);
@@ -174,9 +176,11 @@ export function addTransactionsBulk(txList) {
   const newTxs = [];
 
   for (const tx of txList) {
-    const clientId = (typeof crypto !== 'undefined' && crypto.randomUUID)
-      ? crypto.randomUUID()
-      : `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+    const clientId = tx?.id || (
+      (typeof crypto !== 'undefined' && crypto.randomUUID)
+        ? crypto.randomUUID()
+        : `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
+    );
 
     // 계산 필드 보정 (미제공 시 계산)
     const qty = toNum(tx.quantity);

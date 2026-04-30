@@ -1,7 +1,7 @@
-/**
- * supabaseSync.js - Supabase 클라우드 동기화 레이어 (디바운스)
+﻿/**
+ * supabaseSync.js - Supabase ?대씪?곕뱶 ?숆린???덉씠??(?붾컮?댁뒪)
  *
- * 왜 디바운스? → setState가 연속 호출될 때 매번 API 쏘면 과부하
+ * ???붾컮?댁뒪? ??setState媛 ?곗냽 ?몄텧????留ㅻ쾲 API ?섎㈃ 怨쇰???
  */
 
 import { stateHolder } from './stateRef.js';
@@ -11,9 +11,9 @@ import { storeItemToDb } from '../db.js';
 import { managedQuery, invalidateCache } from '../traffic-manager.js';
 import { isSupabaseConfigured, supabase } from '../supabase-client.js';
 
-// === Supabase 동기화 (디바운스) ===
+// === Supabase ?숆린??(?붾컮?댁뒪) ===
 let _supabaseSyncTimer = null;
-// 어떤 데이터가 변경됐는지 추적
+// ?대뼡 ?곗씠?곌? 蹂寃쎈릱?붿? 異붿쟻
 let _dirtyKeys = new Set();
 let _waitingAuthResume = false;
 let _authResumeSubscription = null;
@@ -31,7 +31,7 @@ export function getErrorMessage(error) {
 export function isAuthLikeSyncError(error) {
   const message = getErrorMessage(error).toLowerCase();
   return (
-    message.includes('로그인이 필요') ||
+    message.includes('濡쒓렇?몄씠 ?꾩슂') ||
     message.includes('login required') ||
     message.includes('jwt') ||
     message.includes('401') ||
@@ -57,11 +57,11 @@ export function waitForAuthThenSync() {
 }
 
 /**
- * 변경된 데이터만 Supabase에 동기화
- * 왜 전체가 아닌 부분 동기화? → 품목 10,000개를 매번 보내면 느림
+ * 蹂寃쎈맂 ?곗씠?곕쭔 Supabase???숆린??
+ * ???꾩껜媛 ?꾨땶 遺遺??숆린?? ???덈ぉ 10,000媛쒕? 留ㅻ쾲 蹂대궡硫??먮┝
  */
-let _lastLocalSyncTime = 0; // 내가 마지막으로 Supabase에 쓴 시각 (내 변경이 Realtime으로 돌아오면 무시)
-let _isSyncing = false;    // 현재 sync 진행 중 → Realtime reload 억제
+let _lastLocalSyncTime = 0; // ?닿? 留덉?留됱쑝濡?Supabase?????쒓컖 (??蹂寃쎌씠 Realtime?쇰줈 ?뚯븘?ㅻ㈃ 臾댁떆)
+let _isSyncing = false;    // ?꾩옱 sync 吏꾪뻾 以???Realtime reload ?듭젣
 
 export function getLastLocalSyncTime() {
   return _lastLocalSyncTime;
@@ -73,8 +73,8 @@ export function isSyncing() {
 
 async function syncToSupabase() {
   if (!isSupabaseConfigured || _dirtyKeys.size === 0) return;
-  // sync 시작 시점에 타임스탬프 설정 — Realtime 이벤트 억제 창을 즉시 활성화
-  // (기존: 완료 후 설정 → 완료 전 Realtime이 restoreState를 발동시켜 재고수량이 0으로 초기화되는 버그)
+  // sync ?쒖옉 ?쒖젏????꾩뒪?ы봽 ?ㅼ젙 ??Realtime ?대깽???듭젣 李쎌쓣 利됱떆 ?쒖꽦??
+  // (湲곗〈: ?꾨즺 ???ㅼ젙 ???꾨즺 ??Realtime??restoreState瑜?諛쒕룞?쒖폒 ?ш퀬?섎웾??0?쇰줈 珥덇린?붾릺??踰꾧렇)
   _lastLocalSyncTime = Date.now();
   _isSyncing = true;
   const { data: { session } } = await supabase.auth.getSession();
@@ -86,21 +86,21 @@ async function syncToSupabase() {
   const keysToSync = new Set(_dirtyKeys);
   _dirtyKeys.clear();
 
-  // 실패한 키를 추적해 재시도 보장
+  // ?ㅽ뙣???ㅻ? 異붿쟻???ъ떆??蹂댁옣
   const failedKeys = new Set();
   let authBlocked = false;
 
   try {
     const promises = [];
 
-    // 품목 데이터 동기화
+    // ?덈ぉ ?곗씠???숆린??
     if (keysToSync.has('mappedData')) {
       const items = (stateHolder.current.mappedData || []).map(item => storeItemToDb(item));
       promises.push(
         managedQuery(() => db.items.bulkUpsert(items))
           .then((savedItems) => {
-            //  Supabase가 반환한 UUID를 state.mappedData._id에 반영
-            // → 같은 세션 내 deleteItem이 정확한 UUID로 Supabase 삭제 가능
+            //  Supabase媛 諛섑솚??UUID瑜?state.mappedData._id??諛섏쁺
+            // ??媛숈? ?몄뀡 ??deleteItem???뺥솗??UUID濡?Supabase ??젣 媛??
             if (Array.isArray(savedItems) && savedItems.length > 0) {
               savedItems.forEach(saved => {
                 const storeItem = stateHolder.current.mappedData.find(m =>
@@ -113,45 +113,68 @@ async function syncToSupabase() {
             }
           })
           .catch(err => {
-            console.warn('[Sync] 품목 동기화 실패:', getErrorMessage(err));
+            console.warn('[Sync] ?덈ぉ ?숆린???ㅽ뙣:', getErrorMessage(err));
             if (isAuthLikeSyncError(err)) authBlocked = true;
             failedKeys.add('mappedData');
           })
       );
     }
 
-    // 입출고 동기화 — 새로 추가된 건만
+    // ?낆텧怨??숆린?????덈줈 異붽???嫄대쭔
     if (keysToSync.has('transactions')) {
-      // Supabase에서 items와 warehouses 직접 로드 (stateHolder 의존 제거)
+      const syncUserId = session.user.id;
+      // Supabase?먯꽌 items? warehouses 吏곸젒 濡쒕뱶 (stateHolder ?섏〈 ?쒓굅)
       const { data: dbItems = [] } = await supabase.from('items')
         .select('id, item_name')
         .limit(1000)
         .catch(() => ({ data: [] }));
 
-      const { data: dbWarehouses = [] } = await supabase.from('warehouses')
+      let { data: dbWarehouses = [] } = await supabase.from('warehouses')
         .select('id, name')
         .catch(() => ({ data: [] }));
 
-      // warehouse 문자열 → warehouse_id UUID 변환 (기본값: 본사 창고)
-      const getWarehouseId = (warehouseName) => {
-        if (!warehouseName) {
-          return '80c5ae39-c6fb-4dbc-a18f-bca85ecf8930'; // 본사 창고 ID
+      const unsyncedTxs = (stateHolder.current.transactions || []).filter(tx => !tx._synced);
+      const missingWarehouseNames = [...new Set(
+        unsyncedTxs
+          .map(tx => String(tx?.warehouse || '').trim())
+          .filter(Boolean)
+          .filter(name => !dbWarehouses.some(w => w.name === name))
+      )];
+      if (missingWarehouseNames.length > 0) {
+        const rows = missingWarehouseNames.map(name => ({ user_id: syncUserId, name }));
+        const { error: whError } = await supabase
+          .from('warehouses')
+          .upsert(rows, { onConflict: 'user_id,name' });
+        if (whError) {
+          console.warn('[Sync] warehouse upsert failed:', getErrorMessage(whError));
+        } else {
+          const { data: refreshedWarehouses = [] } = await supabase.from('warehouses')
+            .select('id, name')
+            .catch(() => ({ data: [] }));
+          dbWarehouses = refreshedWarehouses;
         }
-        const warehouse = dbWarehouses.find(w => w.name === warehouseName);
-        return warehouse ? warehouse.id : '80c5ae39-c6fb-4dbc-a18f-bca85ecf8930';
+      }
+
+      // warehouse 臾몄옄????warehouse_id UUID 蹂??
+      const getWarehouseId = (warehouseName) => {
+        const name = String(warehouseName || '').trim();
+        if (!name) {
+          return dbWarehouses.find(w => w.name === '본사 창고')?.id || dbWarehouses[0]?.id || null;
+        }
+        const warehouse = dbWarehouses.find(w => w.name === name);
+        return warehouse ? warehouse.id : null;
       };
 
-      // item_name 문자열 → item_id UUID 변환
+      // item_name 臾몄옄????item_id UUID 蹂??
       const getItemId = (itemName) => {
         if (!itemName) return null;
         const item = dbItems.find(m => m.item_name === itemName);
         return item ? item.id : null;
       };
 
-      const newTxs = (stateHolder.current.transactions || [])
-        .filter(tx => !tx._synced)
+      const newTxs = unsyncedTxs
         .map(tx => ({
-          id: tx.id,            //  클라이언트 UUID → Supabase와 동일 ID 공유 (upsert 멱등성 보장)
+          id: tx.id,            //  ?대씪?댁뼵??UUID ??Supabase? ?숈씪 ID 怨듭쑀 (upsert 硫깅벑??蹂댁옣)
           type: tx.type,
           item_id: getItemId(tx.itemName),
           item_name: tx.itemName,
@@ -168,7 +191,9 @@ async function syncToSupabase() {
           category: tx.category || null,
           color: tx.color || null,
           date: tx.date,
+          txn_date: /^\d{4}-\d{2}-\d{2}$/.test(String(tx.date || '')) ? tx.date : null,
           vendor: tx.vendor,
+          warehouse: tx.warehouse || null,
           warehouse_id: getWarehouseId(tx.warehouse),
           note: tx.note,
         }));
@@ -180,7 +205,7 @@ async function syncToSupabase() {
               stateHolder.current.transactions.forEach(tx => { tx._synced = true; });
             })
             .catch(err => {
-              console.warn('[Sync] 입출고 동기화 실패:', getErrorMessage(err));
+              console.warn('[Sync] ?낆텧怨??숆린???ㅽ뙣:', getErrorMessage(err));
               if (isAuthLikeSyncError(err)) authBlocked = true;
               failedKeys.add('transactions');
             })
@@ -188,8 +213,8 @@ async function syncToSupabase() {
       }
     }
 
-    // 거래처 동기화 — upsert(onConflict: user_id,name)로 수정 내용도 반영
-    //  _id(UUID)를 id로 포함: 이름 변경 시 같은 row를 업데이트 (중복 생성 방지)
+    // 嫄곕옒泥??숆린????upsert(onConflict: user_id,name)濡??섏젙 ?댁슜??諛섏쁺
+    //  _id(UUID)瑜?id濡??ы븿: ?대쫫 蹂寃???媛숈? row瑜??낅뜲?댄듃 (以묐났 ?앹꽦 諛⑹?)
     if (keysToSync.has('vendorMaster')) {
       const vendors = (stateHolder.current.vendorMaster || []).map(v => {
         const payload = {
@@ -203,18 +228,18 @@ async function syncToSupabase() {
           address: v.address,
           memo: v.memo,
         };
-        if (v._id) payload.id = v._id; // UUID 있으면 포함 → id conflict로 정확한 row 업데이트
+        if (v._id) payload.id = v._id; // UUID ?덉쑝硫??ы븿 ??id conflict濡??뺥솗??row ?낅뜲?댄듃
         return payload;
       });
       promises.push(
         managedQuery(() => db.vendors.upsertBulk(vendors)).catch(err => {
-          console.warn('[Sync] 거래처 동기화 실패:', getErrorMessage(err));
+          console.warn('[Sync] 嫄곕옒泥??숆린???ㅽ뙣:', getErrorMessage(err));
           failedKeys.add('vendorMaster');
         })
       );
 
-      //  삭제된 거래처 Supabase에서도 제거
-      // _deletedVendors: setState로 전달된 삭제 목록 (store에서 추적)
+      //  ??젣??嫄곕옒泥?Supabase?먯꽌???쒓굅
+      // _deletedVendors: setState濡??꾨떖????젣 紐⑸줉 (store?먯꽌 異붿쟻)
       const deletedVendors = stateHolder.current._deletedVendors || [];
       if (deletedVendors.length > 0) {
         for (const v of deletedVendors) {
@@ -222,18 +247,18 @@ async function syncToSupabase() {
             ? managedQuery(() => db.vendors.remove(v._id))
             : managedQuery(() => db.vendors.removeByName(v.name));
           promises.push(
-            del.catch(err => console.warn('[Sync] 거래처 삭제 동기화 실패:', getErrorMessage(err)))
+            del.catch(err => console.warn('[Sync] 嫄곕옒泥???젣 ?숆린???ㅽ뙣:', getErrorMessage(err)))
           );
         }
-        // 처리 후 초기화
+        // 泥섎━ ??珥덇린??
         stateHolder.current._deletedVendors = [];
       }
     }
 
-    // 매출/매입 전표 동기화
+    // 留ㅼ텧/留ㅼ엯 ?꾪몴 ?숆린??
     if (keysToSync.has('accountEntries')) {
       const entries = (stateHolder.current.accountEntries || [])
-        .filter(e => e.id && String(e.id).includes('-')) // UUID 형식만 sync (Date.now_ 형식은 제외)
+        .filter(e => e.id && String(e.id).includes('-')) // UUID ?뺤떇留?sync (Date.now_ ?뺤떇? ?쒖쇅)
         .map(e => ({
           id: e.id,
           type: e.type,
@@ -252,17 +277,17 @@ async function syncToSupabase() {
       if (entries.length > 0) {
         promises.push(
           managedQuery(() => db.accountEntries.bulkUpsert(entries)).catch(err => {
-            console.warn('[Sync] 매출/매입 전표 동기화 실패:', getErrorMessage(err));
+            console.warn('[Sync] 留ㅼ텧/留ㅼ엯 ?꾪몴 ?숆린???ㅽ뙣:', getErrorMessage(err));
             failedKeys.add('accountEntries');
           })
         );
       }
     }
 
-    // 발주서 동기화
+    // 諛쒖＜???숆린??
     if (keysToSync.has('purchaseOrders')) {
       const orders = (stateHolder.current.purchaseOrders || [])
-        .filter(o => o.id && String(o.id).includes('-')) // UUID 형식만 sync
+        .filter(o => o.id && String(o.id).includes('-')) // UUID ?뺤떇留?sync
         .map(o => ({
           id: o.id,
           order_no: o.orderNo,
@@ -282,17 +307,17 @@ async function syncToSupabase() {
       if (orders.length > 0) {
         promises.push(
           managedQuery(() => db.purchaseOrders.bulkUpsert(orders)).catch(err => {
-            console.warn('[Sync] 발주서 동기화 실패:', getErrorMessage(err));
+            console.warn('[Sync] 諛쒖＜???숆린???ㅽ뙣:', getErrorMessage(err));
             failedKeys.add('purchaseOrders');
           })
         );
       }
     }
 
-    // 창고 이동 동기화
+    // 李쎄퀬 ?대룞 ?숆린??
     if (keysToSync.has('transfers')) {
       const rows = (stateHolder.current.transfers || [])
-        .filter(t => t.id && String(t.id).includes('-')) // UUID 형식만 sync
+        .filter(t => t.id && String(t.id).includes('-')) // UUID ?뺤떇留?sync
         .map(t => ({
           id: t.id,
           date: t.date,
@@ -306,33 +331,33 @@ async function syncToSupabase() {
       if (rows.length > 0) {
         promises.push(
           managedQuery(() => db.transfers.bulkUpsert(rows)).catch(err => {
-            console.warn('[Sync] 창고 이동 동기화 실패:', getErrorMessage(err));
+            console.warn('[Sync] 李쎄퀬 ?대룞 ?숆린???ㅽ뙣:', getErrorMessage(err));
             failedKeys.add('transfers');
           })
         );
       }
     }
 
-    // 설정값 동기화
+    // ?ㅼ젙媛??숆린??
     const settingKeys = [
       'safetyStock', 'beginnerMode', 'dashboardMode', 'visibleColumns',
       'inventoryViewPrefs', 'inoutViewPrefs', 'tableSortPrefs',
       'costMethod', 'currency',
-      'notificationReadMap', //  알림 읽음 상태 — 새로고침 후에도 유지
-      'ledgerOpeningOverrides', //  수불부 기초재고 수동 입력값 — 다기기 동기화
+      'notificationReadMap', //  ?뚮┝ ?쎌쓬 ?곹깭 ???덈줈怨좎묠 ?꾩뿉???좎?
+      'ledgerOpeningOverrides', //  ?섎텋遺 湲곗큹?ш퀬 ?섎룞 ?낅젰媛????ㅺ린湲??숆린??
     ];
     for (const key of settingKeys) {
       if (keysToSync.has(key) && stateHolder.current[key] !== undefined) {
         promises.push(
           managedQuery(() => db.settings.set(key, stateHolder.current[key]))
-            .catch(err => { console.warn(`[Sync] 설정 ${key} 동기화 실패:`, err?.message ?? err); failedKeys.add(key); })
+            .catch(err => { console.warn(`[Sync] ?ㅼ젙 ${key} ?숆린???ㅽ뙣:`, err?.message ?? err); failedKeys.add(key); })
         );
       }
     }
 
     await Promise.allSettled(promises);
 
-    // 실패한 키는 다시 dirty로 등록해 재시도 보장
+    // ?ㅽ뙣???ㅻ뒗 ?ㅼ떆 dirty濡??깅줉???ъ떆??蹂댁옣
     if (failedKeys.size > 0) {
       failedKeys.forEach(k => _dirtyKeys.add(k));
       if (authBlocked) {
@@ -353,7 +378,7 @@ async function syncToSupabase() {
     }
     _lastLocalSyncTime = Date.now();
   } catch (err) {
-    // 전체 실패 시 모든 키 복원
+    // ?꾩껜 ?ㅽ뙣 ??紐⑤뱺 ??蹂듭썝
     keysToSync.forEach(k => _dirtyKeys.add(k));
     if (isAuthLikeSyncError(err)) {
       _syncRetryCount = 0;
@@ -372,8 +397,8 @@ async function syncToSupabase() {
 }
 
 /**
- * 디바운스된 Supabase 동기화 트리거 (500ms)
- * setState가 0.1초 간격으로 연속 호출될 수 있어서 묶어서 처리
+ * ?붾컮?댁뒪??Supabase ?숆린???몃━嫄?(500ms)
+ * setState媛 0.1珥?媛꾧꺽?쇰줈 ?곗냽 ?몄텧?????덉뼱??臾띠뼱??泥섎━
  */
 export function scheduleSyncToSupabase(changedKeys) {
   changedKeys.forEach(k => _dirtyKeys.add(k));
@@ -385,7 +410,7 @@ export function scheduleSyncToSupabase(changedKeys) {
 }
 
 /**
- * 로그아웃 시 auth 재시도 구독 해제 + dirty keys 초기화
+ * 濡쒓렇?꾩썐 ??auth ?ъ떆??援щ룆 ?댁젣 + dirty keys 珥덇린??
  */
 export function cleanupDirtyKeys() {
   if (_authResumeSubscription) {
@@ -396,7 +421,7 @@ export function cleanupDirtyKeys() {
   }
 }
 
-// 페이지 언로드 직전 미동기화 데이터 플러시
+// ?섏씠吏 ?몃줈??吏곸쟾 誘몃룞湲고솕 ?곗씠???뚮윭??
 if (typeof window !== 'undefined') {
   window.addEventListener('beforeunload', () => {
     if (_dirtyKeys.size > 0) syncToSupabase();

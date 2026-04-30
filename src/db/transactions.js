@@ -1,12 +1,26 @@
-/**
- * db/transactions.js — 입출고 (Transactions) CRUD
+﻿/**
+ * db/transactions.js - 입출고(Transactions) CRUD
  */
 
 import { supabase } from '../supabase-client.js';
 import { getUserId, handleError } from './core.js';
 
+function toDateOnly(value) {
+  if (!value) return null;
+  const s = String(value).trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  const d = new Date(s);
+  if (Number.isNaN(d.getTime())) return null;
+  return d.toISOString().slice(0, 10);
+}
+
+function pick(tx, camel, snake) {
+  if (tx?.[camel] !== undefined) return tx[camel];
+  return tx?.[snake];
+}
+
 // ============================================================
-// 입출고 (Transactions) CRUD
+// 입출고(Transactions) CRUD
 // ============================================================
 export const transactions = {
   async list(options = {}) {
@@ -18,11 +32,13 @@ export const transactions = {
 
     if (options.type) query = query.eq('type', options.type);
     if (options.itemName) query = query.eq('item_name', options.itemName);
-    if (options.dateFrom) query = query.gte('date', options.dateFrom);
-    if (options.dateTo) query = query.lte('date', options.dateTo);
+    if (options.dateFrom) query = query.gte('txn_date', options.dateFrom);
+    if (options.dateTo) query = query.lte('txn_date', options.dateTo);
     if (options.vendor) query = query.eq('vendor', options.vendor);
 
-    query = query.order('date', { ascending: false });
+    query = query
+      .order('txn_date', { ascending: false, nullsFirst: false })
+      .order('created_at', { ascending: false });
     if (options.limit) query = query.limit(options.limit);
 
     const { data, error } = await query;
@@ -43,30 +59,36 @@ export const transactions = {
 
   async bulkCreate(txArray) {
     const userId = await getUserId();
-    const rows = txArray.map(tx => ({
-      id: tx.id,
-      user_id: userId,
-      type: tx.type,
-      item_name: tx.itemName,
-      item_code: tx.itemCode,
-      quantity: tx.quantity,
-      unit_price: tx.unitPrice,
-      supply_value: tx.supplyValue,
-      vat: tx.vat,
-      total_amount: tx.totalAmount,
-      selling_price: tx.sellingPrice,
-      actual_selling_price: tx.actualSellingPrice,
-      spec: tx.spec,
-      unit: tx.unit,
-      category: tx.category,
-      color: tx.color,
-      date: tx.date,
-      vendor: tx.vendor,
-      warehouse: tx.warehouse,
-      note: tx.note,
-    }));
-    //  insert → upsert(onConflict: 'id')
-    //   클라이언트 UUID가 id로 전달되므로 재시도 시 중복 생성 없음 (멱등)
+    const rows = txArray.map((tx) => {
+      const rawDate = pick(tx, 'date', 'date');
+      return {
+        id: pick(tx, 'id', 'id'),
+        user_id: userId,
+        type: pick(tx, 'type', 'type'),
+        item_id: pick(tx, 'itemId', 'item_id') || null,
+        item_name: pick(tx, 'itemName', 'item_name'),
+        item_code: pick(tx, 'itemCode', 'item_code'),
+        quantity: pick(tx, 'quantity', 'quantity') ?? 0,
+        unit_price: pick(tx, 'unitPrice', 'unit_price') ?? 0,
+        supply_value: pick(tx, 'supplyValue', 'supply_value') ?? 0,
+        vat: pick(tx, 'vat', 'vat') ?? 0,
+        total_amount: pick(tx, 'totalAmount', 'total_amount') ?? 0,
+        selling_price: pick(tx, 'sellingPrice', 'selling_price') ?? 0,
+        actual_selling_price: pick(tx, 'actualSellingPrice', 'actual_selling_price') ?? 0,
+        spec: pick(tx, 'spec', 'spec') || null,
+        unit: pick(tx, 'unit', 'unit') || null,
+        category: pick(tx, 'category', 'category') || null,
+        color: pick(tx, 'color', 'color') || null,
+        date: rawDate || null,
+        txn_date: pick(tx, 'txnDate', 'txn_date') || toDateOnly(rawDate),
+        vendor: pick(tx, 'vendor', 'vendor') || null,
+        vendor_id: pick(tx, 'vendorId', 'vendor_id') || null,
+        warehouse: pick(tx, 'warehouse', 'warehouse') || null,
+        warehouse_id: pick(tx, 'warehouseId', 'warehouse_id') || null,
+        note: pick(tx, 'note', 'note') || null,
+      };
+    });
+
     const { data, error } = await supabase
       .from('transactions')
       .upsert(rows, { onConflict: 'id' })
@@ -95,9 +117,6 @@ export const transactions = {
     handleError(error, '입출고 삭제');
   },
 
-  /**
-   * 해당 사용자의 입출고 기록 전체 삭제 (설정 페이지 초기화용)
-   */
   async deleteAll() {
     const userId = await getUserId();
     const { error } = await supabase
