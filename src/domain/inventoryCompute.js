@@ -29,13 +29,23 @@ export function computeData(rawData, transactions) {
     if (!txAgg[k].unit && tx.unit) txAgg[k].unit = String(tx.unit).trim();
     if (tx.type === 'in') {
       txAgg[k].inQty += qty;
-      txAgg[k].inAmt += Math.round((parseFloat(tx.unitPrice) || 0) * qty);
+      const inSupply = parseFloat(tx.supplyValue);
+      if (Number.isFinite(inSupply) && inSupply > 0) {
+        txAgg[k].inAmt += Math.round(inSupply);
+      } else {
+        txAgg[k].inAmt += Math.round((parseFloat(tx.unitPrice) || 0) * qty);
+      }
     } else {
       txAgg[k].outQty += qty;
-      const sp = parseFloat(tx.actualSellingPrice || tx.sellingPrice) || 0;
+      const sp = parseFloat(tx.actualSellingPrice || tx.sellingPrice || tx.salePrice) || 0;
       const cp = parseFloat(tx.unitPrice) || 0;
       txAgg[k].outAmt  += Math.round(sp * qty);
-      txAgg[k].costAmt += Math.round(cp * qty);
+      const outSupply = parseFloat(tx.supplyValue);
+      if (Number.isFinite(outSupply) && outSupply > 0) {
+        txAgg[k].costAmt += Math.round(outSupply);
+      } else {
+        txAgg[k].costAmt += Math.round(cp * qty);
+      }
     }
   });
 
@@ -61,13 +71,10 @@ export function computeData(rawData, transactions) {
     const storedVat  = parseFloat(item.vat) || 0;
     const storedSv   = parseFloat(item.supplyValue) || 0;
     const vatRate    = storedSv > 0 && storedVat / storedSv < 0.05 ? 0 : 0.1;
-    const supplyValue = inAmt > 0
-      ? inAmt
-      : inQty > 0 && unitPrice > 0
-        ? Math.round(inQty * unitPrice)
-        : qty > 0 && unitPrice > 0
-          ? Math.round(qty * unitPrice)
-          : 0;
+    const basisCost = weightedAvgCost > 0 ? weightedAvgCost : unitPrice;
+    const supplyValue = qty > 0 && basisCost > 0
+      ? Math.round(qty * basisCost)
+      : 0;
     const vat        = Math.ceil(supplyValue * vatRate);
     const totalPrice = supplyValue + vat;
 
