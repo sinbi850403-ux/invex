@@ -24,7 +24,7 @@ import * as db from './db.js';
 import { managedQuery } from './traffic-manager.js';
 import { DEFAULT_STATE } from './store/defaultState.js';
 import { stateHolder, dispatchUpdate } from './store/stateRef.js';
-import { saveToDB, loadFromDB, getUnsyncedTxsFromLS, clearUnsyncedTxsLS } from './store/indexedDb.js';
+import { saveToDB, loadFromDB, getUnsyncedTxsFromLS, clearUnsyncedTxsLS, clearDB } from './store/indexedDb.js';
 import { scheduleSyncToSupabase, cleanupDirtyKeys } from './store/supabaseSync.js';
 import { setInventorySyncCallback } from './store/inventoryOps.js';
 
@@ -134,12 +134,14 @@ export function setState(partial) {
 }
 
 /**
- * 상태 초기화
+ * 상태 초기화 — 메모리 + IndexedDB + localStorage 백업
  */
-export function resetState() {
+export async function resetState() {
   stateHolder.current = { ...DEFAULT_STATE };
   dispatchUpdate(['*']);
-  saveToDB();
+  clearUnsyncedTxsLS();  // localStorage 미동기화 거래 삭제
+  await clearDB();       // IndexedDB 완전 삭제
+  saveToDB();            // 초기 상태 저장
 }
 
 /**

@@ -103,3 +103,20 @@ export async function loadFromDB() {
     return null;
   }
 }
+
+export async function clearDB() {
+  try {
+    const idb = await openDB();
+    const tx = idb.transaction(STORE_NAME, 'readwrite');
+    const store = tx.objectStore(STORE_NAME);
+    store.clear();
+    await new Promise((resolve, reject) => {
+      tx.oncomplete = resolve;
+      tx.onerror = reject;
+    });
+    idb.close();
+    console.log('[Store] IndexedDB 초기화 완료');
+  } catch (e) {
+    console.warn('[Store] IndexedDB 초기화 실패:', e.message);
+  }
+}

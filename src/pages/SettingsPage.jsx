@@ -71,8 +71,10 @@ export default function SettingsPage() {
     if (!confirm('정말로 전체 초기화하시겠습니까? (최종 확인)')) return;
     setClearingAll(true);
     try {
-      if (isSupabaseConfigured) await clearAllUserData();
-      resetState();
+      if (isSupabaseConfigured) {
+        await clearAllUserData();
+      }
+      await resetState();  // await 추가: IndexedDB/localStorage 초기화 완료 대기
       setStore({ _onboardingDone: false });
       showToast('전체 데이터가 초기화되었습니다.', 'info');
       navigate('/home');
