@@ -6,6 +6,24 @@ const monthStr = () => {
   const n = new Date();
   return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}`;
 };
+const normCode = (v) => {
+  const raw = String(v ?? '').trim().replace(/\s+/g, '').toLowerCase();
+  if (!raw) return '';
+  const stripped = raw.replace(/^0+/, '');
+  return stripped || '0';
+};
+const normName = (v) =>
+  String(v ?? '')
+    .toLowerCase()
+    .replace(/\s+/g, '')
+    .replace(/[^\p{L}\p{N}]/gu, '');
+const makeKey = (itemName, itemCode) => {
+  const c = normCode(itemCode);
+  if (c) return `c:${c}`;
+  const n = normName(itemName);
+  if (n) return `n:${n}`;
+  return '';
+};
 
 export function useInoutFilters({ transactions, mappedData, mode }) {
   const isInMode = mode === 'in';
@@ -30,16 +48,33 @@ export function useInoutFilters({ transactions, mappedData, mode }) {
     }
   }, []);
 
-  const itemMap = useMemo(() => new Map(mappedData.map(it => [it.itemName, it])), [mappedData]);
+  const itemMap = useMemo(() => {
+    const map = new Map();
+    (mappedData || []).forEach((it) => {
+      const ck = makeKey('', it.itemCode);
+      const nk = makeKey(it.itemName, '');
+      if (ck && !map.has(ck)) map.set(ck, it);
+      if (nk && !map.has(nk)) map.set(nk, it);
+      if (it.itemName && !map.has(it.itemName)) map.set(it.itemName, it); // 기존 호환
+    });
+    return map;
+  }, [mappedData]);
+
+  const resolveItem = (tx) => itemMap.get(makeKey(tx.itemName, tx.itemCode)) || itemMap.get(makeKey(tx.itemName, '')) || {};
 
   const wacMap = useMemo(() => {
     const acc = {};
     transactions.forEach(tx => {
       if (tx.type !== 'in') return;
-      const k = tx.itemName; if (!k) return;
+      const k = makeKey(tx.itemName, tx.itemCode);
+      if (!k) return;
       if (!acc[k]) acc[k] = { amt: 0, qty: 0 };
       const qty = parseFloat(tx.quantity) || 0;
-      const price = parseFloat(tx.unitPrice) || 0;
+      if (qty <= 0) return;
+      const supply = parseFloat(tx.supplyValue) || 0;
+      let price = parseFloat(tx.unitPrice) || 0;
+      if (supply > 0) price = supply / qty;
+      if (!Number.isFinite(price) || price <= 0) return;
       acc[k].amt += price * qty;
       acc[k].qty += qty;
     });
@@ -49,6 +84,12 @@ export function useInoutFilters({ transactions, mappedData, mode }) {
     });
     return result;
   }, [transactions]);
+  const resolveWac = (tx, itemData) => {
+    const byKey = wacMap[makeKey(tx.itemName, tx.itemCode)];
+    if (byKey > 0) return byKey;
+    const fallback = parseFloat(tx.unitPrice || itemData.unitPrice) || 0;
+    return fallback > 0 ? fallback : 0;
+  };
 
   const inList = useMemo(() => transactions.filter(tx => tx.type === 'in'), [transactions]);
   const outList = useMemo(() => transactions.filter(tx => tx.type === 'out'), [transactions]);
@@ -121,8 +162,8 @@ export function useInoutFilters({ transactions, mappedData, mode }) {
   const sorted = useMemo(() => {
     const dir = sort.dir === 'asc' ? 1 : -1;
     return [...filtered].sort((a, b) => {
-      const aItem = itemMap.get(a.itemName) || {};
-      const bItem = itemMap.get(b.itemName) || {};
+      const aItem = resolveItem(a);
+      const bItem = resolveItem(b);
       let av, bv;
       if (sort.key === 'date') {
         av = new Date(a.date || a.createdAt || 0).getTime();
@@ -137,8 +178,8 @@ export function useInoutFilters({ transactions, mappedData, mode }) {
         av = parseFloat(a.sellingPrice || aItem.salePrice) || 0;
         bv = parseFloat(b.sellingPrice || bItem.salePrice) || 0;
       } else if (sort.key === 'supply') {
-        const aWac = wacMap[a.itemName] || (parseFloat(a.unitPrice || aItem.unitPrice) || 0);
-        const bWac = wacMap[b.itemName] || (parseFloat(b.unitPrice || bItem.unitPrice) || 0);
+        const aWac = resolveWac(a, aItem);
+        const bWac = resolveWac(b, bItem);
         av = aWac * (parseFloat(a.quantity) || 0);
         bv = bWac * (parseFloat(b.quantity) || 0);
       } else if (sort.key === 'outAmt') {
@@ -193,8 +234,8 @@ export function useInoutFilters({ transactions, mappedData, mode }) {
       } else if (sort.key === 'itemName') {
         av = (a.itemName || '').toLowerCase(); bv = (b.itemName || '').toLowerCase();
       } else if (sort.key === 'color') {
-        av = (a.color || itemMap.get(a.itemName)?.color || '').toLowerCase();
-        bv = (b.color || itemMap.get(b.itemName)?.color || '').toLowerCase();
+        av = (a.color || aItem.color || '').toLowerCase();
+        bv = (b.color || bItem.color || '').toLowerCase();
       } else if (sort.key === 'vendor') {
         av = (a.vendor || '').toLowerCase(); bv = (b.vendor || '').toLowerCase();
       } else if (sort.key === 'category') {
@@ -222,7 +263,7 @@ export function useInoutFilters({ transactions, mappedData, mode }) {
     let totQty = 0, totSupply = 0, totVat = 0, totTotal = 0;
     sorted.forEach(tx => {
       const q = parseFloat(tx.quantity) || 0;
-      const itd = itemMap.get(tx.itemName) || {};
+      const itd = resolveItem(tx);
       const cost = parseFloat(tx.unitPrice || itd.unitPrice) || 0;
       const sup = Math.round(cost * q);
       totQty += q; totSupply += sup;
@@ -237,10 +278,10 @@ export function useInoutFilters({ transactions, mappedData, mode }) {
     let totQty = 0, totOutAmt = 0, totVat = 0, totOutTotal = 0, totWacSupply = 0, totProfit = 0;
     sorted.forEach(tx => {
       const q = parseFloat(tx.quantity) || 0;
-      const itd = itemMap.get(tx.itemName) || {};
+      const itd = resolveItem(tx);
       const sp = parseFloat(tx.sellingPrice || itd.salePrice) || 0;
       const oa = Math.round(sp * q);
-      const wac = wacMap[tx.itemName] || (parseFloat(tx.unitPrice || itd.unitPrice) || 0);
+      const wac = resolveWac(tx, itd);
       const ws = Math.round(wac * q);
       const vat = Math.round(oa * 0.1);
       totQty += q; totOutAmt += oa;
@@ -288,7 +329,7 @@ export function useInoutFilters({ transactions, mappedData, mode }) {
     dateFilter, setDateFilter,
     monthFilter, setMonthFilter,
     quick, sort, setSort,
-    sorted, filtered, itemMap, wacMap,
+    sorted, filtered, itemMap, wacMap, resolveItem, resolveWac,
     vendorOptions, quickChips,
     handleQuickChange, handleReset, toggleSort,
     inTotals, outTotals,

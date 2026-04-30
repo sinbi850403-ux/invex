@@ -57,7 +57,7 @@ export function InoutPage({ mode = 'all' }) {
     dateFilter, setDateFilter,
     monthFilter, setMonthFilter,
     quick, sort, setSort,
-    sorted, itemMap, wacMap,
+    sorted, itemMap, wacMap, resolveItem, resolveWac,
     vendorOptions, quickChips,
     handleQuickChange, handleReset, toggleSort,
     inTotals, outTotals,
@@ -121,7 +121,7 @@ export function InoutPage({ mode = 'all' }) {
       const list = transactions.filter(tx => tx.type === 'in');
       if (!list.length) { showToast('입고 기록이 없습니다.', 'warning'); return; }
       data = list.map(tx => {
-        const it = iMap.get(tx.itemName) || {};
+        const it = resolveItem(tx);
         const qty = parseFloat(tx.quantity) || 0;
         const cost = parseFloat(tx.unitPrice) || 0;
         const supply = Math.round(cost * qty);
@@ -138,7 +138,7 @@ export function InoutPage({ mode = 'all' }) {
       const list = transactions.filter(tx => tx.type === 'out');
       if (!list.length) { showToast('출고 기록이 없습니다.', 'warning'); return; }
       data = list.map(tx => {
-        const it = iMap.get(tx.itemName) || {};
+        const it = resolveItem(tx);
         const qty = parseFloat(tx.quantity) || 0;
         const salePrice = parseFloat(tx.sellingPrice || it.sellingPrice) || 0;
         const outAmt = Math.round(salePrice * qty);
@@ -153,7 +153,7 @@ export function InoutPage({ mode = 'all' }) {
       fileName = '출고관리';
     } else {
       data = transactions.map(tx => {
-        const it = iMap.get(tx.itemName) || {};
+        const it = resolveItem(tx);
         const qty = parseFloat(tx.quantity) || 0;
         const cost = parseFloat(tx.unitPrice) || 0;
         const supply = Math.round(cost * qty);
@@ -448,14 +448,14 @@ export function InoutPage({ mode = 'all' }) {
                 {sorted.map((tx, i) => {
                   const rowNum = i + 1;
                   const qty = parseFloat(tx.quantity) || 0;
-                  const itemData = itemMap.get(tx.itemName) || {};
+                  const itemData = resolveItem(tx);
                   const unitPrice = parseFloat(tx.unitPrice || itemData.unitPrice) || 0;
                   const supply = Math.round(unitPrice * qty);
                   const vat = Math.ceil(supply * 0.1);
                   const totalPrice = supply + vat;
                   const salePrice = parseFloat(tx.sellingPrice || itemData.salePrice) || 0;
                   const outAmt = Math.round(salePrice * qty);
-                  const wac = wacMap[tx.itemName] || unitPrice;
+                  const wac = resolveWac(tx, itemData) || unitPrice;
                   const wacSupply = Math.round(wac * qty);
                   const profit = outAmt - wacSupply;
                   const category = tx.category || itemData.category || '';
