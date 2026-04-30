@@ -85,10 +85,17 @@ export function useInoutFilters({ transactions, mappedData, mode }) {
     return result;
   }, [transactions]);
   const resolveWac = (tx, itemData) => {
-    const byKey = wacMap[makeKey(tx.itemName, tx.itemCode)];
+    // 출고 이익 계산은 "행 단가(tx.unitPrice) > 품목 기본원가 > WAC" 우선순위로 사용.
+    // 과거 집계(WAC) 오염값이 즉시 반영되어 이익이 과대 음수로 튀는 현상 방지.
+    const rowCost = parseFloat(tx.unitPrice) || 0;
+    if (rowCost > 0) return rowCost;
+
+    const itemCost = parseFloat(itemData?.unitPrice) || 0;
+    if (itemCost > 0) return itemCost;
+
+    const byKey = wacMap[makeKey(tx.itemName, tx.itemCode)] || 0;
     if (byKey > 0) return byKey;
-    const fallback = parseFloat(tx.unitPrice || itemData.unitPrice) || 0;
-    return fallback > 0 ? fallback : 0;
+    return 0;
   };
 
   const inList = useMemo(() => transactions.filter(tx => tx.type === 'in'), [transactions]);
