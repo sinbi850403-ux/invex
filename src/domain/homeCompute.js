@@ -144,7 +144,12 @@ export function computeHomeDashboard({ items, transactions, safetyStock, categor
   const todayKey = toDateKey(today);
   const thirtyDayCutoff = toDateKey(addDays(today, -30));
 
-  const getItemQty = (itemId) => itemStocks.reduce((sum, s) => s.itemId === itemId ? sum + toNumber(s.quantity) : sum, 0);
+  const getItemQty = (item) => {
+    const id = item?._id || item?.id;
+    const stockQty = itemStocks.reduce((sum, s) => s.itemId === id ? sum + toNumber(s.quantity) : sum, 0);
+    if (stockQty > 0) return stockQty;
+    return toNumber(item?.quantity);
+  };
 
   const categoryOptions = [...new Set(items.map(i => i.category).filter(Boolean))].sort();
   const filteredItems = categoryFilter ? items.filter(item => item.category === categoryFilter) : items;
@@ -156,10 +161,10 @@ export function computeHomeDashboard({ items, transactions, safetyStock, categor
 
   const lowStockItems = filteredItems.filter(item => {
     const minimum = toNumber(safetyStock[item.itemName]);
-    return minimum > 0 && getItemQty(item._id || item.id) <= minimum;
+    return minimum > 0 && getItemQty(item) <= minimum;
   });
   const deadStockItems = filteredItems.filter(item => {
-    if (getItemQty(item._id || item.id) <= 0) return false;
+    if (getItemQty(item) <= 0) return false;
     return !filteredTx.some(tx =>
       tx.type === 'out' && tx.itemName === item.itemName && String(tx.date || '') >= thirtyDayCutoff
     );
@@ -185,7 +190,7 @@ export function computeHomeDashboard({ items, transactions, safetyStock, categor
   const categoryMap = new Map();
   filteredItems.forEach(item => {
     const cat = item.category || '미분류';
-    categoryMap.set(cat, (categoryMap.get(cat) || 0) + getItemQty(item._id || item.id));
+    categoryMap.set(cat, (categoryMap.get(cat) || 0) + getItemQty(item));
   });
   const categories = [...categoryMap.entries()].sort((a, b) => b[1] - a[1]);
 
@@ -208,7 +213,7 @@ export function computeHomeDashboard({ items, transactions, safetyStock, categor
 
   const losers = filteredItems
     .filter(item => {
-      if (getItemQty(item._id || item.id) <= 0) return false;
+      if (getItemQty(item) <= 0) return false;
       return !filteredTx.some(tx =>
         tx.type === 'out' && tx.itemName === item.itemName && String(tx.date || '') >= thirtyDayCutoff
       );
