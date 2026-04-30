@@ -71,89 +71,11 @@ export function InoutPage({ mode = 'all' }) {
 
   const [modal, setModal] = useState(null);
   const [selectedIds, setSelectedIds] = useState(new Set());
-  const [expandedGroups, setExpandedGroups] = useState(new Set());
   const tableRef = useRef(null);
 
   // ── 선택 ───────────────────────────────────────────────────────────────────
   const allOnPageSelected = sorted.length > 0 && sorted.every(tx => selectedIds.has(tx.id));
 
-  const groupedOutRows = useMemo(() => {
-    if (!isOutMode) return [];
-    const groups = new Map();
-    sorted.forEach((tx) => {
-      const itemData = resolveItem(tx);
-      const code = tx.itemCode || itemData.itemCode || '';
-      const name = tx.itemName || itemData.itemName || '-';
-      const key = String(code || name);
-      if (!groups.has(key)) {
-        groups.set(key, {
-          key,
-          code,
-          name,
-          rows: [],
-          qty: 0,
-          outAmt: 0,
-          profit: 0,
-        });
-      }
-      const group = groups.get(key);
-      const qty = parseFloat(tx.quantity) || 0;
-      const salePrice = normalizeCurrency(tx.sellingPrice || itemData.salePrice);
-      const outAmt = Math.round(salePrice * qty);
-      const wac = resolveWac(tx, itemData);
-      const cost = Math.round(wac * qty);
-      group.rows.push(tx);
-      group.qty += qty;
-      group.outAmt += outAmt;
-      group.profit += (outAmt - cost);
-    });
-    return Array.from(groups.values());
-  }, [isOutMode, sorted, resolveItem, resolveWac]);
-
-  const groupedInRows = useMemo(() => {
-    if (!isInMode) return [];
-    const groups = new Map();
-    sorted.forEach((tx) => {
-      const itemData = resolveItem(tx);
-      const code = tx.itemCode || itemData.itemCode || '';
-      const name = tx.itemName || itemData.itemName || '-';
-      const key = String(code || name);
-      if (!groups.has(key)) {
-        groups.set(key, {
-          key,
-          code,
-          name,
-          rows: [],
-          qty: 0,
-          supply: 0,
-        });
-      }
-      const group = groups.get(key);
-      const qty = parseFloat(tx.quantity) || 0;
-      const unitPrice = normalizeCurrency(tx.unitPrice || itemData.unitPrice);
-      const supply = Math.round(unitPrice * qty);
-      group.rows.push(tx);
-      group.qty += qty;
-      group.supply += supply;
-    });
-    return Array.from(groups.values());
-  }, [isInMode, sorted, resolveItem]);
-
-  const toggleGroup = (groupKey) => {
-    setExpandedGroups((prev) => {
-      const next = new Set(prev);
-      if (next.has(groupKey)) next.delete(groupKey);
-      else next.add(groupKey);
-      return next;
-    });
-  };
-  const currentGroupKeys = useMemo(() => {
-    if (isOutMode) return groupedOutRows.map((g) => g.key);
-    if (isInMode) return groupedInRows.map((g) => g.key);
-    return [];
-  }, [isOutMode, isInMode, groupedOutRows, groupedInRows]);
-  const expandAllGroups = () => setExpandedGroups(new Set(currentGroupKeys));
-  const collapseAllGroups = () => setExpandedGroups(new Set());
 
   const toggleSelectAll = () => {
     setSelectedIds(prev => {
@@ -434,12 +356,6 @@ export function InoutPage({ mode = 'all' }) {
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <div style={{ fontSize: '13px', fontWeight: 600 }}>선택 {selectedIds.size}건</div>
-            {(isInMode || isOutMode) && currentGroupKeys.length > 0 && (
-              <>
-                <button className="btn btn-outline btn-sm" onClick={expandAllGroups}>전체 펼치기</button>
-                <button className="btn btn-outline btn-sm" onClick={collapseAllGroups}>전체 접기</button>
-              </>
-            )}
           </div>
           <div>
             {canBulk && (
@@ -534,124 +450,7 @@ export function InoutPage({ mode = 'all' }) {
                 )}
               </thead>
               <tbody>
-                {isOutMode ? groupedOutRows.map((group) => {
-                  const isExpanded = expandedGroups.has(group.key);
-                  const margin = group.outAmt > 0 ? ((group.profit / group.outAmt) * 100).toFixed(1) + '%' : '-';
-                  return (
-                    <React.Fragment key={`group-${group.key}`}>
-                      <tr className="row-warning">
-                        <td colSpan={18} style={{ padding: '8px 12px', fontWeight: 700, cursor: 'pointer' }} onClick={() => toggleGroup(group.key)}>
-                          {isExpanded ? '▼' : '▶'} [{group.code || '-'}] {group.name} · {group.rows.length}건 · 수량 {fmt(group.qty)} · 판매가 {W(group.outAmt)} · 이익 {W(group.profit)} ({margin})
-                        </td>
-                      </tr>
-                      {isExpanded && group.rows.map((tx, i) => {
-                        const rowNum = i + 1;
-                        const qty = parseFloat(tx.quantity) || 0;
-                        const itemData = resolveItem(tx);
-                        const unitPrice = normalizeCurrency(tx.unitPrice || itemData.unitPrice);
-                        const salePrice = normalizeCurrency(tx.sellingPrice || itemData.salePrice);
-                        const outAmt = Math.round(salePrice * qty);
-                        const wac = resolveWac(tx, itemData);
-                        const wacSupply = Math.round(wac * qty);
-                        const profit = outAmt - wacSupply;
-                        const category = tx.category || itemData.category || '';
-                        const itemCode = tx.itemCode || itemData.itemCode || '';
-                        const spec = tx.spec || itemData.spec || '';
-                        const unit = tx.unit || itemData.unit || '';
-                        const isSelected = selectedIds.has(tx.id);
-                        return (
-                          <tr key={tx.id} className={isSelected ? 'selected' : ''}>
-                            <td style={{ textAlign: 'center' }}>
-                              <input type="checkbox" checked={isSelected} onChange={() => toggleSelect(tx.id)} />
-                            </td>
-                            <td className="col-num">{rowNum}</td>
-                            <td style={{ fontSize: '12px' }}>{category || '-'}</td>
-                            <td style={{ fontSize: '12px' }}>{formatDate(tx.date)}</td>
-                            <td style={{ fontSize: '12px' }}>{tx.vendor || '-'}</td>
-                            <td style={{ fontSize: '12px' }}>{itemCode || '-'}</td>
-                            <td className="col-fill"><strong>{tx.itemName || '-'}</strong></td>
-                            <td style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{tx.color || itemData.color || '-'}</td>
-                            <td style={{ fontSize: '12px' }}>{spec || '-'}</td>
-                            <td style={{ fontSize: '12px' }}>{unit || '-'}</td>
-                            <td className="text-right" style={{ fontWeight: 600 }}>{qty ? qty.toLocaleString('ko-KR') : '-'}</td>
-                            <td className="text-right">{salePrice ? W(salePrice) : '-'}</td>
-                            <td className="text-right">{outAmt ? W(outAmt) : '-'}</td>
-                            <td className="text-right">{outAmt ? W(Math.round(outAmt * 0.1)) : '-'}</td>
-                            <td className="text-right">{outAmt ? W(Math.round(outAmt * 1.1)) : '-'}</td>
-                            <td className="text-right">{outAmt ? W(profit) : '-'}</td>
-                            <td className="text-right">{outAmt > 0 ? (profit / outAmt * 100).toFixed(1) + '%' : '-'}</td>
-                            <td>
-                              {canDelete && (
-                                <button className="btn btn-xs btn-outline" style={{ color: 'var(--danger)', borderColor: 'var(--danger)' }} onClick={() => handleDelete(tx)}>
-                                  삭제
-                                </button>
-                              )}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </React.Fragment>
-                  );
-                }) : isInMode ? groupedInRows.map((group) => {
-                  const isExpanded = expandedGroups.has(group.key);
-                  return (
-                    <React.Fragment key={`group-in-${group.key}`}>
-                      <tr className="row-warning">
-                        <td colSpan={16} style={{ padding: '8px 12px', fontWeight: 700, cursor: 'pointer' }} onClick={() => toggleGroup(group.key)}>
-                          {isExpanded ? '▼' : '▶'} [{group.code || '-'}] {group.name} · {group.rows.length}건 · 수량 {fmt(group.qty)} · 공급가 {W(group.supply)}
-                        </td>
-                      </tr>
-                      {isExpanded && group.rows.map((tx, i) => {
-                        const rowNum = i + 1;
-                        const qty = parseFloat(tx.quantity) || 0;
-                        const itemData = resolveItem(tx);
-                        const unitPrice = normalizeCurrency(tx.unitPrice || itemData.unitPrice);
-                        const supply = Math.round(unitPrice * qty);
-                        const vat = Math.ceil(supply * 0.1);
-                        const totalPrice = supply + vat;
-                        const category = tx.category || itemData.category || '';
-                        const itemCode = tx.itemCode || itemData.itemCode || '';
-                        const spec = tx.spec || itemData.spec || '';
-                        const unit = tx.unit || itemData.unit || '';
-                        const isSelected = selectedIds.has(tx.id);
-                        return (
-                          <tr key={tx.id} className={isSelected ? 'selected' : ''}>
-                            <td style={{ textAlign: 'center' }}>
-                              <input type="checkbox" checked={isSelected} onChange={() => toggleSelect(tx.id)} />
-                            </td>
-                            <td className="col-num">{rowNum}</td>
-                            <td style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{category || '-'}</td>
-                            <td style={{ fontSize: '13px' }}>{formatDate(tx.date)}</td>
-                            <td style={{ fontSize: '13px' }}>{tx.vendor || '-'}</td>
-                            <td style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{itemCode || '-'}</td>
-                            <td className="col-fill"><strong>{tx.itemName || '-'}</strong></td>
-                            <td style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{tx.color || itemData.color || '-'}</td>
-                            <td style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{spec || '-'}</td>
-                            <td style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{unit || '-'}</td>
-                            <td className="text-right" style={{ fontWeight: 600, fontSize: '13px' }}>
-                              +{qty ? qty.toLocaleString('ko-KR') : '-'}
-                            </td>
-                            <td className="text-right" style={{ fontSize: '13px' }}>{unitPrice ? W(unitPrice) : '-'}</td>
-                            <td className="text-right" style={{ fontSize: '13px' }}>{supply ? W(supply) : '-'}</td>
-                            <td className="text-right" style={{ color: 'var(--text-muted)', fontSize: '12px' }}>{supply ? W(vat) : '-'}</td>
-                            <td className="text-right" style={{ fontWeight: 700, fontSize: '13px' }}>{supply ? W(totalPrice) : '-'}</td>
-                            <td>
-                              {canDelete && (
-                                <button
-                                  className="btn btn-xs btn-outline"
-                                  style={{ color: 'var(--danger)', borderColor: 'var(--danger)' }}
-                                  onClick={() => handleDelete(tx)}
-                                >
-                                  삭제
-                                </button>
-                              )}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </React.Fragment>
-                  );
-                }) : sorted.map((tx, i) => {
+                {sorted.map((tx, i) => {
                   const rowNum = i + 1;
                   const qty = parseFloat(tx.quantity) || 0;
                   const itemData = resolveItem(tx);
