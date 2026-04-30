@@ -73,7 +73,9 @@ export function parseExcelRows(sheetData, colMap, modeDefault, items) {
       (rawItemCode && it.itemCode && it.itemCode === rawItemCode)
     );
     if (!itemName && matchedItem) itemName = matchedItem.itemName;
-    if (!itemName || quantity <= 0) continue;
+    // 코드만 있는 신규 출고/입고도 통과: 임시로 품명에 코드를 대입해 자동 등록 가능하게 함
+    if (!itemName && rawItemCode) itemName = rawItemCode;
+    if ((!itemName && !rawItemCode) || quantity <= 0) continue;
 
     let dateStr = '';
     if (colMap.date >= 0) {

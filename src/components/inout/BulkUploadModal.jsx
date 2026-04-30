@@ -90,27 +90,42 @@ export function BulkUploadModal({ items, modeDefault, onClose, onSuccess }) {
       }
 
       // 2. 없는 상품 자동 생성
-      const itemNames = new Set(previewRows.map(r => r.itemName).filter(Boolean));
-      const itemMap = new Map(items.map(it => [it.itemName, it.id]));
+      const norm = (v) => String(v ?? '').trim().toLowerCase();
+      const itemKey = (name, code) => {
+        const c = norm(code);
+        if (c) return `code:${c}`;
+        const n = norm(name);
+        return n ? `name:${n}` : '';
+      };
+      const itemMap = new Map();
+      (items || []).forEach((it) => {
+        const k = itemKey(it.itemName, it.itemCode);
+        if (k) itemMap.set(k, it.id);
+      });
 
-      for (const iname of itemNames) {
-        if (!itemMap.has(iname)) {
-          try {
-            const newItem = await db.items.create({
-              itemName: iname,
-              category: '',
-              unit: 'EA',
-            });
-            if (newItem?.id) {
-              itemMap.set(iname, newItem.id);
-            }
-          } catch (err) {
-            // 중복 생성 시 무시하고 기존 항목 사용
-            if (err.message?.includes('duplicate')) {
-              console.warn(`[BulkUploadModal] 상품 중복: ${iname}`);
-            } else {
-              throw err;
-            }
+      const candidateItems = previewRows
+        .map((r) => ({ itemName: r.itemName, itemCode: r.itemCode, unit: r.unit || 'EA', category: r.category || '' }))
+        .filter((r) => r.itemName || r.itemCode);
+
+      for (const c of candidateItems) {
+        const k = itemKey(c.itemName, c.itemCode);
+        if (!k || itemMap.has(k)) continue;
+        try {
+          const newItem = await db.items.create({
+            itemName: c.itemName || c.itemCode,
+            itemCode: c.itemCode || '',
+            category: c.category || '',
+            unit: c.unit || 'EA',
+          });
+          if (newItem?.id) {
+            itemMap.set(k, newItem.id);
+          }
+        } catch (err) {
+          // 중복 생성 시 무시하고 기존 항목 사용
+          if (err.message?.includes('duplicate')) {
+            console.warn(`[BulkUploadModal] 상품 중복: ${c.itemName || c.itemCode}`);
+          } else {
+            throw err;
           }
         }
       }
