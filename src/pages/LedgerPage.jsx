@@ -67,19 +67,30 @@ function SortTh({ colKey, sort, onSort, children, style = {}, rowSpan, colSpan }
 
 function buildLedger(items, transactions, from, to, vendorFilter, itemFilter, openingOverrides = {}) {
   const normName = (v) => String(v || '').trim();
+  const normCode = (v) => String(v || '').trim();
+  const makeKey = (itemName, itemCode) => {
+    const code = normCode(itemCode);
+    if (code) return `code:${code}`;
+    const name = normName(itemName);
+    if (name) return `name:${name}`;
+    return '';
+  };
   const txByItem = new Map();
   transactions.forEach(tx => {
-    const k = normName(tx.itemName);
-    if (!k) return;
-    if (!txByItem.has(k)) txByItem.set(k, []);
-    txByItem.get(k).push(tx);
+    const keys = [makeKey(tx.itemName, tx.itemCode), makeKey(tx.itemName, '')].filter(Boolean);
+    keys.forEach((k) => {
+      if (!txByItem.has(k)) txByItem.set(k, []);
+      txByItem.get(k).push(tx);
+    });
   });
 
   let targetItems = itemFilter ? items.filter(i => i.itemName === itemFilter) : items;
   if (vendorFilter) {
     const vf = vendorFilter.toLowerCase();
     targetItems = targetItems.filter(item => {
-      const txs = txByItem.get(normName(item.itemName)) || [];
+      const txs = txByItem.get(makeKey(item.itemName, item.itemCode))
+        || txByItem.get(makeKey(item.itemName, ''))
+        || [];
       return txs.some(tx => tx.type === 'in' && (tx.vendor || '').toLowerCase().includes(vf));
     });
   }
@@ -94,7 +105,9 @@ function buildLedger(items, transactions, from, to, vendorFilter, itemFilter, op
     let primaryVendor = item.vendor || '';
     let fallbackItemCode = item.itemCode || '';
     let itemColor = item.color || '';
-    const itemTxs = txByItem.get(normName(item.itemName)) || [];
+    const itemTxs = txByItem.get(makeKey(item.itemName, item.itemCode))
+      || txByItem.get(makeKey(item.itemName, ''))
+      || [];
 
     itemTxs.forEach(tx => {
       const qty = parseFloat(tx.quantity) || 0;

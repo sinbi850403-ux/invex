@@ -3,13 +3,30 @@ import { ALL_FIELDS, DEFAULT_VISIBLE, toNum } from './inventoryConfig.js';
 export function computeData(rawData, transactions) {
   const txAgg = {};
   const normName = (v) => String(v || '').trim();
+  const normCode = (v) => String(v || '').trim();
+  const makeKey = (itemName, itemCode) => {
+    const code = normCode(itemCode);
+    if (code) return `code:${code}`;
+    const name = normName(itemName);
+    if (name) return `name:${name}`;
+    return '';
+  };
   (transactions || []).forEach(tx => {
-    const k = normName(tx.itemName);
+    const k = makeKey(tx.itemName, tx.itemCode);
     if (!k) return;
-    if (!txAgg[k]) txAgg[k] = { inQty: 0, inAmt: 0, outQty: 0, outAmt: 0, costAmt: 0, itemCode: '', vendor: '' };
+    if (!txAgg[k]) {
+      txAgg[k] = {
+        inQty: 0, inAmt: 0, outQty: 0, outAmt: 0, costAmt: 0,
+        itemCode: '', vendor: '', category: '', color: '', spec: '', unit: '',
+      };
+    }
     const qty = parseFloat(tx.quantity) || 0;
     if (!txAgg[k].itemCode && tx.itemCode) txAgg[k].itemCode = String(tx.itemCode).trim();
     if (!txAgg[k].vendor && tx.vendor) txAgg[k].vendor = String(tx.vendor).trim();
+    if (!txAgg[k].category && tx.category) txAgg[k].category = String(tx.category).trim();
+    if (!txAgg[k].color && tx.color) txAgg[k].color = String(tx.color).trim();
+    if (!txAgg[k].spec && tx.spec) txAgg[k].spec = String(tx.spec).trim();
+    if (!txAgg[k].unit && tx.unit) txAgg[k].unit = String(tx.unit).trim();
     if (tx.type === 'in') {
       txAgg[k].inQty += qty;
       txAgg[k].inAmt += Math.round((parseFloat(tx.unitPrice) || 0) * qty);
@@ -23,7 +40,9 @@ export function computeData(rawData, transactions) {
   });
 
   return (rawData || []).map(item => {
-    const agg        = txAgg[normName(item.itemName)] || {};
+    const byCode = txAgg[makeKey('', item.itemCode)] || null;
+    const byName = txAgg[makeKey(item.itemName, '')] || null;
+    const agg        = byCode || byName || {};
     const inQty      = agg.inQty  || 0;
     const inAmt      = agg.inAmt  || 0;
     const outQty     = agg.outQty || 0;
@@ -68,8 +87,11 @@ export function computeData(rawData, transactions) {
       ...item,
       itemCode:             item.itemCode || agg.itemCode || '',
       vendor:               item.vendor || agg.vendor || '',
+      category:             item.category || agg.category || '',
+      color:                item.color || agg.color || '',
+      spec:                 item.spec || agg.spec || '',
+      unit:                 item.unit || agg.unit || '',
       quantity:             qty,          // ...item의 quantity(0)를 보정값으로 덮어씀
-      color:                item.color || '',
       year,
       supplyValue:          supplyValue || '',
       vat:                  vat || '',
