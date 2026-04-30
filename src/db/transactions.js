@@ -74,6 +74,7 @@ export const transactions = {
 
   async bulkCreate(txArray) {
     const userId = await getUserId();
+    const BATCH_SIZE = 500;
     const rows = txArray.map((tx) => {
       const rawDate = pick(tx, 'date', 'date');
       const normalizedDate = toDateOnly(rawDate);
@@ -106,12 +107,14 @@ export const transactions = {
       };
     });
 
-    const { data, error } = await supabase
-      .from('transactions')
-      .upsert(rows, { onConflict: 'id' })
-      .select();
-    handleError(error, '입출고 일괄 등록');
-    return data || [];
+    for (let i = 0; i < rows.length; i += BATCH_SIZE) {
+      const batch = rows.slice(i, i + BATCH_SIZE);
+      const { error } = await supabase
+        .from('transactions')
+        .upsert(batch, { onConflict: 'id' });
+      handleError(error, `입출고 일괄 등록(${i}~${i + batch.length})`);
+    }
+    return [];
   },
 
   async update(txId, updates) {
