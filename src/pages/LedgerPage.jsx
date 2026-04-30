@@ -66,17 +66,20 @@ function SortTh({ colKey, sort, onSort, children, style = {}, rowSpan, colSpan }
 }
 
 function buildLedger(items, transactions, from, to, vendorFilter, itemFilter, openingOverrides = {}) {
+  const normName = (v) => String(v || '').trim();
   const txByItem = new Map();
   transactions.forEach(tx => {
-    if (!txByItem.has(tx.itemName)) txByItem.set(tx.itemName, []);
-    txByItem.get(tx.itemName).push(tx);
+    const k = normName(tx.itemName);
+    if (!k) return;
+    if (!txByItem.has(k)) txByItem.set(k, []);
+    txByItem.get(k).push(tx);
   });
 
   let targetItems = itemFilter ? items.filter(i => i.itemName === itemFilter) : items;
   if (vendorFilter) {
     const vf = vendorFilter.toLowerCase();
     targetItems = targetItems.filter(item => {
-      const txs = txByItem.get(item.itemName) || [];
+      const txs = txByItem.get(normName(item.itemName)) || [];
       return txs.some(tx => tx.type === 'in' && (tx.vendor || '').toLowerCase().includes(vf));
     });
   }
@@ -89,8 +92,9 @@ function buildLedger(items, transactions, from, to, vendorFilter, itemFilter, op
     let periodLossQty = 0, periodLossAmt = 0;
     let openingQty = currentQty;
     let primaryVendor = item.vendor || '';
+    let fallbackItemCode = item.itemCode || '';
     let itemColor = item.color || '';
-    const itemTxs = txByItem.get(item.itemName) || [];
+    const itemTxs = txByItem.get(normName(item.itemName)) || [];
 
     itemTxs.forEach(tx => {
       const qty = parseFloat(tx.quantity) || 0;
@@ -101,6 +105,8 @@ function buildLedger(items, transactions, from, to, vendorFilter, itemFilter, op
       }
       // 색상: 트랜잭션에서 보완
       if (tx.color && !itemColor) itemColor = tx.color;
+      if (tx.itemCode && !fallbackItemCode) fallbackItemCode = tx.itemCode;
+      if (tx.vendor && !primaryVendor) primaryVendor = tx.vendor;
       if (tx.date >= from && tx.date <= to) {
         if (tx.type === 'in') {
           periodInQty += qty;
@@ -147,7 +153,7 @@ function buildLedger(items, transactions, from, to, vendorFilter, itemFilter, op
 
     return {
       vendor: primaryVendor,
-      itemCode: item.itemCode || '',
+      itemCode: fallbackItemCode || '',
       itemName: item.itemName,
       color: itemColor,
       year: fromYear,
