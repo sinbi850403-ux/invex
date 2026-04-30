@@ -80,20 +80,25 @@ export function BulkUploadModal({ items, modeDefault, onClose, onSuccess }) {
       // 1. 없는 거래처 자동 생성
       const vendorNames = new Set(previewRows.map(r => r.vendor).filter(Boolean));
       const vendorMap = new Map();
+      let vendorCreateDisabled = false;
       try {
         const vendors = await db.vendors.list({ limit: 999999 });
         vendors.forEach(v => vendorMap.set(v.name, v.id));
       } catch (err) {
-        console.warn('[BulkUploadModal] vendor list failed, continuing upload:', err);
+        vendorCreateDisabled = true;
+        console.warn('[BulkUploadModal] vendor access blocked, skip vendor auto-create:', err);
       }
 
       for (const vname of vendorNames) {
+        if (vendorCreateDisabled) break;
         if (vendorMap.has(vname)) continue;
         try {
           const newVendor = await db.vendors.create({ name: vname });
           if (newVendor?.id) vendorMap.set(vname, newVendor.id);
         } catch (err) {
-          console.warn(`[BulkUploadModal] vendor create failed (${vname}), continuing upload:`, err);
+          vendorCreateDisabled = true;
+          console.warn('[BulkUploadModal] vendor create blocked, stop vendor auto-create:', err);
+          break;
         }
       }
 
@@ -115,7 +120,9 @@ export function BulkUploadModal({ items, modeDefault, onClose, onSuccess }) {
         .map((r) => ({ itemName: r.itemName, itemCode: r.itemCode, unit: r.unit || 'EA', category: r.category || '' }))
         .filter((r) => r.itemName || r.itemCode);
 
+      let itemCreateDisabled = false;
       for (const c of candidateItems) {
+        if (itemCreateDisabled) break;
         const k = itemKey(c.itemName, c.itemCode);
         if (!k || itemMap.has(k)) continue;
         try {
@@ -133,7 +140,9 @@ export function BulkUploadModal({ items, modeDefault, onClose, onSuccess }) {
           if (err.message?.includes('duplicate')) {
             console.warn(`[BulkUploadModal] 상품 중복: ${c.itemName || c.itemCode}`);
           } else {
-            throw err;
+            itemCreateDisabled = true;
+            console.warn('[BulkUploadModal] item create blocked, stop item auto-create:', err);
+            break;
           }
         }
       }
