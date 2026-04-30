@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
 import { initAuth, getCurrentUser, getUserProfileData, logout as authLogout } from '../auth.js';
 import { isSupabaseConfigured } from '../supabase-client.js';
-import { restoreState, setupRealtimeSync, cleanupRealtimeSync } from '../store.js';
+import { restoreState, setupRealtimeSync, cleanupRealtimeSync, getState as getStoreState } from '../store.js';
 import { primeUserIdCache, setWorkspaceUserId, clearWorkspaceUserId } from '../db.js';
 import { injectGetCurrentUser, injectGetUserProfile, PLANS, setPlan, getCurrentPlan } from '../plan.js';
 import { setMonitorUser, clearMonitorUser } from '../error-monitor.js';
@@ -17,6 +17,7 @@ export function AuthProvider({ children }) {
   const [isInitializing, setIsInitializing] = useState(false);
   const [startPage, setStartPage] = useState('home');
   const initializingRef = useRef(false);
+  const hasRetriedBootstrapRef = useRef(false);
 
   // 의존성 주입 (plan.js가 auth.js에 의존하지 않도록 역전)
   useEffect(() => {
@@ -32,6 +33,18 @@ export function AuthProvider({ children }) {
       const uid = loggedInUser?.uid || null;
       primeUserIdCache(uid);
       await restoreState(uid);
+
+      // 로그인 직후 세션 갱신 레이스로 0건이 들어오는 케이스 보정:
+      // 코어 데이터가 비어 있으면 1회 지연 재시도로 안정 세션에서 다시 로드
+      const hasCoreData = () => {
+        const s = getStoreState() || {};
+        return (s.mappedData?.length || 0) > 0 || (s.transactions?.length || 0) > 0;
+      };
+      if (isSupabaseConfigured && uid && !hasCoreData() && !hasRetriedBootstrapRef.current) {
+        hasRetriedBootstrapRef.current = true;
+        await new Promise(r => setTimeout(r, 1200));
+        await restoreState(uid);
+      }
 
       const profilePlan = getUserProfileData()?.plan;
       if (profilePlan && PLANS[profilePlan]) setPlan(profilePlan);
@@ -86,6 +99,7 @@ export function AuthProvider({ children }) {
     initAuth(async (newUser, newProfile) => {
       clearTimeout(readyFallback);
       if (newUser) {
+        hasRetriedBootstrapRef.current = false;
         setMonitorUser(newUser.uid, newUser.email);
         const profilePlan = newProfile?.plan;
         if (profilePlan && PLANS[profilePlan]) setPlan(profilePlan);
