@@ -140,6 +140,7 @@ jobs:
 
       - name: Post-migration verification
         run: |
-          ssh -i ~/.ssh/id_rsa ubuntu@${{ secrets.LIGHTSAIL_HOST }} \
-            "docker exec supabase-db psql -U postgres -c \
-              'SELECT count(*) AS rls_count FROM pg_policies WHERE schemaname='"'"'public'"'"';'"
+          ssh -i ~/.ssh/id_rsa ubuntu@${{ secrets.LIGHTSAIL_HOST }} bash <<'SSHEOF'
+          docker exec supabase-db psql -U postgres \
+            -c "SELECT count(*) AS rls_count FROM pg_policies WHERE schemaname='public';"
+          SSHEOF
