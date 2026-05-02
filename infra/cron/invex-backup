@@ -1,0 +1,64 @@
+#!/usr/bin/env bash
+#
+# INVEX — 일일 DB 백업 (Cloudflare R2)
+#
+# 설치:
+#   sudo cp infra/cron/invex-backup /etc/cron.daily/
+#   sudo chmod +x /etc/cron.daily/invex-backup
+#
+# 보관 정책:
+#   - 일일 백업: 7개 보관
+#   - 주간 백업: 매주 일요일 별도 키, 4주 보관
+#   - 월간 백업: 매월 1일 별도 키, 6개월 보관
+#
+# 의존성: docker, rclone (R2 remote 'r2' 설정 필요)
+
+set -euo pipefail
+
+R2_REMOTE="r2:invex-backup"
+NOW=$(date +%Y%m%d_%H%M)
+DOW=$(date +%u)   # 1=Mon ~ 7=Sun
+DOM=$(date +%d)   # 01 ~ 31
+
+log() { logger -t invex-backup "$*"; echo "[invex-backup] $*"; }
+
+trap 'log "FAILED at line $LINENO"; exit 1' ERR
+
+# ---- 일일 dump ----
+DAILY_KEY="${R2_REMOTE}/daily/db_${NOW}.dump"
+log "백업 시작 → ${DAILY_KEY}"
+docker exec supabase-db pg_dump -U postgres -Fc postgres \
+  | rclone rcat "${DAILY_KEY}"
+log "일일 백업 완료"
+
+# ---- 주간 (일요일) ----
+if [[ "${DOW}" == "7" ]]; then
+  WEEKLY_KEY="${R2_REMOTE}/weekly/db_${NOW}.dump"
+  rclone copyto "${DAILY_KEY}" "${WEEKLY_KEY}"
+  log "주간 백업 복사: ${WEEKLY_KEY}"
+fi
+
+# ---- 월간 (매월 1일) ----
+if [[ "${DOM}" == "01" ]]; then
+  MONTHLY_KEY="${R2_REMOTE}/monthly/db_${NOW}.dump"
+  rclone copyto "${DAILY_KEY}" "${MONTHLY_KEY}"
+  log "월간 백업 복사: ${MONTHLY_KEY}"
+fi
+
+# ---- 보관 정책 적용 (오래된 파일 삭제) ----
+# 일일 7개 초과분 삭제
+rclone lsf "${R2_REMOTE}/daily/" --files-only | sort | head -n -7 | while read -r f; do
+  [[ -n "$f" ]] && rclone delete "${R2_REMOTE}/daily/${f}" && log "  daily 삭제: ${f}"
+done
+
+# 주간 4개 초과분 삭제
+rclone lsf "${R2_REMOTE}/weekly/" --files-only | sort | head -n -4 | while read -r f; do
+  [[ -n "$f" ]] && rclone delete "${R2_REMOTE}/weekly/${f}" && log "  weekly 삭제: ${f}"
+done
+
+# 월간 6개 초과분 삭제
+rclone lsf "${R2_REMOTE}/monthly/" --files-only | sort | head -n -6 | while read -r f; do
+  [[ -n "$f" ]] && rclone delete "${R2_REMOTE}/monthly/${f}" && log "  monthly 삭제: ${f}"
+done
+
+log "백업 완료"
