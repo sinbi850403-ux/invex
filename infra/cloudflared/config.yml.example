@@ -1,0 +1,45 @@
+# Cloudflare Tunnel 설정 — INVEX API
+#
+# 위치: Lightsail 인스턴스 ~/.cloudflared/config.yml
+# (이 파일은 인스턴스 외부에 보관하지 말 것 — credentials.json 경로 노출됨)
+#
+# 셋업 절차:
+#   1. cloudflared tunnel login          — 브라우저 OAuth
+#   2. cloudflared tunnel create invex-api
+#   3. 출력된 UUID를 아래 tunnel: 필드에 붙여넣기
+#   4. credentials-file: 경로 확인
+#   5. cloudflared tunnel route dns invex-api api.invex.io.kr
+#   6. sudo cloudflared service install
+#   7. sudo systemctl status cloudflared
+
+tunnel: <REPLACE_WITH_TUNNEL_UUID>
+credentials-file: /home/ubuntu/.cloudflared/<REPLACE_WITH_TUNNEL_UUID>.json
+
+# 로깅 / 메트릭
+logfile: /var/log/cloudflared.log
+loglevel: info
+metrics: 127.0.0.1:9099   # Prometheus scrape (선택)
+
+# 인그레스 규칙 — 위에서부터 매칭
+ingress:
+  # Supabase API 게이트웨이 (Kong) — 메인 API
+  - hostname: api.invex.io.kr
+    service: http://localhost:8000
+    originRequest:
+      connectTimeout: 30s
+      tlsTimeout: 10s
+      noTLSVerify: true   # localhost → Kong은 평문 OK (Tunnel이 TLS 종료)
+      httpHostHeader: api.invex.io.kr
+
+  # Supabase Studio (관리자 콘솔) — 선택, 별도 도메인 + Cloudflare Access로 보호 권장
+  # - hostname: studio.invex.io.kr
+  #   service: http://localhost:3000
+  #   originRequest:
+  #     access:
+  #       required: true
+  #       teamName: invex
+  #       audTag:
+  #         - <Cloudflare Access App AUD>
+
+  # 매칭 안 된 모든 요청은 404
+  - service: http_status:404
