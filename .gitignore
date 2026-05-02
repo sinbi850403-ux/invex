@@ -14,6 +14,11 @@ dist-ssr
 .env
 .env.*
 !.env.example
+!.env.production.example
+
+# Cloudflare Tunnel credentials & 실제 config (시크릿 포함)
+infra/cloudflared/config.yml
+infra/cloudflared/*.json
 
 # Editor directories and files
 .vscode/*
