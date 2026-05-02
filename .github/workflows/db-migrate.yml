@@ -9,6 +9,7 @@ on:
     branches: [main, master]
     paths:
       - 'db/migrations/**'
+  workflow_dispatch: {}
 
 jobs:
   # ============================================================
@@ -89,7 +90,7 @@ jobs:
   # POSTGRES_PASSWORD 불필요 — docker exec Unix 소켓 인증 사용
   # ============================================================
   apply-production:
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+    if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
     runs-on: ubuntu-latest
     environment: production
     steps:
