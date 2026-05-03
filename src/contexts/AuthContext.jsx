@@ -91,8 +91,15 @@ export function AuthProvider({ children }) {
   }, []);
 
   useEffect(() => {
-    // Supabase 미설정 시 자동 로그인
+    // Supabase 미설정 처리
     if (!isSupabaseConfigured) {
+      // 프로덕션 환경에서는 로컬 모드 차단 — 로그인 화면 표시
+      if (import.meta.env.PROD) {
+        console.error('[INVEX] 프로덕션 환경에서 Supabase 설정이 없습니다.');
+        setIsReady(true);
+        return;
+      }
+      // 개발 환경에서만 로컬 모드 허용
       setUser({ uid: 'local', email: 'local@invex', displayName: '로컬 사용자' });
       setIsReady(true);
       initApp({ uid: 'local' });

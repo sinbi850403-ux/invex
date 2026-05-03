@@ -7,8 +7,10 @@ import { showToast } from '../toast.js';
 
 function generateApiKey() {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  const bytes = new Uint8Array(32);
+  crypto.getRandomValues(bytes);
   let key = 'invex_';
-  for (let i = 0; i < 32; i++) key += chars.charAt(Math.floor(Math.random() * chars.length));
+  for (let i = 0; i < 32; i++) key += chars[bytes[i] % chars.length];
   return key;
 }
 

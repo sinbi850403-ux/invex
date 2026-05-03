@@ -6,6 +6,11 @@
 
 import { getState } from './store.js';
 
+// XSS 방지용 HTML 이스케이프
+function escHtml(s) {
+  return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#x27;');
+}
+
 let navigateCallback = null;
 let panelElement = null;
 
@@ -204,11 +209,11 @@ function renderSearchResults(query) {
   const shown = results.slice(0, 15);
 
   resultsEl.innerHTML = shown.map((r, i) => `
-    <div class="gs-result-item" data-page="${r.page}">
-      <span class="gs-result-icon">${r.icon}</span>
+    <div class="gs-result-item" data-page="${escHtml(r.page)}">
+      <span class="gs-result-icon">${escHtml(r.icon)}</span>
       <div class="gs-result-content">
-        <div class="gs-result-title">${r.title}</div>
-        <div class="gs-result-subtitle">${r.subtitle}</div>
+        <div class="gs-result-title">${escHtml(r.title)}</div>
+        <div class="gs-result-subtitle">${escHtml(r.subtitle)}</div>
       </div>
       <span class="gs-result-type">${r.type === 'item' ? '품목' : r.type === 'vendor' ? '거래처' : r.type === 'tx' ? '거래' : '페이지'}</span>
     </div>

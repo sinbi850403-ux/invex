@@ -236,11 +236,9 @@ export function showUpgradeModal(pageId) {
   modal.querySelector('#upgrade-close').addEventListener('click', () => modal.remove());
   modal.addEventListener('click', (e) => { if (e.target === modal) modal.remove(); });
 
-  // 업그레이드 버튼 → 지금은 무료 체험 활성화
+  // 업그레이드 버튼 → 결제 페이지로 이동 (결제 없이 플랜 변경 불가)
   modal.querySelector('#upgrade-action').addEventListener('click', () => {
-    setPlan(minPlan);
     modal.remove();
-    // 페이지 리로드로 사이드바 갱신
-    window.location.reload();
+    window.location.href = '/billing';
   });
 }

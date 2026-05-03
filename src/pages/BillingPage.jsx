@@ -100,6 +100,15 @@ export default function BillingPage() {
     const planId = params.get('plan');
 
     if (paymentResult === 'success' && planId) {
+      // orderId 검증: sessionStorage에 저장된 주문과 일치해야만 처리
+      const returnedOrderId = params.get('orderId');
+      const pendingRaw = sessionStorage.getItem('invex_pending_order');
+      const pending = pendingRaw ? JSON.parse(pendingRaw) : null;
+      sessionStorage.removeItem('invex_pending_order');
+      if (!pending || pending.orderId !== returnedOrderId || pending.planId !== planId) {
+        window.history.replaceState({}, '', window.location.pathname);
+        return; // 검증 실패 — 외부 조작 차단
+      }
       const p = PLANS[planId];
       if (p) {
         const now = new Date();
@@ -192,11 +201,13 @@ export default function BillingPage() {
       const tossPayments = TossPayments(TOSS_CLIENT_KEY);
       const orderId = 'invex_' + Date.now().toString(36);
       const amount = planId === 'pro' ? 29000 : 59000;
+      // 결제 요청 전 orderId를 sessionStorage에 저장 (콜백 검증용)
+      sessionStorage.setItem('invex_pending_order', JSON.stringify({ orderId, planId, amount }));
       await tossPayments.requestPayment('카드', {
         amount, orderId,
         orderName: `INVEX ${PLANS[planId].name} 월간 구독`,
         customerName: state.userName || '고객',
-        successUrl: `${window.location.origin}/?payment=success&plan=${planId}`,
+        successUrl: `${window.location.origin}/?payment=success&plan=${planId}&orderId=${orderId}`,
         failUrl: `${window.location.origin}/?payment=fail`,
       });
     } catch (err) {

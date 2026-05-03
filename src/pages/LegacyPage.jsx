@@ -81,7 +81,8 @@ export function createLegacyPage(pageId, loader) {
       }).catch((err) => {
         if (!cancelled) {
           console.error(`[LegacyPage] 렌더 오류 (${pageId}):`, err);
-          container.innerHTML = `<div class="page-error"><p>페이지 렌더링 오류: ${err.message}</p><button onclick="location.reload()">새로고침</button></div>`;
+          const safeMsg = String(err.message || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+          container.innerHTML = `<div class="page-error"><p>페이지 렌더링 오류: ${safeMsg}</p><button onclick="location.reload()">새로고침</button></div>`;
         }
       });
 
