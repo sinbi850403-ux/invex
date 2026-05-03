@@ -65,7 +65,12 @@ export function addTransaction(tx) {
   const clientId = tx?.id || (
     (typeof crypto !== 'undefined' && crypto.randomUUID)
       ? crypto.randomUUID()
-      : `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
+      : (() => {
+          const rnd = (typeof crypto !== 'undefined' && crypto.getRandomValues)
+            ? Array.from(crypto.getRandomValues(new Uint8Array(4))).map(b => b.toString(16).padStart(2, '0')).join('')
+            : Math.random().toString(36).slice(2, 9);
+          return `${Date.now().toString(36)}-${rnd}`;
+        })()
   );
 
   // 계산 필드 보정 (미제공 시 계산)
@@ -179,7 +184,12 @@ export function addTransactionsBulk(txList) {
     const clientId = tx?.id || (
       (typeof crypto !== 'undefined' && crypto.randomUUID)
         ? crypto.randomUUID()
-        : `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
+        : (() => {
+            const rnd = (typeof crypto !== 'undefined' && crypto.getRandomValues)
+              ? Array.from(crypto.getRandomValues(new Uint8Array(4))).map(b => b.toString(16).padStart(2, '0')).join('')
+              : Math.random().toString(36).slice(2, 9);
+            return `${Date.now().toString(36)}-${rnd}`;
+          })()
     );
 
     // 계산 필드 보정 (미제공 시 계산)

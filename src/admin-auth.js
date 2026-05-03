@@ -33,7 +33,9 @@ export async function isAdminVerified() {
     if (error || !data) return false;
     return data.role === 'admin' || isSuperAdminEmail(user.email);
   } catch {
-    // DB 조회 실패 시 이메일 체크만으로 폴백 (오프라인 대비)
-    return isSuperAdminEmail(user.email);
+    // [SECURITY] DB 조회 실패 시 false 반환 (Fail-secure 원칙)
+    // 이전에는 이메일 체크 폴백으로 오프라인 상태를 악용한 권한 우회 가능
+    // VULN-003(부분) / admin-auth fail-open 대응 패치 (2026-05-03)
+    return false;
   }
 }

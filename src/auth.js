@@ -947,7 +947,8 @@ export const ACTION_MIN_ROLE = {
 };
 
 export function canAction(actionKey) {
-  if (!isSupabaseConfigured) return true;
+  // 로컬 모드(Supabase 미설정): 개발 환경만 허용, 프로덕션은 거부 (Fail-secure)
+  if (!isSupabaseConfigured) return !import.meta.env.PROD;
   if (!userProfile) return false;
   const required = AUTH_ACTION_MIN_ROLE[actionKey] || ACTION_MIN_ROLE[actionKey];
   if (!required) return true;
@@ -955,7 +956,7 @@ export function canAction(actionKey) {
 }
 
 export function canAccessByRole(pageName) {
-  if (!isSupabaseConfigured) return true;
+  if (!isSupabaseConfigured) return !import.meta.env.PROD;
   if (!userProfile) return false;
   const minRole = AUTH_PAGE_MIN_ROLE[pageName] || PAGE_MIN_ROLE[pageName];
   if (!minRole) return true;

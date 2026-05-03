@@ -144,45 +144,51 @@ export default function BillingPage() {
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  /** 결제 시뮬레이션 */
-  const simulatePayment = (planId) => {
-    const p = PLANS[planId];
-    if (!confirm(`[테스트 모드]\n${p.name} (${p.price}/${p.period}) 구독을 시뮬레이션합니다.\n계속하시겠습니까?`)) return;
-    const now = new Date();
-    const nextPay = new Date(now);
-    nextPay.setMonth(nextPay.getMonth() + 1);
-    const prevHistory = state.paymentHistory || [];
-    setPlan(planId);
-    storeSetState({
-      subscription: {
-        planId, status: 'active',
-        startDate: now.toISOString(),
-        nextPayDate: nextPay.toISOString(),
-        cardLast4: '4242', cardBrand: 'VISA', cardExpiry: '12/28',
-      },
-      paymentHistory: [
-        {
-          id: 'pay-' + Date.now().toString(36),
-          date: now.toISOString(),
-          planName: p.name,
-          amount: p.price,
-          status: 'paid',
-          method: 'VISA •••• 4242',
-        },
-        ...prevHistory,
-      ],
-    });
-    showToast(`${p.icon} ${p.name} 구독이 시작되었습니다!`, 'success');
-    window.location.reload();
-  };
+  // [SECURITY] simulatePayment / simulateCardAdd 는 개발 환경(DEV)에서만 사용 가능.
+  // 프로덕션 번들에 포함되지 않도록 import.meta.env.DEV 분기로 완전히 격리한다.
+  // VULN-001 / CODE-002 / ATTACK-001 대응 패치 (2026-05-03)
+  const simulatePayment = import.meta.env.DEV
+    ? (planId) => {
+        const p = PLANS[planId];
+        if (!confirm(`[테스트 모드]\n${p.name} (${p.price}/${p.period}) 구독을 시뮬레이션합니다.\n계속하시겠습니까?`)) return;
+        const now = new Date();
+        const nextPay = new Date(now);
+        nextPay.setMonth(nextPay.getMonth() + 1);
+        const prevHistory = state.paymentHistory || [];
+        setPlan(planId);
+        storeSetState({
+          subscription: {
+            planId, status: 'active',
+            startDate: now.toISOString(),
+            nextPayDate: nextPay.toISOString(),
+            cardLast4: '4242', cardBrand: 'VISA', cardExpiry: '12/28',
+          },
+          paymentHistory: [
+            {
+              id: 'pay-' + Date.now().toString(36),
+              date: now.toISOString(),
+              planName: p.name,
+              amount: p.price,
+              status: 'paid',
+              method: 'VISA •••• 4242',
+            },
+            ...prevHistory,
+          ],
+        });
+        showToast(`${p.icon} ${p.name} 구독이 시작되었습니다! (테스트 모드)`, 'success');
+        window.location.reload();
+      }
+    : null; // 프로덕션에서는 null — 절대 호출 불가
 
-  /** 카드 등록 시뮬레이션 */
-  const simulateCardAdd = () => {
-    if (!confirm('[테스트 모드]\n테스트 카드(VISA 4242)를 등록합니다.')) return;
-    const sub = { ...(state.subscription || {}), cardLast4: '4242', cardBrand: 'VISA', cardExpiry: '12/28' };
-    storeSetState({ subscription: sub });
-    showToast('테스트 카드가 등록되었습니다.', 'success');
-  };
+  /** 카드 등록 시뮬레이션 (개발 환경 전용) */
+  const simulateCardAdd = import.meta.env.DEV
+    ? () => {
+        if (!confirm('[테스트 모드]\n테스트 카드(VISA 4242)를 등록합니다.')) return;
+        const sub = { ...(state.subscription || {}), cardLast4: '4242', cardBrand: 'VISA', cardExpiry: '12/28' };
+        storeSetState({ subscription: sub });
+        showToast('테스트 카드가 등록되었습니다. (테스트 모드)', 'success');
+      }
+    : null; // 프로덕션에서는 null — 절대 호출 불가
 
   /** 구독하기 클릭 */
   const handleSubscribe = async (planId) => {
@@ -195,6 +201,8 @@ export default function BillingPage() {
       try {
         TossPayments = await loadTossSDK();
       } catch {
+        // [SECURITY] SDK 로딩 실패 시 simulatePayment 폴백 제거 — 오류 메시지만 표시
+        // VULN-001 / CODE-002 / ATTACK-001 대응 패치 (2026-05-03)
         showToast('결제 모듈을 불러올 수 없습니다. 잠시 후 다시 시도해 주세요.', 'error');
         return;
       }
@@ -214,7 +222,10 @@ export default function BillingPage() {
       if (err.code === 'USER_CANCEL') {
         showToast('결제가 취소되었습니다.', 'info');
       } else {
-        simulatePayment(planId);
+        // [SECURITY] SDK 오류 시 simulatePayment 폴백 완전 제거 (DEV 환경에서도 자동 실행 안 함)
+        // 개발자가 명시적으로 테스트 버튼을 눌러야만 시뮬레이션 실행 가능
+        showToast('결제 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.', 'error');
+        console.error('[BillingPage] 결제 SDK 오류:', err);
       }
     }
   };
@@ -238,8 +249,11 @@ export default function BillingPage() {
         successUrl: `${window.location.origin}/?billing=success`,
         failUrl: `${window.location.origin}/?billing=fail`,
       });
-    } catch {
-      simulateCardAdd();
+    } catch (err) {
+      // [SECURITY] SDK 오류 시 simulateCardAdd 폴백 제거 (VULN-001 대응 패치 2026-05-03)
+      if (err && err.code !== 'USER_CANCEL') {
+        showToast('카드 등록 모듈을 불러올 수 없습니다. 잠시 후 다시 시도해 주세요.', 'error');
+      }
     }
   };
 

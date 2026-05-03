@@ -12,7 +12,12 @@ const WH_TYPE_ICONS  = { main: '', branch: '', factory: '', temp: '', returns: '
 const WH_TYPE_COLORS = { main: 'var(--accent)', branch: 'var(--success)', factory: '#f59e0b', temp: 'var(--text-muted)', returns: 'var(--danger)', other: 'var(--text-muted)' };
 
 function fmt(n) { return Math.round(n || 0).toLocaleString('ko-KR'); }
-function genId() { return 'wh-' + Date.now().toString(36) + Math.random().toString(36).substr(2, 4); }
+function genId() {
+  const rnd = (typeof crypto !== 'undefined' && crypto.getRandomValues)
+    ? Array.from(crypto.getRandomValues(new Uint8Array(3))).map(b => b.toString(16).padStart(2, '0')).join('')
+    : Math.random().toString(36).substr(2, 6);
+  return 'wh-' + Date.now().toString(36) + rnd;
+}
 
 const EMPTY_FORM = { id: '', name: '', type: 'branch', address: '', manager: '', memo: '' };
 

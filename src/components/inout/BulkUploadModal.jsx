@@ -146,7 +146,14 @@ export function BulkUploadModal({ items, modeDefault, onClose, onSuccess }) {
         const supplyValue = Math.round(unitPrice * qty);
         const vat = Math.ceil(supplyValue * 0.1);
         return {
-          id: crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`,
+          id: (typeof crypto !== 'undefined' && crypto.randomUUID)
+            ? crypto.randomUUID()
+            : (() => {
+                const rnd = (typeof crypto !== 'undefined' && crypto.getRandomValues)
+                  ? Array.from(crypto.getRandomValues(new Uint8Array(4))).map(b => b.toString(16).padStart(2,'0')).join('')
+                  : Math.random().toString(36).slice(2, 9);
+                return `${Date.now().toString(36)}-${rnd}`;
+              })(),
           type: r.type, vendor: r.vendor, itemName: r.itemName, itemCode: r.itemCode,
           quantity: qty, unitPrice, sellingPrice,
           supplyValue, vat, totalAmount: supplyValue + vat,

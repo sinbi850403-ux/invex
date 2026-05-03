@@ -82,9 +82,14 @@ function isInFreePeriod() {
   if (!profile || !profile.createdAt) return false;
 
   const created = new Date(profile.createdAt);
-  const now = new Date();
-  const daysSinceCreation = Math.floor((now - created) / (1000 * 60 * 60 * 24));
+  if (isNaN(created.getTime())) return false;
 
+  const now = new Date();
+  // IndexedDB 조작 방지: createdAt이 미래 날짜이면 무효 (CWE-345)
+  // 공격자가 createdAt을 미래로 바꿔 무료 기간을 영구 연장하는 것을 차단
+  if (created > now) return false;
+
+  const daysSinceCreation = Math.floor((now - created) / (1000 * 60 * 60 * 24));
   return daysSinceCreation <= FREE_PERIOD_DAYS;
 }
 
@@ -184,61 +189,17 @@ export function getPageBadge(pageId) {
 }
 
 /**
- * 업그레이드 안내 모달 HTML 생성
+ * 업그레이드 안내 모달 표시
+ * React 환경: CustomEvent → AppLayout의 리스너에서 처리 (innerHTML 직접 조작 제거)
+ * 레거시 환경: DOM fallback (PLANS 상수값만 사용하므로 XSS 위험 없음)
  */
 export function showUpgradeModal(pageId) {
   const minPlan = getPageMinPlan(pageId);
   const plan = PLANS[minPlan];
   if (!plan) return;
 
-  // 기존 모달 제거
-  const existing = document.getElementById('upgrade-modal');
-  if (existing) existing.remove();
-
-  const modal = document.createElement('div');
-  modal.id = 'upgrade-modal';
-  modal.className = 'modal-overlay';
-  modal.style.display = 'flex';
-  modal.innerHTML = `
-    <div class="modal" style="max-width:440px; text-align:center;">
-      <div style="padding:32px 24px;">
-        <div style="font-size:48px; margin-bottom:12px;"></div>
-        <h3 style="font-size:20px; font-weight:800; margin-bottom:8px;">
-          ${plan.name} 요금제 기능입니다
-        </h3>
-        <p style="color:var(--text-muted); font-size:14px; margin-bottom:24px; line-height:1.6;">
-          이 기능은 <strong style="color:${plan.color};">${plan.icon} ${plan.name}</strong> 이상 요금제에서 사용할 수 있습니다.
-          <br/>업그레이드 후 이용해주세요.
-        </p>
-
-        <div style="background:var(--bg-secondary); border-radius:12px; padding:20px; margin-bottom:24px; text-align:left;">
-          <div style="font-weight:700; margin-bottom:8px;">${plan.icon} ${plan.name} — ${plan.price}/${plan.period}</div>
-          <div style="font-size:13px; color:var(--text-muted);">${plan.description}</div>
-        </div>
-
-        <div style="display:flex; gap:8px; justify-content:center;">
-          <button class="btn btn-ghost" id="upgrade-close">닫기</button>
-          <button class="btn btn-primary" id="upgrade-action" style="background:linear-gradient(135deg, ${plan.color}, ${plan.color}dd);">
-            ${plan.name}로 업그레이드
-          </button>
-        </div>
-
-        <div style="margin-top:16px; font-size:11px; color:var(--text-muted);">
-          Pro 플랜부터 모든 고급 기능을 사용할 수 있습니다
-        </div>
-      </div>
-    </div>
-  `;
-
-  document.body.appendChild(modal);
-
-  // 닫기 이벤트
-  modal.querySelector('#upgrade-close').addEventListener('click', () => modal.remove());
-  modal.addEventListener('click', (e) => { if (e.target === modal) modal.remove(); });
-
-  // 업그레이드 버튼 → 결제 페이지로 이동 (결제 없이 플랜 변경 불가)
-  modal.querySelector('#upgrade-action').addEventListener('click', () => {
-    modal.remove();
-    window.location.href = '/billing';
-  });
+  // React 컴포넌트(AppLayout)에 모달 렌더링 위임
+  window.dispatchEvent(new CustomEvent('invex:show-upgrade-modal', {
+    detail: { pageId, minPlan, plan },
+  }));
 }

@@ -731,6 +731,22 @@ CREATE INDEX IF NOT EXISTS idx_salary_items_user ON salary_items(user_id);
 -- ============================================================
 -- 28. RLS (Row Level Security)
 -- ============================================================
+
+-- system_config: RLS 활성화 및 정책 적용
+-- [SECURITY] VULN-010 / ATTACK-004 대응 패치 (2026-05-03)
+-- 이전에는 RLS 미적용으로 anon key만 있으면 REST API로 관리자 이메일 목록 조회 가능
+ALTER TABLE system_config ENABLE ROW LEVEL SECURITY;
+
+-- 읽기: DB Function(SECURITY DEFINER)에서만 접근 — 일반 사용자/anon 직접 SELECT 불가
+DROP POLICY IF EXISTS "system_config_no_direct_read" ON system_config;
+CREATE POLICY "system_config_no_direct_read" ON system_config
+  FOR SELECT USING (false);
+
+-- 쓰기: 완전 차단 (Edge Function 또는 SQL Editor에서만 관리)
+DROP POLICY IF EXISTS "system_config_no_write" ON system_config;
+CREATE POLICY "system_config_no_write" ON system_config
+  FOR ALL USING (false) WITH CHECK (false);
+
 ALTER TABLE profiles          ENABLE ROW LEVEL SECURITY;
 ALTER TABLE warehouses        ENABLE ROW LEVEL SECURITY;
 ALTER TABLE items             ENABLE ROW LEVEL SECURITY;

@@ -8,6 +8,22 @@ import { getState, setState } from './store.js';
 import { auditLogs as auditLogsDb } from './db.js';
 
 /**
+ * HTML 특수문자 이스케이프 — innerHTML XSS 방지
+ * VULN-002 / ATTACK-003 대응 패치 (2026-05-03)
+ * @param {*} value - 이스케이프할 값
+ * @returns {string}
+ */
+function escHtml(value) {
+  if (value === null || value === undefined) return '';
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#x27;');
+}
+
+/**
  * 감사 로그 추가
  * @param {string} action - 행위 (예: '입고', '출고', '재고조정', '삭제')
  * @param {string} target - 대상 (예: 'A4용지')
@@ -151,18 +167,20 @@ function renderAuditList(logs) {
       const time = new Date(l.timestamp).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
       const icon = getActionIcon(l.action);
       const detailStr = formatDetail(l.detail);
+      // [SECURITY] escHtml 적용 — l.action, l.target, l.user, detailStr 모두 이스케이프
+      // VULN-002 / ATTACK-003 대응 패치 (2026-05-03)
       return `
         <div style="display:flex; gap:10px; padding:8px 16px; border-bottom:1px solid var(--border-light); align-items:flex-start;">
           <span style="font-size:16px; flex-shrink:0; margin-top:2px;">${icon}</span>
           <div style="flex:1; min-width:0;">
             <div style="font-size:13px;">
-              <span class="badge badge-default" style="font-size:10px;">${l.action}</span>
-              <strong style="margin-left:4px;">${l.target}</strong>
+              <span class="badge badge-default" style="font-size:10px;">${escHtml(l.action)}</span>
+              <strong style="margin-left:4px;">${escHtml(l.target)}</strong>
             </div>
-            ${detailStr ? `<div style="font-size:11px; color:var(--text-muted); margin-top:2px;">${detailStr}</div>` : ''}
+            ${detailStr ? `<div style="font-size:11px; color:var(--text-muted); margin-top:2px;">${escHtml(detailStr)}</div>` : ''}
           </div>
           <div style="font-size:11px; color:var(--text-muted); flex-shrink:0; text-align:right;">
-            ${time}<br/>${l.user || ''}
+            ${time}<br/>${escHtml(l.user || '')}
           </div>
         </div>
       `;

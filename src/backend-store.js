@@ -40,7 +40,10 @@ function splitDocPath(path) {
 }
 
 function randomId() {
-  return `doc_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+  const rnd = (typeof crypto !== 'undefined' && crypto.getRandomValues)
+    ? Array.from(crypto.getRandomValues(new Uint8Array(4))).map(b => b.toString(16).padStart(2, '0')).join('')
+    : Math.random().toString(36).slice(2, 8);
+  return `doc_${Date.now().toString(36)}_${rnd}`;
 }
 
 function notify() {

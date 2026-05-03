@@ -80,7 +80,10 @@ export function generateClientUuid() {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
     return crypto.randomUUID();
   }
-  const bytes = Array.from({ length: 16 }, () => Math.floor(Math.random() * 256));
+  // crypto.getRandomValues 우선 사용 — Math.random()은 암호학적으로 비안전 (CWE-338)
+  const bytes = (typeof crypto !== 'undefined' && crypto.getRandomValues)
+    ? Array.from(crypto.getRandomValues(new Uint8Array(16)))
+    : Array.from({ length: 16 }, () => Math.floor(Math.random() * 256));
   bytes[6] = (bytes[6] & 0x0f) | 0x40;
   bytes[8] = (bytes[8] & 0x3f) | 0x80;
   const hex = bytes.map((b) => b.toString(16).padStart(2, '0')).join('');

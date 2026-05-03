@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
+import { PLANS } from '../../plan.js';
 import { useAuth } from '../../contexts/AuthContext.jsx';
 import Sidebar from './Sidebar.jsx';
 import TopHeader from './TopHeader.jsx';
@@ -94,11 +95,85 @@ function PageNotFound() {
   );
 }
 
+/** 페이지 렌더링 오류 격리 — 전체 앱 크래시 방지 */
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+  componentDidCatch(error, info) {
+    console.error('[AppLayout] 페이지 렌더링 오류:', error, info?.componentStack);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{ padding: '48px', textAlign: 'center' }}>
+          <div style={{ fontSize: '40px', marginBottom: '12px' }}>⚠️</div>
+          <h2 style={{ fontWeight: 700, marginBottom: '8px' }}>페이지를 불러오는 중 오류가 발생했습니다</h2>
+          <p style={{ color: 'var(--text-muted)', fontSize: '13px', marginBottom: '20px' }}>
+            {this.state.error?.message || '알 수 없는 오류'}
+          </p>
+          <button
+            className="btn btn-primary"
+            onClick={() => this.setState({ hasError: false, error: null })}
+          >
+            다시 시도
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+/** 업그레이드 안내 모달 (plan.js의 showUpgradeModal CustomEvent 수신) */
+function UpgradeModal({ data, onClose }) {
+  const plan = data?.plan || PLANS[data?.minPlan];
+  if (!plan) return null;
+  return (
+    <div className="modal-overlay" style={{ display: 'flex' }} onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="modal" style={{ maxWidth: '440px', textAlign: 'center' }}>
+        <div style={{ padding: '32px 24px' }}>
+          <div style={{ fontSize: '48px', marginBottom: '12px' }}>🔒</div>
+          <h3 style={{ fontSize: '20px', fontWeight: 800, marginBottom: '8px' }}>
+            {plan.name} 요금제 기능입니다
+          </h3>
+          <p style={{ color: 'var(--text-muted)', fontSize: '14px', marginBottom: '24px', lineHeight: 1.6 }}>
+            이 기능은 <strong style={{ color: plan.color }}>{plan.icon} {plan.name}</strong> 이상 요금제에서 사용할 수 있습니다.
+            <br />업그레이드 후 이용해주세요.
+          </p>
+          <div style={{ background: 'var(--bg-secondary)', borderRadius: '12px', padding: '20px', marginBottom: '24px', textAlign: 'left' }}>
+            <div style={{ fontWeight: 700, marginBottom: '8px' }}>{plan.icon} {plan.name} — {plan.price}/{plan.period}</div>
+            <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>{plan.description}</div>
+          </div>
+          <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
+            <button className="btn btn-ghost" onClick={onClose}>닫기</button>
+            <button
+              className="btn btn-primary"
+              style={{ background: `linear-gradient(135deg, ${plan.color}, ${plan.color}dd)` }}
+              onClick={() => { onClose(); window.location.href = '/billing'; }}
+            >
+              {plan.name}로 업그레이드
+            </button>
+          </div>
+          <div style={{ marginTop: '16px', fontSize: '11px', color: 'var(--text-muted)' }}>
+            Pro 플랜부터 모든 고급 기능을 사용할 수 있습니다
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function AppLayout() {
   const { user, profile, startPage } = useAuth();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => localStorage.getItem('invex:sidebar-collapsed') === '1');
+  const [upgradeModal, setUpgradeModal] = useState(null); // showUpgradeModal CustomEvent 수신
 
   const toggleSidebarCollapse = () => {
     setSidebarCollapsed(prev => {
@@ -168,6 +243,13 @@ export default function AppLayout() {
     return () => window.removeEventListener('invex:sync-failed', handleSyncFailed);
   }, []);
 
+  // 업그레이드 모달 (plan.js showUpgradeModal → CustomEvent → React 모달)
+  useEffect(() => {
+    const handler = (e) => setUpgradeModal(e.detail || {});
+    window.addEventListener('invex:show-upgrade-modal', handler);
+    return () => window.removeEventListener('invex:show-upgrade-modal', handler);
+  }, []);
+
   return (
     <div id="app">
       <button
@@ -187,20 +269,26 @@ export default function AppLayout() {
 <TopHeader user={user} profile={profile} sidebarCollapsed={sidebarCollapsed} />
 
       <main id="main-content" className={sidebarCollapsed ? 'sidebar-collapsed' : ''}>
-        <Suspense fallback={<div style={{padding:'40px',textAlign:'center',color:'var(--text-muted)'}}>로딩 중...</div>}>
-          <Routes>
-            <Route index element={<Navigate to="/home" replace />} />
-            {Object.entries(PAGE_COMPONENTS).map(([id, Component]) => (
-              <Route
-                key={id}
-                path={'/' + id}
-                element={<Component />}
-              />
-            ))}
-            <Route path="*" element={<PageNotFound />} />
-          </Routes>
-        </Suspense>
+        <ErrorBoundary>
+          <Suspense fallback={<div style={{padding:'40px',textAlign:'center',color:'var(--text-muted)'}}>로딩 중...</div>}>
+            <Routes>
+              <Route index element={<Navigate to="/home" replace />} />
+              {Object.entries(PAGE_COMPONENTS).map(([id, Component]) => (
+                <Route
+                  key={id}
+                  path={'/' + id}
+                  element={<Component />}
+                />
+              ))}
+              <Route path="*" element={<PageNotFound />} />
+            </Routes>
+          </Suspense>
+        </ErrorBoundary>
       </main>
+
+      {upgradeModal && (
+        <UpgradeModal data={upgradeModal} onClose={() => setUpgradeModal(null)} />
+      )}
     </div>
   );
 }
