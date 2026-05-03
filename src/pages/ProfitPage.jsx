@@ -109,10 +109,10 @@ export default function ProfitPage() {
 
   // Chart effects
   useEffect(() => {
-    if (trendChartRef.current) renderProfitTrendChart(trendChartRef.current, monthlySeries);
+    if (trendChartRef.current) renderProfitTrendChart('profit-trend-chart', monthlySeries);
   }, [monthlySeries]);
   useEffect(() => {
-    if (vendorChartRef.current) renderVendorProfitChart(vendorChartRef.current, vendorChartRows);
+    if (vendorChartRef.current) renderVendorProfitChart('profit-vendor-chart', vendorChartRows);
   }, [vendorChartRows]);
 
   // Period range shortcuts
