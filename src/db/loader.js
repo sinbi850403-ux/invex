@@ -68,76 +68,102 @@ async function _fetchAllPages(table, maxLimit = 100000) {
 
 // ============================================================
 // 전체 데이터 로드 (초기화용) — store.js 호환
+//
+// 2단계 로드 전략:
+//   Phase 1: items + transactions + settings (핵심 UI에 필요한 데이터) → onCriticalReady 콜백
+//   Phase 2: vendors + transfers + stocktakes 등 보조 데이터 → 전체 반환
+//
+// 이렇게 하면 items/transactions가 준비되자마자 UI가 갱신되고,
+// vendors/거래처 등은 0.5~1초 뒤 추가로 업데이트됩니다.
 // ============================================================
-export async function loadAllData() {
-  const labels = [
-    'items', 'transactions', 'vendors', 'transfers', 'stocktakes',
-    'auditLogs', 'accountEntries', 'purchaseOrders', 'posSales',
-    'customFields', 'settings', 'itemStocks', 'safetyStocks',
-  ];
-
-  // 모든 대용량 테이블은 페이지네이션으로 로드
-  const results = await Promise.allSettled([
-    _fetchAllPages('items', 100000),
-    _fetchAllPages('transactions', 100000),
-    _fetchAllPages('vendors', 50000),
-    _fetchAllPages('transfers', 50000),
-    _fetchAllPages('stocktakes', 50000),
-    auditLogs.list({ limit: 200 }),
-    _fetchAllPages('account_entries', 100000),
-    _fetchAllPages('purchase_orders', 50000),
-    posSales.list({ limit: 1000 }),
-    customFields.list({ limit: 999999 }),
-    settings.getAll(),
-    itemStocks.listAll(),
-    _fetchAllPages('safety_stocks', 50000),
+export async function loadAllData(onCriticalReady) {
+  // ── Phase 1: 핵심 데이터 (items + transactions + settings) ──────────
+  const phase1 = await Promise.allSettled([
+    _fetchAllPages('items', 100000),          // 0
+    _fetchAllPages('transactions', 100000),   // 1
+    settings.getAll(),                         // 2
+    itemStocks.listAll(),                      // 3
+    _fetchAllPages('safety_stocks', 50000),   // 4
   ]);
 
-  const pick = (idx, fallback) => {
-    const r = results[idx];
-    if (r.status === 'fulfilled') {
-      const value = r.value;
-      if (Array.isArray(value) && labels[idx]) {
-        console.log(`[loadAllData] ${labels[idx]}: ${value.length}행`);
-      }
-      return value;
-    }
-    console.warn(`[loadAllData] ${labels[idx]} 로드 실패:`, r.reason?.message || r.reason);
+  const pickP1 = (idx, fallback) => {
+    const r = phase1[idx];
+    if (r.status === 'fulfilled') return r.value;
+    console.warn(`[loadAllData] phase1[${idx}] 로드 실패:`, r.reason?.message || r.reason);
     return fallback;
   };
 
-  const itemsData      = pick(0,  []);
-  const txData         = pick(1,  []);
-  const vendorsData    = pick(2,  []);
-  const transfersData  = pick(3,  []);
-  const stocktakeData  = pick(4,  []);
-  const auditData      = pick(5,  []);
-  const accountData    = pick(6,  []);
-  const orderData      = pick(7,  []);
-  const posData        = pick(8,  []);
-  const fieldData      = pick(9,  []);
-  const settingsData   = pick(10, {});
-  const itemStocksData = pick(11, []);
-  const safetyStocksData = pick(12, []);
+  const itemsData        = pickP1(0, []);
+  const txData           = pickP1(1, []);
+  const settingsData     = pickP1(2, {});
+  const itemStocksData   = pickP1(3, []);
+  const safetyStocksData = pickP1(4, []);
 
-  // 기존 store.js 호환 — 점진적 전환 유지
-  const mappedData = itemsData.map(dbItemToStoreItem);
+  console.log(`[loadAllData] phase1 완료 — items:${itemsData.length} txs:${txData.length}`);
 
-  // itemStocks 기반으로 quantity 채우기 (단일 진실 공급원)
+  // 핵심 데이터 변환
+  const mappedData         = itemsData.map(dbItemToStoreItem);
   const enrichedMappedData = enrichItemsWithQty(mappedData, itemStocksData);
-
-  // 안전재고 데이터 변환 (safety_stocks는 정규화 테이블)
   const convertedSafetyStocks = safetyStocksData.map(r => ({
-    id: r.id,
-    itemId: r.item_id,
-    warehouseId: r.warehouse_id,
-    minQty: r.min_qty,
-    updatedAt: r.updated_at,
+    id: r.id, itemId: r.item_id, warehouseId: r.warehouse_id,
+    minQty: r.min_qty, updatedAt: r.updated_at,
   }));
 
+  const criticalState = {
+    mappedData:         enrichedMappedData,
+    transactions:       txData.map(dbTxToStoreTx),
+    itemStocks:         itemStocksData,
+    safetyStocks:       convertedSafetyStocks,
+    safetyStock:        settingsData.safetyStock || {},
+    beginnerMode:       settingsData.beginnerMode ?? true,
+    dashboardMode:      settingsData.dashboardMode || 'executive',
+    visibleColumns:     settingsData.visibleColumns || null,
+    inventoryViewPrefs: settingsData.inventoryViewPrefs || {},
+    inoutViewPrefs:     settingsData.inoutViewPrefs || {},
+    tableSortPrefs:     settingsData.tableSortPrefs || {},
+    costMethod:         settingsData.costMethod || 'weighted-avg',
+    currency:           settingsData.currency || { code: 'KRW', symbol: '₩', rate: 1 },
+  };
+
+  // 핵심 데이터 준비 즉시 콜백 → store가 바로 UI 업데이트
+  if (typeof onCriticalReady === 'function') {
+    try { onCriticalReady(criticalState); } catch (_) {}
+  }
+
+  // ── Phase 2: 보조 데이터 (vendors, transfers, 장부 등) ───────────────
+  const phase2 = await Promise.allSettled([
+    _fetchAllPages('vendors', 50000),          // 0
+    _fetchAllPages('transfers', 50000),         // 1
+    _fetchAllPages('stocktakes', 50000),        // 2
+    auditLogs.list({ limit: 200 }),             // 3
+    _fetchAllPages('account_entries', 100000),  // 4
+    _fetchAllPages('purchase_orders', 50000),   // 5
+    posSales.list({ limit: 1000 }),             // 6
+    customFields.list({ limit: 999999 }),       // 7
+  ]);
+
+  const secLabels = ['vendors', 'transfers', 'stocktakes', 'auditLogs',
+    'account_entries', 'purchase_orders', 'posSales', 'customFields'];
+  const pickP2 = (idx, fallback) => {
+    const r = phase2[idx];
+    if (r.status === 'fulfilled') return r.value;
+    console.warn(`[loadAllData] ${secLabels[idx]} 로드 실패:`, r.reason?.message || r.reason);
+    return fallback;
+  };
+
+  const vendorsData   = pickP2(0, []);
+  const transfersData = pickP2(1, []);
+  const stocktakeData = pickP2(2, []);
+  const auditData     = pickP2(3, []);
+  const accountData   = pickP2(4, []);
+  const orderData     = pickP2(5, []);
+  const posData       = pickP2(6, []);
+  const fieldData     = pickP2(7, []);
+
+  console.log(`[loadAllData] phase2 완료 — vendors:${vendorsData.length} transfers:${transfersData.length}`);
+
   return {
-    mappedData:       enrichedMappedData,
-    transactions:     txData.map(dbTxToStoreTx),
+    ...criticalState,
     vendorMaster:     vendorsData.map(dbVendorToStore),
     transfers:        transfersData.map(dbTransferToStore),
     stocktakeHistory: stocktakeData,
@@ -146,19 +172,6 @@ export async function loadAllData() {
     purchaseOrders:   orderData,
     posData:          posData,
     customFields:     fieldData,
-    // 신규: 창고별 현재고 + 안전재고 (정규화 테이블)
-    itemStocks:       itemStocksData,
-    safetyStocks:     convertedSafetyStocks,
-    // 설정값
-    safetyStock:      settingsData.safetyStock || {},
-    beginnerMode:     settingsData.beginnerMode ?? true,
-    dashboardMode:    settingsData.dashboardMode || 'executive',
-    visibleColumns:   settingsData.visibleColumns || null,
-    inventoryViewPrefs: settingsData.inventoryViewPrefs || {},
-    inoutViewPrefs:   settingsData.inoutViewPrefs || {},
-    tableSortPrefs:   settingsData.tableSortPrefs || {},
-    costMethod:       settingsData.costMethod || 'weighted-avg',
-    currency:         settingsData.currency || { code: 'KRW', symbol: '₩', rate: 1 },
   };
 }
 

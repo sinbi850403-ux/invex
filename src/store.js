@@ -168,9 +168,9 @@ export async function restoreState(userId = null) {
               const parsed = JSON.parse(raw);
               const expiresAt = parsed?.expires_at; // Supabase v2: 초 단위 epoch
               if (expiresAt && expiresAt * 1000 < Date.now() + 30_000) {
-                // 30초 이내 만료 또는 이미 만료 → TOKEN_REFRESHED 대기 (최대 6초)
+                // 30초 이내 만료 또는 이미 만료 → TOKEN_REFRESHED 대기 (최대 2초)
                 await new Promise(resolve => {
-                  const timer = setTimeout(resolve, 6000);
+                  const timer = setTimeout(resolve, 2000);
                   window.addEventListener('invex:token-refreshed', () => {
                     clearTimeout(timer);
                     resolve();
@@ -181,7 +181,34 @@ export async function restoreState(userId = null) {
           } catch (_) { /* localStorage 파싱 오류 무시 */ }
         }
 
-        let cloudData = await managedQuery(() => db.loadAllData());
+        // IndexedDB 먼저 로드 (로컬 캐시) — 두 가지 목적:
+        //   ① 빈 클라우드 응답으로 로컬 데이터가 덮어씌워지는 것 방지
+        //   ② onCriticalReady 콜백에서 캐시를 즉시 스토어에 적용 가능
+        const localData = await loadFromDB();
+
+        // Phase 1 완료 콜백: items+transactions 준비 즉시 스토어 갱신 → 화면 빠른 표시
+        const onCriticalReady = (critical) => {
+          critical.transactions?.forEach(tx => { tx._synced = true; });
+          const safeCrit = { ...critical };
+          if (!(safeCrit.mappedData?.length) && (localData?.mappedData?.length ?? 0) > 0) delete safeCrit.mappedData;
+          if (!(safeCrit.transactions?.length) && (localData?.transactions?.length ?? 0) > 0) delete safeCrit.transactions;
+          // 미동기화 로컬 트랜잭션 선(先) 병합
+          if (safeCrit.transactions) {
+            const unsynced = (localData?.transactions || []).filter(tx => !tx._synced);
+            if (unsynced.length) {
+              const cIds = new Set(safeCrit.transactions.map(t => t.id));
+              const missing = unsynced.filter(tx => !cIds.has(tx.id));
+              if (missing.length) safeCrit.transactions = [...missing, ...safeCrit.transactions];
+            }
+          }
+          stateHolder.current = { ...DEFAULT_STATE, ...(localData || {}), ...safeCrit };
+          _recalcMissingQuantities();
+          dispatchUpdate(['mappedData', 'transactions', 'itemStocks', 'safetyStocks',
+            'safetyStock', 'beginnerMode', 'dashboardMode', 'costMethod', 'currency',
+            'visibleColumns', 'inventoryViewPrefs', 'inoutViewPrefs', 'tableSortPrefs']);
+        };
+
+        let cloudData = await managedQuery(() => db.loadAllData(onCriticalReady));
 
         // 여전히 0건이면 1회 재시도 (네트워크 일시 오류 또는 토큰 전파 지연 대응)
         const cloudItemCount = cloudData.mappedData?.length ?? 0;
@@ -190,7 +217,7 @@ export async function restoreState(userId = null) {
           (cloudItemCount === 0 && cloudTxCount === 0) ||
           (cloudItemCount > 0 && cloudTxCount === 0);
         if (looksPartialCloudLoad) {
-          await new Promise(r => setTimeout(r, 1500));
+          await new Promise(r => setTimeout(r, 400)); // 1500ms → 400ms
           const retry = await managedQuery(() => db.loadAllData());
           const retryItemCount = retry.mappedData?.length ?? 0;
           const retryTxCount = retry.transactions?.length ?? 0;
@@ -198,9 +225,6 @@ export async function restoreState(userId = null) {
             cloudData = retry;
           }
         }
-
-        // 로컬 IndexedDB 전체를 먼저 읽어 두고, Supabase가 담당하는 키만 cloudData로 덮어쓴다.
-        const localData = await loadFromDB();
 
         // Supabase 데이터에 입출고는 _synced 표시
         if (cloudData.transactions) {

@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
 import { initAuth, getCurrentUser, getUserProfileData, logout as authLogout } from '../auth.js';
 import { isSupabaseConfigured } from '../supabase-client.js';
-import { restoreState, setupRealtimeSync, cleanupRealtimeSync, getState as getStoreState } from '../store.js';
+import { restoreState, setupRealtimeSync, cleanupRealtimeSync, getState as getStoreState, wasLoadedFromSupabase } from '../store.js';
 import { primeUserIdCache, setWorkspaceUserId, clearWorkspaceUserId } from '../db.js';
 import { injectGetCurrentUser, injectGetUserProfile, PLANS, setPlan, getCurrentPlan } from '../plan.js';
 import { setMonitorUser, clearMonitorUser } from '../error-monitor.js';
@@ -32,10 +32,16 @@ export function AuthProvider({ children }) {
     try {
       const uid = loggedInUser?.uid || null;
       primeUserIdCache(uid);
-      await restoreState(uid);
+
+      // restoreState + getWorkspaceId를 병렬 실행 — RTT 1회 절감
+      const [, wsId] = await Promise.all([
+        restoreState(uid),
+        (uid && isSupabaseConfigured) ? getWorkspaceId(uid) : Promise.resolve(uid),
+      ]);
 
       // 로그인 직후 세션 갱신 레이스로 0건이 들어오는 케이스 보정:
-      // 코어 데이터가 비어 있으면 1회 지연 재시도로 안정 세션에서 다시 로드
+      // wasLoadedFromSupabase()가 true이면 Supabase 쿼리가 정상 응답한 것이므로 재시도 불필요
+      // (신규 계정처럼 데이터가 0건인 정상 케이스와 구분)
       const getCoreCounts = () => {
         const s = getStoreState() || {};
         return {
@@ -54,11 +60,12 @@ export function AuthProvider({ children }) {
       if (
         isSupabaseConfigured &&
         uid &&
+        !wasLoadedFromSupabase() &&
         (hasNoCoreData() || looksPartialBootstrap()) &&
         !hasRetriedBootstrapRef.current
       ) {
         hasRetriedBootstrapRef.current = true;
-        await new Promise(r => setTimeout(r, 1200));
+        await new Promise(r => setTimeout(r, 400)); // 1200ms → 400ms
         await restoreState(uid);
       }
 
@@ -72,13 +79,10 @@ export function AuthProvider({ children }) {
       // 사용자가 수동으로 새로고침 버튼을 눌러야만 데이터 업데이트됨
       // setupRealtimeSync();
 
-      // 워크스페이스 소속 시 오너 UID로 전환
-      if (uid) {
-        const wsId = await getWorkspaceId(uid);
-        if (wsId && wsId !== uid) {
-          setWorkspaceUserId(wsId);
-          await restoreState(wsId);
-        }
+      // 워크스페이스 소속 시 오너 UID로 전환 (wsId는 위 Promise.all에서 이미 조회됨)
+      if (wsId && wsId !== uid) {
+        setWorkspaceUserId(wsId);
+        await restoreState(wsId);
       }
     } finally {
       initializingRef.current = false;
@@ -96,8 +100,8 @@ export function AuthProvider({ children }) {
     }
 
     // ── 최대 대기 타이머 ─────────────────────────────────────────────────────
-    // 저장된 세션이 있으면 INITIAL_SESSION 복원을 기다려야 하므로 5초,
-    // 없으면 Supabase cold-start 대응으로 2초 후 로그인 화면 표시
+    // 저장된 세션이 있으면 INITIAL_SESSION 복원을 기다려야 하므로 2초,
+    // 없으면 Supabase cold-start 대응으로 1초 후 로그인 화면 표시
     const hasStoredSession = (() => {
       try {
         for (let i = 0; i < localStorage.length; i++) {
@@ -110,7 +114,7 @@ export function AuthProvider({ children }) {
       } catch { /* ignore */ }
       return false;
     })();
-    const readyFallback = setTimeout(() => setIsReady(true), hasStoredSession ? 5000 : 2000);
+    const readyFallback = setTimeout(() => setIsReady(true), hasStoredSession ? 2000 : 1000);
 
     initAuth(async (newUser, newProfile) => {
       clearTimeout(readyFallback);
