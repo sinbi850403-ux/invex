@@ -56,7 +56,8 @@ export default function ProfitPage() {
   const savePlanner = useCallback((next) => { const cur = readLS('invex_profit_monthly_planner_v1'); const merged = { ...cur, ...next }; writeLS('invex_profit_monthly_planner_v1', merged); setPlanner(p => ({ ...p, ...next })); }, []);
 
   // Compute item rows
-  const rows = useMemo(() => buildItemRows(items), [items]);
+  // transactions 전달 → 아이템 마스터 원가/판매가가 비어있을 때 트랜잭션 집계값으로 폴백
+  const rows = useMemo(() => buildItemRows(items, transactions), [items, transactions]);
   const sortedByProfit = useMemo(() => [...rows].sort((a, b) => b.profit - a.profit), [rows]);
   const topProfit = useMemo(() => sortedByProfit.slice(0, 5), [sortedByProfit]);
   const riskRows = useMemo(() => [...rows].filter(r => r.hasSalePrice).sort((a, b) => a.operatingProfitRate - b.operatingProfitRate).slice(0, 5), [rows]);

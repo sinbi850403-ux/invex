@@ -34,11 +34,65 @@ export function getTransactionAmount(tx, items) {
   return qty * fp;
 }
 
-export function buildItemRows(items) {
+/**
+ * buildItemRows — 품목별 손익 계산
+ *
+ * @param {Array} items        - 아이템 마스터 배열
+ * @param {Array} transactions - 입출고 트랜잭션 배열 (선택, 없으면 아이템 마스터만 사용)
+ *
+ * 원가/판매가 폴백 순서:
+ *   원가  : 아이템 마스터 unitPrice  → 입고 트랜잭션 가중평균
+ *   판매가 : 아이템 마스터 salePrice  → 출고 트랜잭션 평균 단가 → getSalePrice(원가 기반 추정)
+ */
+export function buildItemRows(items, transactions) {
+  // ── 트랜잭션 집계: 품목별 입고단가 가중평균 + 출고단가 평균 계산 ──────────
+  const txAgg = {};
+  const normCode = v => String(v || '').trim().replace(/^0+/, '').toLowerCase() || '';
+  const normName = v => String(v || '').toLowerCase().replace(/\s+/g, '').replace(/[^\p{L}\p{N}]/gu, '');
+  const makeKey  = (name, code) => {
+    const c = normCode(code);
+    if (c) return `code:${c}`;
+    const n = normName(name);
+    return n ? `name:${n}` : '';
+  };
+
+  (transactions || []).forEach(tx => {
+    const key = makeKey(tx.itemName, tx.itemCode);
+    if (!key) return;
+    if (!txAgg[key]) txAgg[key] = { inQty: 0, inAmt: 0, outQty: 0, outAmt: 0 };
+    const qty = parseFloat(tx.quantity) || 0;
+    if (tx.type === 'in') {
+      txAgg[key].inQty += qty;
+      const sv = parseFloat(tx.supplyValue);
+      txAgg[key].inAmt += (Number.isFinite(sv) && sv > 0) ? sv : (parseFloat(tx.unitPrice) || 0) * qty;
+    } else {
+      txAgg[key].outQty += qty;
+      const sp = parseFloat(tx.actualSellingPrice || tx.sellingPrice || tx.salePrice) || parseFloat(tx.unitPrice) || 0;
+      txAgg[key].outAmt += sp * qty;
+    }
+  });
+
+  // ── 품목 행 계산 ────────────────────────────────────────────────────────────
   const rawRows = items.map(item => {
-    const quantity      = toNumber(item.quantity);
-    const unitCost      = toNumber(item.unitPrice || item.unitCost);
-    const salePrice     = toNumber(getSalePrice(item));
+    const quantity = toNumber(item.quantity);
+
+    // 원가: 아이템 마스터 → 입고 트랜잭션 가중평균
+    const masterCost = toNumber(item.unitPrice || item.unitCost);
+    const txKey      = makeKey(item.itemName, item.itemCode);
+    const agg        = txAgg[txKey] || {};
+    const weightedCost = (agg.inQty > 0 && agg.inAmt > 0) ? agg.inAmt / agg.inQty : 0;
+    const unitCost   = masterCost > 0 ? masterCost : Math.round(weightedCost);
+
+    // 판매가: 아이템 마스터 → 출고 트랜잭션 평균 → 원가 기반 추정(20% 마크업)
+    const masterSalePrice = toNumber(item.salePrice);
+    const avgOutPrice     = (agg.outQty > 0 && agg.outAmt > 0) ? Math.round(agg.outAmt / agg.outQty) : 0;
+    const estimatedPrice  = unitCost > 0 ? toNumber(getSalePrice({ unitPrice: unitCost })) : 0;
+    const salePrice = masterSalePrice > 0 ? masterSalePrice
+                    : avgOutPrice     > 0 ? avgOutPrice
+                    : estimatedPrice;
+
+    const hasSalePrice    = masterSalePrice > 0 || avgOutPrice > 0;
+
     const discountAmount = getItemMetric(item, ['discountAmount','discount','discountValue','discount_price','할인금액']);
     const sgnaExpense    = getItemMetric(item, ['sgnaExpense','sgna','sellingGeneralAdminExpense','operatingExpense','판관비','판매관리비']);
     const grossSalesAmount  = Math.round(quantity * salePrice);
@@ -51,7 +105,7 @@ export function buildItemRows(items) {
     const operatingProfitRate = totalRevenue > 0 ? (operatingProfit / totalRevenue) * 100 : 0;
     return {
       name: item.itemName || '(미분류 품목)', code: item.itemCode || '', category: item.category || '미분류',
-      quantity, unitCost, salePrice, hasSalePrice: toNumber(item.salePrice) > 0,
+      quantity, unitCost, salePrice, hasSalePrice,
       grossSalesAmount, discountAmount, sgnaExpense, totalCost, totalRevenue,
       grossProfit, operatingProfit, profit: operatingProfit,
       profitRate, costRatio, operatingProfitRate,
