@@ -58,7 +58,7 @@ const PAGE_MIN_PLAN = {
   // Pro 기능
   bulk: 'pro', scanner: 'pro', labels: 'pro', transfer: 'pro',
   stocktake: 'pro', vendors: 'pro', summary: 'pro', dashboard: 'pro',
-  costing: 'pro', accounts: 'pro', ledger: 'pro', documents: 'pro', auditlog: 'pro',
+  costing: 'pro', accounts: 'pro', documents: 'pro', auditlog: 'pro',
   'tax-reports': 'pro', orders: 'pro', profit: 'pro', forecast: 'pro', 'weekly-report': 'pro',
   // Enterprise 기능
   warehouses: 'enterprise', roles: 'enterprise', api: 'enterprise',

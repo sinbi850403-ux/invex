@@ -16,6 +16,54 @@ import {
 } from '../domain/profitCompute.js';
 import { SortTh } from '../components/inout/SortTh.jsx';
 
+// ─── PlannerRow는 컴포넌트 외부에 정의 — 렌더마다 재생성 방지 ─────────────────
+const PLANNER_ROWS = [
+  { label: '매출금액', metric: 'sales', editablePlan: true, planKey: 'salesPlan' },
+  { label: '매출원가', metric: 'cost', editablePlan: true, planKey: 'costPlan' },
+  { label: '매출총이익', metric: 'grossProfit' },
+  { label: '판관비', metric: 'sgna', editablePlan: true, editableActual: true, planKey: 'sgnaPlan', actualKey: 'sgnaActual' },
+  { label: '영업이익', metric: 'operatingProfit' },
+  { label: '영업이익율', metric: 'operatingProfitRate', percent: true },
+];
+
+function PlannerRow({ label, metric, editablePlan, editableActual, planKey, actualKey, percent, snapshot, full, monthlyData, onUpdate }) {
+  if (!full) {
+    const pv = toNumber(snapshot.plan[metric]); const av = toNumber(snapshot.actual[metric]); const dv = toNumber(snapshot.diff[metric]);
+    const m = snapshot.month;
+    return (
+      <tr>
+        <td style={{ fontWeight: 700 }}>{label}</td>
+        <td className="text-right">
+          {editablePlan
+            ? <input type="number" className="form-input" style={{ width: '120px', padding: '4px 8px', height: '32px', textAlign: 'right' }} defaultValue={Math.round(pv)} onBlur={e => onUpdate(planKey, m, e.target.value)} />
+            : <span>{percent ? fmtPct(pv) : fmtMoney(pv)}</span>}
+        </td>
+        <td className="text-right">
+          {editableActual
+            ? <input type="number" className="form-input" style={{ width: '120px', padding: '4px 8px', height: '32px', textAlign: 'right' }} defaultValue={Math.round(av)} onBlur={e => onUpdate(actualKey, m, e.target.value)} />
+            : <span>{percent ? fmtPct(av) : fmtMoney(av)}</span>}
+        </td>
+        <td className="text-right" style={{ fontWeight: 700, color: dv > 0 ? 'var(--success)' : dv < 0 ? 'var(--danger)' : 'var(--text-primary)' }}>{percent ? fmtSignedPct(dv) : fmtSigned(dv)}</td>
+      </tr>
+    );
+  }
+  return (
+    <tr>
+      <td style={{ fontWeight: 700 }}>{label}</td>
+      {PROFIT_MONTHS.map(m => {
+        const pv = toNumber(monthlyData.plan[metric]?.[m]); const av = toNumber(monthlyData.actual[metric]?.[m]); const dv = av - pv;
+        return (
+          <React.Fragment key={m}>
+            <td className="text-right">{editablePlan ? <input type="number" className="form-input" style={{ width: '88px', padding: '4px 6px', height: '30px', textAlign: 'right' }} defaultValue={Math.round(pv)} onBlur={e => onUpdate(planKey, m, e.target.value)} /> : <span>{percent ? fmtPct(pv) : fmtMoney(pv)}</span>}</td>
+            <td className="text-right">{editableActual ? <input type="number" className="form-input" style={{ width: '88px', padding: '4px 6px', height: '30px', textAlign: 'right' }} defaultValue={Math.round(av)} onBlur={e => onUpdate(actualKey, m, e.target.value)} /> : <span>{percent ? fmtPct(av) : fmtMoney(av)}</span>}</td>
+            <td className="text-right" style={{ fontWeight: 700, color: dv > 0 ? 'var(--success)' : dv < 0 ? 'var(--danger)' : 'var(--text-primary)' }}>{percent ? fmtSignedPct(dv) : fmtSigned(dv)}</td>
+          </React.Fragment>
+        );
+      })}
+    </tr>
+  );
+}
+
 export default function ProfitPage() {
   const [state] = useStore();
   const navigate = useNavigate();
@@ -196,54 +244,6 @@ export default function ProfitPage() {
     try { const a = document.createElement('a'); a.href = ref.current.toDataURL('image/png'); a.download = `${name}.png`; a.click(); } catch { showToast('저장 실패', 'error'); }
   };
 
-  // Planner row renderer
-  const PlannerRow = ({ label, metric, editablePlan, editableActual, planKey, actualKey, percent, snapshot, full }) => {
-    const months = full ? PROFIT_MONTHS : null;
-    if (!full) {
-      const pv = toNumber(snapshot.plan[metric]); const av = toNumber(snapshot.actual[metric]); const dv = toNumber(snapshot.diff[metric]);
-      const m = snapshot.month;
-      return (
-        <tr>
-          <td style={{ fontWeight: 700 }}>{label}</td>
-          <td className="text-right">
-            {editablePlan
-              ? <input type="number" className="form-input" style={{ width: '120px', padding: '4px 8px', height: '32px', textAlign: 'right' }} defaultValue={Math.round(pv)} onBlur={e => updatePlannerMap(planKey, m, e.target.value)} />
-              : <span>{percent ? fmtPct(pv) : fmtMoney(pv)}</span>}
-          </td>
-          <td className="text-right">
-            {editableActual
-              ? <input type="number" className="form-input" style={{ width: '120px', padding: '4px 8px', height: '32px', textAlign: 'right' }} defaultValue={Math.round(av)} onBlur={e => updatePlannerMap(actualKey, m, e.target.value)} />
-              : <span>{percent ? fmtPct(av) : fmtMoney(av)}</span>}
-          </td>
-          <td className="text-right" style={{ fontWeight: 700, color: dv > 0 ? 'var(--success)' : dv < 0 ? 'var(--danger)' : 'var(--text-primary)' }}>{percent ? fmtSignedPct(dv) : fmtSigned(dv)}</td>
-        </tr>
-      );
-    }
-    return (
-      <tr>
-        <td style={{ fontWeight: 700 }}>{label}</td>
-        {PROFIT_MONTHS.map(m => {
-          const pv = toNumber(monthlyPlanner.plan[metric]?.[m]); const av = toNumber(monthlyPlanner.actual[metric]?.[m]); const dv = av - pv;
-          return (
-            <React.Fragment key={m}>
-              <td className="text-right">{editablePlan ? <input type="number" className="form-input" style={{ width: '88px', padding: '4px 6px', height: '30px', textAlign: 'right' }} defaultValue={Math.round(pv)} onBlur={e => updatePlannerMap(planKey, m, e.target.value)} /> : <span>{percent ? fmtPct(pv) : fmtMoney(pv)}</span>}</td>
-              <td className="text-right">{editableActual ? <input type="number" className="form-input" style={{ width: '88px', padding: '4px 6px', height: '30px', textAlign: 'right' }} defaultValue={Math.round(av)} onBlur={e => updatePlannerMap(actualKey, m, e.target.value)} /> : <span>{percent ? fmtPct(av) : fmtMoney(av)}</span>}</td>
-              <td className="text-right" style={{ fontWeight: 700, color: dv > 0 ? 'var(--success)' : dv < 0 ? 'var(--danger)' : 'var(--text-primary)' }}>{percent ? fmtSignedPct(dv) : fmtSigned(dv)}</td>
-            </React.Fragment>
-          );
-        })}
-      </tr>
-    );
-  };
-
-  const PLANNER_ROWS = [
-    { label: '매출금액', metric: 'sales', editablePlan: true, planKey: 'salesPlan' },
-    { label: '매출원가', metric: 'cost', editablePlan: true, planKey: 'costPlan' },
-    { label: '매출총이익', metric: 'grossProfit' },
-    { label: '판관비', metric: 'sgna', editablePlan: true, editableActual: true, planKey: 'sgnaPlan', actualKey: 'sgnaActual' },
-    { label: '영업이익', metric: 'operatingProfit' },
-    { label: '영업이익율', metric: 'operatingProfitRate', percent: true },
-  ];
 
   return (
     <div>
@@ -382,7 +382,7 @@ export default function ProfitPage() {
           <table className="data-table" style={{ minWidth: '720px' }}>
             <thead><tr><th>구분</th><th className="text-right">계획</th><th className="text-right">실적</th><th className="text-right">차이</th></tr></thead>
             <tbody>
-              {PLANNER_ROWS.map(r => <PlannerRow key={r.label} {...r} snapshot={plannerSnapshot} full={false} />)}
+              {PLANNER_ROWS.map(r => <PlannerRow key={r.label} {...r} snapshot={plannerSnapshot} full={false} onUpdate={updatePlannerMap} monthlyData={monthlyPlanner} />)}
             </tbody>
           </table>
         </div>
@@ -402,7 +402,7 @@ export default function ProfitPage() {
                 </tr>
               </thead>
               <tbody>
-                {PLANNER_ROWS.map(r => <PlannerRow key={r.label} {...r} snapshot={plannerSnapshot} full={true} />)}
+                {PLANNER_ROWS.map(r => <PlannerRow key={r.label} {...r} snapshot={plannerSnapshot} full={true} onUpdate={updatePlannerMap} monthlyData={monthlyPlanner} />)}
               </tbody>
             </table>
           </div>

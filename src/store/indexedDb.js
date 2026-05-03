@@ -9,8 +9,12 @@ const DB_NAME = 'invex-db';
 const DB_VERSION = 1;
 const STORE_NAME = 'appState';
 
+// IDB 연결 싱글턴 — 매 호출마다 새 연결 생성 방지
+let _dbPromise = null;
+
 export function openDB() {
-  return new Promise((resolve, reject) => {
+  if (_dbPromise) return _dbPromise;
+  _dbPromise = new Promise((resolve, reject) => {
     const request = indexedDB.open(DB_NAME, DB_VERSION);
     request.onupgradeneeded = (e) => {
       const db = e.target.result;
@@ -18,9 +22,16 @@ export function openDB() {
         db.createObjectStore(STORE_NAME);
       }
     };
-    request.onsuccess = () => resolve(request.result);
-    request.onerror = () => reject(request.error);
+    request.onsuccess = () => {
+      const db = request.result;
+      // 브라우저가 DB를 강제 종료할 때(버전 업그레이드 등) 캐시 무효화
+      db.onclose = () => { _dbPromise = null; };
+      db.onversionchange = () => { db.close(); _dbPromise = null; };
+      resolve(db);
+    };
+    request.onerror = () => { _dbPromise = null; reject(request.error); };
   });
+  return _dbPromise;
 }
 
 const LS_UNSYNCED_KEY = 'invex-unsynced-txs';
@@ -63,7 +74,7 @@ export async function saveToDB() {
       tx.oncomplete = resolve;
       tx.onerror = reject;
     });
-    idb.close();
+    // 싱글턴 연결 유지 — idb.close() 제거
   } catch (e) {
     console.warn('[Store] IndexedDB 저장 실패:', e.message);
     // 폴백: localStorage에 핵심 데이터만 저장
@@ -95,8 +106,9 @@ export async function loadFromDB() {
     const store = tx.objectStore(STORE_NAME);
     const request = store.get('current');
     return new Promise((resolve) => {
-      request.onsuccess = () => { idb.close(); resolve(request.result || null); };
-      request.onerror = () => { idb.close(); resolve(null); };
+      // 싱글턴 연결 유지 — idb.close() 제거
+      request.onsuccess = () => resolve(request.result || null);
+      request.onerror = () => resolve(null);
     });
   } catch (e) {
     console.warn('[Store] IndexedDB 읽기 실패:', e.message);

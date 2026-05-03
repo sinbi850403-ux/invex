@@ -24,11 +24,32 @@ function getItemMetric(item, keys) {
   return 0;
 }
 
-export function getTransactionAmount(tx, items) {
+/**
+ * 품목 배열로 O(1) 룩업 Map 생성 — O(N×M) 반복 호출을 O(N+M)으로 개선
+ * itemName과 itemCode 두 키 모두 등록해 find() 동작을 재현
+ */
+function _buildItemMap(items) {
+  const map = new Map();
+  for (const item of items) {
+    const name = String(item.itemName || '').trim();
+    if (name) map.set(name, item);
+    if (item.itemCode) map.set(`__code__${item.itemCode}`, item);
+  }
+  return map;
+}
+
+/** itemMap을 미리 받으면 O(1) 룩업, 없으면 기존 Array.find() 폴백 (하위 호환) */
+export function getTransactionAmount(tx, items, itemMap) {
   const qty    = toNumber(tx.quantity);
   const direct = toNumber(tx.price ?? tx.unitPrice ?? tx.unitCost ?? 0);
   if (direct > 0) return qty * direct;
-  const item = items.find(i => i.itemName === tx.itemName || (i.itemCode && i.itemCode === tx.itemCode));
+  let item;
+  if (itemMap) {
+    const name = String(tx.itemName || '').trim();
+    item = itemMap.get(name) || (tx.itemCode ? itemMap.get(`__code__${tx.itemCode}`) : null) || null;
+  } else {
+    item = items.find(i => i.itemName === tx.itemName || (i.itemCode && i.itemCode === tx.itemCode));
+  }
   if (!item) return 0;
   const fp = tx.type === 'out' ? toNumber(getSalePrice(item)) : toNumber(item.unitPrice || item.unitCost);
   return qty * fp;
@@ -138,8 +159,9 @@ export function buildItemRows(items, transactions) {
 
 export function buildPeriodSummary(transactions, items) {
   let totalIn = 0, totalOut = 0;
+  const itemMap = _buildItemMap(items);
   transactions.forEach(tx => {
-    const a = getTransactionAmount(tx, items);
+    const a = getTransactionAmount(tx, items, itemMap);
     if (tx.type === 'in') totalIn += a;
     if (tx.type === 'out') totalOut += a;
   });
@@ -148,11 +170,12 @@ export function buildPeriodSummary(transactions, items) {
 
 export function buildMonthlySeries(transactions, items) {
   const map = new Map();
+  const itemMap = _buildItemMap(items);
   transactions.forEach(tx => {
     if (!tx.date) return;
     const key = String(tx.date).slice(0, 7);
     if (!map.has(key)) map.set(key, { totalIn: 0, totalOut: 0 });
-    const b = map.get(key); const a = getTransactionAmount(tx, items);
+    const b = map.get(key); const a = getTransactionAmount(tx, items, itemMap);
     if (tx.type === 'in') b.totalIn += a;
     if (tx.type === 'out') b.totalOut += a;
   });
@@ -167,12 +190,13 @@ export function buildMonthlySeries(transactions, items) {
 
 export function buildVendorSummary(transactions, items) {
   const map = new Map();
+  const itemMap = _buildItemMap(items);
   transactions.forEach(tx => {
     const name = String(tx.vendor || '').trim() || '미지정';
     const cur = map.get(name) || { name, count: 0, totalIn: 0, totalOut: 0, lastDate: '' };
     cur.count++;
     if (String(tx.date || '') > cur.lastDate) cur.lastDate = String(tx.date || '');
-    const a = getTransactionAmount(tx, items);
+    const a = getTransactionAmount(tx, items, itemMap);
     if (tx.type === 'in') cur.totalIn += a;
     if (tx.type === 'out') cur.totalOut += a;
     map.set(name, cur);

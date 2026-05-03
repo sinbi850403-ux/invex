@@ -7,7 +7,7 @@ import { showToast } from '../toast.js';
 import { PLANS, getCurrentPlan, setPlan } from '../plan.js';
 import { setState as storeSetState } from '../store.js';
 
-const TOSS_CLIENT_KEY = import.meta.env.VITE_TOSS_CLIENT_KEY || 'test_ck_D5GePWvyJnrK0W0k6q8gLzN97Eoq';
+const TOSS_CLIENT_KEY = import.meta.env.VITE_TOSS_CLIENT_KEY ?? '';
 
 function formatDate(iso) {
   if (!iso) return '-';

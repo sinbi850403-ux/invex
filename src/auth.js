@@ -334,7 +334,8 @@ function renderInlineLoginError(loginBtn, email, errorMsg, showResetAction) {
       errorContainer.innerHTML = '';
       const successEl = document.createElement('div');
       successEl.style.cssText = 'color:#22c55e; font-size:13px; text-align:center; padding:14px; background:rgba(34,197,94,0.1); border-radius:8px; line-height:1.6;';
-      successEl.innerHTML = `<strong>이메일을 전송했습니다.</strong><br><span style="font-size:12px; color:var(--text-muted);">${email} 메일함에서 비밀번호를 다시 설정해 주세요.</span>`;
+      const safeEmail = String(email || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      successEl.innerHTML = `<strong>이메일을 전송했습니다.</strong><br><span style="font-size:12px; color:var(--text-muted);">${safeEmail} 메일함에서 비밀번호를 다시 설정해 주세요.</span>`;
       errorContainer.appendChild(successEl);
     });
 

@@ -114,17 +114,25 @@ export function setSyncCallback(fn) {
   setInventorySyncCallback(fn);
 }
 
+// IDB 쓰기 디바운스 타이머 — 빠른 연속 setState 시 쓰기 폭증 방지
+let _idbSaveTimer = null;
+const IDB_DEBOUNCE_MS = 200;
+
 export function setState(partial) {
   // 변경된 키 추적 (Supabase 부분 동기화용)
   const changedKeys = Object.keys(partial);
 
   stateHolder.current = { ...stateHolder.current, ...partial };
   dispatchUpdate(changedKeys);
-  // 비동기로 로컬 저장 — 실패 시 invex:idb-failed 이벤트 dispatch
-  saveToDB().catch(e => {
-    console.warn('[Store] setState → saveToDB 실패:', e.message);
-    window.dispatchEvent(new CustomEvent('invex:idb-failed', { detail: { reason: e.message } }));
-  });
+  // IDB 쓰기 디바운스 — 200ms 내 연속 호출은 마지막 1회만 저장
+  if (_idbSaveTimer !== null) clearTimeout(_idbSaveTimer);
+  _idbSaveTimer = setTimeout(() => {
+    _idbSaveTimer = null;
+    saveToDB().catch(e => {
+      console.warn('[Store] setState → saveToDB 실패:', e.message);
+      window.dispatchEvent(new CustomEvent('invex:idb-failed', { detail: { reason: e.message } }));
+    });
+  }, IDB_DEBOUNCE_MS);
   // 클라우드 동기화 트리거
   if (_syncCallback) _syncCallback();
   // Supabase 부분 동기화 (디바운스)
