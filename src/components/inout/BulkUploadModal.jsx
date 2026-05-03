@@ -188,17 +188,20 @@ export function BulkUploadModal({ items, modeDefault, onClose, onSuccess }) {
           <button className="modal-close" onClick={onClose}></button>
         </div>
         <div className="modal-body">
-          <div className="alert alert-info" style={{ marginBottom: '16px', fontSize: '13px' }}>
+          <div className="alert alert-info" style={{ marginBottom: '0', fontSize: '13px' }}>
             <strong>사용 방법</strong><br />
             1. 아래에서 샘플 양식을 내려받습니다.<br />
             2. 양식에 입고/출고 데이터를 입력합니다. (창고는 선택사항 — 비워두면 "본사 창고"로 자동 할당)<br />
             3. 저장한 엑셀 파일을 끌어놓거나 선택하면 미리보기 후 한 번에 등록할 수 있습니다.
           </div>
-          <button className="btn btn-outline" onClick={handleDownloadTemplate} style={{ marginBottom: '16px' }}>
+
+          <hr style={{ border: 'none', borderTop: '1px solid var(--border-color)', margin: '16px 0' }} />
+
+          <button className="btn btn-outline" onClick={handleDownloadTemplate} style={{ marginBottom: '0' }}>
              엑셀 양식 다운로드
           </button>
 
-          <hr style={{ border: 'none', borderTop: '1px solid var(--border-color)', margin: '0 0 16px' }} />
+          <hr style={{ border: 'none', borderTop: '1px solid var(--border-color)', margin: '16px 0' }} />
 
           {/* 드롭존 */}
           <div
