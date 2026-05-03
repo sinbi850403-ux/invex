@@ -14,6 +14,7 @@ import {
   buildItemRows, buildPeriodSummary, buildMonthlySeries, buildVendorSummary,
   summarizeByCategory, getCurrentMonthSummary, normalizeMonthlyMap, buildMonthlyPlannerData,
 } from '../domain/profitCompute.js';
+import { SortTh } from '../components/inout/SortTh.jsx';
 
 export default function ProfitPage() {
   const [state] = useStore();
@@ -58,6 +59,30 @@ export default function ProfitPage() {
   // Compute item rows
   // transactions 전달 → 아이템 마스터 원가/판매가가 비어있을 때 트랜잭션 집계값으로 폴백
   const rows = useMemo(() => buildItemRows(items, transactions), [items, transactions]);
+
+  // 품목별 손익 상세 정렬 상태
+  const [itemSort, setItemSort] = useState({ key: 'grossProfit', dir: 'desc' });
+  const toggleItemSort = useCallback((key) => {
+    setItemSort(prev => ({ key, dir: prev.key === key && prev.dir === 'desc' ? 'asc' : 'desc' }));
+  }, []);
+
+  const sortedItems = useMemo(() => {
+    const { key, dir } = itemSort;
+    const mul = dir === 'asc' ? 1 : -1;
+    const numericKeys = new Set(['quantity', 'unitCost', 'salePrice', 'ppu', 'grossProfit', 'operatingProfit', 'profitRate', 'costRatio', 'operatingProfitRate']);
+    return [...rows].sort((a, b) => {
+      let av, bv;
+      if (key === 'ppu') { av = a.salePrice - a.unitCost; bv = b.salePrice - b.unitCost; }
+      else { av = a[key]; bv = b[key]; }
+      if (numericKeys.has(key) || key === 'ppu') {
+        const an = typeof av === 'number' ? av : parseFloat(av) || 0;
+        const bn = typeof bv === 'number' ? bv : parseFloat(bv) || 0;
+        return mul * (an - bn);
+      }
+      return mul * String(av ?? '').localeCompare(String(bv ?? ''), 'ko');
+    });
+  }, [rows, itemSort]);
+
   const sortedByProfit = useMemo(() => [...rows].sort((a, b) => b.profit - a.profit), [rows]);
   const topProfit = useMemo(() => sortedByProfit.slice(0, 5), [sortedByProfit]);
   const riskRows = useMemo(() => [...rows].filter(r => r.hasSalePrice).sort((a, b) => a.operatingProfitRate - b.operatingProfitRate).slice(0, 5), [rows]);
@@ -429,12 +454,26 @@ export default function ProfitPage() {
             <div className="table-wrapper" style={{ border: 'none' }}>
               <table className="data-table">
                 <thead>
-                  <tr><th>#</th><th className="col-fill">품목명</th><th>분류</th><th className="text-right">수량</th><th className="text-right">원가</th><th className="text-right">판매가</th><th className="text-right">개당 이익</th><th className="text-right">매출총이익</th><th className="text-right">영업이익</th><th className="text-right">매출총이익률</th><th className="text-right">매출원가율</th><th className="text-right">영업이익율</th><th className="text-center">상태</th></tr>
+                  <tr>
+                    <th>#</th>
+                    <SortTh sortKey="name" sort={itemSort} onSort={toggleItemSort} className="col-fill">품목명</SortTh>
+                    <SortTh sortKey="category" sort={itemSort} onSort={toggleItemSort}>분류</SortTh>
+                    <SortTh sortKey="quantity" sort={itemSort} onSort={toggleItemSort} className="text-right">수량</SortTh>
+                    <SortTh sortKey="unitCost" sort={itemSort} onSort={toggleItemSort} className="text-right">원가</SortTh>
+                    <SortTh sortKey="salePrice" sort={itemSort} onSort={toggleItemSort} className="text-right">판매가</SortTh>
+                    <SortTh sortKey="ppu" sort={itemSort} onSort={toggleItemSort} className="text-right">개당 이익</SortTh>
+                    <SortTh sortKey="grossProfit" sort={itemSort} onSort={toggleItemSort} className="text-right">매출총이익</SortTh>
+                    <SortTh sortKey="operatingProfit" sort={itemSort} onSort={toggleItemSort} className="text-right">영업이익</SortTh>
+                    <SortTh sortKey="profitRate" sort={itemSort} onSort={toggleItemSort} className="text-right">매출총이익률</SortTh>
+                    <SortTh sortKey="costRatio" sort={itemSort} onSort={toggleItemSort} className="text-right">매출원가율</SortTh>
+                    <SortTh sortKey="operatingProfitRate" sort={itemSort} onSort={toggleItemSort} className="text-right">영업이익율</SortTh>
+                    <th className="text-center">상태</th>
+                  </tr>
                 </thead>
                 <tbody>
-                  {sortedByProfit.length === 0 ? (
+                  {sortedItems.length === 0 ? (
                     <tr><td colSpan={13} style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '28px 0' }}>손익을 계산할 재고 데이터가 없습니다.</td></tr>
-                  ) : sortedByProfit.map((row, idx) => {
+                  ) : sortedItems.map((row, idx) => {
                     const ppu = row.salePrice - row.unitCost;
                     return (
                       <tr key={idx} className={row.profit < 0 ? 'row-danger' : row.operatingProfitRate < 10 ? 'row-warning' : ''}>
