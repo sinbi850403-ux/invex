@@ -109,6 +109,12 @@ export function computeData(rawData, transactions) {
     const inDate = item.inDate || item.date || '';
     const year   = item.year  || (inDate ? String(inDate).slice(0, 4) : '');
 
+    // 매입원가: 아이템 마스터 unitPrice > 입고 트랜잭션 가중평균 순으로 폴백
+    // 아이템 마스터에 단가가 없어도 입고 시 입력한 단가로부터 자동 계산
+    const displayUnitPrice = unitPrice > 0
+      ? unitPrice
+      : (weightedAvgCost > 0 ? Math.round(weightedAvgCost) : '');
+
     return {
       ...item,
       itemCode:             item.itemCode || agg.itemCode || '',
@@ -119,6 +125,7 @@ export function computeData(rawData, transactions) {
       unit:                 item.unit || agg.unit || '',
       quantity:             qty,          // ...item의 quantity(0)를 보정값으로 덮어씀
       year,
+      unitPrice:            displayUnitPrice,
       supplyValue:          supplyValue || '',
       vat:                  vat || '',
       totalPrice:           totalPrice || '',
