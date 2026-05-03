@@ -26,7 +26,7 @@ import { DEFAULT_STATE } from './store/defaultState.js';
 import { stateHolder, dispatchUpdate } from './store/stateRef.js';
 import { saveToDB, loadFromDB, getUnsyncedTxsFromLS, clearUnsyncedTxsLS } from './store/indexedDb.js';
 import { scheduleSyncToSupabase, cleanupDirtyKeys } from './store/supabaseSync.js';
-import { setInventorySyncCallback } from './store/inventoryOps.js';
+import { setInventorySyncCallback, recalcItemAmounts } from './store/inventoryOps.js';
 
 /**
  * restoreState 후 items.quantity=0이지만 transactions 합계가 >0인 품목 보정
@@ -57,6 +57,60 @@ function _recalcMissingQuantities() {
     }
   }
   return changed;
+}
+
+/**
+ * restoreState 후 품목 금액 자동 보정
+ *
+ * 문제 상황:
+ *   items 테이블 unit_price = NULL (Excel 업로드 시 가격 미포함)
+ *   트랜잭션에는 unit_price 있음 → 대시보드·요약·원가 분석에서 금액 "-" 표시
+ *
+ * 처리 순서:
+ *   1. 입고 트랜잭션 가중평균 단가 맵 생성 (O(N))
+ *   2. unitPrice 없는 품목에 트랜잭션 가중평균 단가 보정
+ *   3. totalPrice 없는 품목에 recalcItemAmounts 호출
+ */
+function _recalcMissingTotalPrices() {
+  const items = stateHolder.current.mappedData;
+  const transactions = stateHolder.current.transactions;
+  if (!Array.isArray(items) || items.length === 0) return;
+
+  // 입고 트랜잭션 기반 품목별 가중평균 단가 맵
+  const txPriceMap = new Map();
+  if (Array.isArray(transactions)) {
+    for (const tx of transactions) {
+      if (tx.type !== 'in') continue;
+      const name = String(tx.itemName || '').trim();
+      if (!name) continue;
+      const qty = parseFloat(tx.quantity) || 0;
+      const price = parseFloat(tx.unitPrice) || 0;
+      if (qty <= 0 || price <= 0) continue;
+      const cur = txPriceMap.get(name) || { totalQty: 0, totalValue: 0 };
+      cur.totalQty += qty;
+      cur.totalValue += qty * price;
+      txPriceMap.set(name, cur);
+    }
+  }
+
+  for (const item of items) {
+    const existingPrice = parseFloat(item.unitPrice) || 0;
+    const existingTotal = parseFloat(item.totalPrice) || 0;
+
+    // unitPrice 없으면 트랜잭션 가중평균으로 보정 (기존 값은 보호)
+    if (existingPrice <= 0) {
+      const name = String(item.itemName || '').trim();
+      const txPriceData = txPriceMap.get(name);
+      if (txPriceData && txPriceData.totalQty > 0) {
+        item.unitPrice = Math.round(txPriceData.totalValue / txPriceData.totalQty);
+      }
+    }
+
+    // totalPrice 없으면 (unitPrice 보정 포함) recalcItemAmounts
+    if ((parseFloat(item.unitPrice) || 0) > 0 && existingTotal <= 0) {
+      recalcItemAmounts(item);
+    }
+  }
 }
 
 import {
@@ -211,6 +265,7 @@ export async function restoreState(userId = null) {
           }
           stateHolder.current = { ...DEFAULT_STATE, ...(localData || {}), ...safeCrit };
           _recalcMissingQuantities();
+          _recalcMissingTotalPrices(); // total_price NULL 품목 보정 (금액 "-" 방지)
           dispatchUpdate(['mappedData', 'transactions', 'itemStocks', 'safetyStocks',
             'safetyStock', 'beginnerMode', 'dashboardMode', 'costMethod', 'currency',
             'visibleColumns', 'inventoryViewPrefs', 'inoutViewPrefs', 'tableSortPrefs']);
@@ -294,6 +349,7 @@ export async function restoreState(userId = null) {
 
         stateHolder.current = { ...DEFAULT_STATE, ...(localData || {}), ...safeCloudData };
         const _q1 = _recalcMissingQuantities();
+        _recalcMissingTotalPrices(); // total_price NULL 품목 보정 (금액 "-" 방지)
         dispatchUpdate(['*']);
         saveToDB();
         if (_q1 && isSupabaseConfigured) scheduleSyncToSupabase(['mappedData']);
@@ -324,6 +380,7 @@ export async function restoreState(userId = null) {
     clearUnsyncedTxsLS();
     stateHolder.current = { ...DEFAULT_STATE, ...saved };
     const _q2 = _recalcMissingQuantities();
+    _recalcMissingTotalPrices();
     dispatchUpdate(['*']);
     if (_q2 && isSupabaseConfigured) scheduleSyncToSupabase(['mappedData']);
     return;

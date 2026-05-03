@@ -28,22 +28,26 @@ const getMarginRate = row => row.marketValue ? Number((((row.profit || 0) / row.
 function calculateCosts(items, transactions, method) {
   return items.map(item => {
     const qty = parseFloat(item.quantity) || 0;
-    const unitPrice = parseFloat(item.unitPrice) || 0;
-    const sellPrice = getSalePrice(item) || unitPrice;
+    const itemUnitPrice = parseFloat(item.unitPrice) || 0;
     const inTx = transactions
       .filter(tx => tx.type === 'in' && tx.itemName === item.itemName)
       .sort((a, b) => (a.date || '').localeCompare(b.date || ''));
 
-    let unitCost = unitPrice;
-    if (method === 'fifo' && inTx.length > 0) unitCost = parseFloat(inTx[0].unitPrice) || unitPrice;
-    else if (method === 'latest' && inTx.length > 0) unitCost = parseFloat(inTx[inTx.length - 1].unitPrice) || unitPrice;
+    // 원가법별 unitCost 계산 (판매가 fallback에도 사용)
+    let unitCost = itemUnitPrice;
+    if (method === 'fifo' && inTx.length > 0) unitCost = parseFloat(inTx[0].unitPrice) || itemUnitPrice;
+    else if (method === 'latest' && inTx.length > 0) unitCost = parseFloat(inTx[inTx.length - 1].unitPrice) || itemUnitPrice;
     else if (method === 'weighted-avg' && inTx.length > 0) {
       let tq = 0, tv = 0;
-      inTx.forEach(tx => { const q = parseFloat(tx.quantity) || 0; tq += q; tv += q * (parseFloat(tx.unitPrice) || unitPrice); });
-      unitCost = tq > 0 ? Math.round(tv / tq) : unitPrice;
+      inTx.forEach(tx => { const q = parseFloat(tx.quantity) || 0; tq += q; tv += q * (parseFloat(tx.unitPrice) || itemUnitPrice); });
+      unitCost = tq > 0 ? Math.round(tv / tq) : itemUnitPrice;
     }
-
     unitCost = Math.round(unitCost);
+
+    // 판매가: item.salePrice → getSalePrice 폴백(20% 마크업) → unitCost 순 fallback
+    // item.unitPrice가 없어도 unitCost(트랜잭션 기반)를 최종 fallback으로 사용
+    const sellPrice = getSalePrice(item) || unitCost;
+
     const totalCost = Math.round(qty * unitCost);
     const marketValue = Math.round(qty * sellPrice);
     return { itemName: item.itemName, itemCode: item.itemCode || '', qty, unitCost, totalCost, sellPrice: Math.round(sellPrice), marketValue, profit: marketValue - totalCost };
