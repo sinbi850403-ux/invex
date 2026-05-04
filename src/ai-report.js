@@ -1,12 +1,12 @@
 /**
  * ai-report.js — AI 경영 분석 리포트 생성
  * OpenAI gpt-4o-mini 기반, 주간 경영 데이터 → 자연어 인사이트
- * @version 1.0.1
+ * @version 1.1.0
  */
 
 const API_KEY = import.meta.env.VITE_OPENAI_API_KEY ?? '';
 const ENDPOINT = 'https://api.openai.com/v1/chat/completions';
-const MODEL = 'gpt-4o-mini';
+export const MODEL = 'gpt-4o-mini';
 
 /**
  * 주간 경영 데이터로 AI 리포트 생성
@@ -63,6 +63,72 @@ export async function generateWeeklyAIReport(data) {
 
   const json = await res.json();
   return json.choices?.[0]?.message?.content ?? '(응답 없음)';
+}
+
+/**
+ * 스트리밍 방식으로 AI 리포트 생성 — 토큰 수신 시마다 onChunk 콜백 호출
+ * @param {object} data - generateWeeklyAIReport와 동일한 입력 데이터
+ * @param {(chunk: string) => void} onChunk - 새 토큰 수신 시 호출
+ * @returns {Promise<void>}
+ */
+export async function generateWeeklyAIReportStream(data, onChunk) {
+  if (!API_KEY) {
+    throw new Error('OpenAI API 키가 설정되지 않았습니다. .env의 VITE_OPENAI_API_KEY를 확인하세요.');
+  }
+
+  const prompt = buildPrompt(data);
+
+  const res = await fetch(ENDPOINT, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${API_KEY}`,
+    },
+    body: JSON.stringify({
+      model: MODEL,
+      messages: [
+        {
+          role: 'system',
+          content:
+            '당신은 중소기업 경영 분석 전문가입니다. 주어진 데이터를 바탕으로 실용적인 경영 인사이트를 한국어로 제공합니다. 간결하고 실행 가능한 조언을 해주세요.',
+        },
+        { role: 'user', content: prompt },
+      ],
+      max_tokens: 1024,
+      temperature: 0.65,
+      stream: true,
+    }),
+  });
+
+  if (!res.ok) {
+    let msg = `HTTP ${res.status}`;
+    try {
+      const err = await res.json();
+      msg = err.error?.message || msg;
+    } catch { /* noop */ }
+    throw new Error(`AI 리포트 생성 실패: ${msg}`);
+  }
+
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder('utf-8');
+  let buffer = '';
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split('\n');
+    buffer = lines.pop() ?? '';
+    for (const line of lines) {
+      const trimmed = line.replace(/^data: /, '').trim();
+      if (!trimmed || trimmed === '[DONE]') continue;
+      try {
+        const json = JSON.parse(trimmed);
+        const delta = json.choices?.[0]?.delta?.content;
+        if (delta) onChunk(delta);
+      } catch { /* skip malformed chunks */ }
+    }
+  }
 }
 
 function buildPrompt(data) {

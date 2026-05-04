@@ -4,7 +4,7 @@
 import React, { useMemo, useState, useCallback } from 'react';
 import { useStore } from '../hooks/useStore.js';
 import { getSalePrice } from '../price-utils.js';
-import { generateWeeklyAIReport } from '../ai-report.js';
+import { generateWeeklyAIReportStream, MODEL } from '../ai-report.js';
 
 // === 유틸리티 ===
 function getMonday(d) {
@@ -83,6 +83,7 @@ export default function WeeklyReportPage() {
   const [aiReport, setAiReport] = useState('');
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState('');
+  const [aiGeneratedAt, setAiGeneratedAt] = useState(null); // 생성 완료 시각
 
   const {
     thisWeekSales, thisWeekPurchase,
@@ -138,6 +139,7 @@ export default function WeeklyReportPage() {
     setAiLoading(true);
     setAiError('');
     setAiReport('');
+    setAiGeneratedAt(null);
     try {
       // 이상 탐지 데이터 수집
       const items = state.mappedData || [];
@@ -152,19 +154,21 @@ export default function WeeklyReportPage() {
       if (salesChange < -30) anomalies.push(`매출 급감: 전주 대비 ${Math.abs(salesChange)}% 감소`);
       if (lowStockItems.length > 3) anomalies.push(`재고 부족 ${lowStockItems.length}개 품목`);
 
-      const report = await generateWeeklyAIReport({
-        weekLabel,
-        thisWeekSales,
-        thisWeekPurchase,
-        salesChange,
-        purchaseChange,
-        txCount: thisWeekTx.length,
-        lowStockCount: lowStockItems.length,
-        topOutItems,
-        topInItems,
-        anomalies,
-      });
-      setAiReport(report);
+      // 스트리밍: 토큰 수신 시마다 상태 업데이트 → 타이핑 효과
+      await generateWeeklyAIReportStream(
+        {
+          weekLabel, thisWeekSales, thisWeekPurchase,
+          salesChange, purchaseChange,
+          txCount: thisWeekTx.length,
+          lowStockCount: lowStockItems.length,
+          topOutItems, topInItems, anomalies,
+        },
+        (chunk) => {
+          setAiLoading(false); // 첫 토큰 도착 시 로딩 스피너 제거
+          setAiReport(prev => prev + chunk);
+        }
+      );
+      setAiGeneratedAt(new Date()); // 완료 시각 기록
     } catch (e) {
       setAiError(e.message || 'AI 리포트 생성 중 오류가 발생했습니다.');
     } finally {
@@ -315,14 +319,48 @@ export default function WeeklyReportPage() {
       {/* AI 경영 분석 리포트 */}
       {(aiLoading || aiReport || aiError) && (
         <div className="card" style={{ marginTop: '16px', borderLeft: '3px solid #8b5cf6', background: 'linear-gradient(135deg, var(--bg-card) 0%, rgba(139,92,246,0.05) 100%)' }}>
-          <div className="card-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ background: 'linear-gradient(135deg,#8b5cf6,#3b82f6)', borderRadius: '6px', padding: '2px 8px', fontSize: '11px', color: '#fff', fontWeight: '700' }}>AI</span>
-            AI 경영 분석 리포트
+          {/* 헤더: AI 배지 + 제목 + (완료 시) 모델/시각 */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px', flexWrap: 'wrap', gap: '6px' }}>
+            <div className="card-title" style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
+              <span style={{ background: 'linear-gradient(135deg,#8b5cf6,#3b82f6)', borderRadius: '6px', padding: '2px 8px', fontSize: '11px', color: '#fff', fontWeight: '700', letterSpacing: '0.5px' }}>AI</span>
+              AI 경영 분석 리포트
+              {/* 스트리밍 중 깜빡이는 점 */}
+              {aiReport && !aiGeneratedAt && (
+                <span style={{ display: 'inline-flex', gap: '3px', marginLeft: '4px' }}>
+                  {[0, 1, 2].map(i => (
+                    <span key={i} style={{
+                      width: '5px', height: '5px', borderRadius: '50%',
+                      background: '#8b5cf6',
+                      animation: `aiDot 1.2s ease-in-out ${i * 0.2}s infinite`,
+                    }} />
+                  ))}
+                </span>
+              )}
+            </div>
+            {/* 완료 배지: 모델명 + 생성 시각 */}
+            {aiGeneratedAt && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: 'var(--text-muted)' }}>
+                <span style={{
+                  background: 'rgba(139,92,246,0.12)', border: '1px solid rgba(139,92,246,0.3)',
+                  borderRadius: '4px', padding: '2px 7px', fontWeight: '600', color: '#8b5cf6',
+                  display: 'flex', alignItems: 'center', gap: '4px',
+                }}>
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                    <circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>
+                  </svg>
+                  {MODEL}
+                </span>
+                <span>
+                  {aiGeneratedAt.getHours().toString().padStart(2,'0')}:{aiGeneratedAt.getMinutes().toString().padStart(2,'0')} 생성
+                </span>
+              </div>
+            )}
           </div>
+
           {aiLoading && (
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--text-muted)', fontSize: '13px', padding: '8px 0' }}>
               <span style={{ fontSize: '18px', animation: 'spin 1s linear infinite', display: 'inline-block' }}>⟳</span>
-              AI가 이번 주 경영 데이터를 분석하고 있습니다...
+              GPT-4o-mini가 경영 데이터를 분석하고 있습니다...
             </div>
           )}
           {aiError && (
@@ -333,10 +371,30 @@ export default function WeeklyReportPage() {
           {aiReport && (
             <div style={{ padding: '4px 0' }}>
               {renderAIText(aiReport)}
+              {/* 스트리밍 중 커서 */}
+              {!aiGeneratedAt && (
+                <span style={{
+                  display: 'inline-block', width: '2px', height: '14px',
+                  background: '#8b5cf6', marginLeft: '2px', verticalAlign: 'middle',
+                  animation: 'aiCursor 0.8s step-end infinite',
+                }} />
+              )}
             </div>
           )}
         </div>
       )}
+
+      {/* AI 스트리밍 애니메이션 CSS */}
+      <style>{`
+        @keyframes aiDot {
+          0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
+          40% { transform: scale(1); opacity: 1; }
+        }
+        @keyframes aiCursor {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0; }
+        }
+      `}</style>
     </div>
   );
 }
