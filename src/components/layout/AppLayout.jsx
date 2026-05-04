@@ -1,3 +1,4 @@
+// v3.0.1
 import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { PLANS } from '../../plan.js';
