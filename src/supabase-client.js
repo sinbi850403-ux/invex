@@ -1,6 +1,6 @@
 /**
  * supabase-client.js - Supabase 클라이언트 초기화
- *
+ * @updated 2026-05-04
  * 왜 별도 파일? → 모든 모듈에서 동일한 클라이언트 인스턴스를 공유하기 위해
  * 환경변수: .env 파일에 VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY 설정 필요
  */
