@@ -91,9 +91,42 @@ export default function PayrollPage() {
       const allAtt = await attendanceDb.list({ from: `${y}-${String(m).padStart(2,'0')}-01`, to: `${y}-${String(m).padStart(2,'0')}-31` });
       const result = [];
       for (const emp of filtered) {
-        const empAtt = allAtt.filter(a => a.employeeId === emp.id);
-        const attSummary = summarizeMonthAttendance(empAtt);
-        const p = calcPayroll(emp, attSummary, emp.allowances || {}, {});
+        // ① 근태 데이터: camelCase → snake_case (classifyWorkMinutes 입력 형식)
+        const empAttRaw = allAtt.filter(a => a.employeeId === emp.id);
+        const empAttConverted = empAttRaw.map(a => ({
+          check_in:      a.checkIn,
+          check_out:     a.checkOut,
+          break_min:     a.breakMin    || 0,
+          work_min:      a.workMin     || 0,
+          overtime_min:  a.overtimeMin || 0,
+          night_min:     a.nightMin    || 0,
+          holiday_min:   a.holidayMin  || 0,
+          status:        a.status,
+          is_holiday:    a.isHoliday   || false,
+        }));
+
+        // ② 근태 집계 후 calcPayroll 입력 형식으로 매핑
+        const attSummaryRaw = summarizeMonthAttendance(empAttConverted);
+        const attSummary = {
+          total_min:    attSummaryRaw.total_work_min    || 0,
+          overtime_min: attSummaryRaw.total_overtime_min || 0,
+          night_min:    attSummaryRaw.total_night_min    || 0,
+          holiday_min:  attSummaryRaw.total_holiday_min  || 0,
+          work_days:    attSummaryRaw.work_days          || 0,
+          leave_days:   attSummaryRaw.leave_days         || 0,
+        };
+
+        // ③ 직원 데이터: camelCase → snake_case (calcPayroll 입력 형식)
+        const empForCalc = {
+          base_salary:      emp.baseSalary    || 0,
+          hourly_wage:      emp.hourlyWage    || 0,
+          employment_type:  emp.employmentType || '정규직',
+          insurance_flags:  emp.insuranceFlags || { np: true, hi: true, ei: true, wc: true },
+          dependents:       emp.dependents    || 0,
+          children:         emp.children      || 0,
+        };
+
+        const p = calcPayroll(empForCalc, attSummary, emp.allowances || {}, {});
         result.push({ employeeId: emp.id, empNo: emp.empNo, name: emp.name, dept: emp.dept, ...p });
       }
       setPayrolls(result);
