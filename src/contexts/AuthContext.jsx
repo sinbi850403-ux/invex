@@ -108,6 +108,7 @@ export function AuthProvider({ children }) {
 
     // ── 최대 대기 타이머 ─────────────────────────────────────────────────────
     // 저장된 세션이 있으면 INITIAL_SESSION 복원을 기다려야 하므로 2초,
+    // OAuth 콜백(#access_token / ?code=) 처리 중이면 5초 (네트워크 교환 필요),
     // 없으면 Supabase cold-start 대응으로 1초 후 로그인 화면 표시
     const hasStoredSession = (() => {
       try {
@@ -123,7 +124,12 @@ export function AuthProvider({ children }) {
       } catch { /* ignore */ }
       return false;
     })();
-    const readyFallback = setTimeout(() => setIsReady(true), hasStoredSession ? 2000 : 1000);
+    const hasOAuthCallback = (
+      window.location.hash.includes('access_token') ||
+      window.location.search.includes('code=')
+    );
+    const readyFallbackMs = hasStoredSession ? 2000 : hasOAuthCallback ? 5000 : 1000;
+    const readyFallback = setTimeout(() => setIsReady(true), readyFallbackMs);
 
     initAuth(async (newUser, newProfile) => {
       clearTimeout(readyFallback);
