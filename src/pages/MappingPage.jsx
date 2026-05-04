@@ -1,227 +1,303 @@
 /**
- * MappingPage.jsx - 데이터 확인(매핑) 페이지
- * 역할: 엑셀 컬럼을 ERP 필드에 자동/수동 매핑하고 미리보기
+ * MappingPage.jsx — 품목 엑셀 가져오기 2단계
+ * 흐름: 컬럼 매핑 확인/수정 → 미리보기 → bulkUpsert 저장 → 재고 현황으로 이동
  */
-import React, { useMemo, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { ERP_FIELDS, autoMap, buildMappedData } from '../domain/excelFieldMap.ts';
+import { buildUploadDiff } from '../domain/uploadDiff.ts';
+import { items as itemsDb } from '../db.js';
+import { dbItemToStoreItem } from '../db/converters.js';
 import { useStore } from '../hooks/useStore.js';
 import { showToast } from '../toast.js';
-import { indexToCol } from '../excel.js';
-import { ERP_FIELDS, autoMap, buildMappedData } from '../domain/excelFieldMap.js';
-import { applyAmountsAll } from '../domain/inventoryAmount.js';
-import { useNavigate } from 'react-router-dom';
+
+const PREVIEW_ROWS = 5;
+
+function indexToColLabel(idx) {
+  // 0→A, 1→B, ... 25→Z, 26→AA
+  let label = '';
+  let n = idx;
+  while (true) {
+    label = String.fromCharCode(65 + (n % 26)) + label;
+    if (n < 26) break;
+    n = Math.floor(n / 26) - 1;
+  }
+  return label;
+}
+
+function toDbRow(m) {
+  const s = (v) => String(v || '').trim() || null;
+  const n = (v) => {
+    const x = parseFloat(String(v || '').replace(/,/g, ''));
+    return isNaN(x) ? null : x;
+  };
+  return {
+    item_name:    s(m.itemName),
+    item_code:    s(m.itemCode),
+    category:     s(m.category),
+    spec:         s(m.spec),
+    color:        s(m.color),
+    vendor:       s(m.vendor),
+    quantity:     n(m.quantity) ?? 0,
+    unit:         s(m.unit) || 'EA',
+    unit_price:   n(m.unitPrice),
+    sale_price:   n(m.salePrice),
+    supply_value: n(m.supplyValue),
+    vat:          n(m.vat),
+    total_price:  n(m.totalPrice),
+    warehouse:    s(m.warehouse),
+    expiry_date:  s(m.expiryDate),
+    lot_number:   s(m.lotNumber),
+    memo:         s(m.note),
+    min_stock:    n(m.safetyStock),
+  };
+}
 
 export default function MappingPage() {
-  const [state, setState] = useStore();
   const navigate = useNavigate();
+  const location = useLocation();
+  const [, setState] = useStore();
 
-  const rawData = state.rawData || [];
-  const mappedDataFallback = state.mappedData || [];
-  const sheetNames = state.sheetNames || [];
-  const activeSheet = state.activeSheet || '';
-  const allSheets = state.allSheets || {};
+  // location.state에서 rows, fileName 수신
+  const locationState = location.state;
 
-  // rawData 없으면 fallback 뷰
-  if (!rawData.length) {
-    if (mappedDataFallback.length > 0) {
-      const previewRows = mappedDataFallback.slice(0, 100);
-      return (
-        <div>
-          <div className="page-header"><h1 className="page-title"> 데이터 확인</h1></div>
-          <div className="alert alert-info">
-            업로드 원본(rawData)이 없어 저장된 데이터 기준으로 표시합니다. 총 {mappedDataFallback.length}건
-          </div>
-          <div className="card">
-            <div className="card-title">저장 데이터 미리보기 <span className="card-subtitle">처음 {previewRows.length}건</span></div>
-            <div className="table-wrapper">
-              <table className="data-table">
-                <thead>
-                  <tr>
-                    <th style={{ width: '36px' }}>#</th>
-                    <th>품목명</th><th>품목코드</th><th>분류</th><th>거래처</th>
-                    <th>수량</th><th>단위</th><th>매입가</th><th>판매가</th><th>창고/위치</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {previewRows.map((row, idx) => (
-                    <tr key={idx}>
-                      <td className="col-num">{idx + 1}</td>
-                      <td>{row?.itemName ?? ''}</td>
-                      <td>{row?.itemCode ?? ''}</td>
-                      <td>{row?.category ?? ''}</td>
-                      <td>{row?.vendor ?? ''}</td>
-                      <td>{row?.quantity ?? ''}</td>
-                      <td>{row?.unit ?? ''}</td>
-                      <td>{row?.unitPrice ?? ''}</td>
-                      <td>{row?.salePrice ?? ''}</td>
-                      <td>{row?.warehouse ?? ''}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-          <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '16px' }}>
-            <button className="btn btn-outline" onClick={() => navigate('/upload')}>파일 다시 업로드</button>
-            <button className="btn btn-primary" onClick={() => navigate('/inventory')}>재고 현황 보기</button>
-          </div>
-        </div>
-      );
-    }
+  const rows = locationState?.rows;       // 2D 배열: rows[0]=헤더, rows[1..]=데이터
+  const fileName = locationState?.fileName || '';
 
-    return (
-      <div>
-        <div className="page-header"><h1 className="page-title"> 데이터 확인</h1></div>
-        <div className="card">
-          <div className="empty-state">
-            <div className="icon"></div>
-            <div className="msg">먼저 파일을 업로드해 주세요</div>
-            <div className="sub">엑셀 파일을 올리면 자동으로 이 화면에서 데이터를 확인할 수 있습니다.</div>
-            <br />
-            <button className="btn btn-primary" onClick={() => navigate('/upload')}>파일 업로드하러 가기</button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  const headers = rawData[0] || [];
-  const dataRows = rawData.slice(1);
-  const mapping = state.columnMapping || {};
-
-  // 자동 매핑 초기화 — headers 변경(시트 전환 포함) 시 재실행, mapping이 비어있을 때만 덮어씀
+  // state가 없으면 UploadPage로 redirect
   useEffect(() => {
-    if (Object.keys(mapping).length === 0 && headers.length > 0) {
-      setState({ columnMapping: autoMap(headers) });
+    if (!rows) {
+      navigate('/upload', { replace: true });
     }
-  }, [headers]); // eslint-disable-line react-hooks/exhaustive-deps
-  // mapping 은 의도적으로 제외: setState 후 mapping이 채워지면 guard가 막으므로 무한루프 없음
+  }, [rows, navigate]);
 
-  const mappedColsSet = useMemo(() => new Set(Object.values(mapping)), [mapping]);
+  const headers = rows ? (rows[0] || []) : [];
+  const dataRows = rows ? rows.slice(1) : [];
 
-  const handleSheetChange = (e) => {
-    const newSheet = e.target.value;
-    setState({ activeSheet: newSheet, rawData: allSheets[newSheet] || [], columnMapping: {} });
-    showToast(`"${newSheet}" 시트로 전환`, 'info');
-  };
+  const [mapping, setMapping] = useState(() => autoMap(headers));
+  const [isImporting, setIsImporting] = useState(false);
+
+  // 헤더가 바뀌면 자동 매핑 재실행
+  useEffect(() => {
+    if (headers.length > 0) {
+      setMapping(autoMap(headers));
+    }
+  }, [headers.join('|')]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // 미리보기 데이터 (상위 5행)
+  const previewMapped = useMemo(
+    () => buildMappedData(dataRows.slice(0, PREVIEW_ROWS), mapping),
+    [dataRows, mapping]
+  );
+
+  // 유효 행 수 (itemName이 있는 것)
+  const validCount = useMemo(() => {
+    const allMapped = buildMappedData(dataRows, mapping);
+    return allMapped.filter((r) => String(r.itemName || '').trim()).length;
+  }, [dataRows, mapping]);
 
   const handleMappingChange = (fieldKey, colIdxStr) => {
-    const cur = { ...mapping };
-    if (colIdxStr === '') { delete cur[fieldKey]; } else { cur[fieldKey] = parseInt(colIdxStr); }
-    setState({ columnMapping: cur });
+    setMapping((prev) => {
+      const next = { ...prev };
+      if (colIdxStr === '') {
+        delete next[fieldKey];
+      } else {
+        next[fieldKey] = parseInt(colIdxStr, 10);
+      }
+      return next;
+    });
   };
 
-  const handleConfirm = () => {
-    const missing = ERP_FIELDS.filter(f => f.required && mapping[f.key] === undefined).map(f => f.label);
+  const handleImport = async () => {
+    // 필수 필드 검증
+    const missing = ERP_FIELDS.filter((f) => f.required && mapping[f.key] === undefined).map((f) => f.label);
     if (missing.length > 0) {
-      showToast(`필수 항목: ${missing.join(', ')}`, 'warning');
+      showToast(`필수 항목을 연결해 주세요: ${missing.join(', ')}`, 'warning');
       return;
     }
-    const mappedData = applyAmountsAll(buildMappedData(dataRows, mapping));
-    const uploadSafetyStock = { ...(state.safetyStock || {}) };
-    mappedData.forEach(row => {
-      if (row.safetyStock !== '' && row.safetyStock !== undefined && row.safetyStock !== null) {
-        const val = parseFloat(row.safetyStock);
-        if (!isNaN(val)) uploadSafetyStock[row.itemName] = val;
-      }
-    });
-    setState({ mappedData, currentStep: 3, safetyStock: uploadSafetyStock });
-    showToast(`${mappedData.length}건 저장 완료`, 'success');
-    navigate('/inventory');
+
+    const allMapped = buildMappedData(dataRows, mapping);
+    const validRows = allMapped.filter((r) => String(r.itemName || '').trim());
+
+    if (validRows.length === 0) {
+      showToast('가져올 품목이 없습니다. 품목명 열을 확인해 주세요.', 'warning');
+      return;
+    }
+
+    setIsImporting(true);
+    try {
+      const dbRows = validRows.map(toDbRow);
+      const result = await itemsDb.bulkUpsert(dbRows);
+
+      // 저장 후 전체 목록 다시 로드
+      const listResult = await itemsDb.list();
+      const storeItems = (listResult || []).map(dbItemToStoreItem);
+
+      // diff 계산 (이전 데이터와 비교)
+      // 이전 데이터는 없으므로 새 데이터 기준으로만 계산
+      const diff = buildUploadDiff([], validRows, fileName);
+
+      setState({ mappedData: storeItems });
+
+      showToast(
+        `${validRows.length}개 품목을 가져왔습니다. (신규 ${diff.added}건 / 수정 ${diff.updated}건)`,
+        'success'
+      );
+      navigate('/inventory');
+    } catch (err) {
+      showToast('가져오기 중 오류가 발생했습니다: ' + (err?.message || String(err)), 'error');
+    } finally {
+      setIsImporting(false);
+    }
   };
+
+  if (!rows) return null; // redirect 처리 중
+
+  // 미리보기에 표시할 필드 (매핑된 것 우선, 상위 6개)
+  const previewFields = ERP_FIELDS.filter((f) => mapping[f.key] !== undefined).slice(0, 6);
 
   return (
     <div>
       <div className="page-header">
         <div>
-          <h1 className="page-title"> 데이터 확인</h1>
-          <div className="page-desc">엑셀 컬럼과 ERP 항목을 연결합니다.</div>
+          <h1 className="page-title">
+            <span className="title-icon">🔗</span> 컬럼 매핑
+          </h1>
+          <div className="page-desc">엑셀 열과 ERP 항목을 연결합니다.</div>
         </div>
       </div>
 
       {/* 진행 단계 */}
       <div className="steps">
-        <div className="step done"><span className="step-num"></span> 파일 올리기</div>
-        <div className="step active"><span className="step-num">2</span> 컬럼 매핑</div>
-        <div className="step"><span className="step-num">3</span> 확인 완료</div>
+        <div className="step done">
+          <span className="step-num">✓</span> 파일 올리기
+        </div>
+        <div className="step active">
+          <span className="step-num">2</span> 컬럼 매핑
+        </div>
+        <div className="step">
+          <span className="step-num">3</span> 가져오기 완료
+        </div>
       </div>
 
+      {/* 파일 정보 */}
       <div className="alert alert-info">
-         <strong>{state.fileName}</strong> | {dataRows.length}건의 데이터
-        {sheetNames.length > 1 && (
-          <>
-            {' '}| 시트:{' '}
-            <select className="filter-select" value={activeSheet} onChange={handleSheetChange} style={{ marginLeft: '4px' }}>
-              {sheetNames.map(s => <option key={s} value={s}>{s}</option>)}
-            </select>
-          </>
-        )}
+        파일: <strong>{fileName}</strong>
+        &nbsp;|&nbsp;
+        {dataRows.length}행 감지
+        &nbsp;|&nbsp;
+        유효 품목: <strong>{validCount}건</strong>
       </div>
 
       {/* 컬럼 매핑 */}
       <div className="card">
-        <div className="card-title">컬럼 연결 <span className="card-subtitle">비슷한 이름은 자동으로 연결됩니다</span></div>
-        <div id="mapping-list">
-          {ERP_FIELDS.map(field => {
+        <div className="card-title">
+          필드 연결
+          <span className="card-subtitle" style={{ marginLeft: '8px' }}>
+            비슷한 이름은 자동으로 연결됩니다
+          </span>
+        </div>
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
+            gap: '8px',
+          }}
+        >
+          {ERP_FIELDS.map((field) => {
             const selectedIdx = mapping[field.key];
-            const preview = selectedIdx !== undefined ? (dataRows[0]?.[selectedIdx] ?? '-') : '';
+            const preview =
+              selectedIdx !== undefined ? (dataRows[0]?.[selectedIdx] ?? '') : '';
+
             return (
-              <div key={field.key} className="mapping-row">
-                <span className="mapping-label">
-                  {field.label}{field.required && <span style={{ color: 'var(--danger)' }}> *</span>}
+              <div
+                key={field.key}
+                className="mapping-row"
+                style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+              >
+                <span className="mapping-label" style={{ minWidth: '110px', flexShrink: 0 }}>
+                  {field.label}
+                  {field.required && (
+                    <span style={{ color: 'var(--danger)' }}> *</span>
+                  )}
                 </span>
                 <select
                   className="mapping-select"
                   value={selectedIdx !== undefined ? selectedIdx : ''}
-                  onChange={e => handleMappingChange(field.key, e.target.value)}
+                  onChange={(e) => handleMappingChange(field.key, e.target.value)}
                 >
                   <option value="">-- 선택 안 함 --</option>
                   {headers.map((h, i) => (
-                    <option key={i} value={i}>{indexToCol(i)}: {h || `(빈 열)`}</option>
+                    <option key={i} value={i}>
+                      {indexToColLabel(i)}열: {h || `(빈 열)`}
+                    </option>
                   ))}
                 </select>
-                <span className="mapping-preview" title={preview}>
-                  {preview ? `예: ${preview}` : ''}
-                </span>
+                {preview !== '' && preview !== null && preview !== undefined && (
+                  <span
+                    className="mapping-preview"
+                    style={{ fontSize: '12px', color: 'var(--text-muted)', flexShrink: 0 }}
+                    title={String(preview)}
+                  >
+                    예: {String(preview).slice(0, 12)}
+                  </span>
+                )}
               </div>
             );
           })}
         </div>
       </div>
 
-      {/* 미리보기 */}
-      <div className="card">
-        <div className="card-title">데이터 미리보기 <span className="card-subtitle">처음 10건</span></div>
-        <div className="table-wrapper">
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th style={{ width: '36px' }}>#</th>
-                {headers.map((h, i) => (
-                  <th key={i} title={`엑셀 ${indexToCol(i)}열`} style={mappedColsSet.has(i) ? { background: 'rgba(37,99,235,0.15)' } : {}}>
-                    {h || `(${indexToCol(i)}열)`}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {dataRows.slice(0, 10).map((row, ri) => (
-                <tr key={ri}>
-                  <td className="col-num">{ri + 1}</td>
-                  {headers.map((_, ci) => (
-                    <td key={ci} style={mappedColsSet.has(ci) ? { background: 'rgba(37,99,235,0.15)' } : {}}>
-                      {row[ci] ?? ''}
-                    </td>
+      {/* 미리보기 (상위 5행) */}
+      {previewFields.length > 0 && (
+        <div className="card" style={{ marginTop: '16px' }}>
+          <div className="card-title">
+            미리보기
+            <span className="card-subtitle" style={{ marginLeft: '8px' }}>
+              상위 {PREVIEW_ROWS}행
+            </span>
+          </div>
+          <div className="table-wrapper">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th style={{ width: '36px' }}>#</th>
+                  {previewFields.map((f) => (
+                    <th key={f.key}>{f.label}</th>
                   ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {previewMapped.map((row, ri) => (
+                  <tr key={ri}>
+                    <td className="col-num">{ri + 1}</td>
+                    {previewFields.map((f) => (
+                      <td key={f.key}>{String(row[f.key] ?? '')}</td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
+      )}
 
-      <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '16px' }}>
-        <button className="btn btn-outline" onClick={() => navigate('/upload')}>← 다시 업로드</button>
-        <button className="btn btn-success btn-lg" onClick={handleConfirm}> 매핑 확인 완료</button>
+      {/* 액션 버튼 */}
+      <div style={{ display: 'flex', gap: '8px', justifyContent: 'space-between', marginTop: '16px' }}>
+        <button
+          className="btn btn-outline"
+          onClick={() => navigate('/upload')}
+          disabled={isImporting}
+        >
+          ← 파일 다시 선택
+        </button>
+        <button
+          className="btn btn-primary btn-lg"
+          onClick={handleImport}
+          disabled={isImporting || validCount === 0}
+        >
+          {isImporting ? '가져오는 중...' : `가져오기 (${validCount}건) →`}
+        </button>
       </div>
     </div>
   );

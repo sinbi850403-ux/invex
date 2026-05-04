@@ -1,168 +1,208 @@
 /**
- * UploadPage.jsx - 파일 업로드 페이지
- * 흐름: 파일 선택 → 엑셀 파싱 → 자동 매핑 → 바로 재고 현황으로 이동
+ * UploadPage.jsx — 품목 엑셀 가져오기 1단계
+ * 흐름: 파일 선택/드래그 → 파싱 → 미리보기 → MappingPage로 이동
  */
-import React, { useRef, useCallback } from 'react';
-import { useStore } from '../hooks/useStore.js';
-import { showToast } from '../toast.js';
-import { readExcelFile } from '../excel.js';
-import { getState } from '../store.js';
-import { downloadTemplate, getTemplateList } from '../excel-templates.js';
-import { ERP_FIELDS, autoMap, buildMappedData } from '../domain/excelFieldMap.js';
-import { applyAmountsAll } from '../domain/inventoryAmount.js';
-import { buildUploadDiff } from '../domain/uploadDiff.js';
+import React, { useRef, useCallback, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { showToast } from '../toast.js';
+import { readExcelFile, downloadExcelSheets } from '../excel.js';
+
+const MAX_FILE_SIZE_MB = 10;
+const ALLOWED_EXTS = ['.xlsx', '.xls', '.csv'];
+const PREVIEW_ROWS = 5;
 
 export default function UploadPage() {
-  const [state, setState] = useStore();
   const navigate = useNavigate();
   const fileInputRef = useRef(null);
   const zoneRef = useRef(null);
 
-  const templates = getTemplateList();
+  const [fileName, setFileName] = useState('');
+  const [headers, setHeaders] = useState([]);
+  const [previewRows, setPreviewRows] = useState([]);
+  const [totalRows, setTotalRows] = useState(0);
+  const [allRows, setAllRows] = useState(null); // 전체 2D 배열 (헤더 포함)
+  const [isDragging, setIsDragging] = useState(false);
 
   const handleFile = useCallback(async (file) => {
     const ext = '.' + file.name.split('.').pop().toLowerCase();
-    if (!['.xlsx', '.xls', '.csv'].includes(ext)) {
-      showToast('지원하지 않는 파일 형식입니다.', 'error');
+    if (!ALLOWED_EXTS.includes(ext)) {
+      showToast('xlsx, xls, csv 파일만 지원합니다.', 'error');
       return;
     }
+    if (file.size > MAX_FILE_SIZE_MB * 1024 * 1024) {
+      showToast(`파일 크기가 ${MAX_FILE_SIZE_MB}MB를 초과합니다.`, 'error');
+      return;
+    }
+
     try {
       showToast('파일을 읽는 중...', 'info', 1500);
       const result = await readExcelFile(file);
-      const activeSheet = result.sheetNames[0];
-      const rawData = result.sheets[activeSheet];
+      const sheetName = result.sheetNames[0];
+      const rows = result.sheets[sheetName]; // 2D 배열, rows[0] = 헤더
 
-      if (!rawData || rawData.length < 2) {
+      if (!rows || rows.length < 2) {
         showToast('파일에 데이터가 없거나 헤더만 있습니다.', 'warning');
         return;
       }
 
-      const headers = rawData[0];
-      const dataRows = rawData.slice(1);
-      const mapping = autoMap(headers);
-      const mappedData = applyAmountsAll(buildMappedData(dataRows, mapping));
-      const mappedCount = Object.keys(mapping).length;
+      const hdrs = rows[0];
+      const dataRows = rows.slice(1);
 
-      const previousMappedData = (getState().mappedData || []).slice();
-      const uploadDiff = buildUploadDiff(previousMappedData, mappedData, file.name);
-
-      const uploadSafetyStock = { ...getState().safetyStock };
-      mappedData.forEach(row => {
-        if (row.safetyStock !== '' && row.safetyStock !== undefined && row.safetyStock !== null) {
-          const val = parseFloat(row.safetyStock);
-          if (!isNaN(val)) uploadSafetyStock[row.itemName] = val;
-        }
-      });
-
-      setState({
-        rawData,
-        sheetNames: result.sheetNames,
-        activeSheet,
-        fileName: file.name,
-        currentStep: 3,
-        allSheets: result.sheets,
-        columnMapping: mapping,
-        mappedData,
-        safetyStock: uploadSafetyStock,
-        lastUploadDiff: uploadDiff,
-      });
-
-      showToast(`"${file.name}" → ${mappedData.length}건 등록 (${mappedCount}개 필드 자동 매핑)`, 'success');
-      navigate('/inventory');
+      setFileName(file.name);
+      setHeaders(hdrs);
+      setPreviewRows(dataRows.slice(0, PREVIEW_ROWS));
+      setTotalRows(dataRows.length);
+      setAllRows(rows);
     } catch (err) {
-      showToast(err.message, 'error');
+      showToast('파일을 읽는 중 오류가 발생했습니다: ' + err.message, 'error');
     }
-  }, [setState, navigate]);
+  }, []);
 
   const handleDrop = useCallback((e) => {
     e.preventDefault();
-    zoneRef.current?.classList.remove('dragover');
-    if (e.dataTransfer.files.length > 0) handleFile(e.dataTransfer.files[0]);
+    setIsDragging(false);
+    const file = e.dataTransfer.files[0];
+    if (file) handleFile(file);
   }, [handleFile]);
 
-  const handleClear = () => {
-    setState({ rawData: null, mappedData: [], fileName: '' });
-    showToast('이전 데이터를 초기화했습니다.', 'info');
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = () => setIsDragging(false);
+
+  const handleNext = () => {
+    if (!allRows) return;
+    navigate('/mapping', { state: { rows: allRows, fileName } });
+  };
+
+  const downloadTemplate = async () => {
+    try {
+      const headers = ['품목명', '품목코드', '분류', '규격', '색상', '거래처', '수량', '단위', '매입가', '판매가', '창고/위치', '안전재고', '비고'];
+      const sample = [
+        ['사과 후지 10kg', 'ITM001', '과일', '10kg', '홍', '(주)농협유통', 100, 'BOX', 8000, 12000, '창고A', 10, ''],
+        ['배 신고 5kg', 'ITM002', '과일', '5kg', '황', '(주)농협유통', 50, 'BOX', 9000, 14000, '창고A', 5, ''],
+      ];
+      await downloadExcelSheets(
+        [{ name: '품목 가져오기 양식', rows: [headers, ...sample] }],
+        '품목_가져오기_양식'
+      );
+      showToast('양식 다운로드를 시작합니다.', 'success');
+    } catch (err) {
+      showToast('다운로드 중 오류가 발생했습니다.', 'error');
+    }
   };
 
   return (
     <div>
       <div className="page-header">
         <div>
-          <h1 className="page-title"> 파일 업로드</h1>
-          <div className="page-desc">엑셀 파일을 올리면 자동으로 데이터를 읽고 재고에 등록합니다.</div>
+          <h1 className="page-title">
+            <span className="title-icon">📤</span> 품목 엑셀 가져오기
+          </h1>
+          <div className="page-desc">재고 데이터를 엑셀에서 한 번에 불러옵니다.</div>
         </div>
       </div>
 
-      {/* 진행 안내 */}
+      {/* 진행 단계 */}
       <div className="steps">
-        <div className="step active"><span className="step-num">1</span> 파일 올리기</div>
-        <div className="step"><span className="step-num">2</span> 자동 매핑</div>
-        <div className="step"><span className="step-num">3</span> 재고 확인</div>
+        <div className="step active">
+          <span className="step-num">1</span> 파일 올리기
+        </div>
+        <div className="step">
+          <span className="step-num">2</span> 컬럼 매핑
+        </div>
+        <div className="step">
+          <span className="step-num">3</span> 가져오기 완료
+        </div>
       </div>
 
+      {/* 파일 드래그앤드롭 영역 */}
       <div className="card">
         <div
           ref={zoneRef}
-          className="upload-zone"
+          className={`upload-zone${isDragging ? ' dragover' : ''}`}
           style={{ cursor: 'pointer' }}
           onClick={() => fileInputRef.current?.click()}
-          onDragOver={e => { e.preventDefault(); zoneRef.current?.classList.add('dragover'); }}
-          onDragLeave={() => zoneRef.current?.classList.remove('dragover')}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
           onDrop={handleDrop}
         >
-          <div className="icon"></div>
-          <div className="label">엑셀 파일을 여기에 끌어다 놓거나 클릭하세요</div>
-          <div className="hint">.xlsx, .xls, .csv 파일 지원 · 업로드 즉시 자동 매핑됩니다</div>
+          <div className="icon">📂</div>
+          <div className="label">파일을 드래그하거나 클릭하여 업로드</div>
+          <div className="hint">xlsx, xls, csv · 최대 {MAX_FILE_SIZE_MB}MB</div>
           <input
             ref={fileInputRef}
             type="file"
             accept=".xlsx,.xls,.csv"
             style={{ display: 'none' }}
-            onChange={e => { if (e.target.files.length > 0) handleFile(e.target.files[0]); }}
+            onChange={(e) => {
+              if (e.target.files.length > 0) handleFile(e.target.files[0]);
+              e.target.value = '';
+            }}
           />
         </div>
       </div>
 
-      {/* 현재 불러온 파일 */}
-      {state.fileName && (
-        <div className="alert alert-info" style={{ marginTop: '16px' }}>
-           현재 불러온 파일: <strong>{state.fileName}</strong>
-          ({(state.mappedData || []).length}건 등록됨)
-          <button className="btn btn-outline btn-sm" onClick={handleClear} style={{ marginLeft: '12px' }}>
-            새 파일로 교체
+      {/* INVEX 표준 양식 다운로드 */}
+      <div className="card card-compact" style={{ marginTop: '16px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
+          <div>
+            <div style={{ fontWeight: 600, fontSize: '14px', marginBottom: '2px' }}>INVEX 표준 양식</div>
+            <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+              샘플 데이터가 포함된 엑셀 양식을 다운로드하여 작성 후 업로드하세요.
+            </div>
+          </div>
+          <button className="btn btn-outline" onClick={downloadTemplate} style={{ whiteSpace: 'nowrap' }}>
+            ⬇ 양식 다운로드
           </button>
-          <button className="btn btn-primary btn-sm" onClick={() => navigate('/inventory')} style={{ marginLeft: '4px' }}>
-            재고 현황 보기 →
-          </button>
-        </div>
-      )}
-
-      {/* 엑셀 양식 다운로드 */}
-      <div className="card" style={{ marginTop: '24px' }}>
-        <h3 style={{ fontSize: '16px', fontWeight: 700, marginBottom: '4px' }}> 엑셀 양식 다운로드</h3>
-        <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '16px' }}>
-          업종에 맞는 양식을 다운받아 데이터를 입력하고 업로드하세요. 샘플 데이터가 포함되어 있습니다.
-        </p>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '10px' }}>
-          {templates.map(tpl => (
-            <button
-              key={tpl.key}
-              className="template-card"
-              title={tpl.desc}
-              onClick={() => {
-                downloadTemplate(tpl.key);
-                showToast('엑셀 양식을 다운로드합니다 ', 'success');
-              }}
-            >
-              <div style={{ fontSize: '14px', fontWeight: 600, marginBottom: '2px' }}>{tpl.name}</div>
-              <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{tpl.desc}</div>
-              <div style={{ fontSize: '11px', color: 'var(--accent)', marginTop: '6px' }}>⬇ 다운로드</div>
-            </button>
-          ))}
         </div>
       </div>
+
+      {/* 미리보기 (파일 업로드 후 표시) */}
+      {allRows && (
+        <div className="card" style={{ marginTop: '16px' }}>
+          <div className="card-title">
+            미리보기
+            <span className="card-subtitle" style={{ marginLeft: '8px' }}>
+              총 {totalRows}행 감지
+            </span>
+          </div>
+          <div className="table-wrapper">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th style={{ width: '36px' }}>#</th>
+                  {headers.map((h, i) => (
+                    <th key={i}>{h || `(${i + 1}열)`}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {previewRows.map((row, ri) => (
+                  <tr key={ri}>
+                    <td className="col-num">{ri + 1}</td>
+                    {headers.map((_, ci) => (
+                      <td key={ci}>{row[ci] ?? ''}</td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {totalRows > PREVIEW_ROWS && (
+            <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '8px' }}>
+              상위 {PREVIEW_ROWS}행만 표시 (전체 {totalRows}행)
+            </div>
+          )}
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '16px' }}>
+            <button className="btn btn-primary" onClick={handleNext}>
+              다음: 컬럼 매핑 →
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
