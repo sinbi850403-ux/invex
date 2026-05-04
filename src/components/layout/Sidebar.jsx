@@ -6,7 +6,6 @@ import { getNotificationCount, renderNotificationPanel } from '../../notificatio
 import { initGlobalSearch, toggleGlobalSearch } from '../../global-search.js';
 import { toggleTheme } from '../../theme.js';
 import { showToast } from '../../toast.js';
-import { isAdmin } from '../../admin-auth.js';
 import { PAGE_LABELS } from '../../router-config.js';
 
 // 사이드바 섹션 정의
@@ -166,7 +165,7 @@ export default function Sidebar({ isOpen, onClose, collapsed = false, onToggleCo
   const plan = PLANS[planId];
   const userName = profile?.name || user?.displayName || '사용자';
   const userPhoto = user?.photoURL;
-  const adminMode = isAdmin();
+  const adminMode = profile?.role === 'admin';
 
   return (
     <aside id="sidebar" className={`sidebar ${isOpen ? 'open' : ''}${collapsed ? ' sidebar--collapsed' : ''}`}>

@@ -3,7 +3,6 @@ import { useStore } from '../hooks/useStore.js';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import { showToast } from '../toast.js';
 import { supabase } from '../supabase-client.js';
-import { isSuperAdminEmail } from '../admin-emails.js';
 import { fetchAllUsers, timeAgo } from '../domain/adminUtils.js';
 import { UserDetailModal } from '../components/admin/UserDetailModal.jsx';
 import { PlanChangeModal } from '../components/admin/PlanChangeModal.jsx';
@@ -12,7 +11,7 @@ import { UserCard }       from '../components/admin/UserCard.jsx';
 import { TicketsArea }    from '../components/admin/TicketsArea.jsx';
 
 export default function AdminPage() {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const [storeState, setStoreState] = useStore();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -22,7 +21,7 @@ export default function AdminPage() {
   const [showNotice, setShowNotice] = useState(false);
   const [ticketsKey, setTicketsKey] = useState(0);
 
-  const isAdmin = user && isSuperAdminEmail(user.email);
+  const isAdmin = profile?.role === 'admin';
 
   const loadUsers = useCallback(async () => {
     setLoading(true);

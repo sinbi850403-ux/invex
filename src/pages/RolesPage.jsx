@@ -64,7 +64,9 @@ const PERM_GROUPS = ALL_PERMISSIONS.reduce((acc, p) => {
 const ICONS = ['','','','','','','','','','⭐'];
 
 function randomColor() {
-  return '#' + Math.floor(Math.random() * 16777215).toString(16).padStart(6, '0');
+  const buf = new Uint32Array(1);
+  crypto.getRandomValues(buf);
+  return '#' + (buf[0] % 16777216).toString(16).padStart(6, '0');
 }
 
 /* ── 권한 설정 모달 ── */

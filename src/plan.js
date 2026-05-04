@@ -5,7 +5,6 @@
  */
 
 import { getState, setState } from './store.js';
-import { isSuperAdminEmail } from './admin-emails.js';
 
 // 요금제 정의 — 접근 가능 페이지는 PAGE_MIN_PLAN 단일 소스에서 관리
 export const PLANS = {
@@ -146,7 +145,7 @@ export function canAccessPage(pageId) {
 
   // 총관리자는 모든 페이지 무제한 접근
   const user = _getCurrentUser?.();
-  if (user && isSuperAdminEmail(user.email)) return true;
+  if (user?.role === 'admin') return true;
 
   // 1년 무료 기간 체크 — 가입일 기준 365일 이내면 모든 기능 개방
   // 왜? → 1년 무료 오픈이므로 요금제 제한을 걸면 안 됨
