@@ -60,7 +60,7 @@ const PAGE_MIN_PLAN = {
   costing: 'pro', accounts: 'pro', documents: 'pro', auditlog: 'pro',
   'tax-reports': 'pro', orders: 'pro', profit: 'pro', forecast: 'pro', 'weekly-report': 'pro',
   // Enterprise 기능
-  warehouses: 'enterprise', roles: 'enterprise', api: 'enterprise',
+  warehouses: 'enterprise', roles: 'enterprise', api: 'enterprise', 'org-chart': 'enterprise',
 };
 
 // 요금제 등급 순서 (비교용)

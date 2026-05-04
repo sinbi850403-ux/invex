@@ -145,10 +145,10 @@ export function HubDocumentsPage() {
         </div>
       </div>
       <div className="hub-grid">
-        <HubCard icon="" title="세무·회계 서류" desc="부가세와 재고 관련 문서를 생성합니다." nav="tax-reports" color="#dc2626" />
+        <HubCard icon="" title="세무·회계 서류 (개발중)" desc="부가세와 재고 관련 문서를 생성합니다." nav="tax-reports" color="#dc2626" />
         <HubCard icon="" title="문서 생성" desc="발주서, 거래명세서, 견적서를 생성합니다." nav="documents" color="#2563eb" />
         <HubCard icon="" title="원장" desc="입출고 흐름과 잔액을 상세 조회합니다." nav="ledger" color="#059669" />
-        <HubCard icon="" title="감사 추적" desc="변경 이력과 작업 로그를 확인합니다." nav="auditlog" color="#6366f1" />
+        <HubCard icon="" title="감사 추적 (개발중)" desc="변경 이력과 작업 로그를 확인합니다." nav="auditlog" color="#6366f1" />
       </div>
     </div>
   );
