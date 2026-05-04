@@ -76,4 +76,13 @@ export const PAGE_LABELS = {
   severance: '퇴직금 계산',
   'yearend-settlement': '연말정산',
   sales: '수주 관리',
+  // 허브 페이지
+  'hub-inventory': '재고관리 허브',
+  'hub-warehouse': '창고·거래처 허브',
+  'hub-order': '발주·예측 허브',
+  'hub-report': '보고·분석 허브',
+  'hub-documents': '문서·서류 허브',
+  'hub-settings': '설정 허브',
+  'hub-support': '지원 허브',
+  'hub-hr': '인사·급여 허브',
 };

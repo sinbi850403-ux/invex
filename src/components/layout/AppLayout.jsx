@@ -195,13 +195,27 @@ export default function AppLayout() {
     }
   }, [startPage, navigate]);
 
-  // 온보딩 체크
+  // 온보딩 체크 — restoreState 완료(invex:store-updated '*') 이후 실행
+  // 기존 1초 타임아웃 방식: Supabase 로딩(~1-2s)보다 빠를 수 있어 기존 사용자에게도 모달 노출되는 버그
   useEffect(() => {
     if (!user) return;
-    const t = setTimeout(() => {
+    let checked = false;
+    const runCheck = () => {
+      if (checked) return;
+      checked = true;
       checkAndShowOnboarding((pageId) => navigate('/' + pageId));
-    }, 1000);
-    return () => clearTimeout(t);
+    };
+    // store-updated '*' 이벤트 = restoreState 완료 신호
+    const handler = (e) => {
+      if (e.detail?.changedKeys?.includes('*')) runCheck();
+    };
+    window.addEventListener('invex:store-updated', handler);
+    // 혹시 이벤트가 이미 지나쳤을 경우를 대비한 폴백 (4초)
+    const fallback = setTimeout(runCheck, 4000);
+    return () => {
+      window.removeEventListener('invex:store-updated', handler);
+      clearTimeout(fallback);
+    };
   }, [user, navigate]);
 
   // 키보드 단축키 (Alt+숫자)
