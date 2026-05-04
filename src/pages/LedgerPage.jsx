@@ -66,7 +66,7 @@ function SortTh({ colKey, sort, onSort, children, style = {}, rowSpan, colSpan }
   );
 }
 
-function buildLedger(items, transactions, from, to, vendorFilter, itemFilter, openingOverrides = {}) {
+function buildLedger(items, transactions, from, to, vendorFilter, itemFilter, openingOverrides = {}, lossOverrides = {}) {
   const normName = (v) => String(v || '').trim();
   const normCode = (v) => String(v || '').trim();
   const makeKey = (itemName, itemCode) => {
@@ -144,8 +144,6 @@ function buildLedger(items, transactions, from, to, vendorFilter, itemFilter, op
       ? Math.max(0, parseFloat(override) || 0)
       : Math.max(0, openingQty);
 
-    const closingQty = Math.max(0, finalOpeningQty + periodInQty - periodOutQty - periodLossQty);
-
     // 가중평균 단가: 입고 기반 → 출고 원가 기반 → 품목 마스터 단가 순으로 fallback
     const weightedAvgCost = periodInAmt > 0 && periodInQty > 0
       ? periodInAmt / periodInQty
@@ -154,14 +152,24 @@ function buildLedger(items, transactions, from, to, vendorFilter, itemFilter, op
         : unitPrice;
 
     const openingAmt = Math.round(finalOpeningQty * (weightedAvgCost || unitPrice));
-    const closingValue = Math.round(closingQty * (weightedAvgCost || unitPrice));
 
-    // 로스 금액: 명시적 로스가 없으면 재고차이로 보완
-    const impliedLoss = finalOpeningQty + periodInQty - periodOutQty - periodLossQty - closingQty;
-    const finalLossQty = periodLossQty + Math.max(0, impliedLoss);
-    const finalLossAmt = periodLossAmt > 0
-      ? periodLossAmt
-      : Math.round(Math.max(0, impliedLoss) * (weightedAvgCost || unitPrice));
+    // 로스: 사용자 직접 입력(override) 우선, 없으면 자동 계산
+    const lossOverride = lossOverrides[item.itemName];
+    let finalLossQty, finalLossAmt;
+    if (lossOverride !== undefined && lossOverride !== null && lossOverride !== '') {
+      finalLossQty = Math.max(0, parseFloat(lossOverride) || 0);
+      finalLossAmt = Math.round(finalLossQty * (weightedAvgCost || unitPrice));
+    } else {
+      const rawBalance = finalOpeningQty + periodInQty - periodOutQty - periodLossQty;
+      const impliedLoss = Math.max(0, -rawBalance);
+      finalLossQty = periodLossQty + impliedLoss;
+      finalLossAmt = periodLossAmt > 0
+        ? periodLossAmt
+        : Math.round(impliedLoss * (weightedAvgCost || unitPrice));
+    }
+
+    const closingQty = Math.max(0, finalOpeningQty + periodInQty - periodOutQty - finalLossQty);
+    const closingValue = Math.round(closingQty * (weightedAvgCost || unitPrice));
 
     const fromYear = from ? from.slice(0, 4) : '';
 
@@ -252,6 +260,7 @@ export default function LedgerPage() {
   const items        = state.mappedData || [];
   const transactions = state.transactions || [];
   const openingOverrides = state.ledgerOpeningOverrides || {};
+  const lossOverrides    = state.ledgerLossOverrides    || {};
 
   const now      = new Date();
   const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
@@ -263,6 +272,8 @@ export default function LedgerPage() {
   const [itemFilter, setItemFilter] = useState('');
   const [showOpening, setShowOpening] = useState(false);
   const [sort, setSort] = useState({ key: 'closingValue', direction: 'desc' });
+  const [editingLossKey, setEditingLossKey]     = useState(null); // itemName
+  const [editingLossValue, setEditingLossValue] = useState('');
   const tableRef = useRef(null);
 
   const handleSort = (key) => {
@@ -280,8 +291,8 @@ export default function LedgerPage() {
   }, [transactions]);
 
   const rawRows = useMemo(
-    () => buildLedger(items, transactions, fromDate, toDate, vendorFilter, itemFilter, openingOverrides),
-    [items, transactions, fromDate, toDate, vendorFilter, itemFilter, openingOverrides]
+    () => buildLedger(items, transactions, fromDate, toDate, vendorFilter, itemFilter, openingOverrides, lossOverrides),
+    [items, transactions, fromDate, toDate, vendorFilter, itemFilter, openingOverrides, lossOverrides]
   );
   const rows = useMemo(() => sortRows(rawRows, sort), [rawRows, sort]);
 
@@ -309,6 +320,18 @@ export default function LedgerPage() {
     setShowOpening(false);
     showToast('기초재고가 저장되었습니다.', 'success');
   };
+
+  function startEditLoss(itemName, currentQty) {
+    setEditingLossKey(itemName);
+    setEditingLossValue(currentQty > 0 ? String(currentQty) : '');
+  }
+  function commitLoss(itemName) {
+    const numVal = parseFloat(editingLossValue) || 0;
+    if (numVal < 0) { setEditingLossKey(null); return; }
+    setState({ ledgerLossOverrides: { ...lossOverrides, [itemName]: numVal === 0 ? undefined : numVal } });
+    setEditingLossKey(null);
+    if (numVal > 0) showToast(`로스 ${numVal}개 저장`, 'success');
+  }
 
   const handleExcelExport = () => {
     if (!rows.length) { showToast('내보낼 데이터가 없습니다.', 'warning'); return; }
@@ -485,8 +508,26 @@ export default function LedgerPage() {
                       <td className="text-right type-in">{row.inAmt > 0 ? fmt(row.inAmt) : '-'}</td>
                       <td className="text-right type-out">{n(row.outQty)}</td>
                       <td className="text-right type-out">{row.outAmt > 0 ? fmt(row.outAmt) : '-'}</td>
-                      <td className="text-right" style={{ color: row.lossQty > 0 ? 'var(--warning)' : 'var(--text-muted)' }}>
-                        {n(row.lossQty)}
+                      {/* 로스 수량: 더블클릭으로 직접 입력 */}
+                      <td className="text-right"
+                        title="더블클릭으로 로스 수량 입력"
+                        style={{ cursor: 'text', color: row.lossQty > 0 ? 'var(--warning)' : 'var(--text-muted)' }}
+                        onDoubleClick={() => startEditLoss(row.itemName, row.lossQty)}>
+                        {editingLossKey === row.itemName ? (
+                          <input autoFocus type="number" min="0" step="1"
+                            value={editingLossValue}
+                            onChange={e => setEditingLossValue(e.target.value)}
+                            onBlur={() => commitLoss(row.itemName)}
+                            onKeyDown={e => { if (e.key === 'Enter') commitLoss(row.itemName); if (e.key === 'Escape') setEditingLossKey(null); }}
+                            style={{ width: 64, textAlign: 'right', border: '1px solid var(--warning)', borderRadius: 4,
+                              padding: '2px 4px', background: 'var(--bg-card)', color: 'var(--warning)', fontSize: 12 }} />
+                        ) : (
+                          <span style={{ borderBottom: row.lossQty === 0 ? '1px dashed var(--text-muted)' : undefined }}>
+                            {lossOverrides[row.itemName] !== undefined
+                              ? <><span title="직접 입력됨">✎ </span>{n(row.lossQty)}</>
+                              : n(row.lossQty)}
+                          </span>
+                        )}
                       </td>
                       <td className="text-right" style={{ color: row.lossAmt > 0 ? 'var(--warning)' : 'var(--text-muted)' }}>
                         {row.lossAmt > 0 ? fmt(row.lossAmt) : '-'}
