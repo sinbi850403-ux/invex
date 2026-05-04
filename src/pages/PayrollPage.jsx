@@ -334,7 +334,7 @@ export default function PayrollPage() {
                   <th className="text-right">기본급</th>
                   <th className="text-right" title="더블클릭으로 직접 입력">수당 ✎</th>
                   <th className="text-right" title="더블클릭으로 직접 입력">초과/야간 ✎</th><th className="text-right">4대보험</th>
-                  <th className="text-right">세금</th>
+                  <th className="text-right" title="소득세 + 지방소득세(소득세×10%)">소득세</th>
                   <th className="text-right" style={{ background: 'var(--accent-light)', color: 'var(--accent)' }}>실지급액</th>
                   <th style={{ width: 60 }}>상세</th>
                 </tr>
