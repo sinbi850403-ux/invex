@@ -1,6 +1,7 @@
 /**
  * ai-report.js — AI 경영 분석 리포트 생성
  * OpenAI gpt-4o-mini 기반, 주간 경영 데이터 → 자연어 인사이트
+ * @version 1.0.1
  */
 
 const API_KEY = import.meta.env.VITE_OPENAI_API_KEY ?? '';
