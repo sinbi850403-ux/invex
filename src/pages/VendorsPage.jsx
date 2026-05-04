@@ -3,6 +3,8 @@ import { useStore } from '../hooks/useStore.js';
 import { showToast } from '../toast.js';
 import { downloadExcel } from '../excel.js';
 import { getState as getRawState } from '../store.js';
+import { vendors as vendorsDb } from '../db.js';
+import { dbVendorToStore, storeVendorToDb } from '../db/converters.js';
 import { TYPE_LABEL, TYPE_BADGE, PAYMENT_TERMS, EMPTY_FORM, fmt, buildStats } from '../domain/vendorsConfig.js';
 import { VendorModal }  from '../components/vendors/VendorModal.jsx';
 import { VendorDetail } from '../components/vendors/VendorDetail.jsx';
@@ -46,28 +48,48 @@ export default function VendorsPage() {
     });
   }, [vendors, tab, keyword]);
 
-  const handleSave = useCallback((form) => {
-    const current = [...vendors];
-    const existingIdx = current.findIndex(v => v.name === editVendor?.name && editVendor?.name);
-    if (existingIdx >= 0) {
-      current[existingIdx] = form;
-      showToast(`"${form.name}" 거래처를 수정했습니다.`, 'success');
-    } else {
-      current.push(form);
-      showToast(`"${form.name}" 거래처를 등록했습니다.`, 'success');
+  const handleSave = useCallback(async (form) => {
+    try {
+      const isEdit = !!(editVendor?.name);
+      let saved;
+      const dbPayload = storeVendorToDb({ ...form, name: form.name.trim() });
+      if (isEdit && editVendor?._id) {
+        saved = await vendorsDb.update(editVendor._id, dbPayload);
+      } else {
+        saved = await vendorsDb.create(dbPayload);
+      }
+      const storeVendor = saved ? dbVendorToStore(saved) : { ...form, _id: editVendor?._id };
+      const current = [...vendors];
+      const existingIdx = current.findIndex(v => v._id === storeVendor._id || v.name === editVendor?.name);
+      if (existingIdx >= 0) {
+        current[existingIdx] = storeVendor;
+        showToast(`"${storeVendor.name}" 거래처를 수정했습니다.`, 'success');
+      } else {
+        current.push(storeVendor);
+        showToast(`"${storeVendor.name}" 거래처를 등록했습니다.`, 'success');
+      }
+      setState({ vendorMaster: current });
+      setEditVendor(null);
+      if (detailVendor?.name === form.name) setDetailVendor(storeVendor);
+    } catch (err) {
+      showToast(`저장 실패: ${err?.message || '오류가 발생했습니다.'}`, 'error');
     }
-    setState({ vendorMaster: current });
-    setEditVendor(null);
-    if (detailVendor?.name === form.name) setDetailVendor(form);
   }, [vendors, editVendor, detailVendor, setState]);
 
-  const handleDelete = useCallback((vendor) => {
+  const handleDelete = useCallback(async (vendor) => {
     if (!confirm(`"${vendor.name}" 거래처를 삭제하시겠습니까?`)) return;
-    const rawState = getRawState();
-    const prev = rawState._deletedVendors || [];
-    setState({ vendorMaster: vendors.filter(v => v.name !== vendor.name), _deletedVendors: [...prev, vendor] });
-    showToast('거래처를 삭제했습니다.', 'info');
-    if (detailVendor?.name === vendor.name) setDetailVendor(null);
+    try {
+      if (vendor._id) {
+        await vendorsDb.remove(vendor._id);
+      } else {
+        await vendorsDb.removeByName(vendor.name);
+      }
+      setState({ vendorMaster: vendors.filter(v => v.name !== vendor.name) });
+      showToast('거래처를 삭제했습니다.', 'info');
+      if (detailVendor?.name === vendor.name) setDetailVendor(null);
+    } catch (err) {
+      showToast(`삭제 실패: ${err?.message || '오류가 발생했습니다.'}`, 'error');
+    }
   }, [vendors, detailVendor, setState]);
 
   const handleExport = () => {

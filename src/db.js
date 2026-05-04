@@ -14,7 +14,7 @@
 
 // Re-export everything so existing `import * as db from './db.js'` still works
 export { setWorkspaceUserId, clearWorkspaceUserId, primeUserIdCache, getAuthUserId, getWorkspaceContextUserId } from './db/core.js';
-export { storeItemToDb } from './db/converters.js';
+export { storeItemToDb, storeVendorToDb } from './db/converters.js';
 export { items }         from './db/items.js';
 export { transactions }  from './db/transactions.js';
 export { vendors }       from './db/vendors.js';

@@ -126,17 +126,48 @@ export function dbTransferToStore(r) {
 
 export function dbVendorToStore(dbVendor) {
   return {
-    _id: dbVendor.id,
-    name: dbVendor.name,
-    type: dbVendor.type,
-    bizNumber: dbVendor.biz_number,
-    ceoName: dbVendor.ceo_name,
-    contactName: dbVendor.contact_name,
-    phone: dbVendor.phone,
-    email: dbVendor.email,
-    address: dbVendor.address,
-    bankInfo: dbVendor.bank_info,
-    memo: dbVendor.memo,
+    _id:          dbVendor.id,
+    name:         dbVendor.name,
+    type:         dbVendor.type || 'supplier',
+    code:         dbVendor.code        || '',
+    bizNumber:    dbVendor.biz_number  || '',
+    ceoName:      dbVendor.ceo_name    || '',
+    bizType:      dbVendor.biz_type    || '',
+    bizItem:      dbVendor.biz_item    || '',
+    contactName:  dbVendor.contact_name || '',
+    phone:        dbVendor.phone       || '',
+    email:        dbVendor.email       || '',
+    fax:          dbVendor.fax         || '',
+    address:      dbVendor.address     || '',
+    paymentTerm:  dbVendor.payment_term || '',
+    creditLimit:  dbVendor.credit_limit || '',
+    bankName:     dbVendor.bank_name   || '',
+    bankAccount:  dbVendor.bank_account || '',
+    bankHolder:   dbVendor.bank_holder  || '',
+    note:         dbVendor.note || dbVendor.memo || '',
+  };
+}
+
+export function storeVendorToDb(v) {
+  return {
+    name:          v.name,
+    type:          v.type          || 'supplier',
+    code:          v.code          || null,
+    biz_number:    v.bizNumber     || null,
+    ceo_name:      v.ceoName       || null,
+    biz_type:      v.bizType       || null,
+    biz_item:      v.bizItem       || null,
+    contact_name:  v.contactName   || null,
+    phone:         v.phone         || null,
+    email:         v.email         || null,
+    fax:           v.fax           || null,
+    address:       v.address       || null,
+    payment_term:  v.paymentTerm   || null,
+    credit_limit:  v.creditLimit   ? parseFloat(v.creditLimit) : null,
+    bank_name:     v.bankName      || null,
+    bank_account:  v.bankAccount   || null,
+    bank_holder:   v.bankHolder    || null,
+    note:          v.note          || null,
   };
 }
 

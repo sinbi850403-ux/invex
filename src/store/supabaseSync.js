@@ -7,7 +7,7 @@
 import { stateHolder } from './stateRef.js';
 import { saveToDB } from './indexedDb.js';
 import * as db from '../db.js';
-import { storeItemToDb } from '../db.js';
+import { storeItemToDb, storeVendorToDb } from '../db.js';
 import { getUserId } from '../db/core.js';
 import { managedQuery, invalidateCache } from '../traffic-manager.js';
 import { isSupabaseConfigured, supabase } from '../supabase-client.js';
@@ -224,18 +224,8 @@ async function syncToSupabase() {
     //  _id(UUID)瑜?id濡??ы븿: ?대쫫 蹂寃???媛숈? row瑜??낅뜲?댄듃 (以묐났 ?앹꽦 諛⑹?)
     if (keysToSync.has('vendorMaster')) {
       const vendors = (stateHolder.current.vendorMaster || []).map(v => {
-        const payload = {
-          name: v.name,
-          type: v.type,
-          biz_number: v.bizNumber,
-          ceo_name: v.ceoName,
-          contact_name: v.contactName,
-          phone: v.phone,
-          email: v.email,
-          address: v.address,
-          memo: v.memo,
-        };
-        if (v._id) payload.id = v._id; // UUID ?덉쑝硫??ы븿 ??id conflict濡??뺥솗??row ?낅뜲?댄듃
+        const payload = storeVendorToDb(v);
+        if (v._id) payload.id = v._id; // UUID 있으면 포함 → id conflict로 기존 row 업데이트
         return payload;
       });
       promises.push(

@@ -225,20 +225,30 @@ CREATE INDEX IF NOT EXISTS idx_safety_stocks_item_wh   ON safety_stocks(item_id,
 -- 8. 거래처 마스터
 -- ============================================================
 CREATE TABLE IF NOT EXISTS vendors (
-  id           UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id      UUID        NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
-  name         TEXT        NOT NULL,
-  type         TEXT,       -- 'supplier' | 'customer' | 'both'
-  biz_number   TEXT,
-  ceo_name     TEXT,
-  contact_name TEXT,
-  phone        TEXT,
-  email        TEXT,
-  address      TEXT,
-  bank_info    TEXT,
-  memo         TEXT,
-  created_at   TIMESTAMPTZ DEFAULT now(),
-  updated_at   TIMESTAMPTZ DEFAULT now(),
+  id            UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id       UUID        NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  name          TEXT        NOT NULL,
+  type          TEXT        DEFAULT 'supplier', -- 'supplier' | 'customer' | 'both' | 'transfer' | 'adjust' | 'return'
+  code          TEXT,       -- 거래처 코드 (S0001 등)
+  biz_number    TEXT,       -- 사업자번호
+  ceo_name      TEXT,       -- 대표자명
+  biz_type      TEXT,       -- 업태
+  biz_item      TEXT,       -- 종목
+  contact_name  TEXT,       -- 담당자명
+  phone         TEXT,
+  email         TEXT,
+  fax           TEXT,
+  address       TEXT,
+  payment_term  TEXT,       -- 결제조건
+  credit_limit  NUMERIC     DEFAULT 0,
+  bank_name     TEXT,       -- 은행명
+  bank_account  TEXT,       -- 계좌번호
+  bank_holder   TEXT,       -- 예금주
+  bank_info     TEXT,       -- (레거시) 계좌 통합 문자열
+  memo          TEXT,       -- (레거시) 메모
+  note          TEXT,       -- 비고
+  created_at    TIMESTAMPTZ DEFAULT now(),
+  updated_at    TIMESTAMPTZ DEFAULT now(),
   UNIQUE(user_id, name)
 );
 
