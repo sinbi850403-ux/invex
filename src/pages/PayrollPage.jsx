@@ -115,8 +115,9 @@ export default function PayrollPage() {
   const [confirming, setConfirming] = useState(false);
   const [detailPayroll, setDetailPayroll] = useState(null);
   const [emps, setEmps] = useState([]);
-  const [editingCell, setEditingCell] = useState(null); // { id, field }
-  const [editValue, setEditValue] = useState('');
+  const [editingAllowance, setEditingAllowance] = useState(null); // employeeId
+  const [allowanceValue, setAllowanceValue] = useState('');
+  const [editingOvertime, setEditingOvertime] = useState(null); // { id, overHours, nightHours }
 
   useEffect(() => {
     employeesDb.list({ status: 'active' }).then(list => {
@@ -171,7 +172,12 @@ export default function PayrollPage() {
         };
 
         const p = calcPayroll(empForCalc, attSummary, emp.allowances || {}, {});
-        result.push({ employeeId: emp.id, empNo: emp.empNo, name: emp.name, dept: emp.dept, ...p });
+        result.push({
+          employeeId: emp.id, empNo: emp.empNo, name: emp.name, dept: emp.dept,
+          _hourlyWage: emp.hourlyWage || 0,
+          _employmentType: emp.employmentType || '정규직',
+          ...p,
+        });
       }
       setPayrolls(result);
       setCalcYear(y);
@@ -216,31 +222,56 @@ export default function PayrollPage() {
     setConfirming(false);
   }
 
-  function startEdit(id, field, currentValue) {
-    setEditingCell({ id, field });
-    setEditValue(String(Math.round(currentValue)));
+  // ── 수당 편집 ──────────────────────────────────────────
+  function startEditAllowance(id, currentSum) {
+    setEditingAllowance(id);
+    setAllowanceValue(String(Math.round(currentSum)));
   }
-
-  function commitEdit() {
-    if (!editingCell) return;
-    const { id, field } = editingCell;
-    const numVal = parseInt(editValue.replace(/[^0-9]/g, ''), 10) || 0;
+  function commitAllowance(id) {
+    const numVal = parseInt(allowanceValue.replace(/[^0-9]/g, ''), 10) || 0;
     setPayrolls(prev => prev.map(p => {
       if (p.employeeId !== id) return p;
-      if (field === 'allowance') {
-        const overtime = (p.overtime_pay||0)+(p.night_pay||0)+(p.holiday_pay||0);
-        const newGross = (p.base||0) + numVal + overtime;
-        const newNet = newGross - (p.total_deduct||0);
-        return { ...p, allowances: { _manual: numVal }, gross: newGross, net: newNet };
-      } else if (field === 'overtime') {
-        const allowanceSum = Object.values(p.allowances||{}).reduce((a,b)=>a+b,0);
-        const newGross = (p.base||0) + allowanceSum + numVal;
-        const newNet = newGross - (p.total_deduct||0);
-        return { ...p, overtime_pay: numVal, night_pay: 0, holiday_pay: 0, gross: newGross, net: newNet };
-      }
-      return p;
+      const overtime = (p.overtime_pay||0)+(p.night_pay||0)+(p.holiday_pay||0);
+      const newGross = (p.base||0) + numVal + overtime;
+      const newNet = newGross - (p.total_deduct||0);
+      return { ...p, allowances: { _manual: numVal }, gross: newGross, net: newNet };
     }));
-    setEditingCell(null);
+    setEditingAllowance(null);
+  }
+
+  // ── 초과/야간 시간 편집 ─────────────────────────────────
+  function startEditOvertime(p) {
+    // 현재 pay → 역산 (시급 또는 통상시급 기준)
+    const isHourly = p._employmentType === '시급' || p._employmentType === '일용';
+    const hourlyRate = isHourly ? (p._hourlyWage || 0) : (p.base || 0) / 209;
+    const ovMult = 1.5;
+    const nightMult = isHourly ? 2.0 : 0.5; // 시급제=전체2배, 월급제=가산분0.5배
+    const overHours = hourlyRate > 0 ? Math.round(((p.overtime_pay||0) / (hourlyRate * ovMult)) * 2) / 2 : 0;
+    const nightHours = hourlyRate > 0 ? Math.round(((p.night_pay||0) / (hourlyRate * nightMult)) * 2) / 2 : 0;
+    setEditingOvertime({ id: p.employeeId, overHours: String(overHours), nightHours: String(nightHours) });
+  }
+  function commitOvertime() {
+    if (!editingOvertime) return;
+    const { id, overHours, nightHours } = editingOvertime;
+    setPayrolls(prev => prev.map(p => {
+      if (p.employeeId !== id) return p;
+      const isHourly = p._employmentType === '시급' || p._employmentType === '일용';
+      const hourlyRate = isHourly ? (p._hourlyWage || 0) : (p.base || 0) / 209;
+      const ov = parseFloat(overHours) || 0;
+      const nt = parseFloat(nightHours) || 0;
+      const overtime_pay = Math.round(hourlyRate * ov * 1.5);
+      const night_pay    = Math.round(hourlyRate * nt * (isHourly ? 2.0 : 0.5));
+      const allowanceSum = Object.values(p.allowances||{}).reduce((a,b)=>a+b,0);
+      const newGross = (p.base||0) + allowanceSum + overtime_pay + night_pay + (p.holiday_pay||0);
+      const newNet = newGross - (p.total_deduct||0);
+      return { ...p, overtime_pay, night_pay, gross: newGross, net: newNet };
+    }));
+    setEditingOvertime(null);
+  }
+  function handleOvertimeBlur(e) {
+    // 같은 행 안의 다른 input으로 이동 시 blur 무시
+    if (e.relatedTarget && e.currentTarget.closest('tr')?.contains(e.relatedTarget)) return;
+    commitOvertime();
   }
 
   const totalGross = payrolls.reduce((s, p) => s + (p.gross || 0), 0);
@@ -320,32 +351,53 @@ export default function PayrollPage() {
                       <td>{p.name||''}</td>
                       <td>{p.dept||'-'}</td>
                       <td className="text-right">{fmtWon(p.base)}</td>
-                      <td className="text-right"
-                        title="더블클릭으로 수정"
-                        style={{ cursor: 'text' }}
-                        onDoubleClick={() => startEdit(p.employeeId, 'allowance', allowanceSum)}>
-                        {editingCell?.id === p.employeeId && editingCell?.field === 'allowance' ? (
-                          <input autoFocus type="text" value={editValue}
-                            onChange={e => setEditValue(e.target.value)}
-                            onBlur={commitEdit}
-                            onKeyDown={e => { if (e.key === 'Enter') commitEdit(); if (e.key === 'Escape') setEditingCell(null); }}
+
+                      {/* ── 수당: 더블클릭 금액 직접 입력 ── */}
+                      <td className="text-right" title="더블클릭으로 수정" style={{ cursor: 'text' }}
+                        onDoubleClick={() => startEditAllowance(p.employeeId, allowanceSum)}>
+                        {editingAllowance === p.employeeId ? (
+                          <input autoFocus type="text" value={allowanceValue}
+                            onChange={e => setAllowanceValue(e.target.value)}
+                            onBlur={() => commitAllowance(p.employeeId)}
+                            onKeyDown={e => { if (e.key === 'Enter') commitAllowance(p.employeeId); if (e.key === 'Escape') setEditingAllowance(null); }}
                             style={{ width: 90, textAlign: 'right', border: '1px solid var(--accent)', borderRadius: 4, padding: '2px 4px', background: 'var(--bg-card)', color: 'var(--text-primary)', fontSize: 13 }} />
                         ) : (
                           <span style={{ borderBottom: '1px dashed var(--text-muted)', paddingBottom: 1 }}>{fmtWon(allowanceSum)}</span>
                         )}
                       </td>
-                      <td className="text-right"
-                        title="더블클릭으로 수정"
-                        style={{ cursor: 'text' }}
-                        onDoubleClick={() => startEdit(p.employeeId, 'overtime', overtime)}>
-                        {editingCell?.id === p.employeeId && editingCell?.field === 'overtime' ? (
-                          <input autoFocus type="text" value={editValue}
-                            onChange={e => setEditValue(e.target.value)}
-                            onBlur={commitEdit}
-                            onKeyDown={e => { if (e.key === 'Enter') commitEdit(); if (e.key === 'Escape') setEditingCell(null); }}
-                            style={{ width: 90, textAlign: 'right', border: '1px solid var(--accent)', borderRadius: 4, padding: '2px 4px', background: 'var(--bg-card)', color: 'var(--text-primary)', fontSize: 13 }} />
-                        ) : (
-                          <span style={{ borderBottom: '1px dashed var(--text-muted)', paddingBottom: 1 }}>{fmtWon(overtime)}</span>
+
+                      {/* ── 초과/야간: 더블클릭 시간 입력 → 자동 금액 계산 ── */}
+                      <td title="더블클릭 → 시간 입력으로 자동 계산"
+                        style={{ cursor: 'text', whiteSpace: 'nowrap' }}
+                        onDoubleClick={() => startEditOvertime(p)}>
+                        {editingOvertime?.id === p.employeeId ? (() => {
+                          const isHourly = p._employmentType === '시급' || p._employmentType === '일용';
+                          const rate = isHourly ? (p._hourlyWage||0) : (p.base||0)/209;
+                          const ov = parseFloat(editingOvertime.overHours)||0;
+                          const nt = parseFloat(editingOvertime.nightHours)||0;
+                          const preview = Math.round(rate*ov*1.5) + Math.round(rate*nt*(isHourly?2.0:0.5));
+                          const INP = { type:'number', min:'0', step:'0.5',
+                            style:{ width:46, textAlign:'right', border:'1px solid var(--accent)',
+                              borderRadius:4, padding:'2px 3px', background:'var(--bg-card)',
+                              color:'var(--text-primary)', fontSize:12 } };
+                          return (
+                            <div style={{ display:'flex', gap:3, alignItems:'center', justifyContent:'flex-end' }}>
+                              <span style={{ fontSize:10, color:'var(--text-muted)' }}>초과</span>
+                              <input {...INP} autoFocus value={editingOvertime.overHours}
+                                onChange={e => setEditingOvertime(s=>({...s, overHours:e.target.value}))}
+                                onBlur={handleOvertimeBlur}
+                                onKeyDown={e=>{ if(e.key==='Enter') commitOvertime(); if(e.key==='Escape') setEditingOvertime(null); }} />
+                              <span style={{ fontSize:10, color:'var(--text-muted)' }}>야간</span>
+                              <input {...INP} value={editingOvertime.nightHours}
+                                onChange={e => setEditingOvertime(s=>({...s, nightHours:e.target.value}))}
+                                onBlur={handleOvertimeBlur}
+                                onKeyDown={e=>{ if(e.key==='Enter') commitOvertime(); if(e.key==='Escape') setEditingOvertime(null); }} />
+                              <span style={{ fontSize:9, color:'var(--text-muted)' }}>h</span>
+                              {preview > 0 && <span style={{ fontSize:10, color:'var(--accent)', marginLeft:2 }}>={fmtWon(preview)}</span>}
+                            </div>
+                          );
+                        })() : (
+                          <span style={{ borderBottom:'1px dashed var(--text-muted)', paddingBottom:1, float:'right' }}>{fmtWon(overtime)}</span>
                         )}
                       </td>
                       <td className="text-right">{fmtWon(insurance)}</td>
