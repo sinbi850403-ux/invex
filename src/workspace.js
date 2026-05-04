@@ -77,12 +77,43 @@ async function wsUpdateMembers(wsId, members) {
 
 /**
  * 사용자가 속한 워크스페이스 ID 반환 (없으면 본인 UID)
+ *
+ * [SECURITY] 멤버십 서버 검증 추가 (2026-05-04)
+ * joined_workspace_id가 타인 UID로 오염된 경우(stale / 잘못된 초대 수락 등)
+ * is_workspace_member RPC로 실제 멤버 여부를 검증한다.
+ * 검증 실패 시 자동으로 정리하고 본인 UID를 반환하여 데이터 격리를 보장한다.
  */
 export async function getWorkspaceId(userId) {
   if (!isConfigured || !userId) return userId;
   try {
     const wsId = await db.settings.get('joined_workspace_id');
-    return wsId || userId;
+
+    // joined_workspace_id 없거나 본인 UID면 바로 반환
+    if (!wsId || wsId === userId) return userId;
+
+    // [SECURITY] 서버 RPC로 실제 활성 멤버인지 검증
+    // is_workspace_member(owner_uid) → auth.uid()가 해당 워크스페이스의 active 멤버인지 확인
+    const { data: isMember, error } = await supabase.rpc('is_workspace_member', {
+      owner_uid: wsId,
+    });
+
+    if (error) {
+      console.warn('[Workspace] 멤버 검증 RPC 오류 — 본인 UID 사용:', error.message);
+      return userId;
+    }
+
+    if (!isMember) {
+      // stale joined_workspace_id 자동 정리
+      console.warn('[Workspace] 유효하지 않은 워크스페이스 ID 감지 — 정리 후 본인 UID 사용');
+      try {
+        await db.settings.set('joined_workspace_id', null);
+      } catch (cleanupErr) {
+        console.warn('[Workspace] settings 정리 실패 (non-fatal):', cleanupErr.message);
+      }
+      return userId;
+    }
+
+    return wsId;
   } catch {
     return userId;
   }
