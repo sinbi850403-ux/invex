@@ -1,8 +1,10 @@
-﻿/**
- * supabaseSync.js - Supabase ?대씪?곕뱶 ?숆린???덉씠??(?붾컮?댁뒪)
+/**
+ * supabaseSync.js - Supabase 동기화 레이어 (디바운스)
  *
- * ???붾컮?댁뒪? ??setState媛 ?곗냽 ?몄텧????留ㅻ쾲 API ?섎㈃ 怨쇰???
+ * 디바운스 방식: setState가 호출될 때마다 API를 즉시 호출하지 않고,
+ * 일정 시간(기본 2초) 대기 후 한 번에 Supabase에 동기화한다.
  */
+
 
 import { stateHolder } from './stateRef.js';
 import { saveToDB } from './indexedDb.js';
@@ -12,9 +14,9 @@ import { getUserId } from '../db/core.js';
 import { managedQuery, invalidateCache } from '../traffic-manager.js';
 import { isSupabaseConfigured, supabase } from '../supabase-client.js';
 
-// === Supabase ?숆린??(?붾컮?댁뒪) ===
+// === Supabase 동기화 타이머 (디바운스) ===
 let _supabaseSyncTimer = null;
-// ?대뼡 ?곗씠?곌? 蹂寃쎈릱?붿? 異붿쟻
+// 변경된 데이터 키를 추적하여 최소한의 API 호출
 let _dirtyKeys = new Set();
 let _waitingAuthResume = false;
 let _authResumeSubscription = null;
@@ -32,7 +34,7 @@ export function getErrorMessage(error) {
 export function isAuthLikeSyncError(error) {
   const message = getErrorMessage(error).toLowerCase();
   return (
-    message.includes('濡쒓렇?몄씠 ?꾩슂') ||
+    message.includes('로그인이 필요') ||
     message.includes('login required') ||
     message.includes('jwt') ||
     message.includes('401') ||
@@ -62,11 +64,11 @@ export function waitForAuthThenSync() {
 }
 
 /**
- * 蹂寃쎈맂 ?곗씠?곕쭔 Supabase???숆린??
- * ???꾩껜媛 ?꾨땶 遺遺??숆린?? ???덈ぉ 10,000媛쒕? 留ㅻ쾲 蹂대궡硫??먮┝
+ * 변경된 데이터만 Supabase에 동기화
+ * 여러 개가 동시에 변경되면 한 번에 동기화. 단, 10,000개를 넘으면 분할 처리
  */
-let _lastLocalSyncTime = 0; // ?닿? 留덉?留됱쑝濡?Supabase?????쒓컖 (??蹂寃쎌씠 Realtime?쇰줈 ?뚯븘?ㅻ㈃ 臾댁떆)
-let _isSyncing = false;    // ?꾩옱 sync 吏꾪뻾 以???Realtime reload ?듭젣
+let _lastLocalSyncTime = 0; // 마지막 Supabase 성공 시각 (오류 시 Realtime으로 보완)
+let _isSyncing = false;    // 현재 sync 진행 중 여부 — Realtime reload 중복 방지
 
 export function getLastLocalSyncTime() {
   return _lastLocalSyncTime;

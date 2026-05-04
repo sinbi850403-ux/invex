@@ -34,7 +34,12 @@ export default function AdminPage() {
 
   async function handleSuspend(u) {
     const newStatus = u.status === 'suspended' ? 'active' : 'suspended';
-    const { error } = await supabase.from('profiles').update({ status: newStatus }).eq('id', u.id);
+    // [SECURITY] P0-6: 직접 테이블 UPDATE 대신 SECURITY DEFINER RPC 경유.
+    // 서버사이드에서 check_admin_email() 검증 + audit_log 기록.
+    const { error } = await supabase.rpc('admin_set_user_status', {
+      target_id: u.id,
+      new_status: newStatus,
+    });
     if (error) { showToast('처리 실패: ' + error.message, 'error'); return; }
     showToast(newStatus === 'suspended' ? '사용자를 정지했습니다.' : '사용자를 활성화했습니다.', newStatus === 'suspended' ? 'warning' : 'success');
     loadUsers();

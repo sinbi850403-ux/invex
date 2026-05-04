@@ -28,11 +28,15 @@ CREATE TABLE IF NOT EXISTS system_config (
   updated_at  TIMESTAMPTZ DEFAULT now()
 );
 
+-- [SECURITY] P0-2: 아래 admin_emails 초기값은 최초 스키마 생성 시 1회만 삽입됩니다.
+-- 배포 후에는 Supabase Dashboard > Table Editor > system_config 에서
+-- admin_emails 값을 직접 수정하세요. 소스코드 변경 없이 실시간 반영됩니다.
+-- (ON CONFLICT DO NOTHING 이므로 재실행 시 기존 값 보존)
 INSERT INTO system_config(key, value, description)
 VALUES (
   'admin_emails',
-  '["sinbi0214@naver.com","sinbi850403@gmail.com","sinbi021499@gmail.com","admin@invex.io.kr"]',
-  '관리자 이메일 목록'
+  '["admin@invex.io.kr"]',
+  '관리자 이메일 목록 — 초기값. Supabase Dashboard에서 직접 관리하세요.'
 ) ON CONFLICT (key) DO NOTHING;
 
 -- ============================================================
@@ -828,6 +832,33 @@ CREATE POLICY "profiles_update"       ON profiles FOR UPDATE
   USING (auth.uid() = id)
   WITH CHECK (auth.uid() = id AND role = (SELECT p.role FROM profiles p WHERE p.id = auth.uid()));
 
+-- ============================================================
+-- [SECURITY] P0-6: admin_set_user_status — 서버사이드 관리자 검증
+-- profiles_update RLS는 자기 자신만 허용하므로, 관리자가 타 사용자
+-- 상태를 변경하려면 SECURITY DEFINER RPC를 경유해야 한다.
+-- ============================================================
+CREATE OR REPLACE FUNCTION admin_set_user_status(target_id UUID, new_status TEXT)
+RETURNS VOID AS $$
+BEGIN
+  -- 서버사이드 관리자 검증 (check_admin_email은 SECURITY DEFINER)
+  IF NOT check_admin_email() THEN
+    RAISE EXCEPTION 'permission_denied: 관리자 권한이 필요합니다.';
+  END IF;
+  -- new_status 화이트리스트 검증
+  IF new_status NOT IN ('active', 'suspended') THEN
+    RAISE EXCEPTION 'invalid_status: 허용된 상태값은 active, suspended 입니다.';
+  END IF;
+  -- 감사 로그
+  INSERT INTO audit_logs(user_id, action, target, detail)
+    VALUES (auth.uid(), 'admin.setUserStatus', target_id::text,
+            '상태 변경: ' || new_status);
+  -- 상태 업데이트
+  UPDATE profiles SET status = new_status WHERE id = target_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_catalog, pg_temp;
+REVOKE EXECUTE ON FUNCTION admin_set_user_status(UUID, TEXT) FROM PUBLIC;
+GRANT  EXECUTE ON FUNCTION admin_set_user_status(UUID, TEXT) TO authenticated;
+
 -- 단순 user_id 기반 (FOR ALL)
 DROP POLICY IF EXISTS "warehouses_all"     ON warehouses;
 CREATE POLICY "warehouses_all"     ON warehouses     FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
@@ -940,6 +971,8 @@ BEGIN
   RETURN pgp_sym_encrypt(plain, rrn_key);
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_catalog, pg_temp;
+REVOKE EXECUTE ON FUNCTION encrypt_rrn(TEXT) FROM PUBLIC;
+GRANT  EXECUTE ON FUNCTION encrypt_rrn(TEXT) TO authenticated;
 
 CREATE OR REPLACE FUNCTION set_employee_rrn(emp_id UUID, plain TEXT)
 RETURNS VOID AS $$
@@ -952,6 +985,8 @@ BEGIN
   END IF;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_catalog, pg_temp;
+REVOKE EXECUTE ON FUNCTION set_employee_rrn(UUID, TEXT) FROM PUBLIC;
+GRANT  EXECUTE ON FUNCTION set_employee_rrn(UUID, TEXT) TO authenticated;
 
 CREATE OR REPLACE FUNCTION decrypt_rrn(emp_id UUID)
 RETURNS TEXT AS $$
@@ -964,6 +999,9 @@ BEGIN
   RETURN pgp_sym_decrypt(enc_data, current_setting('app.rrn_key', true));
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_catalog, pg_temp;
+-- [SECURITY] P0-4: PUBLIC에 실행 권한 제거 — authenticated 사용자만 호출 가능
+REVOKE EXECUTE ON FUNCTION decrypt_rrn(UUID) FROM PUBLIC;
+GRANT  EXECUTE ON FUNCTION decrypt_rrn(UUID) TO authenticated;
 
 CREATE OR REPLACE FUNCTION set_employee_account_no(emp_id UUID, plain TEXT)
 RETURNS VOID AS $$

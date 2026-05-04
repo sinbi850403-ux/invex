@@ -142,7 +142,9 @@ export function dbVendorToStore(dbVendor) {
     paymentTerm:  dbVendor.payment_term || '',
     creditLimit:  dbVendor.credit_limit || '',
     bankName:     dbVendor.bank_name   || '',
-    bankAccount:  dbVendor.bank_account || '',
+    // [SECURITY] P0-5 TODO: bank_account 평문 → bank_account_mask 마스킹 값으로 교체 필요.
+    // add-vendor-bank-encryption-2026-05.sql 실행 후 bank_account_mask 컬럼 사용.
+    bankAccount:  dbVendor.bank_account_mask || dbVendor.bank_account || '',
     bankHolder:   dbVendor.bank_holder  || '',
     note:         dbVendor.note || dbVendor.memo || '',
   };

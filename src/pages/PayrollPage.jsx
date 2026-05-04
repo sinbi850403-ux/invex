@@ -132,7 +132,9 @@ export default function PayrollPage() {
     const [y, m] = monthStr.split('-').map(Number);
     try {
       const filtered = dept ? emps.filter(e => e.dept === dept && !e.resignDate) : emps.filter(e => !e.resignDate);
-      const allAtt = await attendanceDb.list({ from: `${y}-${String(m).padStart(2,'0')}-01`, to: `${y}-${String(m).padStart(2,'0')}-31` });
+      // limit: 5000 — Supabase 기본 상한 1000행 초과 방지.
+      // 직원 100명 × 31일 = 최대 3100행. 5000은 충분한 여유.
+      const allAtt = await attendanceDb.list({ from: `${y}-${String(m).padStart(2,'0')}-01`, to: `${y}-${String(m).padStart(2,'0')}-31`, limit: 5000 });
       const result = [];
       for (const emp of filtered) {
         // ① 근태 데이터: camelCase → snake_case (classifyWorkMinutes 입력 형식)
