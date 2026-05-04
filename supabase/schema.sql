@@ -771,12 +771,39 @@ ALTER TABLE payrolls          ENABLE ROW LEVEL SECURITY;
 ALTER TABLE leaves            ENABLE ROW LEVEL SECURITY;
 ALTER TABLE salary_items      ENABLE ROW LEVEL SECURITY;
 
+-- [SECURITY] VULN-011 대응 패치 (2026-05-04)
+-- profiles_select_admin 정책의 하드코딩 이메일 → system_config 기반 SECURITY DEFINER 함수로 교체
+-- 이전: DB 정책에 이메일 직접 박혀있어 관리자 추가/제거 시 스키마 수정 필요
+-- 이후: system_config.admin_emails JSONB 배열만 업데이트하면 즉시 반영
+DROP FUNCTION IF EXISTS check_admin_email();
+CREATE OR REPLACE FUNCTION check_admin_email()
+RETURNS boolean LANGUAGE plpgsql SECURITY DEFINER STABLE
+SET search_path = public, pg_catalog, pg_temp
+AS $$
+DECLARE
+  admin_emails jsonb;
+  caller_email text;
+BEGIN
+  -- JWT에서 이메일 추출 (null-safe)
+  caller_email := auth.jwt()->>'email';
+  IF caller_email IS NULL THEN
+    RETURN false;
+  END IF;
+  -- system_config에서 관리자 이메일 목록 조회 (SECURITY DEFINER이므로 RLS 우회)
+  SELECT value INTO admin_emails FROM system_config WHERE key = 'admin_emails';
+  IF admin_emails IS NULL THEN
+    RETURN false;
+  END IF;
+  RETURN admin_emails ? caller_email;
+END;
+$$;
+
 -- profiles
 DROP POLICY IF EXISTS "profiles_select"       ON profiles;
 CREATE POLICY "profiles_select"       ON profiles FOR SELECT  USING (auth.uid() = id);
 DROP POLICY IF EXISTS "profiles_select_admin" ON profiles;
 CREATE POLICY "profiles_select_admin" ON profiles FOR SELECT
-  USING (auth.jwt()->>'email' IN ('sinbi0214@naver.com', 'sinbi850403@gmail.com', 'admin@invex.io.kr'));
+  USING (check_admin_email());
 DROP POLICY IF EXISTS "profiles_insert"       ON profiles;
 CREATE POLICY "profiles_insert"       ON profiles FOR INSERT  WITH CHECK (auth.uid() = id);
 DROP POLICY IF EXISTS "profiles_update"       ON profiles;
