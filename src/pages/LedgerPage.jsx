@@ -476,7 +476,7 @@ export default function LedgerPage() {
                     <th colSpan={2} style={{ textAlign: 'center', background: 'var(--bg-muted)' }}>전월이월</th>
                     <th colSpan={2} style={{ textAlign: 'center', color: 'var(--success)' }}>입고</th>
                     <th colSpan={2} style={{ textAlign: 'center', color: 'var(--danger)' }}>출고</th>
-                    <th colSpan={2} style={{ textAlign: 'center', color: 'var(--warning)' }}>로스</th>
+                    <th colSpan={2} style={{ textAlign: 'center', color: 'var(--warning)' }} title="수량 셀 더블클릭으로 직접 입력">로스 ✎</th>
                     <th colSpan={2} style={{ textAlign: 'center', fontWeight: 700 }}>기말재고</th>
                     <SortTh colKey="unitPrice"  sort={sort} onSort={handleSort} rowSpan={2} style={{ verticalAlign: 'middle', textAlign: 'right', minWidth: '80px' }}>단가</SortTh>
                   </tr>
@@ -522,9 +522,9 @@ export default function LedgerPage() {
                             style={{ width: 64, textAlign: 'right', border: '1px solid var(--warning)', borderRadius: 4,
                               padding: '2px 4px', background: 'var(--bg-card)', color: 'var(--warning)', fontSize: 12 }} />
                         ) : (
-                          <span style={{ borderBottom: row.lossQty === 0 ? '1px dashed var(--text-muted)' : undefined }}>
+                          <span>
                             {lossOverrides[row.itemName] !== undefined
-                              ? <><span title="직접 입력됨">✎ </span>{n(row.lossQty)}</>
+                              ? <><span title="직접 입력됨" style={{ fontSize: 10 }}>✎</span> {n(row.lossQty)}</>
                               : n(row.lossQty)}
                           </span>
                         )}
