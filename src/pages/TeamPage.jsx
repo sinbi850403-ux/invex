@@ -113,12 +113,18 @@ export default function TeamPage() {
       ]);
       let meta = metaResult;
       if (!meta) {
-        await createWorkspace(user.displayName ? `${user.displayName}의 워크스페이스` : 'My Workspace');
-        meta = await getWorkspaceMeta(wsId);
+        // 워크스페이스가 없으면 자동 생성 시도
+        // createWorkspace 내부에서 JWT 검증 → 실패 시 null 반환(토스트 이미 표시됨)
+        const created = await createWorkspace(
+          user.displayName ? `${user.displayName}의 워크스페이스` : 'My Workspace'
+        );
+        if (created) meta = await getWorkspaceMeta(wsId);
+        // created === null 이면 meta는 null로 유지 → UI에서 재시도 버튼 표시
       }
       setData({ meta, myPendingInvite });
     } catch (e) {
       showToast('팀 정보를 불러오지 못했습니다: ' + e.message, 'error');
+      setData({ meta: null, myPendingInvite: null });
     } finally {
       setLoading(false);
     }
@@ -204,11 +210,14 @@ export default function TeamPage() {
           <h1 className="page-title">팀 관리</h1>
           <div className="page-desc">팀원을 초대하고 함께 재고를 관리하세요. 모든 데이터가 실시간으로 공유됩니다.</div>
         </div>
-        {isOwner && (
-          <div className="page-actions">
+        <div className="page-actions">
+          {isOwner && (
             <button className="btn btn-primary" onClick={() => setShowInvite(true)}>+ 팀원 초대</button>
-          </div>
-        )}
+          )}
+          {!meta && !loading && (
+            <button className="btn btn-outline" onClick={load}>⟳ 워크스페이스 생성 재시도</button>
+          )}
+        </div>
       </div>
 
       {/* 내 초대장 (비오너에게만 표시) */}
@@ -255,6 +264,22 @@ export default function TeamPage() {
           <div style={{ height: '100%', width: `${Math.round((freePeriod.daysLeft / 365) * 100)}%`, background: 'linear-gradient(90deg, var(--accent), #a371f7)', borderRadius: '3px', transition: 'width 0.5s' }} />
         </div>
       </div>
+
+      {/* 워크스페이스 미생성 안내 */}
+      {!meta && (
+        <div className="card" style={{ border: '1px solid var(--warning)', background: 'rgba(251,191,36,0.05)', textAlign: 'center', padding: '32px' }}>
+          <div style={{ fontSize: '36px', marginBottom: '12px' }}>⚠️</div>
+          <div style={{ fontWeight: 700, marginBottom: '8px' }}>워크스페이스를 생성하지 못했습니다</div>
+          <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '20px', lineHeight: 1.6 }}>
+            로그인 세션이 만료되었을 수 있습니다.<br />
+            페이지를 새로고침하거나 다시 로그인 후 재시도해 주세요.
+          </div>
+          <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
+            <button className="btn btn-ghost" onClick={() => window.location.reload()}>새로고침</button>
+            <button className="btn btn-primary" onClick={load}>워크스페이스 생성 재시도</button>
+          </div>
+        </div>
+      )}
 
       {/* 워크스페이스 정보 */}
       <div className="stat-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))' }}>
