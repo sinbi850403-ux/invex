@@ -11,10 +11,9 @@ import { showToast } from '../toast.js';
 import { employees as employeesDb } from '../db.js';
 import { canAction } from '../auth.js';
 import { addAuditLog } from '../audit-log.js';
+import { fmtWon } from '../utils/formatters.js';
 
 const EMP_TYPES = ['정규직', '계약직', '시급직', '일용직'];
-
-function fmtWon(n) { const v = parseFloat(n) || 0; return v ? '₩' + v.toLocaleString('ko-KR') : '-'; }
 function maskRRN(rrn) {
   const s = String(rrn || '').replace(/[^0-9]/g, '');
   if (s.length !== 13) return '';

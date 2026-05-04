@@ -12,8 +12,7 @@ import { addAuditLog } from '../audit-log.js';
 import { calcPayroll } from '../payroll-calc.js';
 import { summarizeMonthAttendance } from '../attendance-calc.js';
 import { generatePayslipPDF, generatePayslipBulkPDF } from '../pdf-generator.js';
-
-function fmtWon(n) { const v = parseFloat(n) || 0; return v ? '₩' + v.toLocaleString('ko-KR') : '-'; }
+import { fmtWon } from '../utils/formatters.js';
 
 // ─── 4대보험 요율 레이블 (모달 표시용) ───────────────────
 const INSURANCE_RATE_LABELS = {

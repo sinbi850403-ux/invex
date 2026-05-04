@@ -4,7 +4,6 @@ import { PLANS } from '../../plan.js';
 import { useAuth } from '../../contexts/AuthContext.jsx';
 import Sidebar from './Sidebar.jsx';
 import TopHeader from './TopHeader.jsx';
-import { createLegacyPage } from '../../pages/LegacyPage.jsx';
 import { PAGE_LOADERS } from '../../router-config.js';
 import { initGlobalSearch } from '../../global-search.js';
 import { checkAndShowOnboarding } from '../../onboarding.js';
@@ -79,12 +78,9 @@ const REACT_PAGES = {
   sales:           lazy(() => import('../../pages/SalesPage.jsx')),
 };
 
-// React 페이지는 네이티브 컴포넌트로, 나머지는 LegacyPage 래퍼로 생성
+// 모든 페이지가 React로 완전 변환됨 — REACT_PAGES에서 직접 조회
 const PAGE_COMPONENTS = Object.fromEntries(
-  Object.entries(PAGE_LOADERS).map(([id, loader]) => [
-    id,
-    REACT_PAGES[id] || createLegacyPage(id, loader),
-  ])
+  Object.entries(PAGE_LOADERS).map(([id]) => [id, REACT_PAGES[id]])
 );
 
 function PageNotFound() {

@@ -5,11 +5,7 @@
  */
 
 import { getState } from './store.js';
-
-// XSS 방지용 HTML 이스케이프
-function escHtml(s) {
-  return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#x27;');
-}
+import { escapeHtml as escHtml } from './ux-toolkit.js';
 
 let navigateCallback = null;
 let panelElement = null;

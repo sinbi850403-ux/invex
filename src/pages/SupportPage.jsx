@@ -6,6 +6,7 @@ import { useAuth } from '../contexts/AuthContext.jsx';
 import { collection, addDoc, getDocs, query, where, serverTimestamp, doc, deleteDoc } from '../backend-store.js';
 import { db, isConfigured } from '../backend-config.js';
 import { showToast } from '../toast.js';
+import { escapeHtml } from '../ux-toolkit.js';
 
 // 문의 상태별 라벨
 const STATUS_MAP = {
@@ -21,10 +22,6 @@ const TYPE_MAP = {
   account: '계정',
   other: '기타',
 };
-
-function escapeHtml(str) {
-  return String(str ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-}
 
 /** 목록 뷰 */
 function ListView({ onWrite, onDetail, user }) {

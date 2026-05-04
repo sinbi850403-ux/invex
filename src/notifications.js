@@ -4,6 +4,7 @@
  */
 
 import { getState, setState } from './store.js';
+import { escapeHtml } from './ux-toolkit.js';
 
 function toNumber(value) {
   const parsed = Number(value);
@@ -21,15 +22,6 @@ function hashText(text) {
 
 function buildNotificationId(category, title, desc) {
   return `n_${hashText(`${category}|${title}|${desc}`)}`;
-}
-
-function escapeHtml(text) {
-  return String(text ?? '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
 }
 
 function emitUpdated() {

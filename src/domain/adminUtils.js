@@ -18,10 +18,6 @@ export function timeAgo(iso) {
   return fmtDate(iso);
 }
 
-export function escHtml(s) {
-  return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-}
-
 export async function fetchAllUsers(attempt = 1) {
   try {
     const timeout = 20000;

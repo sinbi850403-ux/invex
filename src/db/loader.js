@@ -62,7 +62,6 @@ async function _fetchAllPages(table, maxLimit = 100000) {
     offset += pageSize;
   }
 
-  console.log(`[loadAllData] ${table}: 총 ${allData.length}행 로드됨`);
   return allData;
 }
 
@@ -98,8 +97,6 @@ export async function loadAllData(onCriticalReady) {
   const settingsData     = pickP1(2, {});
   const itemStocksData   = pickP1(3, []);
   const safetyStocksData = pickP1(4, []);
-
-  console.log(`[loadAllData] phase1 완료 — items:${itemsData.length} txs:${txData.length}`);
 
   // 핵심 데이터 변환
   const mappedData         = itemsData.map(dbItemToStoreItem);
@@ -159,8 +156,6 @@ export async function loadAllData(onCriticalReady) {
   const orderData     = pickP2(5, []);
   const posData       = pickP2(6, []);
   const fieldData     = pickP2(7, []);
-
-  console.log(`[loadAllData] phase2 완료 — vendors:${vendorsData.length} transfers:${transfersData.length}`);
 
   return {
     ...criticalState,

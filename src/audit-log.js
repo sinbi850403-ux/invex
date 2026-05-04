@@ -6,22 +6,7 @@
 
 import { getState, setState } from './store.js';
 import { auditLogs as auditLogsDb } from './db.js';
-
-/**
- * HTML 특수문자 이스케이프 — innerHTML XSS 방지
- * VULN-002 / ATTACK-003 대응 패치 (2026-05-03)
- * @param {*} value - 이스케이프할 값
- * @returns {string}
- */
-function escHtml(value) {
-  if (value === null || value === undefined) return '';
-  return String(value)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#x27;');
-}
+import { escapeHtml as escHtml } from './ux-toolkit.js';
 
 /**
  * 감사 로그 추가
