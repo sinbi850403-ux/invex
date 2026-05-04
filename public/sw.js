@@ -79,4 +79,3 @@ self.addEventListener('fetch', (event) => {
       .catch(() => caches.match(req))
   );
 });
-touch
