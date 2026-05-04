@@ -13,13 +13,13 @@
  */
 
 // Re-export everything so existing `import * as db from './db.js'` still works
-export { setWorkspaceUserId, clearWorkspaceUserId, primeUserIdCache, getAuthUserId } from './db/core.js';
+export { setWorkspaceUserId, clearWorkspaceUserId, primeUserIdCache, getAuthUserId, getWorkspaceContextUserId } from './db/core.js';
 export { storeItemToDb } from './db/converters.js';
 export { items }         from './db/items.js';
 export { transactions }  from './db/transactions.js';
 export { vendors }       from './db/vendors.js';
 export { transfers, stocktakes, itemStocks, safetyStocks } from './db/inventory.js';
 export { auditLogs, accountEntries, purchaseOrders, posSales } from './db/accounts.js';
-export { settings, customFields } from './db/settings.js';
+export { settings, personalSettings, customFields } from './db/settings.js';
 export { employees, attendance, payrolls, leaves, salaryItems } from './db/hr.js';
 export { loadAllData, clearAllUserData } from './db/loader.js';

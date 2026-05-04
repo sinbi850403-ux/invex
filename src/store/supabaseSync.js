@@ -8,6 +8,7 @@ import { stateHolder } from './stateRef.js';
 import { saveToDB } from './indexedDb.js';
 import * as db from '../db.js';
 import { storeItemToDb } from '../db.js';
+import { getUserId } from '../db/core.js';
 import { managedQuery, invalidateCache } from '../traffic-manager.js';
 import { isSupabaseConfigured, supabase } from '../supabase-client.js';
 
@@ -126,7 +127,10 @@ async function syncToSupabase() {
 
     // ?낆텧怨??숆린?????덈줈 異붽???嫄대쭔
     if (keysToSync.has('transactions')) {
-      const syncUserId = session.user.id;
+      // P1 수정: session.user.id(팀원 UID) → getUserId()(워크스페이스 컨텍스트 UID)
+      // 팀 모드에서 창고를 생성할 때 팀원 UID가 아닌 오너 UID로 user_id를 설정해야
+      // 다른 데이터(items/transactions)의 user_id와 일치하여 RLS 통과
+      const syncUserId = await getUserId();
       // stateHolder 인메모리 데이터로 items/warehouses 조회 — DB 재조회 제거 (P1-4)
       // mappedData._id는 bulkUpsert 후 동기화되므로 최신 UUID 보유
       const dbItems = (stateHolder.current.mappedData || [])

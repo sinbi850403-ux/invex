@@ -86,7 +86,8 @@ async function wsUpdateMembers(wsId, members) {
 export async function getWorkspaceId(userId) {
   if (!isConfigured || !userId) return userId;
   try {
-    const wsId = await db.settings.get('joined_workspace_id');
+    // personalSettings: 항상 본인 UID(getAuthUserId) 사용 — 워크스페이스 오너 UID 혼용 방지
+    const wsId = await db.personalSettings.get('joined_workspace_id');
 
     // joined_workspace_id 없거나 본인 UID면 바로 반환
     if (!wsId || wsId === userId) return userId;
@@ -106,7 +107,7 @@ export async function getWorkspaceId(userId) {
       // stale joined_workspace_id 자동 정리
       console.warn('[Workspace] 유효하지 않은 워크스페이스 ID 감지 — 정리 후 본인 UID 사용');
       try {
-        await db.settings.set('joined_workspace_id', null);
+        await db.personalSettings.set('joined_workspace_id', null);
       } catch (cleanupErr) {
         console.warn('[Workspace] settings 정리 실패 (non-fatal):', cleanupErr.message);
       }
@@ -176,10 +177,10 @@ export async function createWorkspace(name) {
       }
     }
 
-    // ④ 워크스페이스 생성 성공 — 로컬 settings에 소속 워크스페이스 ID 저장
-    //    (non-fatal: settings 저장 실패가 워크스페이스 생성 성공을 막지 않음)
+    // ④ 워크스페이스 생성 성공 — 본인 개인 settings에 소속 워크스페이스 ID 저장
+    //    personalSettings: 항상 본인 UID 사용 (non-fatal)
     try {
-      await db.settings.set('joined_workspace_id', validUid);
+      await db.personalSettings.set('joined_workspace_id', validUid);
     } catch (settingsErr) {
       console.warn('[Workspace] settings.set failed (non-fatal):', settingsErr.message);
     }
@@ -225,14 +226,14 @@ export async function inviteMember(email, role = 'staff') {
   }
 
   try {
-    // Supabase profiles에서 이메일로 사용자 조회
-    const { data: targetProfile, error } = await supabase
-      .from('profiles')
-      .select('id, name, email')
-      .eq('email', email)
-      .maybeSingle();
+    // P0 수정: profiles 직접 조회 → lookup_profile_for_invite RPC로 교체
+    // profiles_select_for_invite 정책 제거(V-004) 후 직접 SELECT는 RLS 차단됨
+    // RPC는 SECURITY DEFINER로 id/email/name 최소 필드만 반환 (IDOR 방지)
+    const { data: profileArr, error } = await supabase
+      .rpc('lookup_profile_for_invite', { lookup_email: email });
 
     if (error) throw error;
+    const targetProfile = (profileArr && profileArr.length > 0) ? profileArr[0] : null;
 
     if (!targetProfile) {
       showToast('해당 이메일로 가입된 사용자가 없습니다. 먼저 가입을 안내해 주세요.', 'warning');
@@ -295,7 +296,8 @@ export async function inviteMember(email, role = 'staff') {
 export async function getPendingInvite(userId) {
   if (!isConfigured || !userId) return null;
   try {
-    const myWsId = await db.settings.get('joined_workspace_id');
+    // personalSettings: 본인 UID 사용 (워크스페이스 오염 방지)
+    const myWsId = await db.personalSettings.get('joined_workspace_id');
 
     // RLS가 이미 본인 관련 워크스페이스만 반환 + 이미 속한 워크스페이스 제외
     let query = supabase
@@ -335,7 +337,7 @@ export async function acceptInvite() {
 
   try {
     // 이미 다른 워크스페이스에 소속된 경우 차단
-    const existingWsId = await db.settings.get('joined_workspace_id');
+    const existingWsId = await db.personalSettings.get('joined_workspace_id');
     if (existingWsId && existingWsId !== user.uid) {
       showToast('이미 다른 워크스페이스에 소속되어 있습니다. 먼저 탈퇴 후 수락해 주세요.', 'warning');
       return false;
@@ -362,8 +364,8 @@ export async function acceptInvite() {
     });
     if (rpcErr) throw rpcErr;
 
-    // 내 settings에 워크스페이스 ID 저장
-    await db.settings.set('joined_workspace_id', workspaceId);
+    // 내 개인 settings에 워크스페이스 ID 저장 (personalSettings: 본인 UID 사용)
+    await db.personalSettings.set('joined_workspace_id', workspaceId);
     currentWorkspaceId = workspaceId;
 
     showToast('팀 초대를 수락했습니다! 이제 같은 워크스페이스에서 데이터를 공유합니다.', 'success');

@@ -3,7 +3,7 @@
  */
 
 import { supabase } from '../supabase-client.js';
-import { getUserId, handleError } from './core.js';
+import { getUserId, getAuthUserId, handleError } from './core.js';
 
 // ============================================================
 // 사용자 설정 (Key-Value)
@@ -45,6 +45,53 @@ export const settings = {
     handleError(error, '전체 설정 조회');
 
     // [{key, value}] → {key: value} 객체로 변환
+    const result = {};
+    (data || []).forEach(row => { result[row.key] = row.value; });
+    return result;
+  },
+};
+
+// ============================================================
+// 개인 설정 (Personal Settings) — 항상 로그인한 본인 UID 사용
+//
+// 왜 별도 분리?
+// → settings(공유 설정)는 getUserId()를 사용해 워크스페이스 모드에서
+//   오너 UID로 동작하므로 팀원이 joined_workspace_id 등을 읽고 쓰면
+//   오너의 설정에 덮어써버리는 버그가 발생한다.
+// → 개인 UI 상태 / 소속 워크스페이스 ID 등은 로그인한 본인 UID(getAuthUserId)를 사용해야 한다.
+//
+// 개인 설정 키 목록:
+//   joined_workspace_id, notificationReadMap, onboarding_done, lastPage
+// ============================================================
+export const personalSettings = {
+  async get(key) {
+    const userId = await getAuthUserId();
+    const { data, error } = await supabase
+      .from('user_settings')
+      .select('value')
+      .eq('user_id', userId)
+      .eq('key', key)
+      .maybeSingle();
+    handleError(error, `개인설정 조회 (${key})`);
+    return data?.value ?? null;
+  },
+
+  async set(key, value) {
+    const userId = await getAuthUserId();
+    const result = await supabase
+      .from('user_settings')
+      .upsert({ user_id: userId, key, value }, { onConflict: 'user_id,key' });
+    if (!result) return;
+    handleError(result.error, `개인설정 저장 (${key})`);
+  },
+
+  async getAll() {
+    const userId = await getAuthUserId();
+    const { data, error } = await supabase
+      .from('user_settings')
+      .select('key, value')
+      .eq('user_id', userId);
+    handleError(error, '개인설정 전체 조회');
     const result = {};
     (data || []).forEach(row => { result[row.key] = row.value; });
     return result;
