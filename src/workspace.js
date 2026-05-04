@@ -10,6 +10,7 @@
 
 import { supabase, isSupabaseConfigured } from './supabase-client.js';
 import * as db from './db.js';
+import { primeUserIdCache } from './db.js';
 import { getCurrentUser, getUserProfileData } from './auth.js';
 import { getState, setState } from './store.js';
 import { showToast } from './toast.js';
@@ -105,8 +106,14 @@ export async function createWorkspace(name) {
   const validUid = await _ensureValidSession();
   if (!validUid) return null;
 
+  // ② userId 캐시를 JWT 검증된 UID로 동기화
+  //    AuthContext의 primeUserIdCache(uid) 가 초기화 시점에 캐시한 UID와
+  //    getUser()가 반환한 JWT UID가 달라지는 경우를 방지.
+  //    이후 db.settings.set 등 내부에서 getUserId()를 호출할 때 올바른 UID를 사용.
+  primeUserIdCache(validUid);
+
   try {
-    // ② SECURITY DEFINER RPC 시도 (owner_id를 서버 auth.uid()에서 설정)
+    // ③ SECURITY DEFINER RPC 시도 (owner_id를 서버 auth.uid()에서 설정)
     const { error: rpcErr } = await supabase.rpc('create_workspace_for_user', {
       ws_name: name || 'My Workspace',
       member_email: user.email || '',
@@ -138,7 +145,13 @@ export async function createWorkspace(name) {
       }
     }
 
-    await db.settings.set('joined_workspace_id', validUid);
+    // ④ 워크스페이스 생성 성공 — 로컬 settings에 소속 워크스페이스 ID 저장
+    //    (non-fatal: settings 저장 실패가 워크스페이스 생성 성공을 막지 않음)
+    try {
+      await db.settings.set('joined_workspace_id', validUid);
+    } catch (settingsErr) {
+      console.warn('[Workspace] settings.set failed (non-fatal):', settingsErr.message);
+    }
     currentWorkspaceId = validUid;
     showToast(`워크스페이스 "${name || 'My Workspace'}" 생성 완료!`, 'success');
     return validUid;
