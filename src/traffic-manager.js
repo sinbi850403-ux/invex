@@ -256,10 +256,14 @@ export async function managedQuery(queryFn) {
 
     const result = await queryFn();
 
-    // 에러가 429라면 백오프 후 재시도
+    // BUG-003: 429 재시도 시 큐/레이트리밋 재통과 — 직접 호출로 burst 생성 방지
     if (result?.error?.message?.includes('rate') || result?.error?.code === '429') {
       _metrics.retried++;
-      await new Promise(r => setTimeout(r, CONFIG.BASE_BACKOFF_MS));
+      const backoff = CONFIG.BASE_BACKOFF_MS * (1 + Math.random()); // 0.5~1.5× jitter
+      await new Promise(r => setTimeout(r, backoff));
+      // 재시도도 waitForRateLimit → recordRequest 경유 (레이트리밋 우회 차단)
+      await waitForRateLimit();
+      recordRequest();
       return queryFn();
     }
 

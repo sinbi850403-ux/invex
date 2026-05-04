@@ -16,16 +16,30 @@ type Selector<T> = (state: AnyState) => T;
 type SetState = (partial: Partial<AnyState>) => void;
 
 /**
- * 얕은 동등 비교 — 배열/원시값 모두 처리
- * Object.is만 쓰면 배열 셀렉터가 매 이벤트마다 새 참조를 반환해 무한 리렌더 발생
+ * 얕은 동등 비교 — 배열/객체/원시값 모두 처리 (BUG-009)
+ * Object.is만 쓰면 배열·객체 셀렉터가 매 이벤트마다 새 참조를 반환해 불필요한 리렌더 발생
+ * - 배열: 길이 + 각 요소 Object.is 비교
+ * - 일반 객체: 키 집합 + 각 값 Object.is 비교 (s.currency, s.inventoryViewPrefs 등)
  */
 function shallowEqual(a: unknown, b: unknown): boolean {
   if (Object.is(a, b)) return true;
+  if (a === null || b === null) return false;
+  if (typeof a !== 'object' || typeof b !== 'object') return false;
+
   if (Array.isArray(a) && Array.isArray(b)) {
     if (a.length !== b.length) return false;
     return a.every((item, i) => Object.is(item, b[i]));
   }
-  return false;
+  if (Array.isArray(a) || Array.isArray(b)) return false;
+
+  // 일반 plain 객체 얕은 비교
+  const keysA = Object.keys(a as object);
+  const keysB = Object.keys(b as object);
+  if (keysA.length !== keysB.length) return false;
+  return keysA.every(k =>
+    Object.prototype.hasOwnProperty.call(b, k) &&
+    Object.is((a as Record<string, unknown>)[k], (b as Record<string, unknown>)[k])
+  );
 }
 
 export function useStore(): [AnyState, SetState];

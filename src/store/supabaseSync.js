@@ -43,13 +43,17 @@ export function isAuthLikeSyncError(error) {
 }
 
 export function waitForAuthThenSync() {
-  if (_waitingAuthResume || !isSupabaseConfigured) return;
+  // BUG-002: 이미 구독 중이거나 대기 중이면 중복 구독 생성 방지
+  // _authResumeSubscription 체크 추가 → 재진입 시 중복 리스너 누수 차단
+  if (_authResumeSubscription || _waitingAuthResume || !isSupabaseConfigured) return;
   _waitingAuthResume = true;
   const { data } = supabase.auth.onAuthStateChange((_event, session) => {
     if (session?.user) {
-      _waitingAuthResume = false;
-      _authResumeSubscription?.unsubscribe?.();
+      // 구독/플래그 먼저 정리 후 sync 호출 (sync 실패 시 재진입 가능하도록)
+      const sub = _authResumeSubscription;
       _authResumeSubscription = null;
+      _waitingAuthResume = false;
+      sub?.unsubscribe?.();
       syncToSupabase();
     }
   });

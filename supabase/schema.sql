@@ -785,8 +785,8 @@ DECLARE
   caller_email text;
 BEGIN
   -- JWT에서 이메일 추출 (null-safe)
-  caller_email := auth.jwt()->>'email';
-  IF caller_email IS NULL THEN
+  caller_email := lower(trim(auth.jwt()->>'email'));
+  IF caller_email IS NULL OR caller_email = '' THEN
     RETURN false;
   END IF;
   -- system_config에서 관리자 이메일 목록 조회 (SECURITY DEFINER이므로 RLS 우회)
@@ -794,7 +794,14 @@ BEGIN
   IF admin_emails IS NULL THEN
     RETURN false;
   END IF;
-  RETURN admin_emails ? caller_email;
+  -- H-003 수정: JSONB ? 연산자 → jsonb_array_elements_text + lower() 대소문자 무시 비교
+  -- 이전: admin_emails ? caller_email  (대소문자 구분, JSONB 배열 원소 체크는 실제 동작하나
+  --       이메일 대소문자 불일치 시 관리자 권한 부여 실패)
+  RETURN EXISTS (
+    SELECT 1
+    FROM jsonb_array_elements_text(admin_emails) AS e
+    WHERE lower(trim(e)) = caller_email
+  );
 END;
 $$;
 
