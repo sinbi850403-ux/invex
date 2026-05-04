@@ -7,17 +7,27 @@
 -- 0. 관리자 이메일 단일 소스 헬퍼 함수 (V-003)
 -- 하드코딩 이메일을 모든 정책에 반복하는 대신 이 함수만 수정
 -- ============================================================
+-- H-003 수정: 하드코딩 이메일 목록 → system_config 테이블 조회
+--              대소문자 무시: lower() + jsonb_array_elements_text
 CREATE OR REPLACE FUNCTION check_admin_email()
 RETURNS BOOLEAN
-LANGUAGE sql SECURITY DEFINER STABLE
+LANGUAGE plpgsql SECURITY DEFINER STABLE
 SET search_path = public
 AS $$
-  SELECT auth.jwt()->>'email' IN (
-    'sinbi0214@naver.com',
-    'sinbi850403@gmail.com',
-    'sinbi021499@gmail.com',
-    'admin@invex.io.kr'
-  )
+DECLARE
+  admin_emails JSONB;
+  caller_email TEXT;
+BEGIN
+  caller_email := lower(trim(auth.jwt()->>'email'));
+  IF caller_email IS NULL OR caller_email = '' THEN RETURN false; END IF;
+  SELECT value INTO admin_emails FROM system_config WHERE key = 'admin_emails';
+  IF admin_emails IS NULL THEN RETURN false; END IF;
+  RETURN EXISTS (
+    SELECT 1
+    FROM jsonb_array_elements_text(admin_emails) AS e
+    WHERE lower(trim(e)) = caller_email
+  );
+END;
 $$;
 
 -- ============================================================

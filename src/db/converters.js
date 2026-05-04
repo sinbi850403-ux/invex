@@ -158,7 +158,9 @@ export function dbEmployeeToStore(r) {
     email: r.email,
     address: r.address,
     bank: r.bank,
-    accountNo: r.account_no,
+    // H-001: account_no 평문 컬럼 읽기 차단 — account_no_mask(마스킹) 만 노출
+    // 실제 계좌번호 조회는 employees.getAccountNo(id) RPC를 통해 암호화 해제
+    accountNoMask: r.account_no_mask ?? null,
     baseSalary: r.base_salary,
     hourlyWage: r.hourly_wage,
     employmentType: r.employment_type,
@@ -188,7 +190,8 @@ export function storeEmployeeToDb(e) {
   if ('email' in e) out.email = e.email;
   if ('address' in e) out.address = e.address;
   if ('bank' in e) out.bank = e.bank;
-  if ('accountNo' in e) out.account_no = e.accountNo;
+  // H-001: account_no 평문 컬럼 쓰기 차단 — 계좌번호는 employees.setAccountNo() RPC 경유
+  // (기존: out.account_no = e.accountNo → 평문 저장 — 보안 취약)
   if ('baseSalary' in e) out.base_salary = e.baseSalary;
   if ('hourlyWage' in e) out.hourly_wage = e.hourlyWage;
   if ('employmentType' in e) out.employment_type = e.employmentType;

@@ -16,9 +16,9 @@
 import * as Sentry from '@sentry/browser';
 import { showToast } from './toast.js';
 
-//  Sentry 프로젝트 DSN을 여기에 입력하세요
-// 예시: 'https://abcdef1234567890@o123456.ingest.sentry.io/1234567'
-const SENTRY_DSN = '';
+// Sentry DSN — 환경변수로 관리 (.env: VITE_SENTRY_DSN=https://...)
+// 소스코드에 DSN을 직접 넣으면 public 저장소에서 노출됨 → 반드시 환경변수 사용
+const SENTRY_DSN = import.meta.env.VITE_SENTRY_DSN || '';
 
 /**
  * 에러 모니터링 초기화

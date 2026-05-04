@@ -94,7 +94,7 @@ export function renderAuditLogPage(container, navigateTo) {
         </div>
         <select class="form-select" id="audit-action-filter" style="width:auto;">
           <option value="">전체 행위</option>
-          ${actions.map(a => `<option value="${a}">${a}</option>`).join('')}
+          ${actions.map(a => `<option value="${escHtml(a)}">${escHtml(a)}</option>`).join('')}
         </select>
         <select class="form-select" id="audit-period-filter" style="width:auto;">
           <option value="">전체 기간</option>

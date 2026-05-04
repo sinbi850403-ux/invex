@@ -1367,6 +1367,20 @@ DO $$ BEGIN
    WHERE expiry_date_d IS NULL AND expiry_date ~ '^\d{4}-\d{2}-\d{2}$';
 EXCEPTION WHEN OTHERS THEN NULL; END $$;
 
+-- ============================================================
+-- 43. H-001: account_no 평문 컬럼 정리
+-- 계좌번호 암호화 경로(account_no_enc)로 전환 완료 후 평문 삭제
+-- 주의: account_no_enc가 NULL인 행에 account_no 데이터가 있으면 먼저
+--       SET app.rrn_key = '<key>'; SELECT set_employee_account_no(id, account_no) 로 암호화 후 실행
+-- ============================================================
+DO $$ BEGIN
+  -- account_no_enc가 이미 채워진 행만 평문 삭제 (암호화 완료 확인 후)
+  UPDATE employees
+     SET account_no = NULL
+   WHERE account_no IS NOT NULL
+     AND account_no_enc IS NOT NULL;
+EXCEPTION WHEN OTHERS THEN NULL; END $$;
+
 DO $$ BEGIN
   UPDATE transactions SET txn_date = date::DATE
    WHERE txn_date IS NULL AND date ~ '^\d{4}-\d{2}-\d{2}$';
