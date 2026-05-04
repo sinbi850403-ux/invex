@@ -9,7 +9,7 @@
  */
 
 import { supabase } from '../supabase-client.js';
-import { getUserId } from './core.js';
+import { getUserId, getAuthUserId } from './core.js';
 import { items } from './items.js';
 import { transactions } from './transactions.js';
 import { vendors } from './vendors.js';
@@ -180,7 +180,8 @@ export async function loadAllData(onCriticalReady) {
  * 각 테이블에서 user_id = auth.uid() 인 데이터를 순서대로 삭제
  */
 export async function clearAllUserData() {
-  const userId = await getUserId();
+  // 실제 인증된 사용자 UID 사용 (워크스페이스 오너 UID 불가 — 본인 데이터만 삭제)
+  const userId = await getAuthUserId();
   if (!userId) throw new Error('로그인이 필요합니다.');
 
   const tables = [

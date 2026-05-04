@@ -296,11 +296,14 @@ export function getTrafficMetrics() {
 }
 
 /**
- * 설정 업데이트 — 런타임에 동적으로 트래픽 임계값 조정 가능
+ * 설정 업데이트 — 내부 전용 (V-010: 외부 노출 시 레이트리밋 우회 가능)
+ * export 제거: 외부에서 CONFIG를 임의 조작하지 못하도록 모듈 내부로 격리
  */
-export function updateTrafficConfig(overrides) {
+function updateTrafficConfig(overrides) {
   Object.assign(CONFIG, overrides);
 }
+// 미사용 경고 억제 — 향후 내부 self-tuning 로직에서 호출 예정
+void updateTrafficConfig;
 
 /**
  * 지표 초기화

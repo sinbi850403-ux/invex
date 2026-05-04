@@ -33,11 +33,19 @@ export function AuthProvider({ children }) {
       const uid = loggedInUser?.uid || null;
       primeUserIdCache(uid);
 
-      // restoreState + getWorkspaceId를 병렬 실행 — RTT 1회 절감
-      const [, wsId] = await Promise.all([
-        restoreState(uid),
-        (uid && isSupabaseConfigured) ? getWorkspaceId(uid) : Promise.resolve(uid),
-      ]);
+      // getWorkspaceId 먼저 조회 후 올바른 uid로 restoreState 1회만 실행 (P1-3)
+      // 이전: restoreState(uid) + (wsId !== uid 이면) restoreState(wsId) → 2배 쿼리(26회)
+      // 개선: wsId를 먼저 확정하고 effectiveUid로 단 1회만 restoreState 호출
+      const wsId = (uid && isSupabaseConfigured) ? await getWorkspaceId(uid) : uid;
+      const effectiveUid = (wsId && wsId !== uid) ? wsId : uid;
+
+      // 워크스페이스 멤버인 경우 오너 UID를 DB 쿼리 기준으로 설정
+      if (wsId && wsId !== uid) {
+        setWorkspaceUserId(wsId);
+      }
+
+      // effectiveUid로 상태 복원 (단 1회)
+      await restoreState(effectiveUid);
 
       // 로그인 직후 세션 갱신 레이스로 0건이 들어오는 케이스 보정:
       // wasLoadedFromSupabase()가 true이면 Supabase 쿼리가 정상 응답한 것이므로 재시도 불필요
@@ -59,14 +67,14 @@ export function AuthProvider({ children }) {
       };
       if (
         isSupabaseConfigured &&
-        uid &&
+        effectiveUid &&
         !wasLoadedFromSupabase() &&
         (hasNoCoreData() || looksPartialBootstrap()) &&
         !hasRetriedBootstrapRef.current
       ) {
         hasRetriedBootstrapRef.current = true;
         await new Promise(r => setTimeout(r, 400)); // 1200ms → 400ms
-        await restoreState(uid);
+        await restoreState(effectiveUid);
       }
 
       const profilePlan = getUserProfileData()?.plan;
@@ -78,12 +86,6 @@ export function AuthProvider({ children }) {
       // Realtime 자동 동기화 비활성화 (2026-04-29)
       // 사용자가 수동으로 새로고침 버튼을 눌러야만 데이터 업데이트됨
       // setupRealtimeSync();
-
-      // 워크스페이스 소속 시 오너 UID로 전환 (wsId는 위 Promise.all에서 이미 조회됨)
-      if (wsId && wsId !== uid) {
-        setWorkspaceUserId(wsId);
-        await restoreState(wsId);
-      }
     } finally {
       initializingRef.current = false;
       setIsInitializing(false);

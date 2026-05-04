@@ -1,12 +1,12 @@
 import { showToast } from '../toast.js';
 import { downloadExcelSheets } from '../excel.js';
 
-export const ADMIN_EMAILS = [
-  'sinbi0214@naver.com',
-  'sinbi850403@gmail.com',
-  'sinbi021499@gmail.com',
-  'admin@invex.io.kr',
-];
+// 관리자 이메일은 환경변수에서 로드 — 소스코드에 하드코딩 금지 (P1-5)
+// .env: VITE_ADMIN_EMAILS=sinbi0214@naver.com,sinbi850403@gmail.com,...
+export const ADMIN_EMAILS = (import.meta.env.VITE_ADMIN_EMAILS || '')
+  .split(',')
+  .map((e) => e.trim())
+  .filter(Boolean);
 
 export const POS_FIELDS = [
   { key: 'saleDate',    label: '판매일자' },

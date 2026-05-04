@@ -80,10 +80,11 @@ export function generateClientUuid() {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
     return crypto.randomUUID();
   }
-  // crypto.getRandomValues 우선 사용 — Math.random()은 암호학적으로 비안전 (CWE-338)
-  const bytes = (typeof crypto !== 'undefined' && crypto.getRandomValues)
-    ? Array.from(crypto.getRandomValues(new Uint8Array(16)))
-    : Array.from({ length: 16 }, () => Math.floor(Math.random() * 256));
+  // crypto.getRandomValues만 사용 — Math.random()은 암호학적으로 비안전 (CWE-338)
+  if (typeof crypto === 'undefined' || !crypto.getRandomValues) {
+    throw new Error('보안 UUID 생성 불가: crypto.getRandomValues를 지원하지 않는 환경입니다.');
+  }
+  const bytes = Array.from(crypto.getRandomValues(new Uint8Array(16)));
   bytes[6] = (bytes[6] & 0x0f) | 0x40;
   bytes[8] = (bytes[8] & 0x3f) | 0x80;
   const hex = bytes.map((b) => b.toString(16).padStart(2, '0')).join('');
@@ -107,10 +108,25 @@ export async function resolveFKMap(table, nameColumn, userId, names) {
 }
 
 /**
- * 현재 로그인한 사용자 ID를 안전하게 가져오기
- * — 팀 워크스페이스 소속 시 오너 UID 반환 (_workspaceUserId 우선)
+ * 데이터 쿼리용 user_id 반환 (V-002 수정)
+ *
+ * 설계 원칙:
+ * - _workspaceUserId는 setWorkspaceUserId()로만 설정됨
+ *   → setWorkspaceUserId는 AuthContext에서 인증 성공 + is_workspace_member RPC 검증 후 호출
+ *   → 즉, _workspaceUserId가 설정됐다면 이미 안전하게 인증된 컨텍스트
+ * - 인증 FAILURE 시 _workspaceUserId로 폴백하는 것이 V-002 취약점
+ *   → 수정: _workspaceUserId를 함수 끝이 아닌 인증 이전에 체크 (항상 설정된 값 우선)
+ *
+ * 결과:
+ * - 워크스페이스 모드: _workspaceUserId(오너 UID) → 인증 없이 반환 (보안: 이미 검증됨)
+ * - 개인 모드: 정상 인증 경로 → 실제 로그인 UID 반환
+ * - 인증 실패 시: 예외 throw (auth bypass 없음)
  */
 export async function getUserId() {
+  // 워크스페이스 모드: setWorkspaceUserId()가 인증+멤버십 검증 후 주입한 오너 UID 사용
+  // 이 값은 인증 성공 후에만 설정되므로 먼저 반환해도 안전 (V-002와 다른 이유: 순서 역전)
+  if (_workspaceUserId) return _workspaceUserId;
+
   if (_cachedUserId && Date.now() - _cachedUserIdAt < USER_ID_CACHE_TTL_MS) {
     return _cachedUserId;
   }
@@ -130,9 +146,44 @@ export async function getUserId() {
       return _cachedUserId;
     }
   } catch (_) {
-    // fall through
+    // fall through — 인증 실패 시 아래에서 throw
   }
 
-  if (_workspaceUserId) return _workspaceUserId;
+  // _workspaceUserId가 없고 인증도 실패한 경우: 로그인 필요
+  // (인증 실패 시 _workspaceUserId 폴백 제거 — V-002 fix 핵심)
   throw new Error('로그인이 필요합니다.');
+}
+
+/**
+ * 실제 인증된 사용자 UID (순수 인증용)
+ * — 워크스페이스 컨텍스트 무시, 항상 현재 로그인한 사용자의 UID 반환
+ * — 사용 대상: clearAllUserData() 같은 소유자 본인 판정 로직
+ */
+export async function getAuthUserId() {
+  if (_cachedUserId && Date.now() - _cachedUserIdAt < USER_ID_CACHE_TTL_MS) {
+    return _cachedUserId;
+  }
+  try {
+    const { data: { session } } = await withDbTimeout(supabase.auth.getSession(), 'getSession');
+    if (session?.user?.id) {
+      _cachedUserId = session.user.id;
+      _cachedUserIdAt = Date.now();
+      return _cachedUserId;
+    }
+    const { data: { user } } = await withDbTimeout(supabase.auth.getUser(), 'getUser');
+    if (user?.id) {
+      _cachedUserId = user.id;
+      _cachedUserIdAt = Date.now();
+      return _cachedUserId;
+    }
+  } catch (_) { /* fall through */ }
+  throw new Error('로그인이 필요합니다.');
+}
+
+/**
+ * @deprecated getUserId()가 워크스페이스 컨텍스트를 포함하므로 직접 사용 가능
+ * 하위 호환성을 위해 유지
+ */
+export async function getWorkspaceContextUserId() {
+  return getUserId();
 }

@@ -4,6 +4,23 @@
 -- ============================================================
 
 -- ============================================================
+-- 0. 관리자 이메일 단일 소스 헬퍼 함수 (V-003)
+-- 하드코딩 이메일을 모든 정책에 반복하는 대신 이 함수만 수정
+-- ============================================================
+CREATE OR REPLACE FUNCTION check_admin_email()
+RETURNS BOOLEAN
+LANGUAGE sql SECURITY DEFINER STABLE
+SET search_path = public
+AS $$
+  SELECT auth.jwt()->>'email' IN (
+    'sinbi0214@naver.com',
+    'sinbi850403@gmail.com',
+    'sinbi021499@gmail.com',
+    'admin@invex.io.kr'
+  )
+$$;
+
+-- ============================================================
 -- 1. profiles RLS 정책
 -- ============================================================
 DROP POLICY IF EXISTS "profiles_select"            ON profiles;
@@ -19,17 +36,13 @@ DROP POLICY IF EXISTS "users can update own profile" ON profiles;
 CREATE POLICY "profiles_select" ON profiles
   FOR SELECT USING (auth.uid() = id);
 
--- 관리자: 모든 프로필 조회
+-- 관리자: 모든 프로필 조회 — check_admin_email() 사용 (V-003 수정)
 CREATE POLICY "profiles_select_admin" ON profiles
-  FOR SELECT USING (
-    auth.jwt()->>'email' IN (
-      'sinbi0214@naver.com', 'sinbi850403@gmail.com', 'sinbi021499@gmail.com', 'admin@invex.io.kr'
-    )
-  );
+  FOR SELECT USING (check_admin_email());
 
--- 초대 기능용: 로그인한 사용자라면 이메일로 타인 프로필 조회 가능
-CREATE POLICY "profiles_select_for_invite" ON profiles
-  FOR SELECT USING (auth.uid() IS NOT NULL);
+-- V-004 수정: profiles_select_for_invite 제거 (IDOR — 모든 인증 사용자가 전체 PII 열람 가능)
+-- 초대 이메일 조회는 아래 lookup_profile_for_invite() SECURITY DEFINER RPC로 대체
+-- (RPC는 id, email, name 최소 필드만 반환)
 
 -- 본인 프로필 생성/수정
 CREATE POLICY "profiles_insert" ON profiles
@@ -40,23 +53,40 @@ CREATE POLICY "profiles_update" ON profiles
   USING (auth.uid() = id)
   WITH CHECK (auth.uid() = id);
 
--- 관리자: 모든 프로필 수정
+-- 관리자: 모든 프로필 수정 — check_admin_email() 사용 (V-003 수정)
 CREATE POLICY "profiles_update_admin" ON profiles
   FOR UPDATE
-  USING (
-    auth.jwt()->>'email' IN (
-      'sinbi0214@naver.com', 'sinbi850403@gmail.com', 'sinbi021499@gmail.com', 'admin@invex.io.kr'
-    )
-  )
-  WITH CHECK (
-    auth.jwt()->>'email' IN (
-      'sinbi0214@naver.com', 'sinbi850403@gmail.com', 'sinbi021499@gmail.com', 'admin@invex.io.kr'
-    )
-  );
+  USING (check_admin_email())
+  WITH CHECK (check_admin_email());
+
+-- ============================================================
+-- 1-1. 초대 이메일 조회 RPC (V-004 대체 — 최소 PII 노출)
+-- profiles_select_for_invite 정책 없이 이메일 기반 조회 제공
+-- ============================================================
+CREATE OR REPLACE FUNCTION lookup_profile_for_invite(lookup_email TEXT)
+RETURNS TABLE(id UUID, email TEXT, name TEXT)
+LANGUAGE plpgsql SECURITY DEFINER STABLE
+SET search_path = public
+AS $$
+BEGIN
+  -- 빈 입력 차단
+  IF lookup_email IS NULL OR trim(lookup_email) = '' THEN
+    RETURN;
+  END IF;
+  RETURN QUERY
+    SELECT p.id, p.email, p.name
+    FROM profiles p
+    WHERE p.email = lower(trim(lookup_email))
+    LIMIT 1;
+END;
+$$;
+GRANT EXECUTE ON FUNCTION lookup_profile_for_invite(TEXT) TO authenticated;
 
 -- ============================================================
 -- 2. 신규 회원 프로필 자동 생성 트리거
 -- ============================================================
+-- 관리자 이메일 목록 — 트리거 컨텍스트에서는 auth.jwt() 미사용, 직접 비교
+-- check_admin_email()과 동일 목록으로 유지 (V-003: 변경 시 이 함수도 함께 수정)
 CREATE OR REPLACE FUNCTION handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -68,7 +98,8 @@ BEGIN
     NEW.raw_user_meta_data->>'avatar_url',
     CASE
       WHEN lower(COALESCE(NEW.email, '')) IN (
-        'sinbi0214@naver.com', 'sinbi850403@gmail.com', 'sinbi021499@gmail.com', 'admin@invex.io.kr'
+        'sinbi0214@naver.com', 'sinbi850403@gmail.com',
+        'sinbi021499@gmail.com', 'admin@invex.io.kr'
       ) THEN 'admin'
       ELSE 'viewer'
     END

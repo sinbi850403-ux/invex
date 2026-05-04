@@ -123,16 +123,15 @@ async function syncToSupabase() {
     // ?낆텧怨??숆린?????덈줈 異붽???嫄대쭔
     if (keysToSync.has('transactions')) {
       const syncUserId = session.user.id;
-      // Supabase?먯꽌 items? warehouses 吏곸젒 濡쒕뱶 (stateHolder ?섏〈 ?쒓굅)
-      const { data: dbItems = [] } = await supabase.from('items')
-        .select('id, item_name')
-        .limit(1000)
-        .catch(() => ({ data: [] }));
+      // stateHolder 인메모리 데이터로 items/warehouses 조회 — DB 재조회 제거 (P1-4)
+      // mappedData._id는 bulkUpsert 후 동기화되므로 최신 UUID 보유
+      const dbItems = (stateHolder.current.mappedData || [])
+        .map(item => ({ id: item._id, item_name: item.itemName }))
+        .filter(item => item.id && item.item_name);
 
-      let { data: dbWarehouses = [] } = await supabase.from('warehouses')
-        .select('id, name')
-        .catch(() => ({ data: [] }));
-
+      let dbWarehouses = (stateHolder.current.warehouses || [])
+        .map(w => ({ id: w._id || w.id, name: w.name }))
+        .filter(w => w.name);
       const unsyncedTxs = (stateHolder.current.transactions || []).filter(tx => !tx._synced);
       const missingWarehouseNames = [...new Set(
         unsyncedTxs
