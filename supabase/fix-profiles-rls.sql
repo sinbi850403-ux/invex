@@ -18,7 +18,7 @@ CREATE POLICY "profiles_select" ON profiles
   FOR SELECT USING (auth.uid() = id);
 
 CREATE POLICY "profiles_select_admin" ON profiles
-  FOR SELECT USING (auth.jwt()->>'email' IN ('sinbi0214@naver.com', 'sinbi850403@gmail.com', 'admin@invex.io.kr'));
+  FOR SELECT USING (auth.jwt()->>'email' IN ('sinbi0214@naver.com', 'sinbi850403@gmail.com', 'sinbi021499@gmail.com', 'admin@invex.io.kr'));
 
 CREATE POLICY "profiles_insert" ON profiles
   FOR INSERT WITH CHECK (auth.uid() = id);
@@ -61,7 +61,7 @@ BEGIN
     NEW.email,
     NEW.raw_user_meta_data->>'avatar_url',
     CASE
-      WHEN lower(COALESCE(NEW.email, '')) IN ('sinbi0214@naver.com', 'sinbi850403@gmail.com', 'admin@invex.io.kr') THEN 'admin'
+      WHEN lower(COALESCE(NEW.email, '')) IN ('sinbi0214@naver.com', 'sinbi850403@gmail.com', 'sinbi021499@gmail.com', 'admin@invex.io.kr') THEN 'admin'
       ELSE 'viewer'
     END
   )

@@ -23,7 +23,7 @@ CREATE POLICY "profiles_select" ON profiles
 CREATE POLICY "profiles_select_admin" ON profiles
   FOR SELECT USING (
     auth.jwt()->>'email' IN (
-      'sinbi0214@naver.com', 'sinbi850403@gmail.com', 'admin@invex.io.kr'
+      'sinbi0214@naver.com', 'sinbi850403@gmail.com', 'sinbi021499@gmail.com', 'admin@invex.io.kr'
     )
   );
 
@@ -45,12 +45,12 @@ CREATE POLICY "profiles_update_admin" ON profiles
   FOR UPDATE
   USING (
     auth.jwt()->>'email' IN (
-      'sinbi0214@naver.com', 'sinbi850403@gmail.com', 'admin@invex.io.kr'
+      'sinbi0214@naver.com', 'sinbi850403@gmail.com', 'sinbi021499@gmail.com', 'admin@invex.io.kr'
     )
   )
   WITH CHECK (
     auth.jwt()->>'email' IN (
-      'sinbi0214@naver.com', 'sinbi850403@gmail.com', 'admin@invex.io.kr'
+      'sinbi0214@naver.com', 'sinbi850403@gmail.com', 'sinbi021499@gmail.com', 'admin@invex.io.kr'
     )
   );
 
@@ -68,7 +68,7 @@ BEGIN
     NEW.raw_user_meta_data->>'avatar_url',
     CASE
       WHEN lower(COALESCE(NEW.email, '')) IN (
-        'sinbi0214@naver.com', 'sinbi850403@gmail.com', 'admin@invex.io.kr'
+        'sinbi0214@naver.com', 'sinbi850403@gmail.com', 'sinbi021499@gmail.com', 'admin@invex.io.kr'
       ) THEN 'admin'
       ELSE 'viewer'
     END

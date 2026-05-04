@@ -4,6 +4,7 @@ import { downloadExcelSheets } from '../excel.js';
 export const ADMIN_EMAILS = [
   'sinbi0214@naver.com',
   'sinbi850403@gmail.com',
+  'sinbi021499@gmail.com',
   'admin@invex.io.kr',
 ];
 

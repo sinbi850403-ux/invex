@@ -454,7 +454,7 @@ CREATE TABLE IF NOT EXISTS system_config (
 INSERT INTO system_config(key, value, description)
 VALUES (
   'admin_emails',
-  '["sinbi0214@naver.com","sinbi850403@gmail.com","admin@invex.io.kr"]',
+  '["sinbi0214@naver.com","sinbi850403@gmail.com","sinbi021499@gmail.com","admin@invex.io.kr"]',
   '관리자 이메일 목록'
 ) ON CONFLICT (key) DO NOTHING;
 
