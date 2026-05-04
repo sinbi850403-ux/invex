@@ -94,8 +94,7 @@ export default function HrDashboardPage() {
   if (loading) return <div style={{ padding: '60px', textAlign: 'center', color: 'var(--text-muted)' }}>불러오는 중…</div>;
   if (error) return <div className="empty-state"><div className="msg">{error}</div></div>;
 
-  const maxDept = data.depts[0]?.[1] || 1;
-  const DEPT_COLORS = ['var(--primary)', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#f97316'];
+  const DEPT_COLORS =['var(--primary)', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#f97316'];
 
   return (
     <div>
@@ -154,10 +153,10 @@ export default function HrDashboardPage() {
                     <span style={{ fontWeight: 500 }}>{dept}</span>
                     <span style={{ color: 'var(--text-muted)' }}>{cnt}명 ({Math.round(cnt / data.active.length * 100)}%)</span>
                   </div>
-                  <div style={{ height: 8, background: 'var(--border-color)', borderRadius: 4 }}>
+                  <div style={{ height: 8, background: 'var(--border)', borderRadius: 4 }}>
                     <div style={{
                       height: '100%',
-                      width: Math.round(cnt / maxDept * 100) + '%',
+                      width: Math.round(cnt / data.active.length * 100) + '%',
                       background: DEPT_COLORS[i % DEPT_COLORS.length],
                       borderRadius: 4,
                       transition: 'width 0.4s',
