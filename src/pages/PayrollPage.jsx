@@ -26,28 +26,28 @@ function PayrollDetailModal({ payroll: p, year, month, onClose }) {
           <button className="btn-close" onClick={onClose} />
         </div>
         <div className="modal-body">
-          <h4 style={{ marginBottom: 12, fontSize: 14 }}>【지급항목】</h4>
+          <h4 style={{ marginBottom: 12, fontSize: 14, color: 'var(--text-secondary)' }}>【지급항목】</h4>
           <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: 16 }}>
             <tbody>
-              <tr style={{ borderBottom: '1px solid #e0e0e0' }}><td style={{ padding: '8px 0' }}>기본급</td><td style={{ textAlign: 'right', fontWeight: 500 }}>{fmtWon(p.base)}</td></tr>
-              {allowanceSum > 0 && <tr style={{ borderBottom: '1px solid #e0e0e0' }}><td>수당</td><td style={{ textAlign: 'right', fontWeight: 500 }}>{fmtWon(allowanceSum)}</td></tr>}
-              {(p.overtime_pay || 0) > 0 && <tr style={{ borderBottom: '1px solid #e0e0e0' }}><td>초과근무비</td><td style={{ textAlign: 'right', fontWeight: 500 }}>{fmtWon(p.overtime_pay)}</td></tr>}
-              {(p.night_pay || 0) > 0 && <tr style={{ borderBottom: '1px solid #e0e0e0' }}><td>야간근무비</td><td style={{ textAlign: 'right', fontWeight: 500 }}>{fmtWon(p.night_pay)}</td></tr>}
-              <tr style={{ borderBottom: '2px solid #333', background: '#fafafa' }}><td style={{ padding: '10px 0', fontWeight: 'bold' }}>총 지급액</td><td style={{ padding: '10px 0', textAlign: 'right', fontWeight: 'bold', color: '#2196F3', fontSize: 16 }}>{fmtWon(p.gross)}</td></tr>
+              <tr style={{ borderBottom: '1px solid var(--border)' }}><td style={{ padding: '8px 0', color: 'var(--text-primary)' }}>기본급</td><td style={{ textAlign: 'right', fontWeight: 500, color: 'var(--text-primary)' }}>{fmtWon(p.base)}</td></tr>
+              {allowanceSum > 0 && <tr style={{ borderBottom: '1px solid var(--border)' }}><td style={{ color: 'var(--text-primary)' }}>수당</td><td style={{ textAlign: 'right', fontWeight: 500, color: 'var(--text-primary)' }}>{fmtWon(allowanceSum)}</td></tr>}
+              {(p.overtime_pay || 0) > 0 && <tr style={{ borderBottom: '1px solid var(--border)' }}><td style={{ color: 'var(--text-primary)' }}>초과근무비</td><td style={{ textAlign: 'right', fontWeight: 500, color: 'var(--text-primary)' }}>{fmtWon(p.overtime_pay)}</td></tr>}
+              {(p.night_pay || 0) > 0 && <tr style={{ borderBottom: '1px solid var(--border)' }}><td style={{ color: 'var(--text-primary)' }}>야간근무비</td><td style={{ textAlign: 'right', fontWeight: 500, color: 'var(--text-primary)' }}>{fmtWon(p.night_pay)}</td></tr>}
+              <tr style={{ borderBottom: '2px solid var(--border)', background: 'var(--bg-main)' }}><td style={{ padding: '10px 0', fontWeight: 'bold', color: 'var(--text-primary)' }}>총 지급액</td><td style={{ padding: '10px 0', textAlign: 'right', fontWeight: 'bold', color: 'var(--accent)', fontSize: 16 }}>{fmtWon(p.gross)}</td></tr>
             </tbody>
           </table>
-          <h4 style={{ marginBottom: 12, fontSize: 14 }}>【공제항목】</h4>
+          <h4 style={{ marginBottom: 12, fontSize: 14, color: 'var(--text-secondary)' }}>【공제항목】</h4>
           <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: 16 }}>
             <tbody>
-              {(p.np||0) > 0 && <tr style={{ borderBottom: '1px solid #e0e0e0' }}><td>국민연금</td><td style={{ textAlign: 'right' }}>{fmtWon(p.np)}</td></tr>}
-              {(p.hi||0) > 0 && <tr style={{ borderBottom: '1px solid #e0e0e0' }}><td>건강보험</td><td style={{ textAlign: 'right' }}>{fmtWon(p.hi)}</td></tr>}
-              {(p.ltc||0) > 0 && <tr style={{ borderBottom: '1px solid #e0e0e0' }}><td>장기요양보험</td><td style={{ textAlign: 'right' }}>{fmtWon(p.ltc)}</td></tr>}
-              {(p.income_tax||0) > 0 && <tr style={{ borderBottom: '1px solid #e0e0e0' }}><td>소득세</td><td style={{ textAlign: 'right' }}>{fmtWon(p.income_tax)}</td></tr>}
-              <tr style={{ background: '#fff5e6' }}><td style={{ padding: '10px 0', fontWeight: 'bold' }}>총 공제액</td><td style={{ padding: '10px 0', textAlign: 'right', fontWeight: 'bold' }}>{fmtWon(p.total_deduct)}</td></tr>
+              {(p.np||0) > 0 && <tr style={{ borderBottom: '1px solid var(--border)' }}><td style={{ color: 'var(--text-primary)' }}>국민연금</td><td style={{ textAlign: 'right', color: 'var(--text-primary)' }}>{fmtWon(p.np)}</td></tr>}
+              {(p.hi||0) > 0 && <tr style={{ borderBottom: '1px solid var(--border)' }}><td style={{ color: 'var(--text-primary)' }}>건강보험</td><td style={{ textAlign: 'right', color: 'var(--text-primary)' }}>{fmtWon(p.hi)}</td></tr>}
+              {(p.ltc||0) > 0 && <tr style={{ borderBottom: '1px solid var(--border)' }}><td style={{ color: 'var(--text-primary)' }}>장기요양보험</td><td style={{ textAlign: 'right', color: 'var(--text-primary)' }}>{fmtWon(p.ltc)}</td></tr>}
+              {(p.income_tax||0) > 0 && <tr style={{ borderBottom: '1px solid var(--border)' }}><td style={{ color: 'var(--text-primary)' }}>소득세</td><td style={{ textAlign: 'right', color: 'var(--text-primary)' }}>{fmtWon(p.income_tax)}</td></tr>}
+              <tr style={{ background: 'var(--warning-light)' }}><td style={{ padding: '10px 0', fontWeight: 'bold', color: 'var(--text-primary)' }}>총 공제액</td><td style={{ padding: '10px 0', textAlign: 'right', fontWeight: 'bold', color: 'var(--warning)' }}>{fmtWon(p.total_deduct)}</td></tr>
             </tbody>
           </table>
           <table style={{ width: '100%' }}>
-            <tbody><tr style={{ background: '#f0f7ff' }}><td style={{ padding: 12, fontWeight: 'bold', color: '#2196F3' }}>실지급액</td><td style={{ padding: 12, textAlign: 'right', fontWeight: 'bold', fontSize: 20, color: '#2196F3' }}>{fmtWon(p.net)}</td></tr></tbody>
+            <tbody><tr style={{ background: 'var(--accent-light)', borderRadius: 8 }}><td style={{ padding: 12, fontWeight: 'bold', color: 'var(--accent)' }}>실지급액</td><td style={{ padding: 12, textAlign: 'right', fontWeight: 'bold', fontSize: 20, color: 'var(--accent)' }}>{fmtWon(p.net)}</td></tr></tbody>
           </table>
         </div>
         <div className="modal-footer" style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
@@ -192,8 +192,16 @@ export default function PayrollPage() {
         <div className="card" style={{ marginBottom: 12 }}>
           <h3 style={{ marginBottom: 12 }}>이번달 급여 요약</h3>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12 }}>
-            {[['대상 직원', payrolls.length + '명'], ['총 지급액', fmtWon(totalGross)], ['총 공제액', fmtWon(totalDeduct)], ['총 실지급', fmtWon(totalNet)]].map(([label, val]) => (
-              <div key={label} className="stat-card"><div className="stat-value">{val}</div><div className="stat-label">{label}</div></div>
+            {[
+              { label: '대상 직원', val: payrolls.length + '명', color: 'var(--info)', border: 'var(--info)' },
+              { label: '총 지급액', val: fmtWon(totalGross), color: 'var(--accent)', border: 'var(--accent)' },
+              { label: '총 공제액', val: fmtWon(totalDeduct), color: 'var(--warning)', border: 'var(--warning)' },
+              { label: '총 실지급', val: fmtWon(totalNet), color: 'var(--success)', border: 'var(--success)' },
+            ].map(({ label, val, color, border }) => (
+              <div key={label} className="stat-card" style={{ borderTop: `3px solid ${border}` }}>
+                <div className="stat-value" style={{ color }}>{val}</div>
+                <div className="stat-label">{label}</div>
+              </div>
             ))}
           </div>
         </div>
@@ -210,7 +218,7 @@ export default function PayrollPage() {
                   <th className="text-right">기본급</th><th className="text-right">수당</th>
                   <th className="text-right">초과/야간</th><th className="text-right">4대보험</th>
                   <th className="text-right">세금</th>
-                  <th className="text-right" style={{ background: '#f5f5f5', color: '#2196F3' }}>실지급액</th>
+                  <th className="text-right" style={{ background: 'var(--accent-light)', color: 'var(--accent)' }}>실지급액</th>
                   <th style={{ width: 60 }}>상세</th>
                 </tr>
               </thead>
@@ -230,19 +238,19 @@ export default function PayrollPage() {
                       <td className="text-right">{fmtWon(overtime)}</td>
                       <td className="text-right">{fmtWon(insurance)}</td>
                       <td className="text-right">{fmtWon(tax)}</td>
-                      <td className="text-right" style={{ background: '#f5f5f5', color: '#2196F3', fontWeight: 'bold' }}>{fmtWon(p.net)}</td>
+                      <td className="text-right" style={{ background: 'var(--accent-light)', color: 'var(--accent)', fontWeight: 'bold' }}>{fmtWon(p.net)}</td>
                       <td><button className="btn-icon" onClick={() => setDetailPayroll(p)}>→</button></td>
                     </tr>
                   );
                 })}
-                <tr style={{ background: '#f0f0f0', fontWeight: 'bold', borderTop: '2px solid #333' }}>
-                  <td colSpan={3}>합계</td>
+                <tr style={{ background: 'var(--bg-main)', fontWeight: 'bold', borderTop: '2px solid var(--border)' }}>
+                  <td colSpan={3} style={{ color: 'var(--text-secondary)', fontSize: 12, letterSpacing: '0.5px' }}>합계</td>
                   <td className="text-right">{fmtWon(payrolls.reduce((s,p)=>s+(p.base||0),0))}</td>
                   <td className="text-right">{fmtWon(payrolls.reduce((s,p)=>s+Object.values(p.allowances||{}).reduce((a,b)=>a+b,0),0))}</td>
                   <td className="text-right">{fmtWon(payrolls.reduce((s,p)=>s+((p.overtime_pay||0)+(p.night_pay||0)+(p.holiday_pay||0)),0))}</td>
                   <td className="text-right">{fmtWon(payrolls.reduce((s,p)=>s+((p.np||0)+(p.hi||0)+(p.ltc||0)+(p.ei||0)),0))}</td>
                   <td className="text-right">{fmtWon(payrolls.reduce((s,p)=>s+((p.income_tax||0)+(p.local_tax||0)),0))}</td>
-                  <td className="text-right" style={{ color: '#2196F3' }}>{fmtWon(totalNet)}</td>
+                  <td className="text-right" style={{ color: 'var(--accent)', background: 'var(--accent-light)' }}>{fmtWon(totalNet)}</td>
                   <td />
                 </tr>
               </tbody>
