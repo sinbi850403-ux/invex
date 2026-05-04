@@ -6,8 +6,9 @@ import { getState as getRawState } from '../store.js';
 import { vendors as vendorsDb } from '../db.js';
 import { dbVendorToStore, storeVendorToDb } from '../db/converters.js';
 import { TYPE_LABEL, TYPE_BADGE, PAYMENT_TERMS, EMPTY_FORM, fmt, buildStats } from '../domain/vendorsConfig.js';
-import { VendorModal }  from '../components/vendors/VendorModal.jsx';
-import { VendorDetail } from '../components/vendors/VendorDetail.jsx';
+import { VendorModal }        from '../components/vendors/VendorModal.jsx';
+import { VendorDetail }       from '../components/vendors/VendorDetail.jsx';
+import { VendorImportModal }  from '../components/vendors/VendorImportModal.jsx';
 
 export default function VendorsPage() {
   const [state, setState] = useStore();
@@ -19,6 +20,7 @@ export default function VendorsPage() {
   const [keyword,      setKeyword]      = useState('');
   const [detailVendor, setDetailVendor] = useState(null);
   const [editVendor,   setEditVendor]   = useState(null);
+  const [showImport,   setShowImport]   = useState(false);
 
   const statsMap = useMemo(() => buildStats(vendors, transactions, items), [vendors, transactions, items]);
 
@@ -116,6 +118,16 @@ export default function VendorsPage() {
         <VendorDetail vendor={detailVendor} transactions={transactions} items={items} onClose={() => setDetailVendor(null)}
           onEdit={() => { setEditVendor(detailVendor); setDetailVendor(null); }} />
       )}
+      {showImport && (
+        <VendorImportModal
+          vendors={vendors}
+          onClose={() => setShowImport(false)}
+          onImported={(newVendors) => {
+            setState({ vendorMaster: [...vendors, ...newVendors] });
+            setShowImport(false);
+          }}
+        />
+      )}
 
       <div className="page-header">
         <div>
@@ -123,7 +135,7 @@ export default function VendorsPage() {
           <div className="page-desc">공급처·고객사 마스터 데이터를 관리합니다. 발주서·거래명세서·세금계산서에 자동 연동됩니다.</div>
         </div>
         <div className="page-actions">
-          <button className="btn btn-outline" onClick={() => showToast('엑셀 가져오기 기능은 준비 중입니다.', 'info')}> 엑셀 가져오기</button>
+          <button className="btn btn-outline" onClick={() => setShowImport(true)}> 엑셀 가져오기</button>
           <button className="btn btn-outline" onClick={handleExport}> 내보내기</button>
           <button className="btn btn-primary" onClick={() => setEditVendor({ ...EMPTY_FORM })}>+ 거래처 등록</button>
         </div>
