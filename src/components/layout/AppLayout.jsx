@@ -1,4 +1,3 @@
-// v3.0.1
 import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { PLANS } from '../../plan.js';
@@ -271,7 +270,7 @@ export default function AppLayout() {
 
       <main id="main-content" className={sidebarCollapsed ? 'sidebar-collapsed' : ''}>
         <ErrorBoundary>
-          <Suspense fallback={<div style={{padding:'40px',textAlign:'center',color:'var(--text-muted)'}}>로딩 중...</div>}>
+          <Suspense fallback={<div style={{padding:'40px',textAlign:'center',color:'var(--text-muted)'}}>로딩 중....</div>}>
             <Routes>
               <Route index element={<Navigate to="/home" replace />} />
               {Object.entries(PAGE_COMPONENTS).map(([id, Component]) => (
