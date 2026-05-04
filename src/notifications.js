@@ -134,6 +134,51 @@ export function getNotifications(options = {}) {
     });
   }
 
+  // ── 이상 탐지: 마진율 이상 ─────────────────────────────────────
+  const lowMarginItems = items.filter((item) => {
+    const cost = toNumber(item.unitCost || item.unitPrice || 0);
+    const sale = toNumber(item.salePrice || 0);
+    if (cost <= 0 || sale <= 0) return false;
+    const margin = (sale - cost) / sale * 100;
+    return margin < 10; // 마진율 10% 미만
+  });
+  if (lowMarginItems.length > 0) {
+    pushNotification(notifications, {
+      type: 'warning',
+      icon: '',
+      title: `마진율 이상 품목 ${lowMarginItems.length}건`,
+      desc: `마진율 10% 미만: ${lowMarginItems.slice(0, 2).map(i => i.itemName).join(', ')}${lowMarginItems.length > 2 ? ' 외' : ''}`,
+      category: 'anomaly',
+    });
+  }
+
+  // ── 이상 탐지: 재고 급감 (7일 이내 출고량 > 현재고 50%) ──────────
+  const transactions = state.transactions || [];
+  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+  const recentOut = {};
+  transactions.forEach((tx) => {
+    if (tx.type !== 'out') return;
+    if (!tx.date || new Date(tx.date) < sevenDaysAgo) return;
+    const name = tx.itemName || '';
+    if (!name) return;
+    recentOut[name] = (recentOut[name] || 0) + toNumber(tx.quantity);
+  });
+  const rapidDropItems = items.filter((item) => {
+    const outQty = recentOut[item.itemName] || 0;
+    const curQty = toNumber(item.quantity);
+    if (outQty <= 0 || curQty <= 0) return false;
+    return outQty >= curQty * 0.5; // 7일 출고량이 현재고의 50% 이상
+  });
+  if (rapidDropItems.length > 0) {
+    pushNotification(notifications, {
+      type: 'warning',
+      icon: '',
+      title: `재고 급감 품목 ${rapidDropItems.length}건`,
+      desc: `최근 7일 출고량이 현재고의 50% 이상: ${rapidDropItems.slice(0, 2).map(i => i.itemName).join(', ')}${rapidDropItems.length > 2 ? ' 외' : ''}`,
+      category: 'anomaly',
+    });
+  }
+
   if (includeRead) return notifications;
   return notifications.filter((notification) => !readMap[notification.id]);
 }

@@ -1,9 +1,10 @@
 /**
  * WeeklyReportPage.jsx - 주간 경영 보고서
  */
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useCallback } from 'react';
 import { useStore } from '../hooks/useStore.js';
 import { getSalePrice } from '../price-utils.js';
+import { generateWeeklyAIReport } from '../ai-report.js';
 
 // === 유틸리티 ===
 function getMonday(d) {
@@ -63,8 +64,25 @@ function RankBadge({ rank, type }) {
   );
 }
 
+/** 마크다운 굵은글씨/헤딩 간단 렌더 */
+function renderAIText(text) {
+  return text.split('\n').map((line, i) => {
+    if (line.startsWith('## ')) {
+      return <div key={i} style={{ fontWeight: '700', fontSize: '14px', color: 'var(--text-primary)', marginTop: '14px', marginBottom: '4px' }}>{line.replace('## ', '')}</div>;
+    }
+    if (line.startsWith('- ') || line.match(/^\d+\. /)) {
+      return <div key={i} style={{ paddingLeft: '12px', fontSize: '13px', lineHeight: '1.8', color: 'var(--text-secondary)' }}>{line}</div>;
+    }
+    if (line.trim() === '') return <div key={i} style={{ height: '6px' }} />;
+    return <div key={i} style={{ fontSize: '13px', lineHeight: '1.8', color: 'var(--text-secondary)' }}>{line}</div>;
+  });
+}
+
 export default function WeeklyReportPage() {
   const [state] = useStore();
+  const [aiReport, setAiReport] = useState('');
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState('');
 
   const {
     thisWeekSales, thisWeekPurchase,
@@ -116,12 +134,64 @@ export default function WeeklyReportPage() {
     return { thisWeekSales, thisWeekPurchase, salesChange, purchaseChange, thisWeekTx, lowStockItems, topOutItems, topInItems, weekLabel };
   }, [state.transactions, state.mappedData, state.safetyStock]);
 
+  const handleAIReport = useCallback(async () => {
+    setAiLoading(true);
+    setAiError('');
+    setAiReport('');
+    try {
+      // 이상 탐지 데이터 수집
+      const items = state.mappedData || [];
+      const anomalies = [];
+      items.forEach(item => {
+        const cost = parseFloat(item.unitCost || item.unitPrice || 0);
+        const sale = parseFloat(item.salePrice || 0);
+        if (cost > 0 && sale > 0 && (sale - cost) / sale * 100 < 10) {
+          anomalies.push(`마진율 이상: ${item.itemName} (마진 ${Math.round((sale - cost) / sale * 100)}%)`);
+        }
+      });
+      if (salesChange < -30) anomalies.push(`매출 급감: 전주 대비 ${Math.abs(salesChange)}% 감소`);
+      if (lowStockItems.length > 3) anomalies.push(`재고 부족 ${lowStockItems.length}개 품목`);
+
+      const report = await generateWeeklyAIReport({
+        weekLabel,
+        thisWeekSales,
+        thisWeekPurchase,
+        salesChange,
+        purchaseChange,
+        txCount: thisWeekTx.length,
+        lowStockCount: lowStockItems.length,
+        topOutItems,
+        topInItems,
+        anomalies,
+      });
+      setAiReport(report);
+    } catch (e) {
+      setAiError(e.message || 'AI 리포트 생성 중 오류가 발생했습니다.');
+    } finally {
+      setAiLoading(false);
+    }
+  }, [weekLabel, thisWeekSales, thisWeekPurchase, salesChange, purchaseChange, thisWeekTx, lowStockItems, topOutItems, topInItems, state.mappedData]);
+
   return (
     <div>
       <div className="page-header">
         <div>
           <h1 className="page-title">주간 경영 보고서</h1>
           <div className="page-desc">{weekLabel}</div>
+        </div>
+        <div className="page-actions">
+          <button
+            className="btn btn-primary"
+            onClick={handleAIReport}
+            disabled={aiLoading}
+            style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+          >
+            {aiLoading ? (
+              <><span style={{ fontSize: '14px', animation: 'spin 1s linear infinite', display: 'inline-block' }}>⟳</span> AI 분석 중...</>
+            ) : (
+              <> AI 경영 분석</>
+            )}
+          </button>
         </div>
       </div>
 
@@ -241,6 +311,32 @@ export default function WeeklyReportPage() {
           )}
         </ul>
       </div>
+
+      {/* AI 경영 분석 리포트 */}
+      {(aiLoading || aiReport || aiError) && (
+        <div className="card" style={{ marginTop: '16px', borderLeft: '3px solid #8b5cf6', background: 'linear-gradient(135deg, var(--bg-card) 0%, rgba(139,92,246,0.05) 100%)' }}>
+          <div className="card-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ background: 'linear-gradient(135deg,#8b5cf6,#3b82f6)', borderRadius: '6px', padding: '2px 8px', fontSize: '11px', color: '#fff', fontWeight: '700' }}>AI</span>
+            AI 경영 분석 리포트
+          </div>
+          {aiLoading && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--text-muted)', fontSize: '13px', padding: '8px 0' }}>
+              <span style={{ fontSize: '18px', animation: 'spin 1s linear infinite', display: 'inline-block' }}>⟳</span>
+              AI가 이번 주 경영 데이터를 분석하고 있습니다...
+            </div>
+          )}
+          {aiError && (
+            <div style={{ color: 'var(--danger)', fontSize: '13px', padding: '8px 0' }}>
+              {aiError}
+            </div>
+          )}
+          {aiReport && (
+            <div style={{ padding: '4px 0' }}>
+              {renderAIText(aiReport)}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
