@@ -18,6 +18,33 @@ export const isConfigured = isSupabaseConfigured;
 
 let currentWorkspaceId = null;
 
+// ── 세션 유효성 검증 (JWT 서버측 확인) ───────────────────────
+/**
+ * supabase.auth.getUser() 는 Supabase Auth 서버에 요청을 보내
+ * 현재 액세스 토큰이 실제로 유효한지 검증한다.
+ * (getSession()은 localStorage만 읽으므로 만료/무효 토큰을 잡지 못함)
+ *
+ * 유효하면 서버가 반환한 user.id(UUID)를 반환,
+ * 무효/만료면 로그아웃 처리 후 null 반환.
+ */
+async function _ensureValidSession() {
+  try {
+    const { data: { user }, error } = await supabase.auth.getUser();
+    if (error || !user) {
+      showToast('로그인 세션이 만료되었습니다. 다시 로그인해 주세요.', 'error');
+      // 만료된 토큰 정리 후 페이지 새로고침 (로그인 화면으로 이동)
+      await supabase.auth.signOut();
+      setTimeout(() => window.location.reload(), 1200);
+      return null;
+    }
+    return user.id;
+  } catch (e) {
+    // 네트워크 오류 등 — getCurrentUser() 폴백으로 진행
+    console.warn('[Workspace] getUser() fallback:', e.message);
+    return getCurrentUser()?.uid ?? null;
+  }
+}
+
 // ── Supabase team_workspaces 헬퍼 ─────────────────────────────
 
 async function wsGet(wsId) {
@@ -62,32 +89,65 @@ export async function getWorkspaceId(userId) {
 
 /**
  * 워크스페이스 생성 (최초 1회, 팀장 전용)
+ *
+ * SECURITY DEFINER RPC(create_workspace_for_user)를 통해 생성:
+ *   - owner_id 를 서버의 auth.uid() 로 설정 → 클라이언트 uid 불일치 원천 차단
+ *   - RLS tw_insert 정책과 충돌 없이 삽입 가능
+ *
+ * 직접 upsert 대신 RPC를 우선 시도하고, RPC가 없는 구형 환경에서는
+ * 폴백으로 기존 wsUpsert 를 사용한다.
  */
 export async function createWorkspace(name) {
   const user = getCurrentUser();
   if (!user || !isConfigured) return null;
 
-  const wsId = user.uid;
+  // ① JWT 서버측 검증 — 만료/무효 토큰이면 로그아웃 후 null 반환
+  const validUid = await _ensureValidSession();
+  if (!validUid) return null;
+
   try {
-    await wsUpsert(wsId, {
-      name: name || 'My Workspace',
-      owner_id: user.uid,
-      created_at: new Date().toISOString(),
-      members: [{
-        uid: user.uid,
-        id: user.uid,
-        email: user.email,
-        name: user.displayName || '관리자',
-        role: 'owner',
-        status: 'active',
-        joinedAt: new Date().toISOString(),
-      }],
+    // ② SECURITY DEFINER RPC 시도 (owner_id를 서버 auth.uid()에서 설정)
+    const { error: rpcErr } = await supabase.rpc('create_workspace_for_user', {
+      ws_name: name || 'My Workspace',
+      member_email: user.email || '',
+      member_name: user.displayName || '관리자',
     });
-    await db.settings.set('joined_workspace_id', wsId);
-    currentWorkspaceId = wsId;
-    showToast(`워크스페이스 "${name}" 생성 완료!`, 'success');
-    return wsId;
+
+    if (rpcErr) {
+      // RPC 미존재(구형 DB) — 폴백으로 직접 upsert
+      if (rpcErr.code === 'PGRST202' || rpcErr.message?.includes('Could not find')) {
+        console.warn('[Workspace] create_workspace_for_user RPC 없음 — 직접 upsert 폴백');
+        await wsUpsert(validUid, {
+          name: name || 'My Workspace',
+          owner_id: validUid,
+          created_at: new Date().toISOString(),
+          members: [{
+            uid: validUid, id: validUid,
+            email: user.email, name: user.displayName || '관리자',
+            role: 'owner', status: 'active',
+            joinedAt: new Date().toISOString(),
+          }],
+        });
+      } else if (rpcErr.message?.includes('Auth required') || rpcErr.message?.includes('인증이 필요')) {
+        showToast('로그인 세션이 만료되었습니다. 다시 로그인해 주세요.', 'error');
+        await supabase.auth.signOut();
+        setTimeout(() => window.location.reload(), 1200);
+        return null;
+      } else {
+        throw rpcErr;
+      }
+    }
+
+    await db.settings.set('joined_workspace_id', validUid);
+    currentWorkspaceId = validUid;
+    showToast(`워크스페이스 "${name || 'My Workspace'}" 생성 완료!`, 'success');
+    return validUid;
   } catch (e) {
+    // RLS 위반 — 세션이 의심스러우면 재로그인 안내
+    if (e.code === '42501' || e.message?.includes('row-level security') || e.message?.includes('violates')) {
+      showToast('워크스페이스 생성 권한 오류입니다. 페이지를 새로고침하거나 다시 로그인해 주세요.', 'error');
+      return null;
+    }
     showToast('워크스페이스 생성 실패: ' + e.message, 'error');
     return null;
   }

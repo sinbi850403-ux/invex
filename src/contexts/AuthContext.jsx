@@ -113,7 +113,9 @@ export function AuthProvider({ children }) {
       try {
         for (let i = 0; i < localStorage.length; i++) {
           const k = localStorage.key(i);
-          if (k && /^sb-.+-auth-token$/.test(k)) {
+          // invex-supabase-auth: 커스텀 storageKey (supabase-client.js)
+          // sb-*-auth-token: Supabase SDK 기본 키 패턴
+          if (k && (k === 'invex-supabase-auth' || /^sb-.+-auth-token$/.test(k))) {
             const v = localStorage.getItem(k);
             if (v && v !== 'null' && v !== '{}') return true;
           }
