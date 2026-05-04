@@ -11,13 +11,14 @@ export default function VendorsPage() {
   const [state, setState] = useStore();
   const vendors      = state.vendorMaster || [];
   const transactions = state.transactions || [];
+  const items        = state.mappedData   || [];
 
   const [tab,          setTab]          = useState('all');
   const [keyword,      setKeyword]      = useState('');
   const [detailVendor, setDetailVendor] = useState(null);
   const [editVendor,   setEditVendor]   = useState(null);
 
-  const statsMap = useMemo(() => buildStats(vendors, transactions), [vendors, transactions]);
+  const statsMap = useMemo(() => buildStats(vendors, transactions, items), [vendors, transactions, items]);
 
   const counts = useMemo(() => ({
     all:      vendors.length,
@@ -90,7 +91,7 @@ export default function VendorsPage() {
         <VendorModal initial={editVendor} vendors={vendors} onClose={() => setEditVendor(null)} onSave={handleSave} />
       )}
       {detailVendor && (
-        <VendorDetail vendor={detailVendor} transactions={transactions} onClose={() => setDetailVendor(null)}
+        <VendorDetail vendor={detailVendor} transactions={transactions} items={items} onClose={() => setDetailVendor(null)}
           onEdit={() => { setEditVendor(detailVendor); setDetailVendor(null); }} />
       )}
 

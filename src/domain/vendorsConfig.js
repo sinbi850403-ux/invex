@@ -28,7 +28,40 @@ export function genVendorCode(vendors, type) {
   return `${prefix}${String(next).padStart(4, '0')}`;
 }
 
-export function buildStats(vendors, transactions) {
+// 아이템 마스터에서 품목명→아이템 맵 생성
+function _buildItemPriceMap(items) {
+  const map = new Map();
+  if (!Array.isArray(items)) return map;
+  for (const item of items) {
+    const name = String(item.itemName || '').trim();
+    if (name) map.set(name, item);
+    if (item.itemCode) map.set(`__code__${item.itemCode}`, item);
+  }
+  return map;
+}
+
+// 트랜잭션 금액: tx 직접값 → 아이템 마스터 폴백
+function _txAmt(tx, itemPriceMap) {
+  const qty = toNum(tx.quantity);
+  if (qty <= 0) return 0;
+  const direct = toNum(tx.unitPrice || tx.unitCost || tx.price || 0);
+  if (direct > 0) return qty * direct;
+  const name = String(tx.itemName || '').trim();
+  const item = itemPriceMap.get(name) ||
+    (tx.itemCode ? itemPriceMap.get(`__code__${tx.itemCode}`) : null);
+  if (!item) return 0;
+  if (tx.type === 'out') {
+    const sp = toNum(item.salePrice || 0);
+    if (sp > 0) return qty * sp;
+    const up = toNum(item.unitPrice || item.unitCost || 0);
+    return up > 0 ? qty * up * 1.2 : 0;
+  }
+  const up = toNum(item.unitPrice || item.unitCost || 0);
+  return up > 0 ? qty * up : 0;
+}
+
+export function buildStats(vendors, transactions, items) {
+  const itemPriceMap = _buildItemPriceMap(items);
   const map = new Map();
   vendors.forEach(v => map.set(v.name, { inAmt: 0, outAmt: 0, count: 0, lastDate: '' }));
   transactions.forEach(tx => {
@@ -36,7 +69,7 @@ export function buildStats(vendors, transactions) {
     if (!name) return;
     if (!map.has(name)) map.set(name, { inAmt: 0, outAmt: 0, count: 0, lastDate: '' });
     const s = map.get(name);
-    const amt = toNum(tx.quantity) * toNum(tx.unitPrice || tx.unitCost || tx.price || 0);
+    const amt = _txAmt(tx, itemPriceMap);
     if (tx.type === 'in') s.inAmt += amt;
     if (tx.type === 'out') s.outAmt += amt;
     s.count++;

@@ -1,10 +1,38 @@
 import React from 'react';
 import { TYPE_LABEL, TYPE_BADGE, PAYMENT_TERMS, toNum, fmt } from '../../domain/vendorsConfig.js';
 
-export function VendorDetail({ vendor, transactions, onClose, onEdit }) {
+// 아이템 마스터 폴백 단가 계산 (출고=매출가, 입고=원가)
+function _txPrice(tx, itemMap) {
+  const direct = toNum(tx.unitPrice || tx.unitCost || tx.price || 0);
+  if (direct > 0) return direct;
+  const name = String(tx.itemName || '').trim();
+  const item = itemMap?.get(name) || (tx.itemCode ? itemMap?.get(`__code__${tx.itemCode}`) : null);
+  if (!item) return 0;
+  if (tx.type === 'out') {
+    const sp = toNum(item.salePrice || 0);
+    if (sp > 0) return sp;
+    const up = toNum(item.unitPrice || item.unitCost || 0);
+    return up > 0 ? up * 1.2 : 0;
+  }
+  return toNum(item.unitPrice || item.unitCost || 0);
+}
+
+export function VendorDetail({ vendor, transactions, items, onClose, onEdit }) {
+  // 아이템 맵 구성 (단가 폴백용)
+  const itemMap = React.useMemo(() => {
+    const m = new Map();
+    if (!Array.isArray(items)) return m;
+    for (const item of items) {
+      const name = String(item.itemName || '').trim();
+      if (name) m.set(name, item);
+      if (item.itemCode) m.set(`__code__${item.itemCode}`, item);
+    }
+    return m;
+  }, [items]);
+
   const vendorTxs = transactions.filter(tx => (tx.vendor || '').trim() === vendor.name).reverse();
-  const inAmt  = vendorTxs.filter(t => t.type === 'in').reduce((s, t) => s + toNum(t.quantity) * toNum(t.unitPrice || 0), 0);
-  const outAmt = vendorTxs.filter(t => t.type === 'out').reduce((s, t) => s + toNum(t.quantity) * toNum(t.unitPrice || 0), 0);
+  const inAmt  = vendorTxs.filter(t => t.type === 'in').reduce((s, t) => s + toNum(t.quantity) * _txPrice(t, itemMap), 0);
+  const outAmt = vendorTxs.filter(t => t.type === 'out').reduce((s, t) => s + toNum(t.quantity) * _txPrice(t, itemMap), 0);
   const payLabel = (PAYMENT_TERMS.find(p => p.value === vendor.paymentTerm) || {}).label || '-';
 
   const infoCells = [
@@ -90,7 +118,7 @@ export function VendorDetail({ vendor, transactions, onClose, onEdit }) {
                   </thead>
                   <tbody>
                     {vendorTxs.slice(0, 20).map((tx, i) => {
-                      const amt = toNum(tx.quantity) * toNum(tx.unitPrice || 0);
+                      const amt = toNum(tx.quantity) * _txPrice(tx, itemMap);
                       return (
                         <tr key={tx.id || i}>
                           <td style={{ color: 'var(--text-muted)' }}>{String(tx.date || '').slice(0, 10)}</td>
