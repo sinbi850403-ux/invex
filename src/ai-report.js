@@ -47,8 +47,8 @@ export async function generateWeeklyAIReport(data) {
         },
         { role: 'user', content: prompt },
       ],
-      max_tokens: 900,
-      temperature: 0.6,
+      max_tokens: 1024,
+      temperature: 0.65,
     }),
   });
 
