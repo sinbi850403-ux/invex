@@ -14,7 +14,7 @@
 | **프레임워크** | React 18 + React Router v6 + Vite |
 | **상태관리** | 커스텀 하이브리드 스토어 (메모리 + IndexedDB + Supabase) |
 | **백엔드** | Supabase (PostgreSQL + Auth + RLS) |
-| **배포** | Vercel (자동 CI/CD) |
+| **배포** | Vercel (자동 CI/CD) + AWS Lightsail (인프라 준비 중) |
 | **대상 사용자** | 중소기업, 소매점, 1인 사업자, 유통업 |
 
 ---
@@ -41,9 +41,22 @@
 - **스토리지**: Supabase Storage (향후 파일 첨부용)
 
 ### 배포
-- **호스팅**: Vercel
+- **프론트엔드 호스팅**: Vercel
 - **도메인**: invex.io.kr (예정)
 - **CI/CD**: GitHub → Vercel 자동 배포
+
+### 인프라 (AWS Lightsail + Cloudflare)
+- **서버**: AWS Lightsail `invex-prod` (서울 ap-northeast-2a)
+  - Ubuntu, 2GB RAM, 2 vCPUs, 60GB SSD
+  - 공인 IP: 13.125.23.52
+  - 현재 상태: Running
+- **설치된 것**: cloudflared (Cloudflare 터널), Docker
+- **미설치**: Nginx, Node.js, PM2 (앱 미배포 상태)
+- **목적**: 향후 도메인(invex.io.kr) 연결 파이프라인
+  ```
+  사용자 → Cloudflare (invex.io.kr) → Cloudflare 터널 → Lightsail → Docker → 앱
+  ```
+- **현재**: 인프라만 준비, 실제 앱은 Vercel에서 서비스 중
 
 ---
 
