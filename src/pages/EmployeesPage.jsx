@@ -43,7 +43,7 @@ function EmpModal({ emp, onClose, onSaved }) {
     phone: emp?.phone || '',
     email: emp?.email || '',
     bank: emp?.bank || '',
-    accountNo: emp?.accountNo || '',
+    accountNo: '',  // 변경 시에만 입력 (현재 마스킹값: accountNoMask)
     dependents: emp?.dependents || 0,
     children: emp?.children || 0,
     insuranceFlags: emp?.insuranceFlags || { np: true, hi: true, ei: true, wc: true },
@@ -60,16 +60,25 @@ function EmpModal({ emp, onClose, onSaved }) {
     if (!form.empNo || !form.name || !form.hireDate) { showToast('사번·이름·입사일은 필수입니다', 'error'); return; }
     const canEdit = isEdit ? canAction('employee:edit') : canAction('employee:create');
     if (!canEdit) { showToast('권한이 없습니다', 'error'); return; }
+    const newAccountNo = form.accountNo.trim();
     const payload = { ...form };
+    delete payload.accountNo;  // H-001: storeEmployeeToDb에서 account_no 직접 쓰기 차단 — RPC 경유
     const rrnClean = form.rrn.replace(/[^0-9]/g, '');
     if (rrnClean.length === 13) { payload._rrnPlain = rrnClean; payload.rrnMask = maskRRN(rrnClean); }
     delete payload.rrn;
     try {
       if (isEdit) {
         await employeesDb.update(emp.id, { ...payload, id: emp.id });
+        // 계좌번호 변경 시 별도 암호화 RPC 경유 저장
+        if (newAccountNo) {
+          await employeesDb.setAccountNo(emp.id, newAccountNo);
+        }
         showToast('수정되었습니다', 'success');
       } else {
-        await employeesDb.create(payload);
+        const saved = await employeesDb.create(payload);
+        if (newAccountNo && saved?.id) {
+          await employeesDb.setAccountNo(saved.id, newAccountNo);
+        }
         showToast('등록되었습니다', 'success');
       }
       onSaved();
@@ -188,8 +197,8 @@ function EmpModal({ emp, onClose, onSaved }) {
                   <input className="form-input" value={form.bank} onChange={e => setF('bank', e.target.value)} placeholder="예: 국민은행" />
                 </div>
                 <div className="form-group">
-                  <label className="form-label">계좌번호</label>
-                  <input className="form-input" value={form.accountNo} onChange={e => setF('accountNo', e.target.value)} />
+                  <label className="form-label">계좌번호{isEdit && emp?.accountNoMask && <span style={{ fontWeight: 400, color: 'var(--text-muted)', marginLeft: 6 }}>현재: {emp.accountNoMask}</span>}</label>
+                  <input className="form-input" value={form.accountNo} onChange={e => setF('accountNo', e.target.value)} placeholder={isEdit ? '변경할 계좌번호 입력 (미입력 시 유지)' : '계좌번호'} />
                 </div>
               </div>
               <div className="form-group">
