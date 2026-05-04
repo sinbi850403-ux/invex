@@ -7,7 +7,7 @@
  */
 
 // ★ 배포 때마다 버전을 올리면 이전 캐시가 자동 제거됨
-const CACHE_NAME = 'invex-v5';
+const CACHE_NAME = 'invex-v6';
 
 // 프리캐시 대상: HTML 셸만 (assets는 브라우저 HTTP 캐시에 위임)
 const PRECACHE_URLS = ['/index.html', '/landing.html'];
