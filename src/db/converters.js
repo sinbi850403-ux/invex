@@ -5,6 +5,17 @@
 
 import { toNullableNumber, toNullableString } from './core.js';
 
+/**
+ * 날짜 문자열을 DB에 안전하게 전달하기 위한 헬퍼.
+ * 빈 문자열 / null / undefined → null (PostgreSQL date/timestamptz 타입은 '' 거부)
+ * 값이 있으면 trim한 문자열 반환.
+ */
+function dateOrNull(v) {
+  if (v === null || v === undefined || v === '') return null;
+  const s = String(v).trim();
+  return s || null;
+}
+
 export function dbItemToStoreItem(dbItem) {
   return {
     _id: dbItem.id,
@@ -170,8 +181,8 @@ export function storeEmployeeToDb(e) {
   if ('name' in e) out.name = e.name;
   if ('dept' in e) out.dept = e.dept;
   if ('position' in e) out.position = e.position;
-  if ('hireDate' in e) out.hire_date = e.hireDate;
-  if ('resignDate' in e) out.resign_date = e.resignDate;
+  if ('hireDate' in e) out.hire_date = dateOrNull(e.hireDate);
+  if ('resignDate' in e) out.resign_date = dateOrNull(e.resignDate);
   if ('rrnMask' in e) out.rrn_mask = e.rrnMask;
   if ('phone' in e) out.phone = e.phone;
   if ('email' in e) out.email = e.email;
@@ -214,9 +225,9 @@ export function storeAttendanceToDb(a) {
   const out = {};
   if (a.id) out.id = a.id;
   if ('employeeId' in a) out.employee_id = a.employeeId;
-  if ('workDate' in a) out.work_date = a.workDate;
-  if ('checkIn' in a) out.check_in = a.checkIn;
-  if ('checkOut' in a) out.check_out = a.checkOut;
+  if ('workDate' in a) out.work_date = dateOrNull(a.workDate);
+  if ('checkIn' in a) out.check_in = dateOrNull(a.checkIn);
+  if ('checkOut' in a) out.check_out = dateOrNull(a.checkOut);
   if ('breakMin' in a) out.break_min = a.breakMin;
   if ('workMin' in a) out.work_min = a.workMin;
   if ('overtimeMin' in a) out.overtime_min = a.overtimeMin;
@@ -280,9 +291,9 @@ export function storePayrollToDb(p) {
   if ('totalDeduct' in p) out.total_deduct = p.totalDeduct;
   if ('net' in p) out.net = p.net;
   if ('status' in p) out.status = p.status;
-  if ('paidAt' in p) out.paid_at = p.paidAt;
+  if ('paidAt' in p) out.paid_at = dateOrNull(p.paidAt);
   if ('confirmedBy' in p) out.confirmed_by = p.confirmedBy;
-  if ('confirmedAt' in p) out.confirmed_at = p.confirmedAt;
+  if ('confirmedAt' in p) out.confirmed_at = dateOrNull(p.confirmedAt);
   if ('issueNo' in p) out.issue_no = p.issueNo;
   return out;
 }
@@ -309,12 +320,12 @@ export function storeLeaveToDb(l) {
   if (l.id) out.id = l.id;
   if ('employeeId' in l) out.employee_id = l.employeeId;
   if ('leaveType' in l) out.leave_type = l.leaveType;
-  if ('startDate' in l) out.start_date = l.startDate;
-  if ('endDate' in l) out.end_date = l.endDate;
+  if ('startDate' in l) out.start_date = dateOrNull(l.startDate);
+  if ('endDate' in l) out.end_date = dateOrNull(l.endDate);
   if ('days' in l) out.days = l.days;
   if ('reason' in l) out.reason = l.reason;
   if ('status' in l) out.status = l.status;
   if ('approvedBy' in l) out.approved_by = l.approvedBy;
-  if ('approvedAt' in l) out.approved_at = l.approvedAt;
+  if ('approvedAt' in l) out.approved_at = dateOrNull(l.approvedAt);
   return out;
 }
