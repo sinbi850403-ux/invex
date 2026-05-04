@@ -115,6 +115,8 @@ export default function PayrollPage() {
   const [confirming, setConfirming] = useState(false);
   const [detailPayroll, setDetailPayroll] = useState(null);
   const [emps, setEmps] = useState([]);
+  const [editingCell, setEditingCell] = useState(null); // { id, field }
+  const [editValue, setEditValue] = useState('');
 
   useEffect(() => {
     employeesDb.list({ status: 'active' }).then(list => {
@@ -187,17 +189,58 @@ export default function PayrollPage() {
     try {
       const currentUser = await getCurrentUser();
       const confirmedAt = new Date().toISOString();
+      // storePayrollToDb이 인식하는 camelCase 키로 전달
       const rows = payrolls.map(p => ({
-        employeeId: p.employeeId, payYear: calcYear, payMonth: calcMonth,
-        baseSalary: p.base || 0, allowances: p.allowances || {},
-        deductions: { np: p.np||0, hi: p.hi||0, ltc: p.ltc||0, ei: p.ei||0, income_tax: p.income_tax||0, local_tax: p.local_tax||0 },
-        grossPay: p.gross||0, totalDeduction: p.total_deduct||0, netPay: p.net||0, status: 'confirmed', confirmedAt, confirmedBy: currentUser?.id,
+        employeeId:  p.employeeId,
+        payYear:     calcYear,
+        payMonth:    calcMonth,
+        base:        p.base        || 0,
+        allowances:  p.allowances  || {},
+        gross:       p.gross       || 0,
+        np:          p.np          || 0,
+        hi:          p.hi          || 0,
+        ltc:         p.ltc         || 0,
+        ei:          p.ei          || 0,
+        incomeTax:   p.income_tax  || 0,
+        localTax:    p.local_tax   || 0,
+        totalDeduct: p.total_deduct|| 0,
+        net:         p.net         || 0,
+        status:      'confirmed',
+        confirmedAt,
+        confirmedBy: currentUser?.uid || currentUser?.id,
       }));
       await payrollsDb.bulkUpsert(rows);
       addAuditLog('payroll.confirm', `payroll:${calcYear}-${calcMonth}`, { year: calcYear, month: calcMonth, targetCount: payrolls.length, confirmedBy: currentUser?.id });
       showToast(`${payrolls.length}명의 급여가 확정되었습니다`, 'success');
     } catch (e) { showToast('확정 실패: ' + e.message, 'error'); }
     setConfirming(false);
+  }
+
+  function startEdit(id, field, currentValue) {
+    setEditingCell({ id, field });
+    setEditValue(String(Math.round(currentValue)));
+  }
+
+  function commitEdit() {
+    if (!editingCell) return;
+    const { id, field } = editingCell;
+    const numVal = parseInt(editValue.replace(/[^0-9]/g, ''), 10) || 0;
+    setPayrolls(prev => prev.map(p => {
+      if (p.employeeId !== id) return p;
+      if (field === 'allowance') {
+        const overtime = (p.overtime_pay||0)+(p.night_pay||0)+(p.holiday_pay||0);
+        const newGross = (p.base||0) + numVal + overtime;
+        const newNet = newGross - (p.total_deduct||0);
+        return { ...p, allowances: { _manual: numVal }, gross: newGross, net: newNet };
+      } else if (field === 'overtime') {
+        const allowanceSum = Object.values(p.allowances||{}).reduce((a,b)=>a+b,0);
+        const newGross = (p.base||0) + allowanceSum + numVal;
+        const newNet = newGross - (p.total_deduct||0);
+        return { ...p, overtime_pay: numVal, night_pay: 0, holiday_pay: 0, gross: newGross, net: newNet };
+      }
+      return p;
+    }));
+    setEditingCell(null);
   }
 
   const totalGross = payrolls.reduce((s, p) => s + (p.gross || 0), 0);
@@ -257,8 +300,9 @@ export default function PayrollPage() {
               <thead>
                 <tr>
                   <th>사번</th><th>이름</th><th>부서</th>
-                  <th className="text-right">기본급</th><th className="text-right">수당</th>
-                  <th className="text-right">초과/야간</th><th className="text-right">4대보험</th>
+                  <th className="text-right">기본급</th>
+                  <th className="text-right" title="더블클릭으로 직접 입력">수당 ✎</th>
+                  <th className="text-right" title="더블클릭으로 직접 입력">초과/야간 ✎</th><th className="text-right">4대보험</th>
                   <th className="text-right">세금</th>
                   <th className="text-right" style={{ background: 'var(--accent-light)', color: 'var(--accent)' }}>실지급액</th>
                   <th style={{ width: 60 }}>상세</th>
@@ -276,8 +320,34 @@ export default function PayrollPage() {
                       <td>{p.name||''}</td>
                       <td>{p.dept||'-'}</td>
                       <td className="text-right">{fmtWon(p.base)}</td>
-                      <td className="text-right">{fmtWon(allowanceSum)}</td>
-                      <td className="text-right">{fmtWon(overtime)}</td>
+                      <td className="text-right"
+                        title="더블클릭으로 수정"
+                        style={{ cursor: 'text' }}
+                        onDoubleClick={() => startEdit(p.employeeId, 'allowance', allowanceSum)}>
+                        {editingCell?.id === p.employeeId && editingCell?.field === 'allowance' ? (
+                          <input autoFocus type="text" value={editValue}
+                            onChange={e => setEditValue(e.target.value)}
+                            onBlur={commitEdit}
+                            onKeyDown={e => { if (e.key === 'Enter') commitEdit(); if (e.key === 'Escape') setEditingCell(null); }}
+                            style={{ width: 90, textAlign: 'right', border: '1px solid var(--accent)', borderRadius: 4, padding: '2px 4px', background: 'var(--bg-card)', color: 'var(--text-primary)', fontSize: 13 }} />
+                        ) : (
+                          <span style={{ borderBottom: '1px dashed var(--text-muted)', paddingBottom: 1 }}>{fmtWon(allowanceSum)}</span>
+                        )}
+                      </td>
+                      <td className="text-right"
+                        title="더블클릭으로 수정"
+                        style={{ cursor: 'text' }}
+                        onDoubleClick={() => startEdit(p.employeeId, 'overtime', overtime)}>
+                        {editingCell?.id === p.employeeId && editingCell?.field === 'overtime' ? (
+                          <input autoFocus type="text" value={editValue}
+                            onChange={e => setEditValue(e.target.value)}
+                            onBlur={commitEdit}
+                            onKeyDown={e => { if (e.key === 'Enter') commitEdit(); if (e.key === 'Escape') setEditingCell(null); }}
+                            style={{ width: 90, textAlign: 'right', border: '1px solid var(--accent)', borderRadius: 4, padding: '2px 4px', background: 'var(--bg-card)', color: 'var(--text-primary)', fontSize: 13 }} />
+                        ) : (
+                          <span style={{ borderBottom: '1px dashed var(--text-muted)', paddingBottom: 1 }}>{fmtWon(overtime)}</span>
+                        )}
+                      </td>
                       <td className="text-right">{fmtWon(insurance)}</td>
                       <td className="text-right">{fmtWon(tax)}</td>
                       <td className="text-right" style={{ background: 'var(--accent-light)', color: 'var(--accent)', fontWeight: 'bold' }}>{fmtWon(p.net)}</td>

@@ -26,18 +26,18 @@ function DetailModal({ s, onClose }) {
                 ['월별 소득세 합계', (s.monthlyTaxPaid||0).toLocaleString() + ' 원'],
                 ['부양가족', s.dependents + '명'],
               ].map(([label, val]) => (
-                <tr key={label} style={{ borderBottom: '1px solid #e0e0e0' }}>
-                  <td style={{ padding: '8px 0', fontWeight: 500 }}>{label}</td>
-                  <td style={{ padding: '8px 0', textAlign: 'right' }}>{val}</td>
+                <tr key={label} style={{ borderBottom: '1px solid var(--border)' }}>
+                  <td style={{ padding: '8px 0', fontWeight: 500, color: 'var(--text-primary)' }}>{label}</td>
+                  <td style={{ padding: '8px 0', textAlign: 'right', color: 'var(--text-primary)' }}>{val}</td>
                 </tr>
               ))}
-              <tr style={{ borderBottom: '1px solid #e0e0e0' }}>
-                <td style={{ padding: '8px 0', fontWeight: 500, color: '#2196F3' }}>재계산 소득세</td>
-                <td style={{ padding: '8px 0', textAlign: 'right', color: '#2196F3', fontWeight: 'bold' }}>{(s.yearendTax||0).toLocaleString()} 원</td>
+              <tr style={{ borderBottom: '1px solid var(--border)' }}>
+                <td style={{ padding: '8px 0', fontWeight: 500, color: 'var(--accent)' }}>재계산 소득세</td>
+                <td style={{ padding: '8px 0', textAlign: 'right', color: 'var(--accent)', fontWeight: 'bold' }}>{(s.yearendTax||0).toLocaleString()} 원</td>
               </tr>
-              <tr style={{ background: '#f0f7ff' }}>
-                <td style={{ padding: '12px 0', fontWeight: 'bold', color: '#2196F3', fontSize: '1.1em' }}>환급액 / 납부액</td>
-                <td style={{ padding: '12px 0', textAlign: 'right', fontWeight: 'bold', color: s.refundAmount > 0 ? '#4CAF50' : '#F44336', fontSize: '1.2em' }}>
+              <tr style={{ background: 'var(--accent-light)' }}>
+                <td style={{ padding: '12px 0', fontWeight: 'bold', color: 'var(--accent)', fontSize: '1.1em' }}>환급액 / 납부액</td>
+                <td style={{ padding: '12px 0', textAlign: 'right', fontWeight: 'bold', color: s.refundAmount > 0 ? 'var(--success)' : 'var(--danger)', fontSize: '1.2em' }}>
                   {s.refundAmount > 0 ? '+' : ''}{(s.refundAmount||0).toLocaleString()} 원
                 </td>
               </tr>
@@ -97,8 +97,11 @@ export default function YearendSettlementPage() {
         const annualGross = empPayrolls.reduce((s,p)=>s+(p.gross||0),0);
         const monthlyTaxPaid = empPayrolls.reduce((s,p)=>s+((p.incomeTax||0)+(p.localTax||0)),0);
         const annualInsurance = empPayrolls.reduce((s,p)=>s+((p.np||0)+(p.hi||0)+(p.ltc||0)+(p.ei||0)),0);
-        const yearendTax = calcIncomeTax(annualGross, emp.dependents || 0);
-        const refundAmount = monthlyTaxPaid + annualInsurance - yearendTax;
+        // calcIncomeTax는 월급여 기준 → 연간은 월평균으로 계산 후 12배
+        const avgMonthlyGross = empPayrolls.length > 0 ? annualGross / empPayrolls.length : annualGross / 12;
+        const taxObj = calcIncomeTax(avgMonthlyGross, emp.dependents || 0);
+        const yearendTax = Math.round(((taxObj.income_tax || 0) + (taxObj.local_tax || 0)) * (empPayrolls.length || 12));
+        const refundAmount = monthlyTaxPaid - yearendTax;
         return { id: emp.id, name: emp.name, empNo: emp.empNo, dept: emp.dept, annualGross, monthlyTaxPaid, yearendTax, refundAmount, annualInsurance, dependents: emp.dependents||0, payrolls: empPayrolls };
       });
       setSettlements(result);
@@ -165,18 +168,18 @@ export default function YearendSettlementPage() {
                     <td className="text-right">{(s.annualGross||0).toLocaleString()}</td>
                     <td className="text-right">{(s.monthlyTaxPaid||0).toLocaleString()}</td>
                     <td className="text-right">{(s.yearendTax||0).toLocaleString()}</td>
-                    <td className="text-right" style={{ color: s.refundAmount > 0 ? '#4CAF50' : '#F44336', fontWeight: 'bold' }}>
+                    <td className="text-right" style={{ color: s.refundAmount > 0 ? 'var(--success)' : 'var(--danger)', fontWeight: 'bold' }}>
                       {s.refundAmount > 0 ? '+' : ''}{(s.refundAmount||0).toLocaleString()}
                     </td>
                     <td><button className="btn-icon" onClick={() => setDetail(s)}>→</button></td>
                   </tr>
                 ))}
-                <tr style={{ background: '#f5f5f5', fontWeight: 'bold', borderTop: '2px solid #333' }}>
+                <tr style={{ background: 'var(--bg-main)', fontWeight: 'bold', borderTop: '2px solid var(--border)' }}>
                   <td>합계</td>
                   <td className="text-right">{totalGross.toLocaleString()}</td>
                   <td className="text-right">{totalTaxPaid.toLocaleString()}</td>
                   <td className="text-right">{totalYearendTax.toLocaleString()}</td>
-                  <td className="text-right" style={{ color: totalRefund > 0 ? '#4CAF50' : '#F44336', fontWeight: 'bold' }}>
+                  <td className="text-right" style={{ color: totalRefund > 0 ? 'var(--success)' : 'var(--danger)', fontWeight: 'bold' }}>
                     {totalRefund > 0 ? '+' : ''}{totalRefund.toLocaleString()}
                   </td>
                   <td />

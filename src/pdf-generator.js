@@ -9,7 +9,7 @@
  */
 
 import { jsPDF } from 'jspdf';
-import 'jspdf-autotable';
+import autoTable from 'jspdf-autotable';
 import { getState } from './store.js';
 import { showToast } from './toast.js';
 import { applyKoreanFont, getKoreanFontStyle } from './pdf-font.js';
@@ -47,7 +47,7 @@ export async function generatePurchaseOrderPDF(order) {
   });
 
   y += 4;
-  doc.autoTable({
+  autoTable(doc, {
     startY: y,
     head: [['No.', '품명', '수량', '단가', '금액']],
     body: items.map((it, i) => [
@@ -99,7 +99,7 @@ export async function generateTransactionPDF(txList, title = '거래명세서', 
 
   const totalAmount = txList.reduce((s, tx) => s + calcAmount(tx), 0);
 
-  doc.autoTable({
+  autoTable(doc, {
     startY: y + 6,
     head: [['날짜', '구분', '거래처', '품명', '수량', '단가', '금액']],
     body: txList.map(tx => [
@@ -149,7 +149,7 @@ export async function generateInventoryPDF(items) {
   doc.text(`총 품목: ${items.length}건`, 14, y);
   doc.text(`총 재고액: ${formatCurrency(totalValue)}`, 120, y);
 
-  doc.autoTable({
+  autoTable(doc, {
     startY: y + 6,
     head: [['No.', '품명', '상품코드', '자산', '수량', '단위', '원가', '재고액']],
     body: items.map((it, i) => [
@@ -198,7 +198,7 @@ export async function generateTaxReportPDF(reportType, rows, title, period) {
     const head = [rows[headerIdx]];
     const body = rows.slice(headerIdx + 1).filter(r => Array.isArray(r) && r.length > 1);
 
-    doc.autoTable({
+    autoTable(doc, {
       startY: y + 6,
       head,
       body,
@@ -363,7 +363,7 @@ async function _renderPayslipPage(doc, payroll, year, month, options = {}) {
   });
 
   // 열 너비: 48 + 43 + 52 + 39 = 182 = TW
-  doc.autoTable({
+  const tblResult = autoTable(doc, {
     startY: 65,
     head: [['지급 항목', '금액', '공제 항목 (요율)', '금액']],
     body: tableBody,
@@ -395,7 +395,9 @@ async function _renderPayslipPage(doc, payroll, year, month, options = {}) {
   });
 
   // ── 합계 행 ────────────────────────────────────────────
-  const afterY = doc.lastAutoTable.finalY + 4;
+  // jspdf-autotable v5: finalY는 반환값 또는 doc.lastAutoTable 에서 참조
+  const finalY = (tblResult && tblResult.finalY) || (doc.lastAutoTable && doc.lastAutoTable.finalY) || 160;
+  const afterY = finalY + 4;
   doc.setFillColor(230, 236, 255);
   doc.rect(ML, afterY, TW, 9, 'F');
   doc.setFontSize(8.5);
