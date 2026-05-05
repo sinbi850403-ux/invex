@@ -1598,3 +1598,49 @@ $$;
 REVOKE ALL ON FUNCTION public.admin_change_user_plan(UUID, TEXT) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.admin_change_user_plan(UUID, TEXT) TO authenticated;
 
+-- ============================================================
+-- 42. support_tickets — 고객 문의 게시판
+-- ============================================================
+CREATE TABLE IF NOT EXISTS support_tickets (
+  id          UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id     UUID        REFERENCES profiles(id) ON DELETE SET NULL,
+  user_email  TEXT        NOT NULL DEFAULT '',
+  user_name   TEXT        NOT NULL DEFAULT '',
+  type        TEXT        NOT NULL DEFAULT 'other',
+  title       TEXT        NOT NULL,
+  content     TEXT        NOT NULL,
+  status      TEXT        NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'progress', 'closed')),
+  reply       TEXT,
+  replied_at  TIMESTAMPTZ,
+  created_at  TIMESTAMPTZ DEFAULT now()
+);
+
+ALTER TABLE support_tickets ENABLE ROW LEVEL SECURITY;
+
+-- 사용자: 자신의 문의만 조회/등록/삭제
+DROP POLICY IF EXISTS "support_tickets_user_select" ON support_tickets;
+CREATE POLICY "support_tickets_user_select"
+  ON support_tickets FOR SELECT
+  USING (user_id = auth.uid());
+
+DROP POLICY IF EXISTS "support_tickets_user_insert" ON support_tickets;
+CREATE POLICY "support_tickets_user_insert"
+  ON support_tickets FOR INSERT
+  WITH CHECK (user_id = auth.uid());
+
+DROP POLICY IF EXISTS "support_tickets_user_delete" ON support_tickets;
+CREATE POLICY "support_tickets_user_delete"
+  ON support_tickets FOR DELETE
+  USING (user_id = auth.uid());
+
+-- 관리자(role='admin'): 전체 조회 + 답변(UPDATE) 가능
+DROP POLICY IF EXISTS "support_tickets_admin_all" ON support_tickets;
+CREATE POLICY "support_tickets_admin_all"
+  ON support_tickets FOR ALL
+  USING (
+    EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin')
+  )
+  WITH CHECK (
+    EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin')
+  );
+

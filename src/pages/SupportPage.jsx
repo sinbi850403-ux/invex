@@ -1,45 +1,40 @@
 /**
  * SupportPage.jsx - 고객 문의 (게시판)
+ * 저장소: Supabase support_tickets 테이블 (TicketsArea/ReplyModal과 동일한 DB)
  */
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext.jsx';
-import { collection, addDoc, getDocs, query, where, serverTimestamp, doc, deleteDoc } from '../backend-store.js';
-import { db, isConfigured } from '../backend-config.js';
+import { supabase } from '../supabase-client.js';
 import { showToast } from '../toast.js';
-import { escapeHtml } from '../ux-toolkit.js';
 
 // 문의 상태별 라벨
 const STATUS_MAP = {
-  open: { label: '답변 대기', color: '#f59e0b', bg: 'rgba(245,158,11,0.12)' },
-  progress: { label: '확인 중', color: '#3b82f6', bg: 'rgba(59,130,246,0.12)' },
-  closed: { label: '답변 완료', color: '#10b981', bg: 'rgba(16,185,129,0.12)' },
+  open:     { label: '답변 대기', color: '#f59e0b', bg: 'rgba(245,158,11,0.12)' },
+  progress: { label: '확인 중',   color: '#3b82f6', bg: 'rgba(59,130,246,0.12)' },
+  closed:   { label: '답변 완료', color: '#10b981', bg: 'rgba(16,185,129,0.12)' },
 };
 
 const TYPE_MAP = {
-  bug: '버그/오류',
+  bug:     '버그/오류',
   feature: '기능 제안',
   payment: '결제/요금제',
   account: '계정',
-  other: '기타',
+  other:   '기타',
 };
 
 /** 목록 뷰 */
 function ListView({ onWrite, onDetail, user }) {
-  const [tickets, setTickets] = useState(null); // null = loading
+  const [tickets, setTickets] = useState(null); // null = 로딩 중
 
   const loadTickets = useCallback(async () => {
-    if (!isConfigured || !user) { setTickets([]); return; }
+    if (!user) { setTickets([]); return; }
     try {
-      const q = query(collection(db, 'support_tickets'), where('userId', '==', user.uid));
-      const snapshot = await getDocs(q);
-      const list = [];
-      snapshot.forEach(d => list.push({ id: d.id, ...d.data() }));
-      list.sort((a, b) => {
-        const ta = a.createdAt?.toDate?.() || new Date(0);
-        const tb = b.createdAt?.toDate?.() || new Date(0);
-        return tb - ta;
-      });
-      setTickets(list);
+      const { data, error } = await supabase
+        .from('support_tickets')
+        .select('*')
+        .eq('user_id', user.uid)
+        .order('created_at', { ascending: false });
+      setTickets(error || !data ? [] : data);
     } catch {
       setTickets([]);
     }
@@ -60,26 +55,26 @@ function ListView({ onWrite, onDetail, user }) {
       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
         {tickets === null ? (
           <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)', fontSize: '13px' }}>불러오는 중...</div>
-        ) : !isConfigured || !user ? (
+        ) : !user ? (
           <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)', fontSize: '13px' }}>로그인 후 이용해주세요.</div>
         ) : tickets.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '60px 20px' }}>
-            <div style={{ fontSize: '36px', marginBottom: '12px', opacity: 0.4 }}></div>
+            <div style={{ fontSize: '36px', marginBottom: '12px', opacity: 0.4 }}>💬</div>
             <div style={{ color: 'var(--text-muted)', fontSize: '14px' }}>아직 문의 내역이 없습니다.</div>
             <div style={{ color: 'var(--text-muted)', fontSize: '12px', marginTop: '4px' }}>궁금한 점이 있으시면 문의를 남겨주세요.</div>
           </div>
         ) : tickets.map(ticket => {
           const status = STATUS_MAP[ticket.status] || STATUS_MAP.open;
           const typeLabel = TYPE_MAP[ticket.type] || ticket.type;
-          const date = ticket.createdAt?.toDate
-            ? ticket.createdAt.toDate().toLocaleDateString('ko-KR', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+          const date = ticket.created_at
+            ? new Date(ticket.created_at).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
             : '-';
           return (
             <div
               key={ticket.id}
               className="card"
               style={{ padding: '16px 20px', cursor: 'pointer', transition: 'border-color 0.2s' }}
-              onClick={() => onDetail(ticket.id, ticket)}
+              onClick={() => onDetail(ticket)}
               onMouseOver={e => e.currentTarget.style.borderColor = 'rgba(139,92,246,0.3)'}
               onMouseOut={e => e.currentTarget.style.borderColor = ''}
             >
@@ -87,7 +82,7 @@ function ListView({ onWrite, onDetail, user }) {
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
                     <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '4px', background: status.bg, color: status.color, fontWeight: '600' }}>{status.label}</span>
-                    <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{escapeHtml(typeLabel)}</span>
+                    <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{typeLabel}</span>
                   </div>
                   <div style={{ fontSize: '14px', fontWeight: '600', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{ticket.title}</div>
                 </div>
@@ -113,24 +108,20 @@ function WriteView({ onBack, user, profile }) {
     if (!content.trim()) { showToast('내용을 입력하세요.', 'warning'); return; }
     setSubmitting(true);
     try {
-      if (isConfigured && user) {
-        await addDoc(collection(db, 'support_tickets'), {
-          type,
-          title: title.trim(),
-          content: content.trim(),
-          userEmail: user.email || '',
-          userName: profile?.name || user.displayName || '',
-          userId: user.uid,
-          status: 'open',
-          reply: null,
-          repliedAt: null,
-          createdAt: serverTimestamp(),
-        });
-      }
+      const { error } = await supabase.from('support_tickets').insert({
+        user_id:    user.uid,
+        user_email: user.email || '',
+        user_name:  profile?.name || user.displayName || '',
+        type,
+        title:   title.trim(),
+        content: content.trim(),
+        status:  'open',
+      });
+      if (error) throw error;
       showToast('문의가 등록되었습니다.', 'success');
       onBack();
-    } catch {
-      showToast('등록에 실패했습니다. 다시 시도해주세요.', 'error');
+    } catch (e) {
+      showToast('등록에 실패했습니다: ' + e.message, 'error');
       setSubmitting(false);
     }
   };
@@ -172,24 +163,25 @@ function WriteView({ onBack, user, profile }) {
 }
 
 /** 상세 뷰 */
-function DetailView({ ticketId, data, onBack, onDelete }) {
-  const status = STATUS_MAP[data.status] || STATUS_MAP.open;
-  const typeLabel = TYPE_MAP[data.type] || data.type;
-  const date = data.createdAt?.toDate
-    ? data.createdAt.toDate().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+function DetailView({ ticket, onBack, onDelete }) {
+  const status = STATUS_MAP[ticket.status] || STATUS_MAP.open;
+  const typeLabel = TYPE_MAP[ticket.type] || ticket.type;
+  const date = ticket.created_at
+    ? new Date(ticket.created_at).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })
     : '-';
-  const replyDate = data.repliedAt?.toDate
-    ? data.repliedAt.toDate().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+  const replyDate = ticket.replied_at
+    ? new Date(ticket.replied_at).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })
     : '';
 
   const handleDelete = async () => {
     if (!confirm('이 문의를 삭제하시겠습니까?')) return;
     try {
-      if (isConfigured) await deleteDoc(doc(db, 'support_tickets', ticketId));
+      const { error } = await supabase.from('support_tickets').delete().eq('id', ticket.id);
+      if (error) throw error;
       showToast('문의가 삭제되었습니다.', 'success');
       onDelete();
-    } catch {
-      showToast('삭제에 실패했습니다.', 'error');
+    } catch (e) {
+      showToast('삭제에 실패했습니다: ' + e.message, 'error');
     }
   };
 
@@ -201,21 +193,21 @@ function DetailView({ ticketId, data, onBack, onDelete }) {
       <div className="card" style={{ padding: '24px', marginBottom: '16px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
           <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '4px', background: status.bg, color: status.color, fontWeight: '600' }}>{status.label}</span>
-          <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{escapeHtml(typeLabel)}</span>
+          <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{typeLabel}</span>
           <span style={{ fontSize: '11px', color: 'var(--text-muted)', marginLeft: 'auto' }}>{date}</span>
         </div>
-        <h3 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '16px' }}>{data.title}</h3>
-        <div style={{ fontSize: '13px', lineHeight: '1.8', whiteSpace: 'pre-wrap', color: 'var(--text-secondary)' }}>{data.content}</div>
+        <h3 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '16px' }}>{ticket.title}</h3>
+        <div style={{ fontSize: '13px', lineHeight: '1.8', whiteSpace: 'pre-wrap', color: 'var(--text-secondary)' }}>{ticket.content}</div>
       </div>
 
       {/* 답변 */}
-      {data.reply ? (
+      {ticket.reply ? (
         <div className="card" style={{ padding: '24px', borderLeft: '3px solid #10b981' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-            <span style={{ fontSize: '13px', fontWeight: '700' }}> 관리자 답변</span>
-            <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{replyDate}</span>
+            <span style={{ fontSize: '13px', fontWeight: '700' }}>✅ 관리자 답변</span>
+            {replyDate && <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{replyDate}</span>}
           </div>
-          <div style={{ fontSize: '13px', lineHeight: '1.8', whiteSpace: 'pre-wrap', color: 'var(--text-secondary)' }}>{data.reply}</div>
+          <div style={{ fontSize: '13px', lineHeight: '1.8', whiteSpace: 'pre-wrap', color: 'var(--text-secondary)' }}>{ticket.reply}</div>
         </div>
       ) : (
         <div className="card" style={{ padding: '24px', textAlign: 'center' }}>
@@ -235,12 +227,7 @@ function DetailView({ ticketId, data, onBack, onDelete }) {
 export default function SupportPage() {
   const { user, profile } = useAuth();
   const [view, setView] = useState('list'); // 'list' | 'write' | 'detail'
-  const [selectedTicket, setSelectedTicket] = useState(null); // { id, data }
-
-  const handleDetail = (ticketId, data) => {
-    setSelectedTicket({ id: ticketId, data });
-    setView('detail');
-  };
+  const [selectedTicket, setSelectedTicket] = useState(null);
 
   const handleBack = () => {
     setSelectedTicket(null);
@@ -254,13 +241,18 @@ export default function SupportPage() {
   if (view === 'detail' && selectedTicket) {
     return (
       <DetailView
-        ticketId={selectedTicket.id}
-        data={selectedTicket.data}
+        ticket={selectedTicket}
         onBack={handleBack}
         onDelete={handleBack}
       />
     );
   }
 
-  return <ListView onWrite={() => setView('write')} onDetail={handleDetail} user={user} />;
+  return (
+    <ListView
+      onWrite={() => setView('write')}
+      onDetail={(ticket) => { setSelectedTicket(ticket); setView('detail'); }}
+      user={user}
+    />
+  );
 }
