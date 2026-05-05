@@ -276,167 +276,247 @@ function calcAmount(tx) {
 // 급여명세서 PDF
 // ============================================================
 
-const WON = (n) => `W${Math.round(n).toLocaleString('ko-KR')}`;
-
-/**
- * 4대보험 요율 레이블
- */
-const DEDUCT_RATE_LABELS = {
-  np:  ' (4.5%)',
-  hi:  ' (3.545%)',
-  ltc: ' (건보x12.95%)',
-  ei:  ' (0.9%)',
-};
+const WON = (n) => `₩${Math.round(n).toLocaleString('ko-KR')}`;
 
 /**
  * jsPDF 문서에 급여명세서 한 페이지 렌더링 (내부 헬퍼)
- * - 단일 PDF와 일괄 PDF가 동일 로직을 재사용하기 위해 분리
+ * 모던 리디자인: 다크 네이비 헤더 + 미니멀 테이블 + 색상 계층
  */
 async function _renderPayslipPage(doc, payroll, year, month, options = {}) {
   const { companyName = 'INVEX', payDate = '' } = options;
   const kf = getKoreanFontStyle();
-  const W = 210;
-  const ML = 14;            // 좌 마진
-  const MR = W - ML;        // 우 마진 끝
-  const TW = W - ML * 2;    // 테이블 너비 (182mm)
-  const BLUE = [37, 99, 235];
+  const W   = 210;
+  const ML  = 15;
+  const MR  = W - ML;
+  const TW  = MR - ML;
+  const MID = ML + TW / 2;
 
-  // ── 헤더 배경 ──────────────────────────────────────────
-  doc.setFillColor(...BLUE);
-  doc.rect(0, 0, W, 34, 'F');
-  doc.setTextColor(255);
-  doc.setFontSize(17);
+  // ── 컬러 팔레트 ──────────────────────────────────────────
+  const NAVY    = [15,  23,  55];   // 헤더 배경
+  const ACCENT  = [59, 130, 246];   // 강조 (파랑)
+  const SLATE   = [71,  85, 105];   // 보조 텍스트
+  const MUTED   = [148, 163, 184];  // 힌트/레이블
+  const BORDER  = [226, 232, 240];  // 구분선
+  const LIGHT   = [248, 250, 252];  // 행 배경 (홀수)
+  const TEXT    = [15,  23,  42];   // 본문 텍스트
+  const RED     = [220,  38,  38];  // 공제 금액
+
+  // ── 헤더 (0 ~ 44mm) ──────────────────────────────────
+  doc.setFillColor(...NAVY);
+  doc.rect(0, 0, W, 44, 'F');
+
+  // 하단 액센트 라인
+  doc.setFillColor(...ACCENT);
+  doc.rect(0, 42, W, 2, 'F');
+
+  // 제목
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(22);
   doc.setFont(kf.font, 'bold');
-  doc.text('급 여 명 세 서', ML, 16);
+  doc.text('급여명세서', ML + 1, 21);
+
+  // 부제 (기간)
   doc.setFontSize(9);
   doc.setFont(kf.font, 'normal');
-  doc.text(`${year}년 ${month}월분`, ML, 26);
-  doc.text(companyName, MR, 16, { align: 'right' });
-  doc.text('invex.io.kr', MR, 23, { align: 'right' });
+  doc.setTextColor(160, 185, 220);
+  doc.text(`${year}년 ${month}월분`, ML + 1, 32);
 
-  // ── 직원 정보 박스 ──────────────────────────────────────
-  doc.setTextColor(30, 30, 30);
-  doc.setFillColor(237, 242, 255);
-  doc.roundedRect(ML, 38, TW, 22, 2, 2, 'F');
+  // 회사명 (우측 상단)
+  doc.setFontSize(11);
+  doc.setFont(kf.font, 'bold');
+  doc.setTextColor(255, 255, 255);
+  doc.text(companyName, MR - 1, 19, { align: 'right' });
+
+  doc.setFontSize(8);
+  doc.setFont(kf.font, 'normal');
+  doc.setTextColor(160, 185, 220);
+  doc.text('invex.io.kr', MR - 1, 28, { align: 'right' });
+
+  // ── 직원 정보 (48 ~ 70mm) ────────────────────────────
+  const iY1 = 57;
+  const iY2 = iY1 + 10;
+  const C2  = MID + 4;
+
+  // 레이블
+  doc.setFontSize(7);
+  doc.setFont(kf.font, 'normal');
+  doc.setTextColor(...MUTED);
+  doc.text('성명', ML + 1, iY1);
+  doc.text('사번', ML + 1, iY2);
+  doc.text('부서', C2, iY1);
+  doc.text('지급일', C2, iY2);
+
+  // 값
+  doc.setFontSize(10);
+  doc.setFont(kf.font, 'bold');
+  doc.setTextColor(...TEXT);
+  doc.text(payroll.name || '-', ML + 11, iY1);
+
   doc.setFontSize(9);
-  const IY = 46;
-  const C2 = 100;
-  doc.setFont(kf.font, 'bold');
-  doc.text('성  명', ML + 4, IY);
-  doc.text('사  번', ML + 4, IY + 8);
   doc.setFont(kf.font, 'normal');
-  doc.text(payroll.name || '-', ML + 20, IY);
-  doc.text(payroll.empNo || '-', ML + 20, IY + 8);
-  doc.setFont(kf.font, 'bold');
-  doc.text('부  서', C2, IY);
-  doc.text('지급일', C2, IY + 8);
-  doc.setFont(kf.font, 'normal');
-  doc.text(payroll.dept || '-', C2 + 16, IY);
-  doc.text(payDate || `${year}-${String(month).padStart(2, '0')}-25`, C2 + 16, IY + 8);
+  doc.text(payroll.empNo || '-', ML + 11, iY2);
+  doc.text(payroll.dept  || '-', C2 + 14, iY1);
+  doc.text(payDate || `${year}-${String(month).padStart(2, '0')}-25`, C2 + 14, iY2);
 
-  // ── 지급 / 공제 테이블 ──────────────────────────────────
+  // 중앙 수직 구분선
+  doc.setDrawColor(...BORDER);
+  doc.setLineWidth(0.3);
+  doc.line(MID - 1, iY1 - 5, MID - 1, iY2 + 4);
+
+  // 하단 구분선
+  doc.setLineWidth(0.5);
+  doc.line(ML, iY2 + 7, MR, iY2 + 7);
+
+  // ── 지급 / 공제 항목 수집 ──────────────────────────────
   const allowances = payroll.allowances || {};
-  const payItems = [['기 본 급', payroll.base || 0]];
+  const payItems = [['기본급', payroll.base || 0]];
   Object.entries(allowances).forEach(([k, v]) => { if (v > 0) payItems.push([k, v]); });
   if ((payroll.overtime_pay || 0) > 0) payItems.push(['초과근무수당', payroll.overtime_pay]);
   if ((payroll.night_pay    || 0) > 0) payItems.push(['야간근무수당', payroll.night_pay]);
   if ((payroll.holiday_pay  || 0) > 0) payItems.push(['휴일근무수당', payroll.holiday_pay]);
 
   const deductItems = [];
-  if ((payroll.np         || 0) > 0) deductItems.push([`국민연금${DEDUCT_RATE_LABELS.np}`,  payroll.np]);
-  if ((payroll.hi         || 0) > 0) deductItems.push([`건강보험${DEDUCT_RATE_LABELS.hi}`,  payroll.hi]);
-  if ((payroll.ltc        || 0) > 0) deductItems.push([`장기요양${DEDUCT_RATE_LABELS.ltc}`, payroll.ltc]);
-  if ((payroll.ei         || 0) > 0) deductItems.push([`고용보험${DEDUCT_RATE_LABELS.ei}`,  payroll.ei]);
-  if ((payroll.income_tax || 0) > 0) deductItems.push(['소득세 (간이세액)',                  payroll.income_tax]);
-  if ((payroll.local_tax  || 0) > 0) deductItems.push(['지방소득세 (소득세x10%)',             payroll.local_tax]);
+  if ((payroll.np         || 0) > 0) deductItems.push(['국민연금 4.5%',          payroll.np]);
+  if ((payroll.hi         || 0) > 0) deductItems.push(['건강보험 3.545%',         payroll.hi]);
+  if ((payroll.ltc        || 0) > 0) deductItems.push(['장기요양 건보×12.95%',   payroll.ltc]);
+  if ((payroll.ei         || 0) > 0) deductItems.push(['고용보험 0.9%',           payroll.ei]);
+  if ((payroll.income_tax || 0) > 0) deductItems.push(['소득세',                  payroll.income_tax]);
+  if ((payroll.local_tax  || 0) > 0) deductItems.push(['지방소득세',              payroll.local_tax]);
 
+  // ── 테이블 시작 Y ──────────────────────────────────────
+  const tblStart = iY2 + 12;
+  const COL_W   = TW / 2;          // 각 섹션 너비 (91mm)
+  const ROW_H   = 9;
+
+  // 섹션 헤더 (지급 / 공제)
+  doc.setFillColor(...LIGHT);
+  doc.rect(ML, tblStart, COL_W, 8, 'F');
+  doc.setFontSize(7.5);
+  doc.setFont(kf.font, 'bold');
+  doc.setTextColor(...ACCENT);
+  doc.text('지  급  내  역', ML + 3, tblStart + 5.5);
+
+  doc.setFillColor(...LIGHT);
+  doc.rect(ML + COL_W, tblStart, COL_W, 8, 'F');
+  doc.setTextColor(...RED);
+  doc.text('공  제  내  역', ML + COL_W + 3, tblStart + 5.5);
+
+  // 헤더 구분선
+  doc.setDrawColor(...BORDER);
+  doc.setLineWidth(0.4);
+  doc.line(ML, tblStart + 8, MR, tblStart + 8);
+
+  // 항목 행
   const maxRows = Math.max(payItems.length, deductItems.length);
-  const tableBody = Array.from({ length: maxRows }, (_, i) => {
-    const [pLabel = '', pVal] = payItems[i] || [];
-    const [dLabel = '', dVal] = deductItems[i] || [];
-    return [
-      pLabel,
-      pVal !== undefined ? WON(pVal) : '',
-      dLabel,
-      dVal !== undefined ? WON(dVal) : '',
-    ];
-  });
+  let rowY = tblStart + 8;
 
-  // 열 너비: 48 + 43 + 52 + 39 = 182 = TW
-  const tblResult = autoTable(doc, {
-    startY: 65,
-    head: [['지급 항목', '금액', '공제 항목 (요율)', '금액']],
-    body: tableBody,
-    styles: {
-      font: kf.font,
-      fontSize: 8.5,
-      cellPadding: { top: 3.5, right: 3, bottom: 3.5, left: 3 },
-      textColor: [30, 30, 30],
-      lineColor: [210, 215, 230],
-      lineWidth: 0.2,
-    },
-    headStyles: {
-      font: kf.font,
-      fillColor: BLUE,
-      textColor: [255, 255, 255],
-      fontSize: 8.5,
-      fontStyle: 'bold',
-      halign: 'center',
-    },
-    alternateRowStyles: { fillColor: [250, 251, 255] },
-    columnStyles: {
-      0: { cellWidth: 48 },
-      1: { cellWidth: 43, halign: 'right' },
-      2: { cellWidth: 52 },
-      3: { cellWidth: 39, halign: 'right' },
-    },
-    margin: { left: ML, right: ML },
-    tableWidth: TW,
-  });
+  for (let i = 0; i < maxRows; i++) {
+    const isOdd = i % 2 === 0;
+
+    // 행 배경 (홀수 행 약간 밝게)
+    doc.setFillColor(isOdd ? 255 : 248, isOdd ? 255 : 250, isOdd ? 255 : 252);
+    doc.rect(ML, rowY, TW, ROW_H, 'F');
+
+    // 지급 항목
+    if (payItems[i]) {
+      doc.setFontSize(8.5);
+      doc.setFont(kf.font, 'normal');
+      doc.setTextColor(...SLATE);
+      doc.text(payItems[i][0], ML + 3, rowY + 6.2);
+      doc.setFont(kf.font, 'bold');
+      doc.setTextColor(...TEXT);
+      doc.text(WON(payItems[i][1]), ML + COL_W - 3, rowY + 6.2, { align: 'right' });
+    }
+
+    // 공제 항목
+    if (deductItems[i]) {
+      doc.setFontSize(8.5);
+      doc.setFont(kf.font, 'normal');
+      doc.setTextColor(...SLATE);
+      doc.text(deductItems[i][0], ML + COL_W + 3, rowY + 6.2);
+      doc.setFont(kf.font, 'bold');
+      doc.setTextColor(...RED);
+      doc.text(WON(deductItems[i][1]), MR - 3, rowY + 6.2, { align: 'right' });
+    }
+
+    // 행 하단 구분선
+    doc.setDrawColor(...BORDER);
+    doc.setLineWidth(0.15);
+    doc.line(ML, rowY + ROW_H, MR, rowY + ROW_H);
+
+    rowY += ROW_H;
+  }
+
+  // 중앙 수직 구분선 (테이블 전체)
+  doc.setDrawColor(...BORDER);
+  doc.setLineWidth(0.3);
+  doc.line(ML + COL_W, tblStart, ML + COL_W, rowY);
+
+  // 테이블 외곽선
+  doc.setDrawColor(...BORDER);
+  doc.setLineWidth(0.4);
+  doc.rect(ML, tblStart, TW, rowY - tblStart, 'S');
 
   // ── 합계 행 ────────────────────────────────────────────
-  // jspdf-autotable v5: finalY는 반환값 또는 doc.lastAutoTable 에서 참조
-  const finalY = (tblResult && tblResult.finalY) || (doc.lastAutoTable && doc.lastAutoTable.finalY) || 160;
-  const afterY = finalY + 4;
-  doc.setFillColor(230, 236, 255);
-  doc.rect(ML, afterY, TW, 9, 'F');
+  const sumY = rowY + 3;
+  doc.setFillColor(235, 240, 255);
+  doc.rect(ML, sumY, TW, 10, 'F');
+
   doc.setFontSize(8.5);
-  doc.setFont(kf.font, 'normal');
-  doc.setTextColor(40, 40, 40);
-  doc.text('지급 합계', ML + 3, afterY + 6.2);
-  doc.text(WON(payroll.gross || 0), ML + 91, afterY + 6.2, { align: 'right' });
-  doc.text('공제 합계', ML + 95, afterY + 6.2);
-  doc.text(WON(payroll.total_deduct || 0), MR, afterY + 6.2, { align: 'right' });
-
-  // ── 실지급액 강조 박스 ──────────────────────────────────
-  const netY = afterY + 13;
-  doc.setFillColor(...BLUE);
-  doc.roundedRect(ML, netY, TW, 15, 3, 3, 'F');
-  doc.setTextColor(255);
-  doc.setFontSize(10);
   doc.setFont(kf.font, 'bold');
-  doc.text('실  지  급  액', ML + 4, netY + 10);
-  doc.setFontSize(15);
-  doc.text(WON(payroll.net || 0), MR, netY + 10, { align: 'right' });
+  doc.setTextColor(...SLATE);
+  doc.text('지급 합계', ML + 3, sumY + 7);
+  doc.setTextColor(...NAVY);
+  doc.text(WON(payroll.gross || 0), ML + COL_W - 3, sumY + 7, { align: 'right' });
 
-  // ── 4대보험 요율 안내 ──────────────────────────────────
-  const noteY = netY + 20;
-  doc.setTextColor(120);
-  doc.setFontSize(7);
+  doc.setTextColor(...SLATE);
+  doc.text('공제 합계', ML + COL_W + 3, sumY + 7);
+  doc.setTextColor(...RED);
+  doc.text(WON(payroll.total_deduct || 0), MR - 3, sumY + 7, { align: 'right' });
+
+  // 합계행 중앙 수직선
+  doc.setDrawColor(...BORDER);
+  doc.setLineWidth(0.3);
+  doc.line(ML + COL_W, sumY, ML + COL_W, sumY + 10);
+
+  // ── 실지급액 ──────────────────────────────────────────
+  const netY = sumY + 16;
+  doc.setFillColor(...NAVY);
+  doc.roundedRect(ML, netY, TW, 20, 3, 3, 'F');
+
+  // 레이블
+  doc.setFontSize(9);
   doc.setFont(kf.font, 'normal');
+  doc.setTextColor(160, 185, 220);
+  doc.text('실지급액', ML + 5, netY + 13);
+
+  // 금액
+  doc.setFontSize(20);
+  doc.setFont(kf.font, 'bold');
+  doc.setTextColor(255, 255, 255);
+  doc.text(WON(payroll.net || 0), MR - 5, netY + 14.5, { align: 'right' });
+
+  // ── 주석 ──────────────────────────────────────────────
+  const noteY = netY + 27;
+  doc.setFontSize(6.5);
+  doc.setFont(kf.font, 'normal');
+  doc.setTextColor(...MUTED);
   doc.text(
     '※ 4대보험 요율: 국민연금 4.5% | 건강보험 3.545% | 장기요양 건강보험료×12.95% | 고용보험 0.9%',
     ML, noteY
   );
 
-  // ── 푸터 선 ────────────────────────────────────────────
-  doc.setDrawColor(200);
+  // ── 푸터 ──────────────────────────────────────────────
+  doc.setDrawColor(...BORDER);
   doc.setLineWidth(0.3);
   doc.line(ML, 280, MR, 280);
   doc.setFontSize(7);
-  doc.setTextColor(150);
-  doc.text(`INVEX (invex.io.kr)  |  발행일: ${new Date().toLocaleDateString('ko-KR')}`, ML, 285);
-  doc.text(`${payroll.name} - ${year}년 ${month}월 급여명세서`, MR, 285, { align: 'right' });
+  doc.setTextColor(...MUTED);
+  doc.text(
+    `${companyName}  ·  invex.io.kr  ·  발행일 ${new Date().toLocaleDateString('ko-KR')}`,
+    ML, 285
+  );
+  doc.text(`${payroll.name} · ${year}년 ${month}월 급여명세서`, MR, 285, { align: 'right' });
 }
 
 /**
