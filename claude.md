@@ -616,6 +616,30 @@ CREATE TABLE salary_items (
 - **RLS 정책** 변경 시 반드시 `schema.sql` 동기화 후 SQL Editor에서 실행
 - **환경변수 유출 금지** — `.env`는 절대 Git 커밋 금지
 
+### ⚠️ SQL 마이그레이션 규칙 (필수)
+코드 수정 시 **매번** 아래 두 가지를 함께 제공한다:
+
+1. **SQL 필요 여부 명시** — 코드 변경이 DB 스키마에 영향을 주는지 항상 판단하고 결과를 알린다.
+   - 필요 없는 경우: "SQL 변경 없음" 명시
+   - 필요한 경우: 아래 2번 수행
+
+2. **SQL 명령어 즉시 제공** — 컬럼 추가/삭제/변경, 테이블 생성/삭제, RLS 정책 변경, 인덱스 추가 등 모든 DDL 변경을 코드 수정과 함께 바로 제시한다.
+
+   형식:
+   ```
+   📋 Supabase SQL Editor 실행 필요:
+   [SQL 명령어]
+   ```
+
+   예시:
+   ```sql
+   -- Supabase SQL Editor에서 실행
+   ALTER TABLE employees ADD COLUMN IF NOT EXISTS allowances JSONB DEFAULT '{}';
+   ALTER TABLE employees ADD COLUMN IF NOT EXISTS sme_reduction JSONB DEFAULT NULL;
+   ```
+
+   > `supabase/schema.sql` 파일도 동일하게 업데이트한다.
+
 ---
 
 ## 15. 자주 쓰는 유틸 패턴
