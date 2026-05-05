@@ -131,6 +131,31 @@ export const YEAREND_SETTLEMENT = {
   child_tax_credit_3plus_additional: 250000,
 };
 
+/**
+ * 중소기업 취업자 소득세 감면 (조세특례제한법 제30조)
+ *
+ * 대상: 청년(만 15~34세) · 장애인 · 60세이상 · 경력단절여성
+ * 기간: 중소기업 취업일로부터 5년간
+ * 감면율: 청년 90%, 기타 70%
+ * 연간 한도: 청년 200만원, 기타 150만원
+ */
+export const SME_REDUCTION = {
+  /** 감면 적용 기간 (년) */
+  period_years: 5,
+
+  /** 감면 유형별 설정 */
+  categories: {
+    /** 청년 (만 15~34세) */
+    youth:        { label: '청년',       rate: 0.9,  annual_limit: 2000000 },
+    /** 장애인 */
+    disabled:     { label: '장애인',     rate: 0.7,  annual_limit: 1500000 },
+    /** 60세 이상 */
+    over60:       { label: '60세이상',   rate: 0.7,  annual_limit: 1500000 },
+    /** 경력단절여성 */
+    career_break: { label: '경력단절여성', rate: 0.7, annual_limit: 1500000 },
+  },
+};
+
 // 기본 최저임금 (2025년, 시간급)
 export const MINIMUM_WAGE = {
   hourly: 11030, // 2025년 최저임금 (시간급)

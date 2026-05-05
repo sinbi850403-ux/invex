@@ -20,6 +20,7 @@
 import {
   INSURANCE_RATES,
   WAGE_MULTIPLIERS,
+  SME_REDUCTION,
   calculateIncomeTaxInterpolated,
 } from './payroll-rates-2025.js';
 
@@ -38,6 +39,40 @@ export function calcInsurance(gross, insuranceFlags = {}) {
   const ei = flags.ei ? Math.round(gross * INSURANCE_RATES.ei) : 0;
 
   return { np, hi, ltc, ei };
+}
+
+/**
+ * 중소기업 취업자 소득세 감면 계산 (조세특례제한법 제30조)
+ *
+ * @param {number} incomeTax       - 간이세액표 기준 소득세 (감면 전)
+ * @param {object|null} smeReduction - 직원의 감면 설정
+ *   { enabled: boolean, category: string, startDate: 'YYYY-MM-DD' }
+ * @returns {{ sme_reduction: number, income_tax_after: number }}
+ *   sme_reduction: 이번 달 감면액 (양수), income_tax_after: 감면 후 납부 소득세
+ */
+export function calcSmeReduction(incomeTax, smeReduction) {
+  const none = { sme_reduction: 0, income_tax_after: incomeTax };
+  if (!smeReduction?.enabled || !smeReduction.category || !smeReduction.startDate) {
+    return none;
+  }
+
+  // 5년 적용 기간 체크
+  const start = new Date(smeReduction.startDate);
+  const now   = new Date();
+  const diffYears = (now - start) / (365.25 * 24 * 60 * 60 * 1000);
+  if (diffYears < 0 || diffYears >= SME_REDUCTION.period_years) return none;
+
+  const cfg = SME_REDUCTION.categories[smeReduction.category];
+  if (!cfg) return none;
+
+  // 월 감면 한도 (연 한도 ÷ 12)
+  const monthlyLimit = Math.floor(cfg.annual_limit / 12);
+  const reduction    = Math.min(Math.round(incomeTax * cfg.rate), monthlyLimit);
+
+  return {
+    sme_reduction:    reduction,
+    income_tax_after: Math.max(0, incomeTax - reduction),
+  };
 }
 
 /**
@@ -178,9 +213,9 @@ export function calcWageFromAttendance(hourlyWage, attendance = {}) {
 
 /**
  * 종합 급여 계산
- * @param {object} employee - {name, base_salary, hourly_wage, employment_type, insurance_flags, dependents, children}
- * @param {object} attendance - {total_min, overtime_min, night_min, holiday_min}
- * @param {object} allowances - {식대: 100000, 차량비: 50000, ...}
+ * @param {object} employee    - {name, base_salary, hourly_wage, employment_type, insurance_flags, dependents, children, sme_reduction}
+ * @param {object} attendance  - {total_min, overtime_min, night_min, holiday_min}
+ * @param {object} allowances  - {식대: 100000, 차량비: 50000, ...}
  * @param {object} otherDeduct - {대출금: 50000, ...}
  * @returns {object} complete payroll object
  */
@@ -197,6 +232,7 @@ export function calcPayroll(
     insurance_flags = { np: true, hi: true, ei: true, wc: true },
     dependents = 0,
     children = 0,
+    sme_reduction = null,
   } = employee;
 
   // 1. 지급항목 계산
@@ -211,7 +247,9 @@ export function calcPayroll(
     hi: 0,
     ltc: 0,
     ei: 0,
-    income_tax: 0,
+    income_tax: 0,       // 감면 전 소득세
+    sme_reduction: 0,    // 중소기업 취업자 소득세 감면액
+    income_tax_final: 0, // 감면 후 실납부 소득세
     local_tax: 0,
     other_deduct: { ...otherDeduct },
     total_deduct: 0,
@@ -262,7 +300,14 @@ export function calcPayroll(
   // 4. 소득세 계산 (부양가족 기준)
   const tax = calcIncomeTax(result.gross, dependents);
   result.income_tax = tax.income_tax;
-  result.local_tax = tax.local_tax;
+
+  // 4-1. 중소기업 취업자 소득세 감면 (조세특례제한법 제30조)
+  const smeResult = calcSmeReduction(result.income_tax, sme_reduction);
+  result.sme_reduction    = smeResult.sme_reduction;
+  result.income_tax_final = smeResult.income_tax_after;
+
+  // 지방소득세 = 감면 후 소득세 × 10%
+  result.local_tax = Math.round(result.income_tax_final * INSURANCE_RATES.local_tax_rate);
 
   // 5. 총공제
   const otherDeductSum = Object.values(otherDeduct).reduce((a, b) => a + b, 0);
@@ -271,7 +316,7 @@ export function calcPayroll(
     result.hi +
     result.ltc +
     result.ei +
-    result.income_tax +
+    result.income_tax_final +
     result.local_tax +
     otherDeductSum;
 

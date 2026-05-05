@@ -376,12 +376,13 @@ async function _renderPayslipPage(doc, payroll, year, month, options = {}) {
   if ((payroll.holiday_pay  || 0) > 0) payItems.push(['휴일근무수당', payroll.holiday_pay]);
 
   const deductItems = [];
-  if ((payroll.np         || 0) > 0) deductItems.push(['국민연금 4.75%',          payroll.np]);
-  if ((payroll.hi         || 0) > 0) deductItems.push(['건강보험 3.595%',         payroll.hi]);
-  if ((payroll.ltc        || 0) > 0) deductItems.push(['장기요양 건보×13.14%',   payroll.ltc]);
-  if ((payroll.ei         || 0) > 0) deductItems.push(['고용보험 0.9%',           payroll.ei]);
-  if ((payroll.income_tax || 0) > 0) deductItems.push(['소득세',                  payroll.income_tax]);
-  if ((payroll.local_tax  || 0) > 0) deductItems.push(['지방소득세',              payroll.local_tax]);
+  if ((payroll.np         || 0) > 0) deductItems.push(['국민연금 4.75%',          payroll.np,      false]);
+  if ((payroll.hi         || 0) > 0) deductItems.push(['건강보험 3.595%',         payroll.hi,      false]);
+  if ((payroll.ltc        || 0) > 0) deductItems.push(['장기요양 건보×13.14%',   payroll.ltc,     false]);
+  if ((payroll.ei           || 0) > 0) deductItems.push(['고용보험 0.9%',              payroll.ei,            false]);
+  if ((payroll.income_tax   || 0) > 0) deductItems.push(['소득세',                     payroll.income_tax,    false]);
+  if ((payroll.sme_reduction|| 0) > 0) deductItems.push(['중소기업감면(조특§30)',      -payroll.sme_reduction, true]);
+  if ((payroll.local_tax    || 0) > 0) deductItems.push(['지방소득세',                 payroll.local_tax,     false]);
 
   // ── 테이블 시작 Y ──────────────────────────────────────
   const tblStart = iY2 + 12;
@@ -430,13 +431,16 @@ async function _renderPayslipPage(doc, payroll, year, month, options = {}) {
 
     // 공제 항목
     if (deductItems[i]) {
+      const [dLabel, dAmt, dIsCredit] = deductItems[i];
+      const GREEN = [16, 185, 129];
       doc.setFontSize(8.5);
       doc.setFont(kf.font, 'normal');
       doc.setTextColor(...SLATE);
-      doc.text(deductItems[i][0], ML + COL_W + 3, rowY + 6.2);
+      doc.text(dLabel, ML + COL_W + 3, rowY + 6.2);
       doc.setFont(kf.font, 'bold');
-      doc.setTextColor(...RED);
-      doc.text(WON(deductItems[i][1]), MR - 3, rowY + 6.2, { align: 'right' });
+      doc.setTextColor(...(dIsCredit ? GREEN : RED));
+      const dispAmt = dIsCredit ? `−${WON(-dAmt)}` : WON(dAmt);
+      doc.text(dispAmt, MR - 3, rowY + 6.2, { align: 'right' });
     }
 
     // 행 하단 구분선

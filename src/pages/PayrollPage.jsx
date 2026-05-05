@@ -32,8 +32,9 @@ function PayrollDetailModal({ payroll: p, year, month, onClose }) {
     { label: '장기요양', rate: '건보×13.14%',   val: p.ltc },
     { label: '고용보험', rate: '0.9%',          val: p.ei },
     { label: '소득세',   rate: '간이세액표',     val: p.income_tax },
+    ...(p.sme_reduction > 0 ? [{ label: '중소기업감면', rate: '조특법§30', val: -(p.sme_reduction), isCredit: true }] : []),
     { label: '지방소득세', rate: '소득세×10%',  val: p.local_tax },
-  ].filter(r => (r.val || 0) > 0);
+  ].filter(r => r.isCredit || (r.val || 0) > 0);
 
   const grossRatio = p.gross > 0 ? Math.min((p.gross / (p.gross + p.total_deduct)) * 100, 100) : 0;
 
@@ -157,8 +158,10 @@ function PayrollDetailModal({ payroll: p, year, month, onClose }) {
                     </span>
                   )}
                 </span>
-                <span style={{ fontSize: 13, fontWeight: 500, color: '#ef4444', fontVariantNumeric: 'tabular-nums' }}>
-                  {fmtWon(r.val)}
+                <span style={{ fontSize: 13, fontWeight: 500,
+                  color: r.isCredit ? '#10b981' : '#ef4444',
+                  fontVariantNumeric: 'tabular-nums' }}>
+                  {r.isCredit ? `−${fmtWon(-r.val)}` : fmtWon(r.val)}
                 </span>
               </div>
             ))}
@@ -266,6 +269,7 @@ export default function PayrollPage() {
           insurance_flags:  emp.insuranceFlags || { np: true, hi: true, ei: true, wc: true },
           dependents:       emp.dependents    || 0,
           children:         emp.children      || 0,
+          sme_reduction:    emp.smeReduction  || null,  // 중소기업 감면
         };
 
         const p = calcPayroll(empForCalc, attSummary, emp.allowances || {}, {});
@@ -300,15 +304,16 @@ export default function PayrollPage() {
         base:        p.base        || 0,
         allowances:  p.allowances  || {},
         gross:       p.gross       || 0,
-        np:          p.np          || 0,
-        hi:          p.hi          || 0,
-        ltc:         p.ltc         || 0,
-        ei:          p.ei          || 0,
-        incomeTax:   p.income_tax  || 0,
-        localTax:    p.local_tax   || 0,
-        totalDeduct: p.total_deduct|| 0,
-        net:         p.net         || 0,
-        status:      'confirmed',
+        np:           p.np           || 0,
+        hi:           p.hi           || 0,
+        ltc:          p.ltc          || 0,
+        ei:           p.ei           || 0,
+        incomeTax:    p.income_tax   || 0,
+        smeReduction: p.sme_reduction || 0,
+        localTax:     p.local_tax    || 0,
+        totalDeduct:  p.total_deduct || 0,
+        net:          p.net          || 0,
+        status:       'confirmed',
         confirmedAt,
         confirmedBy: currentUser?.uid || currentUser?.id,
       }));

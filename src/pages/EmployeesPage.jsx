@@ -46,6 +46,7 @@ function EmpModal({ emp, onClose, onSaved }) {
     dependents: emp?.dependents || 0,
     children: emp?.children || 0,
     insuranceFlags: emp?.insuranceFlags || { np: true, hi: true, ei: true, wc: true },
+    smeReduction: emp?.smeReduction || { enabled: false, category: 'youth', startDate: '' },
     status: emp?.status || 'active',
     resignDate: emp?.resignDate || '',
     rrn: '',
@@ -54,6 +55,7 @@ function EmpModal({ emp, onClose, onSaved }) {
 
   function setF(k, v) { setForm(f => ({ ...f, [k]: v })); }
   function setIns(k, v) { setForm(f => ({ ...f, insuranceFlags: { ...f.insuranceFlags, [k]: v } })); }
+  function setSme(k, v) { setForm(f => ({ ...f, smeReduction: { ...f.smeReduction, [k]: v } })); }
 
   async function save() {
     if (!form.empNo || !form.name || !form.hireDate) { showToast('사번·이름·입사일은 필수입니다', 'error'); return; }
@@ -220,6 +222,36 @@ function EmpModal({ emp, onClose, onSaved }) {
                   <label className="form-label">20세 이하 자녀수</label>
                   <input type="number" className="form-input" min="0" value={form.children} onChange={e => setF('children', parseInt(e.target.value) || 0)} />
                 </div>
+              </div>
+
+              {/* 중소기업 취업자 소득세 감면 */}
+              <div className="form-group" style={{ marginTop: 8, padding: '14px 16px', borderRadius: 10, border: '1px solid var(--border)', background: 'var(--bg-secondary)' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontWeight: 600, fontSize: 13 }}>
+                  <input type="checkbox" checked={!!form.smeReduction?.enabled} onChange={e => setSme('enabled', e.target.checked)} />
+                  중소기업 취업자 소득세 감면 적용 (조세특례제한법 제30조)
+                </label>
+                {form.smeReduction?.enabled && (
+                  <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    <div className="form-row" style={{ margin: 0 }}>
+                      <div className="form-group" style={{ margin: 0 }}>
+                        <label className="form-label">감면 유형</label>
+                        <select className="form-select" value={form.smeReduction?.category || 'youth'} onChange={e => setSme('category', e.target.value)}>
+                          <option value="youth">청년 (만 15~34세) — 90% 감면</option>
+                          <option value="disabled">장애인 — 70% 감면</option>
+                          <option value="over60">60세 이상 — 70% 감면</option>
+                          <option value="career_break">경력단절여성 — 70% 감면</option>
+                        </select>
+                      </div>
+                      <div className="form-group" style={{ margin: 0 }}>
+                        <label className="form-label">감면 시작일 (중소기업 취업일)</label>
+                        <input type="date" className="form-input" value={form.smeReduction?.startDate || ''} onChange={e => setSme('startDate', e.target.value)} />
+                      </div>
+                    </div>
+                    <div style={{ fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.6 }}>
+                      · 취업일로부터 5년간 적용 · 청년: 연 200만원 한도 · 기타: 연 150만원 한도
+                    </div>
+                  </div>
+                )}
               </div>
             </>
           )}

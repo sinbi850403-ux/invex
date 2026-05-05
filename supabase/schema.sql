@@ -616,6 +616,9 @@ ALTER TABLE employees ADD COLUMN IF NOT EXISTS dependents        INTEGER DEFAULT
 ALTER TABLE employees ADD COLUMN IF NOT EXISTS children          INTEGER DEFAULT 0;
 ALTER TABLE employees ADD COLUMN IF NOT EXISTS annual_leave_total NUMERIC(4,1) DEFAULT 15;
 ALTER TABLE employees ADD COLUMN IF NOT EXISTS annual_leave_used  NUMERIC(4,1) DEFAULT 0;
+-- v3.1: 중소기업 취업자 소득세 감면 설정 (조세특례제한법 제30조)
+ALTER TABLE employees ADD COLUMN IF NOT EXISTS sme_reduction JSONB DEFAULT NULL;
+-- 예: {"enabled":true,"category":"youth","startDate":"2024-03-01"}
 
 CREATE INDEX IF NOT EXISTS idx_emp_user       ON employees(user_id);
 CREATE INDEX IF NOT EXISTS idx_emp_dept       ON employees(user_id, dept);
