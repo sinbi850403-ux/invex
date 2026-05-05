@@ -457,10 +457,19 @@ CREATE TABLE IF NOT EXISTS purchase_orders (
 );
 
 -- 기존 DB 호환: 신규 컬럼 추가 (이미 있으면 무시)
-ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS vendor_id       UUID REFERENCES vendors(id) ON DELETE SET NULL;
-ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS order_date_d    DATE;
-ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS expected_date   TEXT;
-ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS expected_date_d DATE;
+ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS vendor_id        UUID REFERENCES vendors(id) ON DELETE SET NULL;
+ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS order_date_d     DATE;
+ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS expected_date    TEXT;
+ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS expected_date_d  DATE;
+-- v3.1 컬럼: 발주번호·납기·결제예정·확정/취소 타임스탬프·연동 ID
+ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS order_no         TEXT;
+ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS delivery_date    TEXT;
+ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS payment_due_date TEXT;
+ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS notes            TEXT;
+ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS confirmed_at     TIMESTAMPTZ;
+ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS cancelled_at     TIMESTAMPTZ;
+ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS payable_entry_id UUID;
+ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS tax_invoice_id   UUID;
 
 CREATE INDEX IF NOT EXISTS idx_po_vendor_id ON purchase_orders(vendor_id) WHERE vendor_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_po_status    ON purchase_orders(user_id, status, order_date DESC)
