@@ -5,6 +5,10 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import { isSupabaseConfigured as isConfigured } from '../supabase-client.js';
 import { showToast } from '../toast.js';
+import { useStore } from '../hooks/useStore.js';
+import { setState as setStoreState } from '../store.js';
+import * as db from '../db.js';
+import { DEFAULT_ROLE_PERMISSIONS } from '../db/rolePermissions.js';
 import {
   getWorkspaceId,
   createWorkspace,
@@ -21,6 +25,72 @@ import {
   removeTestMembers,
   changeMemberRole,
 } from '../workspace.js';
+
+/* ── 권한 행렬 상수 ───────────────────────────────────────────────────── */
+const FEATURE_GROUPS = [
+  {
+    id: 'inventory', label: '📦 재고관리', sensitive: false,
+    pages: [
+      { id: 'dashboard',  label: '홈 대시보드' },
+      { id: 'inventory',  label: '재고현황' },
+      { id: 'in',         label: '입출고관리' },
+      { id: 'ledger',     label: '수불관리' },
+      { id: 'transfer',   label: '창고이동' },
+      { id: 'stocktake',  label: '재고실사' },
+      { id: 'bulk',       label: '일괄편집' },
+      { id: 'scanner',    label: '바코드스캔' },
+      { id: 'labels',     label: '라벨출력' },
+    ],
+  },
+  {
+    id: 'vendor', label: '🏢 거래처·창고', sensitive: false,
+    pages: [
+      { id: 'vendors',    label: '거래처관리' },
+      { id: 'warehouses', label: '창고관리' },
+      { id: 'orders',     label: '발주관리' },
+    ],
+  },
+  {
+    id: 'report', label: '📊 보고·분석', sensitive: false,
+    pages: [
+      { id: 'summary',    label: '보고서' },
+      { id: 'costing',    label: '원가분석' },
+      { id: 'profit',     label: '손익분석' },
+      { id: 'accounts',   label: '매출/매입' },
+      { id: 'documents',  label: '문서·서류' },
+      { id: 'auditlog',   label: '감사로그' },
+    ],
+  },
+  {
+    id: 'hr', label: '👥 인사·급여', sensitive: true,
+    pages: [
+      { id: 'hr-dashboard',         label: 'HR 대시보드' },
+      { id: 'employees',            label: '직원관리' },
+      { id: 'attendance',           label: '근태관리' },
+      { id: 'payroll',              label: '급여계산' },
+      { id: 'leaves',               label: '휴가관리' },
+      { id: 'severance',            label: '퇴직금' },
+      { id: 'yearend-settlement',   label: '연말정산' },
+    ],
+  },
+  {
+    id: 'system', label: '⚙️ 시스템', sensitive: false,
+    pages: [
+      { id: 'settings',  label: '설정' },
+      { id: 'team',      label: '팀관리' },
+      { id: 'roles',     label: '권한관리' },
+      { id: 'backup',    label: '백업' },
+    ],
+  },
+];
+
+const PERM_ROLES = [
+  { id: 'owner',   label: '대표',   locked: true  },
+  { id: 'admin',   label: '관리자', locked: false },
+  { id: 'manager', label: '매니저', locked: false },
+  { id: 'staff',   label: '직원',   locked: false },
+  { id: 'viewer',  label: '열람자', locked: false },
+];
 
 const ROLE_LABELS = {
   owner:   { text: '대표',   color: 'var(--accent)',            icon: '' },
@@ -104,6 +174,19 @@ export default function TeamPage() {
   const [wsId, setWsId] = useState(null);
   const [testLoading, setTestLoading] = useState(false);
   const [roleChangingUid, setRoleChangingUid] = useState(null);
+
+  // 권한 행렬 상태
+  const storeRolePerms = useStore(s => s.rolePermissions);
+  const [perms, setPerms] = useState(null);
+  const [permsDirty, setPermsDirty] = useState(false);
+  const [permsSaving, setPermsSaving] = useState(false);
+
+  // store에서 권한 로드
+  useEffect(() => {
+    const base = storeRolePerms || DEFAULT_ROLE_PERMISSIONS;
+    setPerms(JSON.parse(JSON.stringify(base)));
+    setPermsDirty(false);
+  }, [storeRolePerms]);
 
   const load = useCallback(async () => {
     if (!isConfigured || !user) {
@@ -210,6 +293,46 @@ export default function TeamPage() {
     await changeMemberRole(wsId, targetUid, newRole);
     await load();
     setRoleChangingUid(null);
+  };
+
+  // 권한 행렬 핸들러
+  const handlePermChange = (role, pageId, value) => {
+    setPerms(prev => ({ ...prev, [role]: { ...prev[role], [pageId]: value } }));
+    setPermsDirty(true);
+  };
+
+  const handleGroupToggle = (role, groupPages, value) => {
+    setPerms(prev => {
+      const updated = { ...prev[role] };
+      groupPages.forEach(p => { updated[p.id] = value; });
+      return { ...prev, [role]: updated };
+    });
+    setPermsDirty(true);
+  };
+
+  const handleResetPerms = () => {
+    setPerms(JSON.parse(JSON.stringify(DEFAULT_ROLE_PERMISSIONS)));
+    setPermsDirty(true);
+  };
+
+  const handleRevertPerms = () => {
+    const base = storeRolePerms || DEFAULT_ROLE_PERMISSIONS;
+    setPerms(JSON.parse(JSON.stringify(base)));
+    setPermsDirty(false);
+  };
+
+  const handleSavePerms = async () => {
+    setPermsSaving(true);
+    try {
+      await db.rolePermissions.saveAll(perms);
+      setStoreState({ rolePermissions: perms });
+      setPermsDirty(false);
+      showToast('권한 설정이 저장되었습니다.', 'success');
+    } catch (e) {
+      showToast('저장 실패: ' + e.message, 'error');
+    } finally {
+      setPermsSaving(false);
+    }
   };
 
   const handleAddTestMembers = async () => {
@@ -475,6 +598,139 @@ export default function TeamPage() {
                 })}
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+
+      {/* ── 권한 행렬 ─────────────────────────────────────────────── */}
+      {perms && (
+        <div className="card">
+          {/* 카드 헤더 */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px', marginBottom: '12px' }}>
+            <div className="card-title" style={{ margin: 0 }}>🔑 역할별 권한 설정</div>
+            {isOwner ? (
+              <div style={{ display: 'flex', gap: '6px' }}>
+                <button className="btn btn-ghost" style={{ fontSize: '12px', padding: '4px 10px' }}
+                  title="기본값으로 초기화" onClick={handleResetPerms}>초기화</button>
+                <button className="btn btn-outline" style={{ fontSize: '12px', padding: '4px 10px' }}
+                  onClick={handleRevertPerms} disabled={!permsDirty}>되돌리기</button>
+                <button className="btn btn-primary" style={{ fontSize: '12px', padding: '4px 12px' }}
+                  onClick={handleSavePerms} disabled={!permsDirty || permsSaving}>
+                  {permsSaving ? '저장 중…' : '💾 저장'}
+                </button>
+              </div>
+            ) : (
+              <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>👁 읽기 전용 (대표만 수정 가능)</span>
+            )}
+          </div>
+
+          {/* HR 민감 경고 */}
+          <div className="alert alert-warning" style={{ fontSize: '12px', padding: '8px 12px', marginBottom: '12px' }}>
+            🔒 <strong>인사·급여</strong> 항목은 급여·개인정보를 포함합니다. 꼭 필요한 역할에만 권한을 부여하세요.
+          </div>
+
+          {/* 행렬 테이블 */}
+          <div style={{ overflowX: 'auto' }}>
+            <table className="data-table" style={{ minWidth: '560px', tableLayout: 'fixed' }}>
+              <colgroup>
+                <col style={{ width: '160px' }} />
+                {PERM_ROLES.map(r => <col key={r.id} style={{ width: '80px' }} />)}
+              </colgroup>
+              <thead>
+                <tr>
+                  <th style={{ textAlign: 'left' }}>기능</th>
+                  {PERM_ROLES.map(r => (
+                    <th key={r.id} style={{ textAlign: 'center', color: r.locked ? 'var(--success)' : undefined }}>
+                      {r.label}
+                      {r.locked && <div style={{ fontSize: '10px', fontWeight: 400, color: 'var(--success)' }}>항상 허용</div>}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {FEATURE_GROUPS.map(group => (
+                  <React.Fragment key={group.id}>
+                    {/* 그룹 헤더 행 */}
+                    <tr style={{ background: group.sensitive ? 'rgba(251,191,36,0.07)' : 'var(--bg-secondary)' }}>
+                      <td style={{ fontWeight: 700, fontSize: '13px' }}>
+                        {group.label}{group.sensitive && ' 🔒'}
+                      </td>
+                      {/* owner: 항상 전체 허용 */}
+                      <td style={{ textAlign: 'center', fontSize: '12px', color: 'var(--success)' }}>✅ 전체</td>
+                      {/* 나머지 역할: 일괄 토글 버튼 */}
+                      {PERM_ROLES.filter(r => !r.locked).map(r => {
+                        const allOn  = group.pages.every(p => perms[r.id]?.[p.id]);
+                        const allOff = group.pages.every(p => !perms[r.id]?.[p.id]);
+                        return (
+                          <td key={r.id} style={{ textAlign: 'center', padding: '4px' }}>
+                            <button
+                              disabled={!isOwner}
+                              onClick={() => handleGroupToggle(r.id, group.pages, !allOn)}
+                              style={{
+                                fontSize: '10px', padding: '2px 7px', borderRadius: '10px',
+                                border: 'none', cursor: isOwner ? 'pointer' : 'default',
+                                background: allOn ? 'var(--success)' : allOff ? 'var(--bg-secondary)' : 'var(--warning, #f59e0b)',
+                                color: allOn ? '#fff' : allOff ? 'var(--text-muted)' : '#fff',
+                                outline: allOff ? '1px solid var(--border)' : 'none',
+                              }}
+                            >
+                              {allOn ? '전체 ✓' : allOff ? '전체 ✗' : '일부 △'}
+                            </button>
+                          </td>
+                        );
+                      })}
+                    </tr>
+                    {/* 기능 항목 행 */}
+                    {group.pages.map(page => (
+                      <tr key={page.id} style={group.sensitive ? { background: 'rgba(251,191,36,0.03)' } : {}}>
+                        <td style={{ paddingLeft: '24px', fontSize: '13px', color: 'var(--text-muted)' }}>{page.label}</td>
+                        {/* owner: 항상 체크 */}
+                        <td style={{ textAlign: 'center' }}>
+                          <span style={{ color: 'var(--success)', fontSize: '16px' }}>✓</span>
+                        </td>
+                        {/* admin/manager/staff/viewer 체크박스 */}
+                        {PERM_ROLES.filter(r => !r.locked).map(r => (
+                          <td key={r.id} style={{ textAlign: 'center' }}>
+                            <input
+                              type="checkbox"
+                              checked={!!perms[r.id]?.[page.id]}
+                              disabled={!isOwner}
+                              onChange={e => handlePermChange(r.id, page.id, e.target.checked)}
+                              style={{
+                                width: '16px', height: '16px',
+                                cursor: isOwner ? 'pointer' : 'default',
+                                accentColor: 'var(--accent)',
+                              }}
+                            />
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </React.Fragment>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* 역할별 허용 기능 수 요약 */}
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '12px' }}>
+            {PERM_ROLES.map(r => {
+              if (r.locked) {
+                const total = FEATURE_GROUPS.reduce((s, g) => s + g.pages.length, 0);
+                return (
+                  <div key={r.id} style={{ fontSize: '12px', padding: '4px 10px', borderRadius: '8px', background: 'rgba(34,197,94,0.1)', color: 'var(--success)', border: '1px solid rgba(34,197,94,0.2)' }}>
+                    {r.label}: {total}개 전체
+                  </div>
+                );
+              }
+              const allowed = perms[r.id] ? Object.values(perms[r.id]).filter(Boolean).length : 0;
+              const total = FEATURE_GROUPS.reduce((s, g) => s + g.pages.length, 0);
+              return (
+                <div key={r.id} style={{ fontSize: '12px', padding: '4px 10px', borderRadius: '8px', background: 'var(--bg-secondary)', border: '1px solid var(--border)' }}>
+                  {r.label}: <strong>{allowed}</strong> / {total}
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
