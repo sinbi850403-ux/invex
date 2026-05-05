@@ -129,16 +129,52 @@ function PageNotFound() {
 class ErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
-    this.state = { hasError: false, error: null };
+    this.state = { hasError: false, error: null, isChunkError: false };
   }
   static getDerivedStateFromError(error) {
-    return { hasError: true, error };
+    // Vercel 재배포 후 구버전 청크 URL 404 → 자동 새로고침으로 해결
+    const msg = error?.message || '';
+    const isChunkError =
+      msg.includes('Failed to fetch dynamically imported module') ||
+      msg.includes('Importing a module script failed') ||
+      msg.includes('error loading dynamically imported module');
+    return { hasError: true, error, isChunkError };
   }
   componentDidCatch(error, info) {
     console.error('[AppLayout] 페이지 렌더링 오류:', error, info?.componentStack);
+    // 청크 로드 실패 시 1회 자동 새로고침 (캐시 무효화)
+    const msg = error?.message || '';
+    const isChunkError =
+      msg.includes('Failed to fetch dynamically imported module') ||
+      msg.includes('Importing a module script failed') ||
+      msg.includes('error loading dynamically imported module');
+    if (isChunkError) {
+      const reloadKey = 'invex:chunk-reload-' + Date.now().toString().slice(0, 8);
+      if (!sessionStorage.getItem('invex:chunk-reloaded')) {
+        sessionStorage.setItem('invex:chunk-reloaded', '1');
+        window.location.reload();
+      }
+    }
   }
   render() {
     if (this.state.hasError) {
+      if (this.state.isChunkError) {
+        return (
+          <div style={{ padding: '48px', textAlign: 'center' }}>
+            <div style={{ fontSize: '40px', marginBottom: '12px' }}>🔄</div>
+            <h2 style={{ fontWeight: 700, marginBottom: '8px' }}>새 버전으로 업데이트 중...</h2>
+            <p style={{ color: 'var(--text-muted)', fontSize: '13px', marginBottom: '20px' }}>
+              잠시 후 자동으로 새로고침됩니다.
+            </p>
+            <button
+              className="btn btn-primary"
+              onClick={() => { sessionStorage.removeItem('invex:chunk-reloaded'); window.location.reload(); }}
+            >
+              지금 새로고침
+            </button>
+          </div>
+        );
+      }
       return (
         <div style={{ padding: '48px', textAlign: 'center' }}>
           <div style={{ fontSize: '40px', marginBottom: '12px' }}>⚠️</div>
@@ -148,7 +184,7 @@ class ErrorBoundary extends React.Component {
           </p>
           <button
             className="btn btn-primary"
-            onClick={() => this.setState({ hasError: false, error: null })}
+            onClick={() => this.setState({ hasError: false, error: null, isChunkError: false })}
           >
             다시 시도
           </button>
