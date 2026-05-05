@@ -19,6 +19,7 @@ import {
   startWorkspaceSync,
   addTestMembers,
   removeTestMembers,
+  changeMemberRole,
 } from '../workspace.js';
 
 const ROLE_LABELS = {
@@ -102,6 +103,7 @@ export default function TeamPage() {
   const [acceptingInvite, setAcceptingInvite] = useState(false);
   const [wsId, setWsId] = useState(null);
   const [testLoading, setTestLoading] = useState(false);
+  const [roleChangingUid, setRoleChangingUid] = useState(null);
 
   const load = useCallback(async () => {
     if (!isConfigured || !user) {
@@ -200,6 +202,14 @@ export default function TeamPage() {
     if (!confirm(`"${name}" 님에 대한 초대를 취소하시겠습니까?`)) return;
     const success = await cancelInvite(uid);
     if (success) load();
+  };
+
+  const handleRoleChange = async (targetUid, newRole) => {
+    if (!wsId) return;
+    setRoleChangingUid(targetUid);
+    await changeMemberRole(wsId, targetUid, newRole);
+    await load();
+    setRoleChangingUid(null);
   };
 
   const handleAddTestMembers = async () => {
@@ -356,7 +366,7 @@ export default function TeamPage() {
                 <th>이메일</th>
                 <th>역할</th>
                 <th>참여일</th>
-                {isOwner && <th style={{ width: '80px' }}>관리</th>}
+                {isOwner && <th style={{ width: '160px' }}>역할 변경 / 관리</th>}
               </tr>
             </thead>
             <tbody>
@@ -382,12 +392,32 @@ export default function TeamPage() {
                     <td style={{ fontSize: '12px' }}>{joinDate}</td>
                     {isOwner && (
                       <td>
-                        {!isMe && m.role !== 'owner' && (
-                          <button
-                            className="btn-icon btn-icon-danger"
-                            title="제거"
-                            onClick={() => handleRemoveMember(m.uid, m.name)}
-                          ></button>
+                        {!isMe && m.role !== 'owner' ? (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <select
+                              value={m.role || 'staff'}
+                              disabled={roleChangingUid === m.uid}
+                              onChange={e => handleRoleChange(m.uid, e.target.value)}
+                              style={{
+                                fontSize: '12px', padding: '3px 6px',
+                                borderRadius: '6px', border: '1px solid var(--border)',
+                                background: 'var(--bg-secondary)', color: 'var(--text)',
+                                cursor: 'pointer', flex: 1,
+                              }}
+                            >
+                              <option value="admin">관리자</option>
+                              <option value="manager">매니저</option>
+                              <option value="staff">직원</option>
+                              <option value="viewer">열람자</option>
+                            </select>
+                            <button
+                              className="btn-icon btn-icon-danger"
+                              title="제거"
+                              onClick={() => handleRemoveMember(m.uid, m.name)}
+                            >🗑</button>
+                          </div>
+                        ) : (
+                          <td></td>
                         )}
                       </td>
                     )}

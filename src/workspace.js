@@ -557,6 +557,26 @@ export function getFreePeriodInfo(createdAt) {
 }
 
 /**
+ * 특정 팀원의 역할 변경 (대표만 가능)
+ */
+export async function changeMemberRole(wsId, targetUid, newRole) {
+  if (!wsId || !isConfigured) return false;
+  try {
+    const ws = await wsGet(wsId);
+    if (!ws) return false;
+    const updated = (ws.members || []).map(m =>
+      (m.uid === targetUid || m.id === targetUid) ? { ...m, role: newRole } : m
+    );
+    await wsUpdateMembers(wsId, updated);
+    showToast('역할을 변경했습니다.', 'success');
+    return true;
+  } catch (e) {
+    showToast('역할 변경 실패: ' + e.message, 'error');
+    return false;
+  }
+}
+
+/**
  * 테스트용 가상 팀원 4명을 워크스페이스 members JSONB에 직접 추가
  * 실제 Supabase 계정 없이 역할별 UI를 확인할 때 사용
  * uid가 'test-' 로 시작하는 멤버는 테스트 멤버로 구분됨
