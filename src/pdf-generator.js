@@ -386,7 +386,7 @@ async function _renderPayslipPage(doc, payroll, year, month, options = {}) {
   if ((payroll.ltc         || 0) > 0) deductItems.push(['장기요양 건보×13.14%', payroll.ltc,          false]);
   if ((payroll.ei          || 0) > 0) deductItems.push(['고용보험 0.9%',        payroll.ei,           false]);
   if ((payroll.income_tax  || 0) > 0) deductItems.push(['소득세',               payroll.income_tax,   false]);
-  if ((payroll.sme_reduction|| 0) > 0) deductItems.push(['중소기업감면(조특§30)', -payroll.sme_reduction, true]);
+  if ((payroll.sme_reduction|| 0) > 0) deductItems.push(['중소기업감면(조특30조)', -payroll.sme_reduction, true]);
   if ((payroll.local_tax   || 0) > 0) deductItems.push(['지방소득세',           payroll.local_tax,    false]);
 
   // ── 테이블 시작 Y ──────────────────────────────────────

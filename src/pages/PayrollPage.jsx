@@ -40,7 +40,7 @@ function PayrollDetailModal({ payroll: p, year, month, onClose }) {
     { label: '고용보험',   rate: '0.9%',        val: p.ei },
     { label: '소득세',     rate: '간이세액표',  val: p.income_tax },
     ...(p.sme_reduction > 0
-      ? [{ label: '중소기업감면', rate: '조특법§30', val: -(p.sme_reduction), isCredit: true }]
+      ? [{ label: '중소기업감면', rate: '조특법30조', val: -(p.sme_reduction), isCredit: true }]
       : []),
     { label: '지방소득세', rate: '소득세×10%',  val: p.local_tax },
     ...Object.entries(p.other_deduct || {}).filter(([, v]) => v > 0).map(([k, v]) => ({ label: k, val: v })),
