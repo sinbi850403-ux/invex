@@ -14,86 +14,182 @@ import { summarizeMonthAttendance } from '../attendance-calc.js';
 import { generatePayslipPDF, generatePayslipBulkPDF } from '../pdf-generator.js';
 import { fmtWon } from '../utils/formatters.js';
 
-// ─── 4대보험 요율 레이블 (모달 표시용) ───────────────────
-const INSURANCE_RATE_LABELS = {
-  np:  '국민연금',
-  hi:  '건강보험',
-  ltc: '장기요양',
-  ei:  '고용보험',
-};
-const INSURANCE_RATES_DISPLAY = {
-  np:  '4.5%',
-  hi:  '3.545%',
-  ltc: '건보×12.95%',
-  ei:  '0.9%',
-};
-
-function RateTag({ rate }) {
-  return <span style={{ fontSize: 10, color: 'var(--text-muted)', marginLeft: 4 }}>({rate})</span>;
-}
-
 // ─── 상세 모달 ────────────────────────────────────────
 function PayrollDetailModal({ payroll: p, year, month, onClose }) {
   const allowanceSum = Object.values(p.allowances || {}).reduce((a, b) => a + b, 0);
-  const TD_L = { padding: '7px 4px', color: 'var(--text-primary)', verticalAlign: 'middle' };
-  const TD_R = { padding: '7px 4px', textAlign: 'right', color: 'var(--text-primary)', fontVariantNumeric: 'tabular-nums' };
-  const ROW_SEP = { borderBottom: '1px solid var(--border)' };
+
+  const payRows = [
+    { label: '기본급', val: p.base, always: true },
+    { label: '각종 수당', val: allowanceSum, cond: allowanceSum > 0 },
+    { label: '초과근무수당', val: p.overtime_pay },
+    { label: '야간근무수당', val: p.night_pay },
+    { label: '휴일근무수당', val: p.holiday_pay },
+  ].filter(r => r.always || (r.cond ?? (r.val || 0) > 0));
+
+  const deductRows = [
+    { label: '국민연금', rate: '4.5%',         val: p.np },
+    { label: '건강보험', rate: '3.545%',        val: p.hi },
+    { label: '장기요양', rate: '건보×12.95%',   val: p.ltc },
+    { label: '고용보험', rate: '0.9%',          val: p.ei },
+    { label: '소득세',   rate: '간이세액표',     val: p.income_tax },
+    { label: '지방소득세', rate: '소득세×10%',  val: p.local_tax },
+  ].filter(r => (r.val || 0) > 0);
+
+  const grossRatio = p.gross > 0 ? Math.min((p.gross / (p.gross + p.total_deduct)) * 100, 100) : 0;
+
   return (
     <div className="modal-overlay" style={{ display: 'flex' }} onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="modal" style={{ maxWidth: 680 }}>
-        <div className="modal-header">
-          <h3>{p.name} ({p.empNo}) — {year}년 {month}월</h3>
-          <button className="btn-close" onClick={onClose} />
+      <div className="modal" style={{ maxWidth: 520, padding: 0, overflow: 'hidden' }}>
+
+        {/* ── 헤더 ── */}
+        <div style={{
+          background: 'linear-gradient(135deg, #0f1737 0%, #1e3a8a 100%)',
+          padding: '20px 24px 16px',
+          position: 'relative',
+        }}>
+          {/* 닫기 버튼 */}
+          <button onClick={onClose} style={{
+            position: 'absolute', top: 14, right: 16,
+            background: 'rgba(255,255,255,0.15)', border: 'none',
+            borderRadius: '50%', width: 28, height: 28,
+            color: '#fff', cursor: 'pointer', fontSize: 16,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>×</button>
+
+          {/* 이름 & 기간 */}
+          <div style={{ fontSize: 11, color: 'rgba(160,185,220,0.9)', marginBottom: 4, letterSpacing: '0.5px' }}>
+            급여명세서
+          </div>
+          <div style={{ fontSize: 18, fontWeight: 700, color: '#fff', marginBottom: 2 }}>
+            {p.name}
+            <span style={{ fontSize: 13, fontWeight: 400, color: 'rgba(160,185,220,0.8)', marginLeft: 8 }}>
+              {p.empNo} · {p.dept}
+            </span>
+          </div>
+          <div style={{ fontSize: 12, color: 'rgba(160,185,220,0.8)' }}>
+            {year}년 {month}월분
+          </div>
+
+          {/* 실지급액 하이라이트 */}
+          <div style={{
+            marginTop: 16, background: 'rgba(255,255,255,0.08)',
+            borderRadius: 10, padding: '12px 16px',
+            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+          }}>
+            <span style={{ fontSize: 12, color: 'rgba(160,185,220,0.9)' }}>실지급액</span>
+            <span style={{ fontSize: 24, fontWeight: 800, color: '#fff', fontVariantNumeric: 'tabular-nums' }}>
+              {fmtWon(p.net)}
+            </span>
+          </div>
+
+          {/* 지급/공제 바 */}
+          <div style={{ marginTop: 10, height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.15)', overflow: 'hidden' }}>
+            <div style={{
+              height: '100%', width: `${grossRatio}%`,
+              background: 'linear-gradient(90deg, #3b82f6, #60a5fa)',
+              borderRadius: 2, transition: 'width 0.6s',
+            }} />
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 5, fontSize: 10, color: 'rgba(160,185,220,0.7)' }}>
+            <span>지급 {fmtWon(p.gross)}</span>
+            <span>공제 {fmtWon(p.total_deduct)}</span>
+          </div>
         </div>
-        <div className="modal-body" style={{ color: 'var(--text-primary)' }}>
 
-          {/* ── 지급항목 ── */}
-          <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 6, letterSpacing: '0.5px' }}>
-            지급 항목
-          </div>
-          <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: 16 }}>
-            <tbody>
-              <tr style={ROW_SEP}><td style={TD_L}>기본급</td><td style={{ ...TD_R, fontWeight: 500 }}>{fmtWon(p.base)}</td></tr>
-              {allowanceSum > 0 && <tr style={ROW_SEP}><td style={TD_L}>각종 수당</td><td style={{ ...TD_R, fontWeight: 500 }}>{fmtWon(allowanceSum)}</td></tr>}
-              {(p.overtime_pay || 0) > 0 && <tr style={ROW_SEP}><td style={TD_L}>초과근무수당</td><td style={{ ...TD_R, fontWeight: 500 }}>{fmtWon(p.overtime_pay)}</td></tr>}
-              {(p.night_pay    || 0) > 0 && <tr style={ROW_SEP}><td style={TD_L}>야간근무수당</td><td style={{ ...TD_R, fontWeight: 500 }}>{fmtWon(p.night_pay)}</td></tr>}
-              {(p.holiday_pay  || 0) > 0 && <tr style={ROW_SEP}><td style={TD_L}>휴일근무수당</td><td style={{ ...TD_R, fontWeight: 500 }}>{fmtWon(p.holiday_pay)}</td></tr>}
-              <tr style={{ background: 'var(--accent-light)', borderTop: '2px solid var(--accent)' }}>
-                <td style={{ ...TD_L, fontWeight: 700 }}>총 지급액</td>
-                <td style={{ ...TD_R, fontWeight: 700, color: 'var(--accent)', fontSize: 16 }}>{fmtWon(p.gross)}</td>
-              </tr>
-            </tbody>
-          </table>
+        {/* ── 바디 ── */}
+        <div style={{ padding: '0 24px 20px', background: 'var(--bg-card, var(--bg-secondary))' }}>
 
-          {/* ── 공제항목 ── */}
-          <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 6, letterSpacing: '0.5px' }}>
-            공제 항목
-          </div>
-          <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: 16 }}>
-            <tbody>
-              {(p.np  || 0) > 0 && <tr style={ROW_SEP}><td style={TD_L}>{INSURANCE_RATE_LABELS.np}<RateTag rate={INSURANCE_RATES_DISPLAY.np} /></td><td style={TD_R}>{fmtWon(p.np)}</td></tr>}
-              {(p.hi  || 0) > 0 && <tr style={ROW_SEP}><td style={TD_L}>{INSURANCE_RATE_LABELS.hi}<RateTag rate={INSURANCE_RATES_DISPLAY.hi} /></td><td style={TD_R}>{fmtWon(p.hi)}</td></tr>}
-              {(p.ltc || 0) > 0 && <tr style={ROW_SEP}><td style={TD_L}>{INSURANCE_RATE_LABELS.ltc}<RateTag rate={INSURANCE_RATES_DISPLAY.ltc} /></td><td style={TD_R}>{fmtWon(p.ltc)}</td></tr>}
-              {(p.ei  || 0) > 0 && <tr style={ROW_SEP}><td style={TD_L}>{INSURANCE_RATE_LABELS.ei}<RateTag rate={INSURANCE_RATES_DISPLAY.ei} /></td><td style={TD_R}>{fmtWon(p.ei)}</td></tr>}
-              {(p.income_tax || 0) > 0 && <tr style={ROW_SEP}><td style={TD_L}>소득세<span style={{ fontSize: 10, color: 'var(--text-muted)', marginLeft: 4 }}>(간이세액표)</span></td><td style={TD_R}>{fmtWon(p.income_tax)}</td></tr>}
-              {(p.local_tax  || 0) > 0 && <tr style={ROW_SEP}><td style={TD_L}>지방소득세<span style={{ fontSize: 10, color: 'var(--text-muted)', marginLeft: 4 }}>(소득세×10%)</span></td><td style={TD_R}>{fmtWon(p.local_tax)}</td></tr>}
-              <tr style={{ background: 'var(--warning-light)', borderTop: '2px solid var(--warning)' }}>
-                <td style={{ ...TD_L, fontWeight: 700 }}>총 공제액</td>
-                <td style={{ ...TD_R, fontWeight: 700, color: 'var(--warning)' }}>{fmtWon(p.total_deduct)}</td>
-              </tr>
-            </tbody>
-          </table>
-
-          {/* ── 실지급액 ── */}
-          <div style={{ background: 'var(--accent)', borderRadius: 8, padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ color: '#fff', fontWeight: 700, fontSize: 14 }}>실 지 급 액</span>
-            <span style={{ color: '#fff', fontWeight: 800, fontSize: 22, fontVariantNumeric: 'tabular-nums' }}>{fmtWon(p.net)}</span>
+          {/* 지급 항목 */}
+          <div style={{ paddingTop: 18 }}>
+            <div style={{
+              fontSize: 11, fontWeight: 700, letterSpacing: '0.8px', color: '#3b82f6',
+              marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6,
+            }}>
+              <span style={{ display: 'inline-block', width: 3, height: 12, background: '#3b82f6', borderRadius: 2 }} />
+              지급 항목
+            </div>
+            {payRows.map((r, i) => (
+              <div key={i} style={{
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                padding: '8px 0',
+                borderBottom: '1px solid var(--border)',
+              }}>
+                <span style={{ fontSize: 13, color: 'var(--text)' }}>{r.label}</span>
+                <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', fontVariantNumeric: 'tabular-nums' }}>
+                  {fmtWon(r.val)}
+                </span>
+              </div>
+            ))}
+            {/* 지급 합계 */}
+            <div style={{
+              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+              padding: '10px 12px', marginTop: 6,
+              background: 'rgba(59,130,246,0.08)', borderRadius: 8,
+            }}>
+              <span style={{ fontSize: 13, fontWeight: 700, color: '#3b82f6' }}>총 지급액</span>
+              <span style={{ fontSize: 15, fontWeight: 800, color: '#3b82f6', fontVariantNumeric: 'tabular-nums' }}>
+                {fmtWon(p.gross)}
+              </span>
+            </div>
           </div>
 
+          {/* 공제 항목 */}
+          <div style={{ paddingTop: 18 }}>
+            <div style={{
+              fontSize: 11, fontWeight: 700, letterSpacing: '0.8px', color: '#ef4444',
+              marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6,
+            }}>
+              <span style={{ display: 'inline-block', width: 3, height: 12, background: '#ef4444', borderRadius: 2 }} />
+              공제 항목
+            </div>
+            {deductRows.map((r, i) => (
+              <div key={i} style={{
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                padding: '8px 0',
+                borderBottom: '1px solid var(--border)',
+              }}>
+                <span style={{ fontSize: 13, color: 'var(--text)' }}>
+                  {r.label}
+                  {r.rate && (
+                    <span style={{ fontSize: 10, color: 'var(--text-muted)', marginLeft: 5,
+                      background: 'var(--bg-secondary)', padding: '1px 5px', borderRadius: 4 }}>
+                      {r.rate}
+                    </span>
+                  )}
+                </span>
+                <span style={{ fontSize: 13, fontWeight: 500, color: '#ef4444', fontVariantNumeric: 'tabular-nums' }}>
+                  {fmtWon(r.val)}
+                </span>
+              </div>
+            ))}
+            {/* 공제 합계 */}
+            <div style={{
+              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+              padding: '10px 12px', marginTop: 6,
+              background: 'rgba(239,68,68,0.07)', borderRadius: 8,
+            }}>
+              <span style={{ fontSize: 13, fontWeight: 700, color: '#ef4444' }}>총 공제액</span>
+              <span style={{ fontSize: 15, fontWeight: 800, color: '#ef4444', fontVariantNumeric: 'tabular-nums' }}>
+                {fmtWon(p.total_deduct)}
+              </span>
+            </div>
+          </div>
         </div>
-        <div className="modal-footer" style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-          <button className="btn btn-ghost" onClick={() => generatePayslipPDF(p, year, month)}>📄 PDF 출력</button>
-          <button className="btn btn-primary" onClick={onClose}>닫기</button>
+
+        {/* ── 푸터 ── */}
+        <div style={{
+          display: 'flex', gap: 8, justifyContent: 'flex-end',
+          padding: '12px 24px 16px',
+          borderTop: '1px solid var(--border)',
+          background: 'var(--bg-card, var(--bg-secondary))',
+        }}>
+          <button className="btn btn-ghost" style={{ fontSize: 13 }}
+            onClick={() => generatePayslipPDF(p, year, month)}>
+            📄 PDF 출력
+          </button>
+          <button className="btn btn-primary" style={{ fontSize: 13 }} onClick={onClose}>
+            닫기
+          </button>
         </div>
       </div>
     </div>
