@@ -495,8 +495,23 @@ export function InoutPage({ mode = 'all' }) {
                           <td className="text-right">{outAmt ? W(outAmt) : '-'}</td>
                           <td className="text-right">{outAmt ? W(Math.round(outAmt * 0.1)) : '-'}</td>
                           <td className="text-right">{outAmt ? W(Math.round(outAmt * 1.1)) : '-'}</td>
-                          <td className="text-right">{outAmt ? W(profit) : '-'}</td>
-                          <td className="text-right">{outAmt > 0 ? (profit / outAmt * 100).toFixed(1) + '%' : '-'}</td>
+                          {/* 이익액: wac>0이면 실제 이익(₩0 포함), wac=0이면 원가없음 표시 */}
+                          <td className="text-right">
+                            {outAmt > 0
+                              ? wac > 0
+                                ? <span style={{ color: profit >= 0 ? 'var(--success, #4caf50)' : 'var(--error, #f44336)', fontWeight: 600 }}>
+                                    {profit >= 0 ? W(profit) : `-${W(Math.abs(profit))}`}
+                                  </span>
+                                : <span style={{ color: 'var(--text-muted)', fontSize: '11px' }}>원가없음</span>
+                              : '-'}
+                          </td>
+                          <td className="text-right">
+                            {outAmt > 0 && wac > 0
+                              ? <span style={{ color: profit >= 0 ? 'var(--success, #4caf50)' : 'var(--error, #f44336)' }}>
+                                  {(profit / outAmt * 100).toFixed(1)}%
+                                </span>
+                              : '-'}
+                          </td>
                         </>
                       ) : isInMode ? (
                         <>

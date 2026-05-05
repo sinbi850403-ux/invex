@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+﻿import { useState, useMemo, useEffect } from 'react';
 import { showToast } from '../toast.js';
 
 const todayStr = () => new Date().toISOString().slice(0, 10);
@@ -165,9 +165,8 @@ export function useInoutFilters({ transactions, mappedData, mode }) {
     const costFromRow = toPositiveNumber(tx.unitPrice);
     if (isPlausibleCost(costFromRow)) return costFromRow;
 
-    // ??? ?熬곣뫀沅뽪뤆?쎛 ?熬? ??????⑤챸?꾢슖????堉??濡?듆, ???逾????λ닑??????얍슖???蹂κ국??? ???낆┣??嶺뚮씞?????????臾먮┰??ル‘紐드슖?????
-    if (salePrice > 0) return salePrice;
-    return costFromStats || costFromItemSupply || costFromItemUnit || costFromRow || 0;
+    // 원가 데이터 없음 → 0 반환 (salePrice 폴백 제거: 이익=0 오표시 방지)
+    return 0;
   };
 
   const inList = useMemo(() => transactions.filter(tx => tx.type === 'in'), [transactions]);

@@ -73,15 +73,15 @@ export function buildColMap(headers, modeDefault) {
     quantity:     modeDefault === 'out'
       ? findCol('출고수량', '판매수량', '수량', '입고수량', 'qty', 'quantity')
       : findCol('입고수량', '구매수량', '수량', '출고수량', 'qty', 'quantity'),
+    // 출고 엑셀: unitPrice = 원가(비용) 컬럼만 매핑. 출고단가/판매가는 sellingPrice가 담당
+    // 입고 엑셀: unitPrice = 매입원가 계열 컬럼
     unitPrice:    modeDefault === 'out'
-      ? findCol('출고단가', '판매가', '판매단가', '매출단가', '매출가', '소비자가', '소매가',
-                 '출고가', '소가', 'price', 'selling', 'retail',
-                 '매입원가', '매입가', '원가', '단가', '입고단가', '입고가', '매입단가', '구매가', '구매단가', '가격')
+      ? findCol('매입원가', '매입가', '원가', '매입단가', '구매가', '구매단가', '매입가격', 'cost', 'unitcost')
       : findCol('매입원가', '매입가', '원가', '단가', '입고단가', '입고가', '매입단가', '구매가', '구매단가',
-                '매입가격', '입고가격', '공급단가', 'cost', 'price', 'unitprice',
-                '판매가', '판매단가', '출고단가'),
-    sellingPrice: findCol('판매가', '출고단가', '판매단가', '소비자가', '소매가', '매출단가', '소가',
-                          'selling', 'retail', 'saleprice'),
+                '매입가격', '입고가격', '공급단가', 'cost', 'unitprice', 'price'),
+    // sellingPrice: 판매가/출고단가 계열 (출고 엑셀 핵심 컬럼)
+    sellingPrice: findCol('판매가', '출고단가', '판매단가', '소비자가', '소매가', '매출단가', '소가', '출고가',
+                          '매출가', 'selling', 'retail', 'saleprice', 'price'),
     date:         modeDefault === 'out'
       ? findCol('출고일자', '출고일', '판매일', '날짜', '일자', '입고일자', 'date')
       : findCol('입고일자', '입고일', '구매일', '날짜', '일자', '출고일자', 'date'),
