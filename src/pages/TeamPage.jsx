@@ -176,16 +176,17 @@ export default function TeamPage() {
   const [roleChangingUid, setRoleChangingUid] = useState(null);
 
   // 권한 행렬 상태
-  const storeRolePerms = useStore(s => s.rolePermissions);
-  const [perms, setPerms] = useState(null);
+  const [storeRolePerms] = useStore(s => s.rolePermissions);
+  const [perms, setPerms] = useState(() => JSON.parse(JSON.stringify(DEFAULT_ROLE_PERMISSIONS)));
   const [permsDirty, setPermsDirty] = useState(false);
   const [permsSaving, setPermsSaving] = useState(false);
 
-  // store에서 권한 로드
+  // store에서 권한 로드 (DB에 저장된 값이 있을 때만 동기화)
   useEffect(() => {
-    const base = storeRolePerms || DEFAULT_ROLE_PERMISSIONS;
-    setPerms(JSON.parse(JSON.stringify(base)));
-    setPermsDirty(false);
+    if (storeRolePerms && typeof storeRolePerms === 'object' && !Array.isArray(storeRolePerms)) {
+      setPerms(JSON.parse(JSON.stringify(storeRolePerms)));
+      setPermsDirty(false);
+    }
   }, [storeRolePerms]);
 
   const load = useCallback(async () => {
@@ -316,7 +317,9 @@ export default function TeamPage() {
   };
 
   const handleRevertPerms = () => {
-    const base = storeRolePerms || DEFAULT_ROLE_PERMISSIONS;
+    const base = (storeRolePerms && typeof storeRolePerms === 'object' && !Array.isArray(storeRolePerms))
+      ? storeRolePerms
+      : DEFAULT_ROLE_PERMISSIONS;
     setPerms(JSON.parse(JSON.stringify(base)));
     setPermsDirty(false);
   };
