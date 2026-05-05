@@ -1,7 +1,7 @@
 /**
  * ReferralPage.jsx - 친구 초대 프로그램
  */
-import React, { useMemo } from 'react';
+import React, { useMemo, useEffect } from 'react';
 import { useStore } from '../hooks/useStore.js';
 import { getCurrentUser } from '../auth.js';
 import { showToast } from '../toast.js';
@@ -24,16 +24,21 @@ export default function ReferralPage() {
   const [referralData, setStore] = useStore(s => s.referralData || {});
   const user = useMemo(() => getCurrentUser(), []);
 
-  // 추천 코드 자동 생성
-  const data = useMemo(() => {
+  // 추천 코드 자동 초기화 — 렌더 중 상태 변이 금지이므로 useEffect 사용
+  useEffect(() => {
     if (!referralData.code && user) {
       const code = generateCode(user.uid);
-      const newData = { ...referralData, code, invited: [], rewards: 0, totalInvited: 0 };
-      setStore({ referralData: newData });
-      return newData;
+      setStore({ referralData: { ...referralData, code, invited: [], rewards: 0, totalInvited: 0 } });
+    }
+  }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // 표시용 데이터 — setStore 없이 순수 파생값만 계산
+  const data = useMemo(() => {
+    if (!referralData.code && user) {
+      return { ...referralData, code: generateCode(user.uid), invited: [], rewards: 0, totalInvited: 0 };
     }
     return referralData;
-  }, [referralData, user]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [referralData, user]);
 
   const myCode = data.code || '---';
   const invited = data.invited || [];

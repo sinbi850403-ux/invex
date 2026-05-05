@@ -4,7 +4,7 @@
 import React, { useState, useEffect } from 'react';
 import { useStore } from '../hooks/useStore.js';
 import { showToast } from '../toast.js';
-import { PLANS, getCurrentPlan, setPlan } from '../plan.js';
+import { PLANS, setPlan } from '../plan.js';
 import { setState as storeSetState } from '../store.js';
 
 const TOSS_CLIENT_KEY = import.meta.env.VITE_TOSS_CLIENT_KEY ?? '';
@@ -87,7 +87,9 @@ export default function BillingPage() {
   const [state] = useStore();
   const [showContact, setShowContact] = useState(false);
 
-  const currentPlan = getCurrentPlan();
+  // state.currentPlan 사용 — useStore가 store 업데이트를 구독하므로 reactive
+  // getCurrentPlan()은 렌더 시 한 번만 읽어 stale해질 수 있음
+  const currentPlan = state.currentPlan || 'free';
   const plan = PLANS[currentPlan];
   const subscription = state.subscription || {};
   const paymentHistory = state.paymentHistory || [];

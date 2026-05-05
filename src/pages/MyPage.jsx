@@ -5,11 +5,12 @@ import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import { supabase } from '../supabase-client.js';
 import { showToast } from '../toast.js';
-import { getCurrentPlan, PLANS } from '../plan.js';
+import { PLANS } from '../plan.js';
 
 export default function MyPage() {
   const { user, profile, logout } = useAuth();
-  const plan = getCurrentPlan();
+  // profile.plan 사용 — getCurrentPlan()은 store 초기값이 'free'라 race condition 발생 가능
+  const plan = profile?.plan || 'free';
   const planInfo = PLANS[plan] || PLANS.free;
 
   const [name, setName] = useState(profile?.name || user?.displayName || '');
