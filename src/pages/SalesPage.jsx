@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useStore } from '../hooks/useStore.js';
 import { showToast } from '../toast.js';
 import { addAuditLog } from '../audit-log.js';
-import { addTransaction } from '../store.js';
+import { createTransaction } from '../services/inoutService.js';
 import { toNum, fmt, orderTotal, genOrderNo, calcDueDate } from '../domain/salesConfig.js';
 import { StatusBadge } from '../components/sales/StatusBadge.jsx';
 import { SalesModal }  from '../components/sales/SalesModal.jsx';
@@ -80,12 +80,12 @@ export default function SalesPage() {
     (order.items || []).forEach((it, i) => {
       const qty = thisShip[i] || 0;
       if (qty <= 0) return;
-      addTransaction({
+      createTransaction({
         type: 'out', itemName: it.name, itemCode: it.itemCode || '',
         quantity: qty, unitPrice: toNum(it.price), date: shipDate,
         vendor: order.customer,
         note: `수주 ${order.orderNo} 출고${shipNote ? ' - ' + shipNote : ''}`,
-      });
+      }, true);
     });
 
     const newShipped = { ...shipped };

@@ -5,7 +5,7 @@ import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { Html5Qrcode } from 'html5-qrcode';
 import { useStore } from '../hooks/useStore.js';
 import { showToast } from '../toast.js';
-import { addTransaction } from '../store.js';
+import { createTransaction } from '../services/inoutService.js';
 
 /* 스캔 확인 모달 */
 function ScanConfirmModal({ payload, onConfirm, onClose }) {
@@ -125,7 +125,7 @@ export default function ScannerPage() {
 
   const handleConfirm = () => {
     const { item, qty, note, type, date } = confirmPayload;
-    addTransaction({
+    createTransaction({
       type,
       itemName: item.itemName,
       itemCode: item.itemCode || '',
@@ -133,12 +133,11 @@ export default function ScannerPage() {
       unitPrice: parseFloat(item.unitPrice) || 0,
       date,
       note: note ? `[스캔] ${note}` : '[스캔]',
-    });
+    }, true);
     setScanHistory(prev => [{
       time: new Date().toLocaleTimeString('ko-KR'),
       type, name: item.itemName, code: item.itemCode, qty,
     }, ...prev.slice(0, 19)]);
-    showToast(`${type === 'in' ? '입고' : '출고'} 등록: ${item.itemName} ${qty}개`, type === 'in' ? 'success' : 'info');
     setConfirmPayload(null);
     setScanResult(null);
   };

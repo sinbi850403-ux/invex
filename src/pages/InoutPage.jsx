@@ -7,14 +7,13 @@ import { useStore } from '../hooks/useStore.js';
 import { showToast } from '../toast.js';
 import { downloadExcel } from '../excel.js';
 import { canAction } from '../auth.js';
-import { addTransaction, deleteTransaction, deleteTransactionsBulk } from '../store.js';
 import { enableColumnResize } from '../ux-toolkit.js';
-import { fmtNum as fmt, fmtWon as W, normalizeCurrency } from '../utils/formatters.js';
-import { formatDateStr as formatDate } from '../domain/inoutExcelParser.js';
+import { normalizeCurrency } from '../utils/formatters.js';
 import { TxModal } from '../components/inout/TxModal.jsx';
 import { BulkUploadModal } from '../components/inout/BulkUploadModal.jsx';
-import { SortTh } from '../components/inout/SortTh.jsx';
+import { InoutTable } from '../components/inout/InoutTable.jsx';
 import { useInoutFilters } from '../hooks/useInoutFilters.js';
+import { createTransaction, removeTransaction, removeBulkTransactions } from '../services/inoutService.js';
 
 // ── 빈 상태 ──────────────────────────────────────────────────────────────────
 function EmptyState({ icon, msg, sub }) {
@@ -76,7 +75,6 @@ export function InoutPage({ mode = 'all' }) {
   // ── 선택 ───────────────────────────────────────────────────────────────────
   const allOnPageSelected = sorted.length > 0 && sorted.every(tx => selectedIds.has(tx.id));
 
-
   const toggleSelectAll = () => {
     setSelectedIds(prev => {
       const next = new Set(prev);
@@ -96,26 +94,12 @@ export function InoutPage({ mode = 'all' }) {
 
   // ── 삭제 ───────────────────────────────────────────────────────────────────
   const handleDelete = (tx) => {
-    if (!canDelete) { showToast('삭제 권한이 없습니다.', 'warning'); return; }
-    if (!confirm(`이 ${tx.type === 'in' ? '입고' : '출고'} 기록을 삭제하시겠습니까?\n품목: ${tx.itemName}`)) return;
-    deleteTransaction(tx.id);
-    showToast('삭제되었습니다.', 'success');
+    removeTransaction(tx, canDelete);
   };
 
   const handleBulkDelete = async () => {
-    if (!canBulk) { showToast('일괄 삭제 권한이 없습니다. 매니저 이상만 가능합니다.', 'warning'); return; }
-    if (!selectedIds.size) return;
-    if (!confirm(`선택한 ${selectedIds.size}건의 기록을 삭제하시겠습니까?`)) return;
-    const count = selectedIds.size;
-    showToast(`${count}건 삭제 중...`, 'info');
-    try {
-      await deleteTransactionsBulk([...selectedIds]);
-      setSelectedIds(new Set());
-      showToast(`${count}건 삭제 완료`, 'success');
-    } catch (err) {
-      showToast('삭제 중 오류가 발생했습니다.', 'error');
-      console.error('[InoutPage] 배치 삭제 실패:', err);
-    }
+    const deleted = await removeBulkTransactions(selectedIds, canBulk);
+    if (deleted) setSelectedIds(new Set());
   };
 
   // ── 엑셀 내보내기 ──────────────────────────────────────────────────────────
@@ -180,26 +164,13 @@ export function InoutPage({ mode = 'all' }) {
 
   // ── 등록 저장 ──────────────────────────────────────────────────────────────
   const handleSaveTx = (data) => {
-    if (!canCreate) { showToast('등록 권한이 없습니다.', 'warning'); return; }
-    addTransaction(data);
-    showToast(`${data.type === 'in' ? '입고' : '출고'} 등록 완료!`, 'success');
-    setModal(null);
+    const ok = createTransaction(data, canCreate);
+    if (ok) setModal(null);
   };
 
   useEffect(() => {
     if (tableRef.current) enableColumnResize(tableRef.current);
   }, [sorted]);
-
-  // ── 배지 렌더 ──────────────────────────────────────────────────────────────
-  const TypeBadge = ({ type }) => (
-    <span style={{
-      background: type === 'in' ? 'rgba(22,163,74,0.12)' : 'rgba(239,68,68,0.12)',
-      color: type === 'in' ? '#16a34a' : '#ef4444',
-      padding: '2px 8px', borderRadius: '10px', fontSize: '11px', fontWeight: 600,
-    }}>
-      {type === 'in' ? '입고' : '출고'}
-    </span>
-  );
 
   // ── 렌더 ───────────────────────────────────────────────────────────────────
   return (
@@ -383,236 +354,22 @@ export function InoutPage({ mode = 'all' }) {
             sub={transactions.length === 0 ? '위 버튼으로 입고 또는 출고를 등록해 주세요.' : ''}
           />
         ) : (
-          <div className="table-wrapper" style={{ border: 'none' }}>
-            <table className="data-table inv-table" ref={tableRef}>
-              <thead>
-                {isOutMode ? (
-                  <tr>
-                    <th style={{ width: '40px', textAlign: 'center', textTransform: 'none' }}>
-                      <input type="checkbox" checked={allOnPageSelected} onChange={toggleSelectAll} />
-                    </th>
-                    <th className="col-num" style={{ textTransform: 'none', fontSize: '13px' }}>#</th>
-                    <SortTh sortKey="category" sort={sort} onSort={toggleSort}>자산</SortTh>
-                    <SortTh sortKey="date" sort={sort} onSort={toggleSort}>출고일자</SortTh>
-                    <SortTh sortKey="vendor" sort={sort} onSort={toggleSort}>거래처</SortTh>
-                    <SortTh sortKey="itemCode" sort={sort} onSort={toggleSort}>상품코드</SortTh>
-                    <SortTh sortKey="itemName" className="col-fill" sort={sort} onSort={toggleSort}>품명</SortTh>
-                    <SortTh sortKey="color" sort={sort} onSort={toggleSort}>색상</SortTh>
-                    <SortTh sortKey="spec" sort={sort} onSort={toggleSort}>규격</SortTh>
-                    <SortTh sortKey="unit" sort={sort} onSort={toggleSort}>단위</SortTh>
-                    <SortTh sortKey="quantity" className="text-right" sort={sort} onSort={toggleSort}>출고수량</SortTh>
-                    {[
-                      { key: 'sellingPrice', label: '출고단가' },
-                      { key: 'outAmt',       label: '판매가'   },
-                      { key: 'outVat',       label: '부가세'   },
-                      { key: 'outTotal',     label: '출고합계' },
-                      { key: 'profit',       label: '이익액'   },
-                      { key: 'profitMargin', label: '이익률'   },
-                    ].map(({ key, label }) => (
-                      <SortTh key={key} sortKey={key} sort={sort} onSort={toggleSort} className="text-right" style={{
-                        fontWeight: 700, fontSize: '11px', textTransform: 'none', whiteSpace: 'nowrap', minWidth: 72,
-                      }}>{label}</SortTh>
-                    ))}
-                    <th style={{ textTransform: 'none', fontSize: '13px' }}>관리</th>
-                  </tr>
-                ) : (
-                  <tr>
-                    <th style={{ width: '40px', textAlign: 'center', textTransform: 'none' }}>
-                      <input type="checkbox" checked={allOnPageSelected} onChange={toggleSelectAll} />
-                    </th>
-                    <th className="col-num" style={{ textTransform: 'none', fontSize: '13px' }}>#</th>
-                    {!isInMode && !isOutMode && <SortTh sortKey="type" sort={sort} onSort={toggleSort}>구분</SortTh>}
-                    {isInMode ? (
-                      <>
-                        <SortTh sortKey="category" sort={sort} onSort={toggleSort} style={{ color: 'var(--text-muted)' }}>자산</SortTh>
-                        <SortTh sortKey="date" sort={sort} onSort={toggleSort}>입고일자</SortTh>
-                        <SortTh sortKey="vendor" sort={sort} onSort={toggleSort}>거래처</SortTh>
-                        <SortTh sortKey="itemCode" sort={sort} onSort={toggleSort} style={{ color: 'var(--text-muted)' }}>상품코드</SortTh>
-                        <SortTh sortKey="itemName" className="col-fill" sort={sort} onSort={toggleSort}>품명</SortTh>
-                        <SortTh sortKey="color" sort={sort} onSort={toggleSort} style={{ color: 'var(--text-muted)' }}>색상</SortTh>
-                        <SortTh sortKey="spec" sort={sort} onSort={toggleSort} style={{ color: 'var(--text-muted)' }}>규격</SortTh>
-                        <SortTh sortKey="unit" sort={sort} onSort={toggleSort} style={{ color: 'var(--text-muted)' }}>단위</SortTh>
-                        <SortTh sortKey="quantity" className="text-right" sort={sort} onSort={toggleSort}>입고수량</SortTh>
-                        <SortTh sortKey="unitPrice" className="text-right" sort={sort} onSort={toggleSort}>매입원가</SortTh>
-                        <SortTh sortKey="supply" className="text-right" sort={sort} onSort={toggleSort}>공급가액</SortTh>
-                        <SortTh sortKey="vat" className="text-right" sort={sort} onSort={toggleSort}>부가세</SortTh>
-                        <SortTh sortKey="totalPrice" className="text-right" sort={sort} onSort={toggleSort}>합계금액</SortTh>
-                      </>
-                    ) : (
-                      <>
-                        <SortTh sortKey="date" sort={sort} onSort={toggleSort}>날짜</SortTh>
-                        <SortTh sortKey="vendor" sort={sort} onSort={toggleSort}>거래처</SortTh>
-                        <SortTh sortKey="itemName" className="col-fill" sort={sort} onSort={toggleSort}>품목명</SortTh>
-                        <SortTh sortKey="color" sort={sort} onSort={toggleSort} style={{ color: 'var(--text-muted)' }}>색상</SortTh>
-                        <SortTh sortKey="quantity" className="text-right" sort={sort} onSort={toggleSort} style={{ color: 'var(--danger)', fontWeight: 700 }}>수량</SortTh>
-                        <SortTh sortKey="unitPrice" className="text-right" sort={sort} onSort={toggleSort}>원가</SortTh>
-                        <SortTh sortKey="sellingPrice" className="text-right" sort={sort} onSort={toggleSort} style={{ color: 'var(--success)', fontWeight: 700 }}>판매가</SortTh>
-                        <SortTh sortKey="supply" className="text-right" sort={sort} onSort={toggleSort} style={{ fontWeight: 700 }}>금액</SortTh>
-                        <SortTh sortKey="note" sort={sort} onSort={toggleSort} style={{ color: 'var(--text-muted)' }}>비고</SortTh>
-                      </>
-                    )}
-                    <th style={{ textTransform: 'none', fontSize: '13px' }}>관리</th>
-                  </tr>
-                )}
-              </thead>
-              <tbody>
-                {sorted.map((tx, i) => {
-                  const rowNum = i + 1;
-                  const qty = parseFloat(tx.quantity) || 0;
-                  const itemData = resolveItem(tx);
-                  const unitPrice = normalizeCurrency(tx.unitPrice || itemData.unitPrice);
-                  const supply = Math.round(unitPrice * qty);
-                  const vat = Math.ceil(supply * 0.1);
-                  const totalPrice = supply + vat;
-                  const salePrice = normalizeCurrency(tx.sellingPrice || itemData.salePrice);
-                  const outAmt = Math.round(salePrice * qty);
-                  const wac = resolveWac(tx, itemData);
-                  const wacSupply = Math.round(wac * qty);
-                  const profit = outAmt - wacSupply;
-                  const category = tx.category || itemData.category || '';
-                  const itemCode = tx.itemCode || itemData.itemCode || '';
-                  const spec = tx.spec || itemData.spec || '';
-                  const unit = tx.unit || itemData.unit || '';
-                  const isSelected = selectedIds.has(tx.id);
-                  return (
-                    <tr key={tx.id} className={isSelected ? 'selected' : ''}>
-                      <td style={{ textAlign: 'center' }}>
-                        <input type="checkbox" checked={isSelected} onChange={() => toggleSelect(tx.id)} />
-                      </td>
-                      <td className="col-num">{rowNum}</td>
-                      {!isInMode && !isOutMode && (
-                        <td><TypeBadge type={tx.type} /></td>
-                      )}
-                      {isOutMode ? (
-                        <>
-                          <td style={{ fontSize: '12px' }}>{category || '-'}</td>
-                          <td style={{ fontSize: '12px' }}>{formatDate(tx.date)}</td>
-                          <td style={{ fontSize: '12px' }}>{tx.vendor || '-'}</td>
-                          <td style={{ fontSize: '12px' }}>{itemCode || '-'}</td>
-                          <td className="col-fill"><strong>{tx.itemName || '-'}</strong></td>
-                          <td style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{tx.color || itemData.color || '-'}</td>
-                          <td style={{ fontSize: '12px' }}>{spec || '-'}</td>
-                          <td style={{ fontSize: '12px' }}>{unit || '-'}</td>
-                          <td className="text-right" style={{ fontWeight: 600 }}>
-                            {qty ? qty.toLocaleString('ko-KR') : '-'}
-                          </td>
-                          {/* 판매 그룹 */}
-                          <td className="text-right">{salePrice ? W(salePrice) : '-'}</td>
-                          <td className="text-right">{outAmt ? W(outAmt) : '-'}</td>
-                          <td className="text-right">{outAmt ? W(Math.round(outAmt * 0.1)) : '-'}</td>
-                          <td className="text-right">{outAmt ? W(Math.round(outAmt * 1.1)) : '-'}</td>
-                          {/* 이익액: wac>0이면 실제 이익(₩0 포함), wac=0이면 원가없음 표시 */}
-                          <td className="text-right">
-                            {outAmt > 0
-                              ? wac > 0
-                                ? <span style={{ color: profit >= 0 ? 'var(--success, #4caf50)' : 'var(--error, #f44336)', fontWeight: 600 }}>
-                                    {profit >= 0 ? W(profit) : `-${W(Math.abs(profit))}`}
-                                  </span>
-                                : <span style={{ color: 'var(--text-muted)', fontSize: '11px' }}>원가없음</span>
-                              : '-'}
-                          </td>
-                          <td className="text-right">
-                            {outAmt > 0 && wac > 0
-                              ? <span style={{ color: profit >= 0 ? 'var(--success, #4caf50)' : 'var(--error, #f44336)' }}>
-                                  {(profit / outAmt * 100).toFixed(1)}%
-                                </span>
-                              : '-'}
-                          </td>
-                        </>
-                      ) : isInMode ? (
-                        <>
-                          <td style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{category || '-'}</td>
-                          <td style={{ fontSize: '13px' }}>{formatDate(tx.date)}</td>
-                          <td style={{ fontSize: '13px' }}>{tx.vendor || '-'}</td>
-                          <td style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{itemCode || '-'}</td>
-                          <td className="col-fill"><strong>{tx.itemName || '-'}</strong></td>
-                          <td style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{tx.color || itemData.color || '-'}</td>
-                          <td style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{spec || '-'}</td>
-                          <td style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{unit || '-'}</td>
-                          <td className="text-right" style={{ fontWeight: 600, fontSize: '13px' }}>
-                            +{qty ? qty.toLocaleString('ko-KR') : '-'}
-                          </td>
-                          <td className="text-right" style={{ fontSize: '13px' }}>{unitPrice ? W(unitPrice) : '-'}</td>
-                          <td className="text-right" style={{ fontSize: '13px' }}>{supply ? W(supply) : '-'}</td>
-                          <td className="text-right" style={{ color: 'var(--text-muted)', fontSize: '12px' }}>{supply ? W(vat) : '-'}</td>
-                          <td className="text-right" style={{ fontWeight: 700, fontSize: '13px' }}>{supply ? W(totalPrice) : '-'}</td>
-                        </>
-                      ) : (
-                        <>
-                          <td style={{ fontSize: '12px' }}>{formatDate(tx.date)}</td>
-                          <td style={{ fontSize: '12px' }}>{tx.vendor || '-'}</td>
-                          <td className="col-fill">
-                            <strong>{tx.itemName || '-'}</strong>
-                            {itemCode && <span style={{ fontSize: '11px', color: 'var(--text-muted)', marginLeft: '6px' }}>{itemCode}</span>}
-                          </td>
-                          <td style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{tx.color || itemData.color || '-'}</td>
-                          <td className="text-right">
-                            <span style={{ color: tx.type === 'in' ? '#16a34a' : '#ef4444', fontWeight: 600 }}>
-                              {tx.type === 'in' ? '+' : '-'}{fmt(qty)}
-                            </span>
-                          </td>
-                          <td className="text-right">{unitPrice ? W(unitPrice) : <span style={{ color: 'var(--text-muted)' }}>-</span>}</td>
-                          <td className="text-right">{salePrice ? W(salePrice) : <span style={{ color: 'var(--text-muted)' }}>-</span>}</td>
-                          <td className="text-right" style={{ fontWeight: 600 }}>{supply ? W(supply) : <span style={{ color: 'var(--text-muted)' }}>-</span>}</td>
-                          <td style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{tx.note || ''}</td>
-                        </>
-                      )}
-                      <td>
-                        {canDelete && (
-                          <button
-                            className="btn btn-xs btn-outline"
-                            style={{ color: 'var(--danger)', borderColor: 'var(--danger)' }}
-                            onClick={() => handleDelete(tx)}
-                          >
-                            삭제
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-              {isInMode && inTotals && sorted.length > 0 && (() => {
-                const S = { fontWeight: 700, padding: '8px 12px', borderTop: '2px solid var(--border-color,#333)' };
-                return (
-                  <tfoot>
-                    <tr style={{ background: 'var(--bg-lighter)', fontWeight: 700 }}>
-                      <td colSpan={10} className="text-right" style={{ ...S, color: 'var(--text-muted)', fontSize: '12px' }}>
-                        합계 ({sorted.length.toLocaleString()}건)
-                      </td>
-                      <td className="text-right" style={{ ...S, fontSize: '13px' }}>
-                        +{inTotals.totQty.toLocaleString('ko-KR')}
-                      </td>
-                      <td className="text-right" style={S}>-</td>
-                      <td className="text-right" style={S}>{W(inTotals.totSupply)}</td>
-                      <td className="text-right" style={{ ...S, color: 'var(--text-muted)' }}>{W(inTotals.totVat)}</td>
-                      <td className="text-right" style={S}>{W(inTotals.totTotal)}</td>
-                      <td style={S}></td>
-                    </tr>
-                  </tfoot>
-                );
-              })()}
-              {isOutMode && outTotals && sorted.length > 0 && (() => {
-                const S = { fontWeight: 700, padding: '8px 12px', borderTop: '2px solid var(--border-color,#333)' };
-                return (
-                  <tfoot>
-                    <tr style={{ background: 'var(--bg-lighter)', fontWeight: 700 }}>
-                      <td colSpan={11} className="text-right" style={{ ...S, color: 'var(--text-muted)', fontSize: '12px' }}>
-                        합계 ({sorted.length.toLocaleString()}건)
-                      </td>
-                      <td className="text-right" style={{ ...S, fontWeight: 400 }}>-</td>
-                      <td className="text-right" style={S}>{W(outTotals.totOutAmt)}</td>
-                      <td className="text-right" style={S}>{W(outTotals.totVat)}</td>
-                      <td className="text-right" style={S}>{W(outTotals.totOutTotal)}</td>
-                      <td className="text-right" style={S}>{W(outTotals.totProfit)}</td>
-                      <td className="text-right" style={{ ...S, fontSize: '12px' }}>{outTotals.totProfitMargin}</td>
-                      <td style={S}></td>
-                    </tr>
-                  </tfoot>
-                );
-              })()}
-            </table>
-          </div>
+          <InoutTable
+            mode={mode}
+            sorted={sorted}
+            sort={sort}
+            onSort={toggleSort}
+            selectedIds={selectedIds}
+            onSelectAll={toggleSelectAll}
+            onSelect={toggleSelect}
+            canDelete={canDelete}
+            resolveItem={resolveItem}
+            resolveWac={resolveWac}
+            onDelete={handleDelete}
+            inTotals={inTotals}
+            outTotals={outTotals}
+            tableRef={tableRef}
+          />
         )}
 
       </div>

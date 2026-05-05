@@ -5,7 +5,7 @@
 import React, { useState, useMemo } from 'react';
 import { useStore } from '../hooks/useStore.js';
 import { showToast } from '../toast.js';
-import { addTransaction } from '../store.js';
+import { createTransaction } from '../services/inoutService.js';
 import { addAuditLog } from '../audit-log.js';
 import { generatePurchaseOrderPDF } from '../pdf-generator.js';
 import { STATUS, fmt, toNum, orderTotal, calcDueDate } from '../domain/ordersConfig.js';
@@ -90,13 +90,13 @@ export default function OrdersPage() {
     (order.items || []).forEach((it, i) => {
       const qty = receiveQtys[i] || 0;
       if (qty <= 0) return;
-      addTransaction({
+      createTransaction({
         type: 'in', date: receiveDate,
         itemName: it.name, itemCode: it.itemCode || '',
         quantity: qty, unitPrice: toNum(it.price),
         vendor: order.vendor, warehouse: warehouse || '',
         note: `발주 ${order.orderNo} 입고${receiveNote ? ' - ' + receiveNote : ''}`,
-      });
+      }, true);
     });
 
     const newReceived = { ...prevReceived };
