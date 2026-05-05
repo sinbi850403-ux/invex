@@ -1,4 +1,4 @@
-/**
+﻿/**
  * supabaseSync.js - Supabase 동기화 레이어 (디바운스)
  *
  * 디바운스 방식: setState가 호출될 때마다 API를 즉시 호출하지 않고,
@@ -139,9 +139,11 @@ async function syncToSupabase() {
         .map(item => ({ id: item._id, item_name: item.itemName }))
         .filter(item => item.id && item.item_name);
 
+      // UUID 형식 검증 — 'wh-default' 같은 로컬 더미 ID 제외
+      const _UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
       let dbWarehouses = (stateHolder.current.warehouses || [])
         .map(w => ({ id: w._id || w.id, name: w.name }))
-        .filter(w => w.name);
+        .filter(w => w.name && _UUID_RE.test(w.id || ''));
       const unsyncedTxs = (stateHolder.current.transactions || []).filter(tx => !tx._synced);
       const missingWarehouseNames = [...new Set(
         unsyncedTxs
@@ -165,13 +167,16 @@ async function syncToSupabase() {
       }
 
       // warehouse 臾몄옄????warehouse_id UUID 蹂??
+      // warehouse 이름 → UUID 변환 (wh-default 등 비UUID 값은 null 반환)
       const getWarehouseId = (warehouseName) => {
         const name = String(warehouseName || '').trim();
         if (!name) {
-          return dbWarehouses.find(w => w.name === '본사 창고')?.id || dbWarehouses[0]?.id || null;
+          const fid = dbWarehouses.find(w => w.name === '본사 창고')?.id || dbWarehouses[0]?.id || null;
+          return _UUID_RE.test(fid || '') ? fid : null;
         }
         const warehouse = dbWarehouses.find(w => w.name === name);
-        return warehouse ? warehouse.id : null;
+        const id = warehouse ? warehouse.id : null;
+        return _UUID_RE.test(id || '') ? id : null;
       };
 
       // item_name 臾몄옄????item_id UUID 蹂??
