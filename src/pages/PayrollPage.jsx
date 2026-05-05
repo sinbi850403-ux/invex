@@ -408,14 +408,27 @@ export default function PayrollPage() {
           <h3 style={{ marginBottom: 12 }}>이번달 급여 요약</h3>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12 }}>
             {[
-              { label: deptFilter ? `${deptFilter} 직원` : '대상 직원', val: visiblePayrolls.length + '명', color: '#6366f1' },
-              { label: '총 지급액',  val: fmtWon(totalGross),  color: '#3b82f6' },
-              { label: '총 공제액',  val: fmtWon(totalDeduct), color: '#ef4444' },
-              { label: '총 실지급', val: fmtWon(totalNet),    color: '#10b981' },
-            ].map(({ label, val, color }) => (
-              <div key={label} className="stat-card" style={{ borderTop: `3px solid ${color}` }}>
-                <div className="stat-value" style={{ color }}>{val}</div>
-                <div className="stat-label">{label}</div>
+              { label: deptFilter ? `${deptFilter} 직원` : '대상 직원', val: visiblePayrolls.length + '명', color: '#6366f1', icon: '👥' },
+              { label: '총 지급액',  val: fmtWon(totalGross),  color: '#3b82f6', icon: '💰' },
+              { label: '총 공제액',  val: fmtWon(totalDeduct), color: '#ef4444', icon: '📉' },
+              { label: '총 실지급', val: fmtWon(totalNet),    color: '#10b981', icon: '✅' },
+            ].map(({ label, val, color, icon }) => (
+              <div key={label} style={{
+                borderRadius: 10,
+                border: '1px solid var(--border)',
+                borderLeft: `4px solid ${color}`,
+                background: 'var(--bg-secondary)',
+                padding: '14px 16px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 6,
+              }}>
+                <div style={{ fontSize: 11, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 5 }}>
+                  <span>{icon}</span>{label}
+                </div>
+                <div style={{ fontSize: 20, fontWeight: 800, color, fontVariantNumeric: 'tabular-nums', lineHeight: 1.2 }}>
+                  {val}
+                </div>
               </div>
             ))}
           </div>
