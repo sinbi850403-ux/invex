@@ -199,7 +199,7 @@ function UpgradeModal({ data, onClose }) {
 }
 
 export default function AppLayout() {
-  const { user, profile, startPage } = useAuth();
+  const { user, profile, startPage, isReady } = useAuth();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => localStorage.getItem('invex:sidebar-collapsed') === '1');
@@ -216,14 +216,15 @@ export default function AppLayout() {
   const hasNavigated = useRef(false);
 
   // 앱 초기 진입 시 startPage로 이동 — 직접 URL 접근(/inventory 등)은 유지
+  // isReady(인증 완료) 시점에 단 1회만 실행 후 hasNavigated를 잠금 → 이후 대시보드 이동 시 재리다이렉트 방지
   useEffect(() => {
-    if (hasNavigated.current) return;
+    if (!isReady || hasNavigated.current) return;
+    hasNavigated.current = true; // auth 완료 즉시 잠금 (경로 무관)
     const isRoot = ['/', '/home'].includes(window.location.pathname);
     if (isRoot && startPage && startPage !== 'home') {
-      hasNavigated.current = true;
       navigate('/' + startPage, { replace: true });
     }
-  }, [startPage, navigate]);
+  }, [isReady, startPage, navigate]);
 
   // 온보딩 체크 — restoreState 완료(invex:store-updated '*') 이후 실행
   // 기존 1초 타임아웃 방식: Supabase 로딩(~1-2s)보다 빠를 수 있어 기존 사용자에게도 모달 노출되는 버그
