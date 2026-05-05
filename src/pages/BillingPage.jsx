@@ -300,7 +300,7 @@ export default function BillingPage() {
                 </div>
               </>
             ) : currentPlan !== 'free' ? (
-              <div style={{ marginTop: '4px' }}><span className="badge badge-warning">무료 체험</span></div>
+              <div style={{ marginTop: '4px' }}><span className="badge badge-warning">베타 무료</span></div>
             ) : null}
           </div>
         </div>
