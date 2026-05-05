@@ -1555,3 +1555,46 @@ CREATE TRIGGER trg_role_permissions_updated_at
   BEFORE UPDATE ON role_permissions
   FOR EACH ROW
   EXECUTE FUNCTION update_role_permissions_updated_at();
+
+-- ============================================================
+-- 41. admin_change_user_plan — 관리자 요금제 변경 RPC (P1-5)
+-- ============================================================
+-- 왜 필요? → profiles 테이블은 RLS(auth.uid()=id)로 보호되어
+--   일반 UPDATE로는 타 사용자 plan 변경 불가.
+--   SECURITY DEFINER RPC를 통해 서버 권한으로 실행.
+-- 보안: 호출자가 admin 역할인지 검증 후 업데이트.
+CREATE OR REPLACE FUNCTION public.admin_change_user_plan(
+  target_user_id UUID,
+  new_plan TEXT
+) RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  caller_role TEXT;
+BEGIN
+  -- 호출자의 role 확인 (admin만 허용)
+  SELECT role INTO caller_role
+  FROM public.profiles
+  WHERE id = auth.uid();
+
+  IF caller_role IS DISTINCT FROM 'admin' THEN
+    RAISE EXCEPTION 'permission denied: admin role required';
+  END IF;
+
+  -- 유효한 요금제 값만 허용
+  IF new_plan NOT IN ('free', 'pro', 'enterprise') THEN
+    RAISE EXCEPTION 'invalid plan: %', new_plan;
+  END IF;
+
+  UPDATE public.profiles
+  SET plan = new_plan
+  WHERE id = target_user_id;
+END;
+$$;
+
+-- RPC 실행 권한: 인증된 사용자에게만 허용 (내부에서 admin 검증)
+REVOKE ALL ON FUNCTION public.admin_change_user_plan(UUID, TEXT) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.admin_change_user_plan(UUID, TEXT) TO authenticated;
+

@@ -6,7 +6,12 @@ import { supabase } from '../../supabase-client.js';
 export function PlanChangeModal({ user: u, onClose, onRefresh, currentUser }) {
   async function changePlan(planId) {
     try {
-      const { error } = await supabase.from('profiles').update({ plan: planId }).eq('id', u.id);
+      // P1-5: profiles 직접 UPDATE → RLS auth.uid()=id 위반 수정
+      // SECURITY DEFINER RPC로 교체 (관리자만 호출 가능한 서버 함수)
+      const { error } = await supabase.rpc('admin_change_user_plan', {
+        target_user_id: u.id,
+        new_plan: planId,
+      });
       if (error) throw error;
       if (currentUser?.id === u.id) setPlan(planId);
       onClose();

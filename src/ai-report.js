@@ -1,11 +1,12 @@
 /**
  * ai-report.js — AI 경영 분석 리포트 생성
- * OpenAI gpt-4o-mini 기반, 범용 스트리밍 + 페이지별 프롬프트 빌더
- * @version 2.0.0
+ * Vercel Edge Function(/api/ai-proxy)을 통해 OpenAI 호출 — 키 클라이언트 미노출
+ * @version 2.1.0
  */
 
-const API_KEY = import.meta.env.VITE_OPENAI_API_KEY ?? '';
-const ENDPOINT = 'https://api.openai.com/v1/chat/completions';
+// P0-1: VITE_OPENAI_API_KEY 클라이언트 번들 노출 수정
+// 클라이언트는 /api/ai-proxy 만 호출. OpenAI 키는 서버(api/ai-proxy.js)에서만 보유.
+const PROXY_ENDPOINT = '/api/ai-proxy';
 export const MODEL = 'gpt-4o-mini';
 
 // ─────────────────────────────────────────────
@@ -17,26 +18,14 @@ export const MODEL = 'gpt-4o-mini';
  * @param {(chunk: string) => void} onChunk - 토큰 수신 콜백
  */
 export async function callAIStream(systemPrompt, userPrompt, onChunk) {
-  if (!API_KEY) {
-    throw new Error('OpenAI API 키가 설정되지 않았습니다. .env의 VITE_OPENAI_API_KEY를 확인하세요.');
-  }
-  const res = await fetch(ENDPOINT, {
+  const res = await fetch(PROXY_ENDPOINT, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${API_KEY}` },
-    body: JSON.stringify({
-      model: MODEL,
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user',   content: userPrompt },
-      ],
-      max_tokens: 1024,
-      temperature: 0.65,
-      stream: true,
-    }),
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ systemPrompt, userPrompt }),
   });
   if (!res.ok) {
     let msg = `HTTP ${res.status}`;
-    try { const err = await res.json(); msg = err.error?.message || msg; } catch { /* noop */ }
+    try { const err = await res.json(); msg = err.error || msg; } catch { /* noop */ }
     throw new Error(`AI 분석 실패: ${msg}`);
   }
   const reader = res.body.getReader();

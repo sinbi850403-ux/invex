@@ -65,11 +65,9 @@ export const supabase = isSupabaseConfigured
       auth: {
         persistSession: true,
         autoRefreshToken: true,
-        // 이전 인증 저장소와 충돌 방지
         storageKey: 'invex-supabase-auth',
-        // 동시 다중 쿼리 시 Web Locks 경쟁 방지
-        // (단일 탭 SPA이므로 크로스탭 락 보호 불필요)
-        lock: (_name, _acquireTimeout, fn) => fn(),
+        // P1-4: lock no-op 제거 → 기본 Web Locks API 복원
+        // 다중 탭 동시 토큰 갱신 레이스 컨디션 방지
       },
     })
   : null;

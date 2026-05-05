@@ -163,12 +163,16 @@ export function computeHomeDashboard({ items, transactions, safetyStock, categor
     const minimum = toNumber(safetyStock[item.itemName]);
     return minimum > 0 && getItemQty(item) <= minimum;
   });
-  const deadStockItems = filteredItems.filter(item => {
-    if (getItemQty(item) <= 0) return false;
-    return !filteredTx.some(tx =>
-      tx.type === 'out' && tx.itemName === item.itemName && String(tx.date || '') >= thirtyDayCutoff
-    );
-  });
+
+  // P1-6: O(I×T) → O(I+T) — 30일 이내 출고 품목명 Set 선계산
+  const recentOutSet = new Set(
+    filteredTx
+      .filter(tx => tx.type === 'out' && String(tx.date || '') >= thirtyDayCutoff)
+      .map(tx => tx.itemName)
+  );
+  const deadStockItems = filteredItems.filter(item =>
+    getItemQty(item) > 0 && !recentOutSet.has(item.itemName)
+  );
 
   const todayTx       = filteredTx.filter(tx => String(tx.date || '') === todayKey);
   const todayInCount  = todayTx.filter(tx => tx.type === 'in').length;
@@ -211,13 +215,9 @@ export function computeHomeDashboard({ items, transactions, safetyStock, categor
     .sort((a, b) => b[1] - a[1]).slice(0, 5)
     .map(([name, qty]) => ({ name, qty }));
 
+  // P1-6: losers도 recentOutSet 재사용 → O(I×T) → O(I)
   const losers = filteredItems
-    .filter(item => {
-      if (getItemQty(item) <= 0) return false;
-      return !filteredTx.some(tx =>
-        tx.type === 'out' && tx.itemName === item.itemName && String(tx.date || '') >= thirtyDayCutoff
-      );
-    })
+    .filter(item => getItemQty(item) > 0 && !recentOutSet.has(item.itemName))
     .sort((a, b) => getItemSupplyValue(b, itemStocks) - getItemSupplyValue(a, itemStocks))
     .slice(0, 5);
 
