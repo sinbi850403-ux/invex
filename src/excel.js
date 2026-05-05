@@ -51,37 +51,30 @@ export async function readExcelFile(file) {
     const normalized = rows.map((row) => {
       const filled = row.slice();
       while (filled.length < maxCols) filled.push('');
-      return filled.map((cell) => normalizeExcelCell(cell));
+      return filled.map((cell) => {
+        if (cell == null) return '';
+        if (typeof cell !== 'object') return cell;
+        // Date — YYYY-MM-DD 문자열로 변환
+        if (cell instanceof Date) {
+          const y = cell.getFullYear();
+          const m = String(cell.getMonth() + 1).padStart(2, '0');
+          const d = String(cell.getDate()).padStart(2, '0');
+          return `${y}-${m}-${d}`;
+        }
+        // ExcelJS richText
+        if (cell.richText) return cell.richText.map(r => r.text || '').join('');
+        // ExcelJS formula → use result
+        if ('result' in cell) return cell.result ?? '';
+        // ExcelJS hyperlink
+        if (cell.text != null) return String(cell.text);
+        return '';
+      });
     });
 
     sheets[worksheet.name] = normalized;
   });
 
   return { sheetNames, sheets };
-}
-
-function normalizeExcelCell(cell) {
-  if (cell == null) return '';
-  if (typeof cell === 'string' || typeof cell === 'number' || typeof cell === 'boolean') {
-    return cell;
-  }
-  if (cell instanceof Date) {
-    return cell.toISOString().slice(0, 10);
-  }
-  if (Array.isArray(cell)) {
-    return cell.map((part) => normalizeExcelCell(part)).join(' ').trim();
-  }
-  if (typeof cell === 'object') {
-    if (typeof cell.text === 'string') return cell.text;
-    if (Array.isArray(cell.richText)) {
-      return cell.richText.map((part) => String(part?.text ?? '')).join('');
-    }
-    if ('result' in cell && cell.result != null) return normalizeExcelCell(cell.result);
-    if (typeof cell.hyperlink === 'string' && typeof cell.text === 'string') return cell.text;
-    if (typeof cell.hyperlink === 'string') return cell.hyperlink;
-    if (typeof cell.formula === 'string' && cell.formula) return cell.formula;
-  }
-  return String(cell);
 }
 
 export async function downloadExcel(data, fileName = '내보내기') {

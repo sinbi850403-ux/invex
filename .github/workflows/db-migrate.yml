@@ -1,0 +1,146 @@
+name: DB Migrations
+
+on:
+  pull_request:
+    paths:
+      - 'db/migrations/**'
+      - '.github/workflows/db-migrate.yml'
+  push:
+    branches: [main, master]
+    paths:
+      - 'db/migrations/**'
+  workflow_dispatch: {}
+
+jobs:
+  # ============================================================
+  # PR — dbmate up && rollback && up dry-run on ephemeral PG 15
+  # 마이그레이션 파일이 멱등 + 양방향 안전한지 검증
+  # ============================================================
+  dry-run:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: test_pw
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgres://postgres:test_pw@localhost:5432/postgres?sslmode=disable
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dbmate
+        run: |
+          sudo curl -fsSL -o /usr/local/bin/dbmate \
+            https://github.com/amacneil/dbmate/releases/latest/download/dbmate-linux-amd64
+          sudo chmod +x /usr/local/bin/dbmate
+          dbmate --version
+
+      - name: Bootstrap minimal auth schema (Supabase compatibility)
+        # 셀프호스트 Supabase가 아닌 일반 PG에서는 auth.users / auth.uid() 부재 → stub 생성
+        run: |
+          psql "$DATABASE_URL" <<'SQL'
+          CREATE SCHEMA IF NOT EXISTS auth;
+          CREATE TABLE IF NOT EXISTS auth.users (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            email TEXT UNIQUE,
+            raw_user_meta_data JSONB DEFAULT '{}'::jsonb,
+            created_at TIMESTAMPTZ DEFAULT now()
+          );
+          CREATE OR REPLACE FUNCTION auth.uid() RETURNS UUID
+            LANGUAGE sql STABLE AS $$ SELECT NULL::uuid $$;
+          CREATE OR REPLACE FUNCTION auth.jwt() RETURNS JSONB
+            LANGUAGE sql STABLE AS $$ SELECT '{}'::jsonb $$;
+          CREATE EXTENSION IF NOT EXISTS pgcrypto;
+          ALTER DATABASE postgres SET app.rrn_key = 'ci-test-key-must-be-32-chars-or-more!';
+          SQL
+
+      - name: dbmate status (initial)
+        run: dbmate -d ./db/migrations status
+
+      - name: dbmate up (forward)
+        run: dbmate -d ./db/migrations up
+
+      - name: dbmate rollback (one step)
+        run: dbmate -d ./db/migrations rollback
+
+      - name: dbmate up (re-apply)
+        run: dbmate -d ./db/migrations up
+
+      - name: Verify RLS policies
+        run: |
+          psql "$DATABASE_URL" -c \
+            "SELECT count(*) AS rls_policies FROM pg_policies WHERE schemaname='public';"
+
+  # ============================================================
+  # main 머지 — production Lightsail SSH → 백업 → dbmate up
+  #
+  # 필요 시크릿 (GitHub repo → Settings → Secrets → Actions):
+  #   LIGHTSAIL_HOST       — 13.125.23.52 (공인 IP)
+  #   LIGHTSAIL_SSH_KEY    — Lightsail 기본 키 PEM 내용 (-----BEGIN RSA...-----END RSA-----)
+  #
+  # POSTGRES_PASSWORD 불필요 — docker exec Unix 소켓 인증 사용
+  # ============================================================
+  apply-production:
+    if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.LIGHTSAIL_SSH_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H "${{ secrets.LIGHTSAIL_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Sync migrations to Lightsail
+        run: |
+          rsync -avz --delete -e "ssh -i ~/.ssh/id_rsa" \
+            ./db/migrations/ \
+            ubuntu@${{ secrets.LIGHTSAIL_HOST }}:/home/ubuntu/invex/db/migrations/
+
+      - name: Pre-migration backup → R2
+        run: |
+          ssh -i ~/.ssh/id_rsa ubuntu@${{ secrets.LIGHTSAIL_HOST }} \
+            "/usr/local/bin/invex-backup.sh"
+
+      - name: Run dbmate up (production via docker exec)
+        # docker exec으로 컨테이너 내부 Unix 소켓 인증 사용 (패스워드 불필요)
+        run: |
+          ssh -i ~/.ssh/id_rsa ubuntu@${{ secrets.LIGHTSAIL_HOST }} bash <<'SSHEOF'
+          set -euo pipefail
+          MIGRATIONS_DIR=/home/ubuntu/invex/db/migrations
+          DBMATE_BIN=/usr/local/bin/dbmate
+          DB_URL="postgres://postgres@/postgres?host=/var/run/postgresql&sslmode=disable"
+
+          # 최신 migration 파일을 컨테이너에 복사
+          docker cp "${MIGRATIONS_DIR}/." supabase-db:/tmp/migrations/
+
+          # dbmate binary도 컨테이너에 있는지 확인 후 status → up
+          docker cp "${DBMATE_BIN}" supabase-db:/usr/local/bin/dbmate 2>/dev/null || true
+          docker exec supabase-db /usr/local/bin/dbmate \
+            --url "${DB_URL}" \
+            -d /tmp/migrations \
+            status
+          docker exec supabase-db /usr/local/bin/dbmate \
+            --url "${DB_URL}" \
+            -d /tmp/migrations \
+            up
+          SSHEOF
+
+      - name: Post-migration verification
+        run: |
+          ssh -i ~/.ssh/id_rsa ubuntu@${{ secrets.LIGHTSAIL_HOST }} bash <<'SSHEOF'
+          docker exec supabase-db psql -U postgres \
+            -c "SELECT count(*) AS rls_count FROM pg_policies WHERE schemaname='public';"
+          SSHEOF

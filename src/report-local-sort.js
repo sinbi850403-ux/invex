@@ -118,6 +118,8 @@ function renderHeaderState(table) {
     const direction = isActive ? state.direction : '';
     const label = cell.dataset.localSortLabel || cell.textContent || '';
 
+    const resizeHandle = cell.querySelector('.col-resize-handle');
+
     cell.classList.toggle('is-active', Boolean(direction));
     cell.setAttribute(
       'aria-sort',
@@ -129,6 +131,7 @@ function renderHeaderState(table) {
         <span class="sort-indicator">${direction === 'asc' ? '↑' : direction === 'desc' ? '↓' : '↕'}</span>
       </button>
     `;
+    if (resizeHandle) cell.appendChild(resizeHandle);
   });
 }
 

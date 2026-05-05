@@ -5,6 +5,7 @@
  */
 
 import { getState } from './store.js';
+import { escapeHtml as escHtml } from './ux-toolkit.js';
 
 let navigateCallback = null;
 let panelElement = null;
@@ -46,7 +47,7 @@ function openGlobalSearch() {
   panelElement.innerHTML = `
     <div class="global-search-panel" id="gs-panel">
       <div class="gs-input-wrap">
-        <span class="gs-icon">🔍</span>
+        <span class="gs-icon"></span>
         <input class="gs-input" id="gs-input" placeholder="품목, 거래처, 코드 검색... (ESC로 닫기)" autofocus />
         <span class="gs-shortcut">Ctrl+K</span>
       </div>
@@ -128,7 +129,7 @@ function renderSearchResults(query) {
     if (matchFields.includes(query)) {
       results.push({
         type: 'item',
-        icon: '📦',
+        icon: '',
         title: item.itemName,
         subtitle: `${item.itemCode || '-'} | 재고: ${parseFloat(item.quantity) || 0} | ${item.warehouse || '-'}`,
         page: 'inventory',
@@ -142,7 +143,7 @@ function renderSearchResults(query) {
     if (matchFields.includes(query)) {
       results.push({
         type: 'vendor',
-        icon: '🤝',
+        icon: '',
         title: v.name,
         subtitle: `${v.type === 'supplier' ? '매입처' : '매출처'} | ${v.contactName || '-'} | ${v.phone || '-'}`,
         page: 'vendors',
@@ -156,31 +157,31 @@ function renderSearchResults(query) {
     if (matchFields.includes(query)) {
       results.push({
         type: 'tx',
-        icon: tx.type === 'in' ? '📥' : '📤',
+        icon: tx.type === 'in' ? '' : '',
         title: `${tx.itemName} (${tx.type === 'in' ? '+' : '-'}${tx.quantity})`,
         subtitle: `${tx.date} | ${tx.note || '-'}`,
-        page: 'inout',
+        page: 'in',
       });
     }
   });
 
   // 4. 페이지 검색
   const pages = [
-    { name: '대시보드', page: 'home', icon: '🏠' },
-    { name: '파일 업로드', page: 'upload', icon: '📂' },
-    { name: '데이터 확인', page: 'mapping', icon: '📋' },
-    { name: '재고 현황', page: 'inventory', icon: '📦' },
-    { name: '입출고 관리', page: 'inout', icon: '🔄' },
-    { name: '바코드 스캔', page: 'scanner', icon: '📱' },
-    { name: '창고 이동', page: 'transfer', icon: '🏭' },
-    { name: '요약 보고', page: 'summary', icon: '📊' },
-    { name: '고급 분석', page: 'dashboard', icon: '📈' },
-    { name: '수불부', page: 'ledger', icon: '📒' },
-    { name: '문서 생성 발주서 견적서', page: 'documents', icon: '📄' },
-    { name: '거래처 관리', page: 'vendors', icon: '🤝' },
-    { name: '재고 실사', page: 'stocktake', icon: '📋' },
-    { name: '일괄 처리 발주 추천', page: 'bulk', icon: '⚡' },
-    { name: '설정 템플릿', page: 'settings', icon: '⚙️' },
+    { name: '대시보드', page: 'home', icon: '' },
+    { name: '파일 업로드', page: 'upload', icon: '' },
+    { name: '데이터 확인', page: 'mapping', icon: '' },
+    { name: '재고 현황', page: 'inventory', icon: '' },
+    { name: '입출고 관리', page: 'in', icon: '' },
+    { name: '바코드 스캔', page: 'scanner', icon: '' },
+    { name: '창고 이동', page: 'transfer', icon: '' },
+    { name: '요약 보고', page: 'summary', icon: '' },
+    { name: '고급 분석', page: 'dashboard', icon: '' },
+    { name: '수불부', page: 'ledger', icon: '' },
+    { name: '문서 생성 발주서 견적서', page: 'documents', icon: '' },
+    { name: '거래처 관리', page: 'vendors', icon: '' },
+    { name: '수불관리', page: 'stocktake', icon: '' },
+    { name: '일괄 처리 발주 추천', page: 'bulk', icon: '' },
+    { name: '설정 템플릿', page: 'settings', icon: '' },
   ];
 
   pages.forEach(p => {
@@ -204,11 +205,11 @@ function renderSearchResults(query) {
   const shown = results.slice(0, 15);
 
   resultsEl.innerHTML = shown.map((r, i) => `
-    <div class="gs-result-item" data-page="${r.page}">
-      <span class="gs-result-icon">${r.icon}</span>
+    <div class="gs-result-item" data-page="${escHtml(r.page)}">
+      <span class="gs-result-icon">${escHtml(r.icon)}</span>
       <div class="gs-result-content">
-        <div class="gs-result-title">${r.title}</div>
-        <div class="gs-result-subtitle">${r.subtitle}</div>
+        <div class="gs-result-title">${escHtml(r.title)}</div>
+        <div class="gs-result-subtitle">${escHtml(r.subtitle)}</div>
       </div>
       <span class="gs-result-type">${r.type === 'item' ? '품목' : r.type === 'vendor' ? '거래처' : r.type === 'tx' ? '거래' : '페이지'}</span>
     </div>

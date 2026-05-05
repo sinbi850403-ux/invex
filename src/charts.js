@@ -50,7 +50,7 @@ function destroyChart(id) {
   }
 }
 
-export function renderWeeklyTrendChart(canvasId, weekData) {
+export function renderWeeklyTrendChart(canvasId, weekData, onBarClick) {
   destroyChart(canvasId);
   const canvas = document.getElementById(canvasId);
   if (!canvas) return;
@@ -90,6 +90,11 @@ export function renderWeeklyTrendChart(canvasId, weekData) {
       responsive: true,
       maintainAspectRatio: false,
       interaction: { intersect: false, mode: 'index' },
+      ...(onBarClick ? { onClick: (evt, elements) => {
+        if (!elements.length) return;
+        const d = weekData[elements[0].index];
+        if (d?.date) onBarClick(d.date);
+      }} : {}),
       plugins: {
         legend: {
           labels: { color: textColor, font: { size: 11 }, usePointStyle: true, pointStyle: 'circle' },
@@ -114,7 +119,7 @@ export function renderWeeklyTrendChart(canvasId, weekData) {
         },
         y: {
           beginAtZero: true,
-          ticks: { color: textColor, font: { size: 10 }, stepSize: 1 },
+          ticks: { color: textColor, font: { size: 10 } },
           grid: { color: gridColor },
         },
       },
@@ -183,7 +188,7 @@ export function renderCategoryChart(canvasId, categories) {
   });
 }
 
-export function renderMonthlyChart(canvasId, monthData) {
+export function renderMonthlyChart(canvasId, monthData, onBarClick) {
   destroyChart(canvasId);
   const canvas = document.getElementById(canvasId);
   if (!canvas) return;
@@ -214,6 +219,11 @@ export function renderMonthlyChart(canvasId, monthData) {
     options: {
       responsive: true,
       maintainAspectRatio: false,
+      ...(onBarClick ? { onClick: (evt, elements) => {
+        if (!elements.length) return;
+        const label = monthData[elements[0].index]?.month;
+        if (label) onBarClick(label);
+      }} : {}),
       plugins: {
         legend: {
           labels: { color: textColor, font: { size: 11 }, usePointStyle: true, pointStyle: 'circle' },

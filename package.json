@@ -7,26 +7,37 @@
     "dev": "vite",
     "dev:local": "vite --host 127.0.0.1 --port 4173",
     "build": "vite build",
-    "test:auth": "node src/auth-validation-tests.js",
     "preview": "vite preview",
-    "preview:local": "vite preview --host 127.0.0.1 --port 4173"
+    "preview:local": "vite preview --host 127.0.0.1 --port 4173",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
   },
   "devDependencies": {
-    "@vitejs/plugin-react": "^6.0.1",
-    "vite": "^8.0.10"
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@vitest/coverage-v8": "^4.1.5",
+    "typescript": "^6.0.3",
+    "vite": "^8.0.1",
+    "vitest": "^4.1.5"
+  },
+  "overrides": {
+    "uuid": ">=14.0.0"
   },
   "dependencies": {
     "@fontsource/noto-sans-kr": "^5.2.9",
-    "@sentry/browser": "^10.49.0",
-    "@supabase/supabase-js": "^2.104.0",
+    "@sentry/browser": "^10.47.0",
+    "@supabase/supabase-js": "^2.103.0",
+    "@vitejs/plugin-react": "^6.0.1",
     "chart.js": "^4.5.1",
     "exceljs": "^4.4.0",
     "html5-qrcode": "^2.3.8",
     "jspdf": "^4.2.1",
     "jspdf-autotable": "^5.0.7",
     "papaparse": "^5.5.3",
-    "react": "^19.2.5",
-    "react-dom": "^19.2.5",
-    "react-router-dom": "^7.14.2"
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.30.3"
   }
 }

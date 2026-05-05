@@ -1,34 +1,307 @@
-/* auth.css - 회원가입/로그인 폼 가시성 개선 */
+/* auth.css - 로그인/회원가입 화면 스타일 */
 
-/* 입력 필드 기본 스타일 (이미 인라인에 정의돼 있으나 재정의를 위해) */
-input {
-  color: var(--text-primary, #e2e8f0);
-  background: rgba(255,255,255,0.05);
-  border: 1px solid rgba(255,255,255,0.12);
+/* ── 전체 배경 (화면 중앙 정렬) ─────────────────────────────── */
+.auth-gate {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+  z-index: 9999;
+  padding: 20px;
+  overflow-y: auto;
+}
+
+/* ── 로그인 카드 박스 ────────────────────────────────────────── */
+.auth-container {
+  width: 100%;
+  max-width: 420px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
+  padding: 40px 36px;
+  backdrop-filter: blur(20px);
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255,255,255,0.05);
+  margin: auto;
+}
+
+/* ── 로고 ───────────────────────────────────────────────────── */
+.auth-logo {
+  text-align: center;
+  margin-bottom: 16px;
+}
+
+/* ── 타이틀 ─────────────────────────────────────────────────── */
+.auth-title {
+  font-size: 2rem;
+  font-weight: 800;
+  color: #f1f5f9;
+  text-align: center;
+  margin: 0 0 6px 0;
+  letter-spacing: -0.5px;
+}
+
+.auth-subtitle {
+  font-size: 13px;
+  color: #94a3b8;
+  text-align: center;
+  margin: 0 0 28px 0;
+  line-height: 1.5;
+}
+
+/* ── 탭 (로그인 / 회원가입) ─────────────────────────────────── */
+.auth-tabs {
+  display: flex;
+  gap: 4px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
+  padding: 4px;
+  margin-bottom: 24px;
+}
+
+.auth-tab {
+  flex: 1;
+  padding: 10px;
+  border: none;
+  background: transparent;
+  color: #94a3b8;
+  font-size: 14px;
+  font-weight: 500;
   border-radius: 8px;
-  padding: 12px 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.auth-tab.active {
+  background: #2563eb;
+  color: #fff;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.4);
+}
+
+.auth-tab.active.active-signup {
+  background: #7c3aed;
+  box-shadow: 0 2px 8px rgba(124, 58, 237, 0.4);
+}
+
+/* ── 버튼 공통 ──────────────────────────────────────────────── */
+.auth-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  padding: 13px 20px;
+  border: none;
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-sizing: border-box;
+}
+
+/* Google 버튼 */
+.auth-btn-google {
+  background: rgba(255, 255, 255, 0.08);
+  color: #f1f5f9;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+.auth-btn-google:hover {
+  background: rgba(255, 255, 255, 0.14);
+  border-color: rgba(255, 255, 255, 0.25);
+  transform: translateY(-1px);
+}
+
+/* 이메일 로그인 버튼 */
+.auth-btn-primary {
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  color: #fff;
+  margin-top: 6px;
+  box-shadow: 0 4px 15px rgba(37, 99, 235, 0.35);
+}
+.auth-btn-primary:hover {
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(37, 99, 235, 0.45);
+}
+
+/* 회원가입 버튼 */
+.auth-btn-signup {
+  background: linear-gradient(135deg, #7c3aed, #6d28d9);
+  color: #fff;
+  margin-top: 6px;
+  box-shadow: 0 4px 15px rgba(124, 58, 237, 0.35);
+}
+.auth-btn-signup:hover {
+  background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+  transform: translateY(-1px);
+}
+
+/* ── 구분선 (또는 이메일로 진행하기) ───────────────────────── */
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 20px 0;
+}
+
+.auth-divider-line {
+  flex: 1;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.auth-divider-text {
+  font-size: 12px;
+  color: #64748b;
+  white-space: nowrap;
+}
+
+/* ── 폼 ─────────────────────────────────────────────────────── */
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.auth-field {
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── 입력 필드 ──────────────────────────────────────────────── */
+.auth-input {
+  width: 100%;
+  padding: 13px 16px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  color: #f1f5f9;
   font-size: 14px;
   outline: none;
   box-sizing: border-box;
-  transition: border-color 0.2s;
+  transition: border-color 0.2s, background 0.2s;
 }
 
-/* placeholder 색상 – 다크 모드에서도 충분히 대비 */
-input::placeholder {
-  color: var(--text-muted, #94a3b8);
-  opacity: 1; /* Chrome 기본 opacity 0.5를 무시 */
+.auth-input:focus {
+  border-color: #3b82f6;
+  background: rgba(255, 255, 255, 0.09);
 }
 
-/* Chrome 자동완성(autofill) 스타일 보정 */
+.auth-input::placeholder {
+  color: #64748b;
+}
+
+/* Chrome autofill */
+.auth-input:-webkit-autofill,
+.auth-input:-webkit-autofill:focus {
+  -webkit-text-fill-color: #f1f5f9 !important;
+  -webkit-box-shadow: 0 0 0px 1000px #1e293b inset !important;
+  transition: background-color 5000s ease-in-out 0s;
+}
+
+/* ── 비밀번호 찾기 링크 ─────────────────────────────────────── */
+.auth-forgot {
+  text-align: right;
+  margin-top: -4px;
+}
+
+.auth-link-small {
+  font-size: 12px;
+  color: #64748b;
+  text-decoration: none;
+}
+.auth-link-small:hover {
+  color: #94a3b8;
+}
+
+/* ── 링크 색상 ──────────────────────────────────────────────── */
+.auth-link-blue {
+  color: #60a5fa;
+  text-decoration: none;
+}
+.auth-link-blue:hover { text-decoration: underline; }
+
+.auth-link-purple {
+  color: #a78bfa;
+  text-decoration: none;
+}
+.auth-link-purple:hover { text-decoration: underline; }
+
+/* ── 동의 체크박스 ──────────────────────────────────────────── */
+.auth-agree {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 13px;
+  color: #94a3b8;
+  line-height: 1.5;
+}
+
+.auth-checkbox {
+  width: 16px;
+  height: 16px;
+  margin-top: 2px;
+  flex-shrink: 0;
+  accent-color: #7c3aed;
+  cursor: pointer;
+}
+
+.auth-required {
+  color: #f87171;
+}
+
+/* ── 로딩 오버레이 ──────────────────────────────────────────── */
+.auth-loading {
+  text-align: center;
+  color: #94a3b8;
+  font-size: 13px;
+  margin-top: 16px;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+/* ── 하단 텍스트 ────────────────────────────────────────────── */
+.auth-footer-text {
+  font-size: 11px;
+  color: #475569;
+  text-align: center;
+  margin-top: 20px;
+  line-height: 1.6;
+}
+
+.auth-security {
+  text-align: center;
+  margin-top: 8px;
+}
+
+.auth-security p {
+  font-size: 11px;
+  color: #334155;
+  margin: 0;
+}
+
+/* ── 반응형 (모바일) ────────────────────────────────────────── */
+@media (max-width: 480px) {
+  .auth-container {
+    padding: 28px 20px;
+    border-radius: 16px;
+  }
+  .auth-title { font-size: 1.6rem; }
+}
+
+/* ── 일반 input (앱 내) autofill 보정 ─────────────────────── */
 input:-webkit-autofill,
 input:-webkit-autofill:hover,
 input:-webkit-autofill:focus {
-  -webkit-text-fill-color: var(--text-primary, #e2e8f0) !important; /* 텍스트 색상 유지 */
-  -webkit-box-shadow: 0 0 0px 1000px var(--bg-primary, #0f172a) inset; /* 배경 색상 강제 */
-  transition: background-color 5000s ease-in-out 0s; /* 깜빡임 방지 */
+  -webkit-text-fill-color: var(--text-primary, #e2e8f0) !important;
+  -webkit-box-shadow: 0 0 0px 1000px var(--bg-primary, #0f172a) inset;
+  transition: background-color 5000s ease-in-out 0s;
 }
 
-/* 포커스 시 테두리 색상 강조 */
-input:focus {
-  border-color: #3b82f6;
+/* ── pulse 애니메이션 (로딩) ────────────────────────────────── */
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
 }

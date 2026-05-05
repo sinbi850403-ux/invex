@@ -1,6 +1,7 @@
 import { isSuperAdminEmail } from '../admin-emails.js';
 
-const VALID_ROLES = new Set(['viewer', 'staff', 'manager', 'admin']);
+// 'owner' = 워크스페이스 대표/오너 (admin 이상 권한)
+const VALID_ROLES = new Set(['viewer', 'staff', 'manager', 'admin', 'owner']);
 
 export function resolveProfileRole(role, email) {
   if (isSuperAdminEmail(email)) return 'admin';
@@ -42,6 +43,5 @@ export function mapProfileData(data, fallback) {
     lastLogin: new Date().toISOString(),
     beginnerMode: data.beginner_mode,
     dashboardMode: data.dashboard_mode,
-    industryTemplate: data.industry_template,
   };
 }

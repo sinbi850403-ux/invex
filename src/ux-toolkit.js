@@ -193,11 +193,6 @@ export function renderInsightHero({
             `).join('')}
           </div>
         ` : ''}
-        ${bullets.length > 0 ? `
-          <div class="mission-bullet-list">
-            ${bullets.map(bullet => `<div class="mission-bullet">${escapeHtml(bullet)}</div>`).join('')}
-          </div>
-        ` : ''}
         ${actions.length > 0 ? `
           <div class="mission-actions">
             ${actions.map(renderAction).join('')}
@@ -229,4 +224,37 @@ export function renderQuickFilterRow({
       </div>
     </div>
   `;
+}
+
+export function enableColumnResize(table) {
+  if (!table) return;
+  table.querySelectorAll('th').forEach(th => {
+    if (th.querySelector('.col-resize-handle')) return;
+    const handle = document.createElement('div');
+    handle.className = 'col-resize-handle';
+    handle.addEventListener('mousedown', e => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (table.style.tableLayout !== 'fixed') {
+        table.querySelectorAll('th').forEach(t => { t.style.width = t.offsetWidth + 'px'; });
+        table.style.tableLayout = 'fixed';
+        table.classList.add('table-layout-fixed');
+      }
+      const startX = e.pageX;
+      const startWidth = th.offsetWidth;
+      const onMove = mv => {
+        const newWidth = Math.max(36, startWidth + mv.pageX - startX);
+        th.style.width = newWidth + 'px';
+        th.style.minWidth = newWidth + 'px';
+      };
+      const onUp = () => {
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup', onUp);
+      };
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', onUp);
+    });
+    if (getComputedStyle(th).position === 'static') th.style.position = 'relative';
+    th.appendChild(handle);
+  });
 }

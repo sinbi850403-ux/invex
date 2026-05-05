@@ -256,10 +256,14 @@ export async function managedQuery(queryFn) {
 
     const result = await queryFn();
 
-    // 에러가 429라면 백오프 후 재시도
+    // BUG-003: 429 재시도 시 큐/레이트리밋 재통과 — 직접 호출로 burst 생성 방지
     if (result?.error?.message?.includes('rate') || result?.error?.code === '429') {
       _metrics.retried++;
-      await new Promise(r => setTimeout(r, CONFIG.BASE_BACKOFF_MS));
+      const backoff = CONFIG.BASE_BACKOFF_MS * (1 + Math.random()); // 0.5~1.5× jitter
+      await new Promise(r => setTimeout(r, backoff));
+      // 재시도도 waitForRateLimit → recordRequest 경유 (레이트리밋 우회 차단)
+      await waitForRateLimit();
+      recordRequest();
       return queryFn();
     }
 
@@ -296,11 +300,14 @@ export function getTrafficMetrics() {
 }
 
 /**
- * 설정 업데이트 — 런타임에 동적으로 트래픽 임계값 조정 가능
+ * 설정 업데이트 — 내부 전용 (V-010: 외부 노출 시 레이트리밋 우회 가능)
+ * export 제거: 외부에서 CONFIG를 임의 조작하지 못하도록 모듈 내부로 격리
  */
-export function updateTrafficConfig(overrides) {
+function updateTrafficConfig(overrides) {
   Object.assign(CONFIG, overrides);
 }
+// 미사용 경고 억제 — 향후 내부 self-tuning 로직에서 호출 예정
+void updateTrafficConfig;
 
 /**
  * 지표 초기화

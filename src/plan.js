@@ -5,84 +5,62 @@
  */
 
 import { getState, setState } from './store.js';
-import { isSuperAdminEmail } from './admin-emails.js';
 
-// 요금제 정의
+// 요금제 정의 — 접근 가능 페이지는 PAGE_MIN_PLAN 단일 소스에서 관리
 export const PLANS = {
   free: {
     id: 'free',
     name: 'Free',
-    icon: '🆓',
+    icon: '',
     color: '#6b7280',
     price: '₩0',
     period: '영구 무료',
     description: '1인 사업자·스타트업',
     itemLimit: 100,
     userLimit: 1,
-    // Free에서 접근 가능한 페이지
-    pages: [
-      'home', 'upload', 'mapping', 'inventory', 'inout', 'settings', 'billing', 'admin',
-      'mypage', 'guide', 'support', 'team', 'backup', 'referral',
-      // 허브 페이지 — 요금제와 무관하게 항상 접근 가능 (네비게이션 역할)
-      'hub-data', 'hub-inventory', 'hub-warehouse', 'hub-order',
-      'hub-report', 'hub-documents', 'hub-settings', 'hub-support', 'hub-hr',
-    ],
   },
   pro: {
     id: 'pro',
     name: 'Pro',
     icon: '⭐',
     color: '#3b82f6',
-    price: '₩290,000',
+    price: '₩29,000',
     period: '월',
     description: '중소기업·소매점',
     itemLimit: Infinity,
     userLimit: 5,
-    // Pro에서 추가로 접근 가능한 페이지
-    pages: [
-      'home', 'upload', 'mapping', 'inventory', 'inout', 'settings',
-      'bulk', 'scanner', 'labels', 'transfer', 'stocktake', 'vendors',
-      'summary', 'dashboard', 'costing', 'accounts', 'ledger', 'documents', 'auditlog',
-      'billing', 'admin', 'mypage', 'guide', 'support', 'team', 'backup', 'referral',
-      'tax-reports', 'auto-order', 'orders', 'profit', 'forecast', 'weekly-report',
-      'pos', 'scanner', 'labels',
-      // 허브 페이지 — 요금제와 무관하게 항상 접근 가능
-      'hub-data', 'hub-inventory', 'hub-warehouse', 'hub-order',
-      'hub-report', 'hub-documents', 'hub-settings', 'hub-support', 'hub-hr',
-    ],
   },
   enterprise: {
     id: 'enterprise',
     name: 'Enterprise',
-    icon: '🏢',
+    icon: '',
     color: '#8b5cf6',
-    price: '₩490,000',
+    price: '₩59,000',
     period: '월',
     description: '다점포·유통업',
     itemLimit: Infinity,
     userLimit: Infinity,
-    // Enterprise는 모든 페이지 접근 가능
-    pages: ['*'],
   },
 };
 
 // 각 페이지가 어느 요금제부터 사용 가능한지 매핑
 const PAGE_MIN_PLAN = {
   // 허브 페이지 — 항상 무료 (네비게이션 전용)
-  'hub-data': 'free', 'hub-inventory': 'free', 'hub-warehouse': 'free',
+  'hub-inventory': 'free', 'hub-warehouse': 'free',
   'hub-order': 'free', 'hub-report': 'free', 'hub-documents': 'free',
   'hub-settings': 'free', 'hub-support': 'free', 'hub-hr': 'free',
   // Free 기능
   home: 'free', upload: 'free', mapping: 'free',
-  inventory: 'free', inout: 'free', settings: 'free', billing: 'free', admin: 'free',
+  inventory: 'free', in: 'free', out: 'free', ledger: 'free',
+  settings: 'free', billing: 'free', admin: 'free',
   mypage: 'free', guide: 'free', support: 'free', team: 'free', backup: 'free', referral: 'free',
   // Pro 기능
   bulk: 'pro', scanner: 'pro', labels: 'pro', transfer: 'pro',
   stocktake: 'pro', vendors: 'pro', summary: 'pro', dashboard: 'pro',
-  costing: 'pro', accounts: 'pro', ledger: 'pro', documents: 'pro', auditlog: 'pro',
-  'tax-reports': 'pro', 'auto-order': 'pro', orders: 'pro', profit: 'pro', forecast: 'pro', 'weekly-report': 'pro',
+  costing: 'pro', accounts: 'pro', documents: 'pro', auditlog: 'pro',
+  'tax-reports': 'pro', orders: 'pro', profit: 'pro', forecast: 'pro', 'weekly-report': 'pro',
   // Enterprise 기능
-  warehouses: 'enterprise', roles: 'enterprise', api: 'enterprise',
+  warehouses: 'enterprise', roles: 'enterprise', api: 'enterprise', 'org-chart': 'enterprise',
 };
 
 // 요금제 등급 순서 (비교용)
@@ -100,12 +78,17 @@ export function injectGetUserProfile(fn) { _getUserProfile = fn; }
 
 function isInFreePeriod() {
   const profile = _getUserProfile?.();
-  if (!profile || !profile.createdAt) return true; // 프로필 없으면 일단 허용
+  if (!profile || !profile.createdAt) return false;
 
   const created = new Date(profile.createdAt);
-  const now = new Date();
-  const daysSinceCreation = Math.floor((now - created) / (1000 * 60 * 60 * 24));
+  if (isNaN(created.getTime())) return false;
 
+  const now = new Date();
+  // IndexedDB 조작 방지: createdAt이 미래 날짜이면 무효 (CWE-345)
+  // 공격자가 createdAt을 미래로 바꿔 무료 기간을 영구 연장하는 것을 차단
+  if (created > now) return false;
+
+  const daysSinceCreation = Math.floor((now - created) / (1000 * 60 * 60 * 24));
   return daysSinceCreation <= FREE_PERIOD_DAYS;
 }
 
@@ -146,6 +129,8 @@ export function getCurrentPlan() {
 export function setPlan(planId) {
   if (!PLANS[planId]) return;
   setState({ currentPlan: planId });
+  // React 컴포넌트(Sidebar 등)에 plan 변경 알림
+  window.dispatchEvent(new CustomEvent('invex:plan-changed', { detail: { planId } }));
 }
 
 /**
@@ -160,17 +145,18 @@ export function canAccessPage(pageId) {
 
   // 총관리자는 모든 페이지 무제한 접근
   const user = _getCurrentUser?.();
-  if (user && isSuperAdminEmail(user.email)) return true;
+  if (user?.role === 'admin') return true;
 
   // 1년 무료 기간 체크 — 가입일 기준 365일 이내면 모든 기능 개방
   // 왜? → 1년 무료 오픈이므로 요금제 제한을 걸면 안 됨
   if (isInFreePeriod()) return true;
 
   const currentPlan = getCurrentPlan();
-  const plan = PLANS[currentPlan];
-  if (!plan) return false;
-  if (plan.pages.includes('*')) return true;
-  return plan.pages.includes(pageId);
+  if (!PLANS[currentPlan]) return false;
+  if (currentPlan === 'enterprise') return true;
+  const minPlan = PAGE_MIN_PLAN[pageId];
+  if (!minPlan) return false;
+  return PLAN_RANK[currentPlan] >= PLAN_RANK[minPlan];
 }
 
 // 순환참조 방지용: auth 모듈에서 함수를 lazy 주입
@@ -202,63 +188,17 @@ export function getPageBadge(pageId) {
 }
 
 /**
- * 업그레이드 안내 모달 HTML 생성
+ * 업그레이드 안내 모달 표시
+ * React 환경: CustomEvent → AppLayout의 리스너에서 처리 (innerHTML 직접 조작 제거)
+ * 레거시 환경: DOM fallback (PLANS 상수값만 사용하므로 XSS 위험 없음)
  */
 export function showUpgradeModal(pageId) {
   const minPlan = getPageMinPlan(pageId);
   const plan = PLANS[minPlan];
   if (!plan) return;
 
-  // 기존 모달 제거
-  const existing = document.getElementById('upgrade-modal');
-  if (existing) existing.remove();
-
-  const modal = document.createElement('div');
-  modal.id = 'upgrade-modal';
-  modal.className = 'modal-overlay';
-  modal.style.display = 'flex';
-  modal.innerHTML = `
-    <div class="modal" style="max-width:440px; text-align:center;">
-      <div style="padding:32px 24px;">
-        <div style="font-size:48px; margin-bottom:12px;">🔒</div>
-        <h3 style="font-size:20px; font-weight:800; margin-bottom:8px;">
-          ${plan.name} 요금제 기능입니다
-        </h3>
-        <p style="color:var(--text-muted); font-size:14px; margin-bottom:24px; line-height:1.6;">
-          이 기능은 <strong style="color:${plan.color};">${plan.icon} ${plan.name}</strong> 이상 요금제에서 사용할 수 있습니다.
-          <br/>업그레이드 후 이용해주세요.
-        </p>
-
-        <div style="background:var(--bg-secondary); border-radius:12px; padding:20px; margin-bottom:24px; text-align:left;">
-          <div style="font-weight:700; margin-bottom:8px;">${plan.icon} ${plan.name} — ${plan.price}/${plan.period}</div>
-          <div style="font-size:13px; color:var(--text-muted);">${plan.description}</div>
-        </div>
-
-        <div style="display:flex; gap:8px; justify-content:center;">
-          <button class="btn btn-ghost" id="upgrade-close">닫기</button>
-          <button class="btn btn-primary" id="upgrade-action" style="background:linear-gradient(135deg, ${plan.color}, ${plan.color}dd);">
-            ${plan.name}로 업그레이드
-          </button>
-        </div>
-
-        <div style="margin-top:16px; font-size:11px; color:var(--text-muted);">
-          Pro 플랜부터 모든 고급 기능을 사용할 수 있습니다
-        </div>
-      </div>
-    </div>
-  `;
-
-  document.body.appendChild(modal);
-
-  // 닫기 이벤트
-  modal.querySelector('#upgrade-close').addEventListener('click', () => modal.remove());
-  modal.addEventListener('click', (e) => { if (e.target === modal) modal.remove(); });
-
-  // 업그레이드 버튼 → 지금은 무료 체험 활성화
-  modal.querySelector('#upgrade-action').addEventListener('click', () => {
-    setPlan(minPlan);
-    modal.remove();
-    // 페이지 리로드로 사이드바 갱신
-    window.location.reload();
-  });
+  // React 컴포넌트(AppLayout)에 모달 렌더링 위임
+  window.dispatchEvent(new CustomEvent('invex:show-upgrade-modal', {
+    detail: { pageId, minPlan, plan },
+  }));
 }

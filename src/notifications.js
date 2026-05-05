@@ -4,6 +4,7 @@
  */
 
 import { getState, setState } from './store.js';
+import { escapeHtml } from './ux-toolkit.js';
 
 function toNumber(value) {
   const parsed = Number(value);
@@ -21,15 +22,6 @@ function hashText(text) {
 
 function buildNotificationId(category, title, desc) {
   return `n_${hashText(`${category}|${title}|${desc}`)}`;
-}
-
-function escapeHtml(text) {
-  return String(text ?? '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
 }
 
 function emitUpdated() {
@@ -62,7 +54,7 @@ export function getNotifications(options = {}) {
     if (qty <= 0) {
       pushNotification(notifications, {
         type: 'danger',
-        icon: '🚨',
+        icon: '',
         title: `재고 없음: ${item.itemName}`,
         desc: `현재 재고 0 / 안전재고 ${min}`,
         category: 'stock',
@@ -73,7 +65,7 @@ export function getNotifications(options = {}) {
     if (qty <= toNumber(min)) {
       pushNotification(notifications, {
         type: 'warning',
-        icon: '⚠️',
+        icon: '',
         title: `재고 부족: ${item.itemName}`,
         desc: `현재 ${qty} / 안전재고 ${min}`,
         category: 'stock',
@@ -89,7 +81,7 @@ export function getNotifications(options = {}) {
     if (daysLeft <= 0) {
       pushNotification(notifications, {
         type: 'danger',
-        icon: '🔴',
+        icon: '',
         title: `유통기한 만료: ${item.itemName}`,
         desc: `${item.expiryDate} (만료됨)`,
         category: 'expiry',
@@ -100,7 +92,7 @@ export function getNotifications(options = {}) {
     if (daysLeft <= 7) {
       pushNotification(notifications, {
         type: 'danger',
-        icon: '🟠',
+        icon: '',
         title: `유통기한 임박: ${item.itemName}`,
         desc: `${item.expiryDate} (D-${daysLeft})`,
         category: 'expiry',
@@ -111,7 +103,7 @@ export function getNotifications(options = {}) {
     if (daysLeft <= 30) {
       pushNotification(notifications, {
         type: 'warning',
-        icon: '🟡',
+        icon: '',
         title: `유통기한 주의: ${item.itemName}`,
         desc: `${item.expiryDate} (D-${daysLeft})`,
         category: 'expiry',
@@ -127,10 +119,55 @@ export function getNotifications(options = {}) {
   if (noValueItems.length > 0) {
     pushNotification(notifications, {
       type: 'info',
-      icon: 'ℹ️',
+      icon: '',
       title: `단가 미설정 품목 ${noValueItems.length}건`,
       desc: '단가를 설정하면 정확한 재고 가치를 파악할 수 있습니다.',
       category: 'info',
+    });
+  }
+
+  // ── 이상 탐지: 마진율 이상 ─────────────────────────────────────
+  const lowMarginItems = items.filter((item) => {
+    const cost = toNumber(item.unitCost || item.unitPrice || 0);
+    const sale = toNumber(item.salePrice || 0);
+    if (cost <= 0 || sale <= 0) return false;
+    const margin = (sale - cost) / sale * 100;
+    return margin < 10; // 마진율 10% 미만
+  });
+  if (lowMarginItems.length > 0) {
+    pushNotification(notifications, {
+      type: 'warning',
+      icon: '',
+      title: `마진율 이상 품목 ${lowMarginItems.length}건`,
+      desc: `마진율 10% 미만: ${lowMarginItems.slice(0, 2).map(i => i.itemName).join(', ')}${lowMarginItems.length > 2 ? ' 외' : ''}`,
+      category: 'anomaly',
+    });
+  }
+
+  // ── 이상 탐지: 재고 급감 (7일 이내 출고량 > 현재고 50%) ──────────
+  const transactions = state.transactions || [];
+  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+  const recentOut = {};
+  transactions.forEach((tx) => {
+    if (tx.type !== 'out') return;
+    if (!tx.date || new Date(tx.date) < sevenDaysAgo) return;
+    const name = tx.itemName || '';
+    if (!name) return;
+    recentOut[name] = (recentOut[name] || 0) + toNumber(tx.quantity);
+  });
+  const rapidDropItems = items.filter((item) => {
+    const outQty = recentOut[item.itemName] || 0;
+    const curQty = toNumber(item.quantity);
+    if (outQty <= 0 || curQty <= 0) return false;
+    return outQty >= curQty * 0.5; // 7일 출고량이 현재고의 50% 이상
+  });
+  if (rapidDropItems.length > 0) {
+    pushNotification(notifications, {
+      type: 'warning',
+      icon: '',
+      title: `재고 급감 품목 ${rapidDropItems.length}건`,
+      desc: `최근 7일 출고량이 현재고의 50% 이상: ${rapidDropItems.slice(0, 2).map(i => i.itemName).join(', ')}${rapidDropItems.length > 2 ? ' 외' : ''}`,
+      category: 'anomaly',
     });
   }
 
@@ -229,16 +266,16 @@ function renderPanelContent(panel) {
 
   panel.innerHTML = `
     <div class="notif-header">
-      <strong>🔔 알림 센터</strong>
+      <strong> 알림 센터</strong>
       <span class="badge ${notifications.length > 0 ? 'badge-danger' : 'badge-default'}" style="margin-left:8px;">${notifications.length}</span>
       <div class="notif-actions">
         ${notifications.length > 0 ? '<button class="notif-action-btn" id="notif-mark-all">전체 확인</button>' : ''}
-        <button class="notif-close" id="notif-close">✕</button>
+        <button class="notif-close" id="notif-close"></button>
       </div>
     </div>
     <div class="notif-body">
       ${notifications.length === 0
-        ? '<div style="text-align:center; padding:32px; color:var(--text-muted); font-size:13px;">✅ 알림이 없습니다</div>'
+        ? '<div style="text-align:center; padding:32px; color:var(--text-muted); font-size:13px;"> 알림이 없습니다</div>'
         : notifications.map((notification) => `
           <div class="notif-item notif-${notification.type}">
             <span class="notif-icon">${notification.icon}</span>

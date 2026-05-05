@@ -24,7 +24,6 @@ async function loadKoreanFont() {
     }
     
     const arrayBuffer = await res.arrayBuffer();
-    console.log('[PDF] 폰트 로드 완료:', arrayBuffer.byteLength, 'bytes');
 
     // ArrayBuffer → Base64 변환 (청크 단위)
     const bytes = new Uint8Array(arrayBuffer);
@@ -66,8 +65,6 @@ export async function applyKoreanFont(doc) {
     doc.addFont('NanumGothic-Regular.ttf', 'NanumGothic', 'italic');
     doc.addFont('NanumGothic-Regular.ttf', 'NanumGothic', 'bolditalic');
     doc.setFont('NanumGothic');
-    
-    console.log('[PDF] 한글 폰트 등록 완료');
     return true;
   } catch (err) {
     console.error('[PDF] 폰트 등록 실패:', err);

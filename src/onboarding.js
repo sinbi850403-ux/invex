@@ -39,26 +39,26 @@ function showOnboardingModal(navigateTo) {
 
   const steps = [
     {
-      icon: '👋',
+      icon: '',
       title: 'INVEX에 오신 것을 환영합니다!',
       desc: `재고 관리, 입출고 추적, 세무 서류까지<br/>
              모든 기능을 <strong>1년 무료</strong>로 이용할 수 있습니다.`,
       detail: `
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:12px;">
           <div style="background:rgba(37,99,235,0.08); border-radius:10px; padding:14px; text-align:center;">
-            <div style="font-size:24px;">📦</div>
+            <div style="font-size:24px;"></div>
             <div style="font-size:12px; font-weight:600; margin-top:4px;">재고 관리</div>
           </div>
           <div style="background:rgba(63,185,80,0.08); border-radius:10px; padding:14px; text-align:center;">
-            <div style="font-size:24px;">🔄</div>
+            <div style="font-size:24px;"></div>
             <div style="font-size:12px; font-weight:600; margin-top:4px;">입출고 추적</div>
           </div>
           <div style="background:rgba(139,92,246,0.08); border-radius:10px; padding:14px; text-align:center;">
-            <div style="font-size:24px;">📑</div>
+            <div style="font-size:24px;"></div>
             <div style="font-size:12px; font-weight:600; margin-top:4px;">세무 서류</div>
           </div>
           <div style="background:rgba(210,153,34,0.08); border-radius:10px; padding:14px; text-align:center;">
-            <div style="font-size:24px;">💹</div>
+            <div style="font-size:24px;"></div>
             <div style="font-size:12px; font-weight:600; margin-top:4px;">손익 분석</div>
           </div>
         </div>
@@ -66,51 +66,51 @@ function showOnboardingModal(navigateTo) {
       btnText: '시작하기 →',
     },
     {
-      icon: '📄',
+      icon: '',
       title: '기존 엑셀 파일이 있으신가요?',
       desc: '엑셀 파일을 업로드하면 품목을 자동으로 인식합니다.<br/>없어도 괜찮아요, 직접 추가할 수 있습니다.',
       detail: `
         <div style="display:flex; gap:12px; margin-top:16px;">
           <button class="onb-action-btn onb-upload-btn" style="flex:1; background:linear-gradient(135deg,#2563eb,#7c3aed); color:#fff; border:none; padding:14px; border-radius:10px; cursor:pointer; font-size:14px; font-weight:600;">
-            📤 엑셀 파일 업로드
+             엑셀 파일 업로드
           </button>
           <button class="onb-action-btn onb-skip-btn" style="flex:1; background:#f8f9fc; color:#5a6474; border:1px solid #e2e6eb; padding:14px; border-radius:10px; cursor:pointer; font-size:14px; font-weight:600;">
-            ✋ 나중에 할게요
+             나중에 할게요
           </button>
         </div>
       `,
       btnText: '다음 →',
     },
     {
-      icon: '🎉',
+      icon: '',
       title: '준비 완료!',
       desc: '이제 INVEX의 모든 기능을 사용할 수 있습니다.',
       detail: `
         <div style="margin-top:16px; font-size:13px; color:#5a6474; line-height:1.8;">
           <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
-            <span style="font-size:18px;">💡</span>
+            <span style="font-size:18px;"></span>
             <strong>TIP:</strong> 왼쪽 사이드바에서 원하는 메뉴를 선택하세요
           </div>
           <div style="background:#f8f9fc; border-radius:10px; padding:12px; margin-top:8px;">
             <strong>추천 순서:</strong><br/>
-            1️⃣ 품목 등록 (재고 현황 → 품목 추가)<br/>
-            2️⃣ 입출고 기록 (입출고 관리)<br/>
-            3️⃣ 보고서 확인 (손익 분석 / 요약 보고)
+            1⃣ 품목 등록 (재고 현황 → 품목 추가)<br/>
+            2⃣ 입출고 기록 (입출고 관리)<br/>
+            3⃣ 보고서 확인 (손익 분석 / 요약 보고)
           </div>
           <div style="display:flex; gap:8px; margin-top:12px; flex-wrap:wrap;">
             <button class="onb-action-btn onb-go-inventory" style="flex:1; min-width:120px; background:linear-gradient(135deg,#2563eb,#1d4ed8); color:#fff; border:none; padding:10px; border-radius:10px; cursor:pointer; font-size:13px; font-weight:600;">
-              📦 재고 현황
+               재고 현황
             </button>
             <button class="onb-action-btn onb-go-inout" style="flex:1; min-width:120px; background:linear-gradient(135deg,#0ea5e9,#0284c7); color:#fff; border:none; padding:10px; border-radius:10px; cursor:pointer; font-size:13px; font-weight:600;">
-              🔄 입출고 관리
+               입출고 관리
             </button>
             <button class="onb-action-btn onb-go-guide" style="flex:1; min-width:120px; background:#f8f9fc; color:#334155; border:1px solid #dbe1e8; padding:10px; border-radius:10px; cursor:pointer; font-size:13px; font-weight:600;">
-              📖 사용 가이드
+               사용 가이드
             </button>
           </div>
         </div>
       `,
-      btnText: '시작하기! 🚀',
+      btnText: '시작하기! ',
     },
   ];
 
@@ -188,7 +188,7 @@ function showOnboardingModal(navigateTo) {
     });
     overlay.querySelector('.onb-go-inout')?.addEventListener('click', () => {
       finish();
-      navigateTo('inout');
+      navigateTo('in');
     });
     overlay.querySelector('.onb-go-guide')?.addEventListener('click', () => {
       finish();
@@ -199,7 +199,7 @@ function showOnboardingModal(navigateTo) {
   function finish() {
     setState({ _onboardingDone: true });
     overlay.remove();
-    showToast('환영합니다! INVEX를 자유롭게 둘러보세요 🎉', 'success');
+    showToast('환영합니다! INVEX를 자유롭게 둘러보세요 ', 'success');
   }
 
   render();

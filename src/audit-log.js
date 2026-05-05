@@ -6,6 +6,7 @@
 
 import { getState, setState } from './store.js';
 import { auditLogs as auditLogsDb } from './db.js';
+import { escapeHtml as escHtml } from './ux-toolkit.js';
 
 /**
  * 감사 로그 추가
@@ -63,7 +64,7 @@ export function renderAuditLogPage(container, navigateTo) {
   container.innerHTML = `
     <div class="page-header">
       <div>
-        <h1 class="page-title"><span class="title-icon">📝</span> 감사 추적</h1>
+        <h1 class="page-title">감사 추적</h1>
         <div class="page-desc">모든 데이터 변경 이력을 기록합니다. 세무·감사 대비 필수 기능.</div>
       </div>
       <div class="page-actions">
@@ -74,11 +75,11 @@ export function renderAuditLogPage(container, navigateTo) {
     <div class="card card-compact" style="margin-bottom:12px;">
       <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
         <div style="flex:1; min-width:180px;">
-          <input class="form-input" id="audit-search" placeholder="🔍 대상, 행위 검색..." />
+          <input class="form-input" id="audit-search" placeholder=" 대상, 행위 검색..." />
         </div>
         <select class="form-select" id="audit-action-filter" style="width:auto;">
           <option value="">전체 행위</option>
-          ${actions.map(a => `<option value="${a}">${a}</option>`).join('')}
+          ${actions.map(a => `<option value="${escHtml(a)}">${escHtml(a)}</option>`).join('')}
         </select>
         <select class="form-select" id="audit-period-filter" style="width:auto;">
           <option value="">전체 기간</option>
@@ -145,24 +146,26 @@ function renderAuditList(logs) {
 
   return Object.entries(groups).map(([date, items]) => `
     <div style="padding:8px 16px; background:var(--bg-main); font-size:12px; font-weight:600; color:var(--text-muted); border-bottom:1px solid var(--border-light);">
-      📅 ${date} (${items.length}건)
+       ${date} (${items.length}건)
     </div>
     ${items.slice(0, 50).map(l => {
       const time = new Date(l.timestamp).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
       const icon = getActionIcon(l.action);
       const detailStr = formatDetail(l.detail);
+      // [SECURITY] escHtml 적용 — l.action, l.target, l.user, detailStr 모두 이스케이프
+      // VULN-002 / ATTACK-003 대응 패치 (2026-05-03)
       return `
         <div style="display:flex; gap:10px; padding:8px 16px; border-bottom:1px solid var(--border-light); align-items:flex-start;">
           <span style="font-size:16px; flex-shrink:0; margin-top:2px;">${icon}</span>
           <div style="flex:1; min-width:0;">
             <div style="font-size:13px;">
-              <span class="badge badge-default" style="font-size:10px;">${l.action}</span>
-              <strong style="margin-left:4px;">${l.target}</strong>
+              <span class="badge badge-default" style="font-size:10px;">${escHtml(l.action)}</span>
+              <strong style="margin-left:4px;">${escHtml(l.target)}</strong>
             </div>
-            ${detailStr ? `<div style="font-size:11px; color:var(--text-muted); margin-top:2px;">${detailStr}</div>` : ''}
+            ${detailStr ? `<div style="font-size:11px; color:var(--text-muted); margin-top:2px;">${escHtml(detailStr)}</div>` : ''}
           </div>
           <div style="font-size:11px; color:var(--text-muted); flex-shrink:0; text-align:right;">
-            ${time}<br/>${l.user || ''}
+            ${time}<br/>${escHtml(l.user || '')}
           </div>
         </div>
       `;
@@ -172,11 +175,11 @@ function renderAuditList(logs) {
 
 function getActionIcon(action) {
   const map = {
-    '입고': '📥', '출고': '📤', '삭제': '🗑️', '수정': '✏️', '등록': '➕',
-    '재고조정': '🔧', '이동': '🏭', '발주': '📄', '백업': '💾', '복원': '📥',
-    '설정변경': '⚙️', '거래처등록': '🤝', '거래처삭제': '🗑️',
+    '입고': '', '출고': '', '삭제': '', '수정': '', '등록': '',
+    '재고조정': '', '이동': '', '발주': '', '백업': '', '복원': '',
+    '설정변경': '', '거래처등록': '', '거래처삭제': '',
   };
-  return map[action] || '📋';
+  return map[action] || '';
 }
 
 function formatDetail(detail) {

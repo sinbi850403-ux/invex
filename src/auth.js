@@ -1,6 +1,5 @@
-import { supabase, isSupabaseConfigured, getSupabaseDebugInfo } from './supabase-client.js';
+import { supabase, isSupabaseConfigured, getSupabaseConfig, getSupabaseDebugInfo } from './supabase-client.js';
 import { showToast } from './toast.js';
-import { flushPendingSync } from './store.js';
 import {
   ACTION_MIN_ROLE as AUTH_ACTION_MIN_ROLE,
   PAGE_MIN_ROLE as AUTH_PAGE_MIN_ROLE,
@@ -10,16 +9,15 @@ import {
 import { getFallbackProfile as createFallbackProfile, mapProfileData } from './auth/profile.js';
 import { renderInlineLoginError as renderVanillaLoginError, renderLoginScreen as renderVanillaLoginScreen } from './auth/ui.js';
 import { purgeLegacyAuthStorage as purgeAuthStorage, sanitizeSupabaseStorage as sanitizeAuthStorage } from './auth/storage.js';
-import { withTimeout, TimeoutError } from './auth/async.js';
-import { hasSessionAccessToken, shouldAttemptProfileLoad } from './auth/session-guards.js';
+import { withTimeout } from './auth/async.js';
 
 let currentUser = null;
 let userProfile = null;
 let authChangeCallbacks = [];
 let authSubscription = null;
 let authInitialized = false;
-let authHydrationStarted = false;
-let authHydrationComplete = false;
+// 부트스트랩 관련 상수 (TOKEN_REFRESHED, logout에서 localStorage 정리용으로만 유지)
+const _BS_BLOCKED_KEY = 'invex-profile-bs-blocked';
 
 // ─── 이중 클릭 / 중복 요청 방지 플래그 ─────────────────────────────────────
 // isLoggingIn: 이메일 로그인 진행 중 이중 클릭 방지 (Google OAuth 에는 사용 X)
@@ -38,7 +36,7 @@ const AUTH_STORAGE_PATTERNS = [
   /^sb-.*-auth-token$/,
   /^supabase\.auth\./,
 ];
-const LEGACY_AUTH_PREFIX = `${String.fromCharCode(102, 105, 114, 101, 98, 97, 115, 101)}:`;
+const LEGACY_AUTH_PREFIX = 'firebase:';
 // ─── 유틸리티 ─────────────────────────────────────────────────────────────────
 
 function toCompatUser(supabaseUser) {
@@ -65,26 +63,11 @@ function emitAuthChanged() {
       console.error('[Auth] authChangeCallback threw:', err);
     }
   });
-}
-
-function getFallbackProfile(user) {
-  return {
-    uid: user?.uid || null,
-    email: user?.email || null,
-    name: user?.displayName || '사용자',
-    photoURL: user?.photoURL || null,
-    role: resolveProfileRole(null, user?.email),
-    plan: 'free',
-  };
+  // React 컴포넌트가 canAction() 결과를 재평가하도록 store 업데이트 이벤트 발행
+  window.dispatchEvent(new CustomEvent('invex:store-updated', { detail: { changedKeys: ['_auth'] } }));
 }
 
 // ─── 스토리지 관련 ────────────────────────────────────────────────────────────
-
-function resolveProfileRole(role, email) {
-  if (isSuperAdminEmail(email)) return 'admin';
-  if (VALID_ROLES.has(role)) return role;
-  return 'viewer';
-}
 
 function forEachStorageKey(callback) {
   if (typeof window === 'undefined' || !window.localStorage) return;
@@ -139,33 +122,69 @@ function sanitizeSupabaseStorage() {
 
 // ─── 프로필 로드 ──────────────────────────────────────────────────────────────
 
-async function loadProfile(user, session = null) {
+function isRlsOrAuthError(err) {
+  if (!err) return false;
+  const msg = String(err.message || err.code || '').toLowerCase();
+  return msg.includes('row-level security') ||
+         msg.includes('row level security') ||
+         msg.includes('401') ||
+         msg.includes('unauthorized') ||
+         err.code === '42501' ||
+         err.code === 'PGRST301';
+}
+
+async function loadProfile(user) {
   const fallback = createFallbackProfile(user);
 
-  // Ctrl+F5 직후 hydration 경합에서 user만 있고 토큰이 없는 경우가 있어
-  // profiles 조회를 시도하면 401이 반복된다. 토큰이 없으면 즉시 fallback 처리.
-  if (!shouldAttemptProfileLoad(user, session)) {
-    return fallback;
-  }
-
   try {
-    const { data, error } = await withTimeout(
-      supabase.from('profiles').select('*').eq('id', user.uid).maybeSingle(),
-      8000,
-      'load-profile',
-    );
-
-    if (error) {
-      throw error;
+    // SELECT 시도 — 4초 타임아웃, 실패 시 한 번만 재시도
+    let result;
+    try {
+      result = await withTimeout(
+        supabase.from('profiles').select('*').eq('id', user.uid).maybeSingle(),
+        4000,
+        'load-profile',
+      );
+    } catch (firstErr) {
+      const transient = firstErr.message?.includes('timeout') || firstErr.message?.includes('fetch');
+      if (!transient) {
+        // 권한·RLS 오류는 즉시 폴백
+        return fallback;
+      }
+      // 일시 오류만 1회 재시도 (조용히)
+      await new Promise(r => setTimeout(r, 1500));
+      try {
+        result = await withTimeout(
+          supabase.from('profiles').select('*').eq('id', user.uid).maybeSingle(),
+          6000,
+          'load-profile-retry',
+        );
+      } catch {
+        // 재시도도 실패 — 폴백으로 조용히 계속 진행 (콘솔 도배 X)
+        return fallback;
+      }
     }
 
-    if (!data) return fallback;
+    const { data, error } = result || {};
+    if (error) {
+      // 권한 오류면 조용히 폴백
+      if (isRlsOrAuthError(error)) return fallback;
+      // 그 외는 1회만 경고 후 폴백
+      console.warn('[Auth] profile select error:', error.message);
+      return fallback;
+    }
+
+    if (!data) {
+      // 프로필 미존재 → 폴백 프로필 사용
+      // (트리거 handle_new_user가 가입 시 자동 생성하므로 클라이언트 INSERT 불필요)
+      return { ...fallback, createdAt: new Date().toISOString() };
+    }
 
     return mapProfileData(data, fallback);
   } catch (error) {
-    // 타임아웃 또는 네트워크 오류 — 폴백 프로필로 계속 진행
-    if (!(error instanceof TimeoutError)) {
-      console.warn('[Auth] profile load failed:', error.message);
+    // 어떤 오류든 앱이 멈추면 안 됨 — 폴백으로 계속
+    if (!isRlsOrAuthError(error)) {
+      console.warn('[Auth] profile load fallback:', error.message);
     }
     return fallback;
   }
@@ -182,9 +201,11 @@ async function loadProfile(user, session = null) {
  *   → 로그아웃 후 늦게 도착한 프로필로 상태가 덮어씌워지는 race condition 제거.
  */
 async function applySession(session, seq) {
-  if (!session?.user || !hasSessionAccessToken(session)) {
-    // 이미 미인증 상태이면 중복 콜백 방지
-    if (currentUser === null && !isLoggingIn) return;
+  if (!session?.user) {
+    // 이미 로그아웃 상태면 콜백 불필요 (loginWithEmail pre-signout 중에도 동일)
+    // isLoggingIn=true 상태에서 pre-signout이 null 콜백을 발생시키면
+    // isAuthReady가 false로 리셋되어 initAppAfterAuth가 중복 호출되는 버그 방지
+    if (currentUser === null) return;
     currentUser = null;
     userProfile = null;
     isLoggingIn = false;
@@ -193,7 +214,7 @@ async function applySession(session, seq) {
   }
 
   const user = toCompatUser(session.user);
-  const profile = await loadProfile(user, session);
+  const profile = await loadProfile(user);
 
   // 프로필 로딩이 끝나는 사이에 logout()이 호출됐으면 폐기
   if (seq !== applySessionSeq) {
@@ -207,20 +228,59 @@ async function applySession(session, seq) {
   emitAuthChanged();
 }
 
-// ─── 로그인 에러 분류 ─────────────────────────────────────────────────────────
+// ─── directPasswordLogin (fallback) ──────────────────────────────────────────
 
-function classifyLoginError(err) {
-  if (err instanceof TimeoutError) return 'timeout';
-  const msg = String(err?.message || '').toLowerCase();
-  if (
-    msg.includes('invalid login') ||
-    msg.includes('invalid credentials') ||
-    msg.includes('email or password') ||
-    msg.includes('invalid email or password')
-  ) return 'credentials';
-  if (msg.includes('email not confirmed')) return 'unconfirmed';
-  if (msg.includes('fetch') || msg.includes('network') || msg.includes('abort')) return 'network';
-  return 'unknown';
+async function directPasswordLogin(email, password) {
+  const { url, anonKey } = getSupabaseConfig();
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 10000);
+
+  try {
+    const response = await fetch(`${url}/auth/v1/token?grant_type=password`, {
+      method: 'POST',
+      headers: {
+        apikey: anonKey,
+        Authorization: `Bearer ${anonKey}`,
+        'Content-Type': 'application/json',
+        'X-Client-Info': 'invex-direct-auth',
+      },
+      body: JSON.stringify({ email, password }),
+      signal: controller.signal,
+    });
+
+    let payload = {};
+    try {
+      payload = await response.json();
+    } catch {
+      // JSON 파싱 실패 시 raw text 로 오류 메시지 구성
+      const rawText = await response.text().catch(() => '');
+      throw new Error(rawText || `서버 응답 파싱 실패 (HTTP ${response.status})`);
+    }
+
+    if (!response.ok) {
+      throw new Error(
+        payload?.msg ||
+        payload?.message ||
+        payload?.error_description ||
+        payload?.error ||
+        `Direct auth failed (HTTP ${response.status})`,
+      );
+    }
+
+    const { error } = await withTimeout(
+      supabase.auth.setSession({
+        access_token: payload.access_token,
+        refresh_token: payload.refresh_token,
+      }),
+      8000,
+      'set-session',
+    );
+
+    if (error) throw error;
+    return payload.user || null;
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 // ─── 인라인 로그인 오류 표시 ──────────────────────────────────────────────────
@@ -241,7 +301,7 @@ function renderInlineLoginError(loginBtn, email, errorMsg, showResetAction) {
   if (errorMsg.includes('지연') || errorMsg.includes('불안정') || errorMsg.includes('오프라인') || errorMsg.includes('재시도')) {
     const retryBtn = document.createElement('button');
     retryBtn.style.cssText = 'width:100%; margin-top:8px; padding:10px 16px; background:linear-gradient(135deg, #3b82f6, #6366f1); color:white; border:none; border-radius:8px; cursor:pointer; font-size:13px; font-weight:600;';
-    retryBtn.textContent = '🔄 다시 시도';
+    retryBtn.textContent = ' 다시 시도';
     retryBtn.addEventListener('click', () => {
       document.getElementById('login-error-msg')?.remove();
       document.getElementById('gate-email-login')?.click();
@@ -274,7 +334,8 @@ function renderInlineLoginError(loginBtn, email, errorMsg, showResetAction) {
       errorContainer.innerHTML = '';
       const successEl = document.createElement('div');
       successEl.style.cssText = 'color:#22c55e; font-size:13px; text-align:center; padding:14px; background:rgba(34,197,94,0.1); border-radius:8px; line-height:1.6;';
-      successEl.innerHTML = `<strong>이메일을 전송했습니다.</strong><br><span style="font-size:12px; color:var(--text-muted);">${email} 메일함에서 비밀번호를 다시 설정해 주세요.</span>`;
+      const safeEmail = String(email || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      successEl.innerHTML = `<strong>이메일을 전송했습니다.</strong><br><span style="font-size:12px; color:var(--text-muted);">${safeEmail} 메일함에서 비밀번호를 다시 설정해 주세요.</span>`;
       errorContainer.appendChild(successEl);
     });
 
@@ -291,6 +352,10 @@ export function initAuth(callback) {
   if (callback && !authChangeCallbacks.includes(callback)) {
     authChangeCallbacks.push(callback);
   }
+  const unsubscribe = () => {
+    const idx = authChangeCallbacks.indexOf(callback);
+    if (idx !== -1) authChangeCallbacks.splice(idx, 1);
+  };
 
   if (!isSupabaseConfigured) {
     purgeAuthStorage({ includeSupabaseSession: true });
@@ -299,52 +364,59 @@ export function initAuth(callback) {
     if (callback) {
       try { callback(null, userProfile); } catch (e) { console.error('[Auth] callback error:', e); }
     }
-    return;
+    return unsubscribe;
   }
 
   if (authInitialized) {
     if (callback) {
       try { callback(currentUser, userProfile); } catch (e) { console.error('[Auth] callback error:', e); }
     }
-    return;
+    return unsubscribe;
   }
 
   authInitialized = true;
   sanitizeAuthStorage();
 
-  // onAuthStateChange — INITIAL_SESSION 이벤트를 단일 hydration 소스로 사용
-  const { data: listener } = supabase.auth.onAuthStateChange(async (event, session) => {
+  // INITIAL_SESSION이 일정 시간 내 오지 않으면 로그인 화면으로 폴백
+  let initialSessionReceived = false;
+  const fallbackTimer = setTimeout(() => {
+    if (!initialSessionReceived) {
+      console.warn('[Auth] INITIAL_SESSION timeout — showing login screen');
+      applySession(null, applySessionSeq);
+    }
+  }, 3000); // 8000 → 3000ms (AuthContext에도 2초 fallback 있으므로 충분)
+
+  // onAuthStateChange만으로 초기 세션 + 이후 변경 모두 처리
+  // (별도 getSession() 호출 시 Supabase 내부 initialize lock과 충돌 → 5초 지연 발생)
+  const { data: listener } = supabase.auth.onAuthStateChange(async (_event, session) => {
     try {
-      if (event === 'INITIAL_SESSION') {
-        authHydrationStarted = true;
+      if (!initialSessionReceived) {
+        initialSessionReceived = true;
+        clearTimeout(fallbackTimer);
       }
+
+      if (_event === 'PASSWORD_RECOVERY') {
+        showPasswordRecoveryModal();
+        return;
+      }
+
+      if (_event === 'TOKEN_REFRESHED') {
+        // 혹시 남아있을 수 있는 구 버전 localStorage 플래그 제거
+        try { localStorage.removeItem(_BS_BLOCKED_KEY); } catch (_) {}
+      }
+
       await applySession(session, applySessionSeq);
-      authHydrationComplete = true;
+
+      // applySession 완료 후 발행 — currentUser가 세팅된 시점에서 main.js가 받도록
+      if (_event === 'TOKEN_REFRESHED') {
+        window.dispatchEvent(new CustomEvent('invex:token-refreshed'));
+      }
     } catch (err) {
       console.error('[Auth] onAuthStateChange handler error:', err);
     }
   });
   authSubscription = listener?.subscription || null;
-
-  // 일부 환경에서 INITIAL_SESSION이 지연/누락될 수 있어 1회 폴백만 수행
-  setTimeout(() => {
-    if (authHydrationStarted || authHydrationComplete) return;
-    const initSeq = applySessionSeq;
-    withTimeout(supabase.auth.getSession(), 12000, 'initial-session')
-      .then(({ data }) => applySession(data?.session || null, initSeq))
-      .catch((error) => {
-        const message = String(error?.message || '').toLowerCase();
-        if (message.includes('timeout')) {
-          console.info('[Auth] Initial session recovery timeout, continue with anonymous state');
-        } else {
-          console.warn('[Auth] Initial session recovery failed:', error.message);
-        }
-        applySession(null, initSeq);
-      })
-      .finally(() => {
-        authHydrationComplete = true;
-      });
-  }, 1200);
+  return unsubscribe;
 }
 
 // ─── Google 로그인 ────────────────────────────────────────────────────────────
@@ -482,6 +554,7 @@ export async function loginWithEmail(email, password) {
     return null;
   }
   isLoggingIn = true;
+  applySessionSeq += 1; // 진행 중인 INITIAL_SESSION applySession 무효화
 
   const loginBtn = document.getElementById('gate-email-login');
   const originalText = loginBtn?.textContent || '이메일로 로그인';
@@ -499,52 +572,78 @@ export async function loginWithEmail(email, password) {
     // ── Supabase 클라이언트 내부 상태 초기화 ─────────────────────────────────
     // localStorage 정리만으로는 클라이언트 내부 토큰/갱신 상태가 남아
     // signInWithPassword 충돌 또는 fetch timeout의 근본 원인이 됨
-    // ★ non-blocking: 완료를 기다리지 않아 3s 낭비 제거
-    supabase.auth.signOut({ scope: 'local' }).catch(() => {});
+    // 1.2초로 단축: scope: 'local'은 API 호출 없이 끝나야 정상 — 그보다 오래 걸리면 의미 없음
+    try {
+      await withTimeout(supabase.auth.signOut({ scope: 'local' }), 1200, 'pre-login-signout');
+    } catch {
+      // signOut 실패해도 로그인 계속
+    }
     purgeAuthStorage({ includeSupabaseSession: true });
 
-    // ── 로그인 시도 (재시도 1회 포함) ────────────────────────────────────────
+    // ── 로그인 시도 (재시도 포함) ─────────────────────────────────────────────
     async function attemptLogin(attempt = 1) {
-      const timeout = attempt === 1 ? 5000 : 8000; // 1차 5s, 재시도 8s (기존 8s/12s → 단축)
-      const { data, error } = await withTimeout(
-        supabase.auth.signInWithPassword({ email, password }),
-        timeout,
-        'login',
-      );
-      if (error) throw error;
-      return data.user;
-    }
-
-    let user;
-    try {
-      user = await attemptLogin(1);
-    } catch (err) {
-      const kind = classifyLoginError(err);
-      if (kind === 'timeout' || kind === 'network') {
-        // 네트워크/타임아웃 오류 시 1.5초 대기 후 1회만 재시도
-        await new Promise(r => setTimeout(r, 1500));
-        user = await attemptLogin(2);
-      } else {
-        throw err; // credentials/unconfirmed → 즉시 에러 표시
+      const timeout = attempt === 1 ? 15000 : 20000;
+      try {
+        const { data, error } = await withTimeout(
+          supabase.auth.signInWithPassword({ email, password }),
+          timeout,
+          'login',
+        );
+        if (error) throw error;
+        return data.user;
+      } catch (err) {
+        const m = String(err?.message || '').toLowerCase();
+        const isNetwork = m.includes('fetch') || m.includes('network') || m.includes('timeout') || m.includes('abort');
+        if (isNetwork && attempt === 1) {
+          // 1차 실패 → 1.5초 대기 후 directPasswordLogin fallback 시도
+          await new Promise(r => setTimeout(r, 1500));
+          purgeAuthStorage({ includeSupabaseSession: true });
+          const fallbackUser = await directPasswordLogin(email, password);
+          return fallbackUser;
+        }
+        throw err;
       }
     }
+
+    const user = await attemptLogin(1).catch(async (err) => {
+      const m = String(err?.message || '').toLowerCase();
+      const isNetwork = m.includes('fetch') || m.includes('network') || m.includes('timeout') || m.includes('abort');
+      if (isNetwork) {
+        await new Promise(r => setTimeout(r, 2000));
+        return attemptLogin(2);
+      }
+      throw err;
+    });
 
     showToast(`${user?.user_metadata?.full_name || '사용자'}님, 로그인되었습니다.`, 'success');
     return toCompatUser(user);
 
   } catch (error) {
-    const kind = classifyLoginError(error);
+    const lowerMessage = String(error?.message || '').toLowerCase();
+
     let errorMsg = '';
     let showResetAction = false;
 
-    if (kind === 'credentials') {
+    const isConnectivity =
+      lowerMessage.includes('fetch') ||
+      lowerMessage.includes('network') ||
+      lowerMessage.includes('timeout') ||
+      lowerMessage.includes('abort');
+
+    if (
+      lowerMessage.includes('invalid login') ||
+      lowerMessage.includes('invalid credentials') ||
+      lowerMessage.includes('email or password') ||
+      lowerMessage.includes('invalid email or password')
+    ) {
       errorMsg = '이메일 또는 비밀번호가 올바르지 않습니다.';
       showResetAction = true;
       showToast('로그인 정보를 확인해 주세요.', 'error', 3000);
-    } else if (kind === 'unconfirmed') {
+    } else if (lowerMessage.includes('email not confirmed')) {
       errorMsg = '이메일 인증이 완료되지 않았습니다. 메일함을 확인해 주세요.';
       showToast(errorMsg, 'warning', 5000);
-    } else if (kind === 'timeout' || kind === 'network') {
+    } else if (isConnectivity) {
+      const debug = getSupabaseDebugInfo();
       if (typeof navigator !== 'undefined' && navigator.onLine === false) {
         errorMsg = '현재 오프라인 상태입니다. 네트워크 연결을 확인한 뒤 다시 시도해 주세요.';
       } else {
@@ -554,7 +653,7 @@ export async function loginWithEmail(email, password) {
         message: error?.message,
         name: error?.name,
         online: navigator?.onLine,
-        supabase: getSupabaseDebugInfo(),
+        supabase: debug,
       });
       showToast(errorMsg, 'error', 8000);
     } else {
@@ -618,6 +717,88 @@ export async function resetPassword(email) {
   }
 }
 
+/**
+ * 비밀번호 재설정 링크 클릭 후 새 비밀번호 입력 모달
+ */
+function showPasswordRecoveryModal() {
+  const existing = document.getElementById('pw-recovery-modal');
+  if (existing) existing.remove();
+
+  const overlay = document.createElement('div');
+  overlay.id = 'pw-recovery-modal';
+  overlay.style.cssText = [
+    'position:fixed; inset:0; z-index:9999;',
+    'background:rgba(0,0,0,0.7); backdrop-filter:blur(4px);',
+    'display:flex; align-items:center; justify-content:center;',
+  ].join('');
+
+  overlay.innerHTML = `
+    <div style="background:var(--bg-card,#1e293b); border:1px solid rgba(255,255,255,0.1);
+                border-radius:16px; padding:40px 32px; width:100%; max-width:400px;
+                box-shadow:0 24px 80px rgba(0,0,0,0.5); font-family:inherit;">
+      <div style="text-align:center; margin-bottom:24px;">
+        <div style="font-size:40px; margin-bottom:10px;"></div>
+        <h2 style="font-size:18px; font-weight:800; color:var(--text,#f0f4f8); margin-bottom:6px;">새 비밀번호 설정</h2>
+        <p style="font-size:13px; color:var(--text-muted,#94a3b8);">사용할 새 비밀번호를 입력해 주세요.</p>
+      </div>
+      <div id="pw-recovery-err" style="display:none; margin-bottom:14px; padding:10px 14px;
+           background:rgba(239,68,68,0.1); border-radius:8px;
+           color:#ef4444; font-size:13px; text-align:center;"></div>
+      <input id="pw-recovery-new" type="password" placeholder="새 비밀번호 (8자 이상)"
+        style="width:100%; padding:12px 14px; border-radius:10px; border:1px solid rgba(255,255,255,0.1);
+               background:rgba(255,255,255,0.05); color:var(--text,#f0f4f8); font-size:14px;
+               margin-bottom:10px; outline:none; box-sizing:border-box;" />
+      <input id="pw-recovery-confirm" type="password" placeholder="새 비밀번호 확인"
+        style="width:100%; padding:12px 14px; border-radius:10px; border:1px solid rgba(255,255,255,0.1);
+               background:rgba(255,255,255,0.05); color:var(--text,#f0f4f8); font-size:14px;
+               margin-bottom:20px; outline:none; box-sizing:border-box;" />
+      <button id="pw-recovery-btn"
+        style="width:100%; padding:13px; border-radius:10px; border:none; cursor:pointer;
+               background:linear-gradient(135deg,#3b82f6,#6366f1); color:#fff;
+               font-size:15px; font-weight:700; font-family:inherit; transition:opacity 0.2s;">
+        비밀번호 변경하기
+      </button>
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+
+  const newPw = overlay.querySelector('#pw-recovery-new');
+  const confirmPw = overlay.querySelector('#pw-recovery-confirm');
+  const btn = overlay.querySelector('#pw-recovery-btn');
+  const errEl = overlay.querySelector('#pw-recovery-err');
+
+  function showErr(msg) {
+    errEl.textContent = msg;
+    errEl.style.display = 'block';
+  }
+
+  btn.addEventListener('click', async () => {
+    const pw = newPw.value.trim();
+    const cpw = confirmPw.value.trim();
+    errEl.style.display = 'none';
+
+    if (pw.length < 8) { showErr('비밀번호는 8자 이상이어야 합니다.'); return; }
+    if (pw !== cpw) { showErr('비밀번호가 일치하지 않습니다.'); return; }
+
+    btn.disabled = true;
+    btn.textContent = '변경 중...';
+
+    const { error } = await supabase.auth.updateUser({ password: pw });
+    if (error) {
+      btn.disabled = false;
+      btn.textContent = '비밀번호 변경하기';
+      showErr(`변경 실패: ${error.message}`);
+      return;
+    }
+
+    overlay.remove();
+    showToast('비밀번호가 변경되었습니다. 새 비밀번호로 로그인해 주세요.', 'success', 5000);
+    // 변경 후 로그아웃 → 로그인 화면으로
+    await supabase.auth.signOut({ scope: 'local' });
+  });
+}
+
 // ─── 로그아웃 ─────────────────────────────────────────────────────────────────
 
 /**
@@ -631,13 +812,6 @@ export async function resetPassword(email) {
 export async function logout() {
   if (!isSupabaseConfigured) return false;
 
-  // 로그아웃 전 대기 중인 데이터 동기화 완료 (2초 디바운스 중 세션 소멸로 인한 데이터 유실 방지)
-  try {
-    await flushPendingSync();
-  } catch (e) {
-    console.warn('[Auth] 로그아웃 전 동기화 실패 (계속 진행):', e.message);
-  }
-
   // 진행 중인 applySession 결과를 무효화
   applySessionSeq += 1;
 
@@ -647,30 +821,21 @@ export async function logout() {
     googleLoginTimeoutId = null;
   }
 
-  let signOutError = null;
-  try {
-    const { error } = await withTimeout(
-      supabase.auth.signOut({ scope: 'local' }),
-      8000,
-      'logout',
-    );
-    signOutError = error || null;
-  } catch (error) {
-    signOutError = error;
-  } finally {
-    purgeAuthStorage({ includeSupabaseSession: true });
-    currentUser = null;
-    userProfile = null;
-    isLoggingIn = false;
-    emitAuthChanged();
-  }
-
-  if (signOutError) {
-    showToast(`로그아웃 처리 경고: ${signOutError.message}`, 'warning');
-    return false;
-  }
+  //  로컬 상태를 즉시 초기화 → UI가 바로 로그인 화면으로 전환 (대기 없음)
+  purgeAuthStorage({ includeSupabaseSession: true });
+  try { localStorage.removeItem(_BS_BLOCKED_KEY); } catch (_) {}
+  currentUser = null;
+  userProfile = null;
+  isLoggingIn = false;
+  emitAuthChanged(); // ← 여기서 즉시 로그인 화면으로 전환
 
   showToast('로그아웃되었습니다.', 'info');
+
+  // 서버 세션 취소는 백그라운드에서 처리 (UI 차단 없음)
+  supabase.auth.signOut({ scope: 'local' }).catch((err) => {
+    console.warn('[Auth] background signOut error (ignored):', err?.message);
+  });
+
   return true;
 }
 
@@ -727,7 +892,6 @@ export const PAGE_MIN_ROLE = {
   accounts:     'manager',
   orders:       'manager',
   sales:        'manager',
-  'auto-order': 'manager',
   profit:       'manager',
   'weekly-report': 'manager',
   'tax-reports':'manager',
@@ -783,7 +947,8 @@ export const ACTION_MIN_ROLE = {
 };
 
 export function canAction(actionKey) {
-  if (!isSupabaseConfigured) return true;
+  // 로컬 모드(Supabase 미설정): 개발 환경만 허용, 프로덕션은 거부 (Fail-secure)
+  if (!isSupabaseConfigured) return !import.meta.env.PROD;
   if (!userProfile) return false;
   const required = AUTH_ACTION_MIN_ROLE[actionKey] || ACTION_MIN_ROLE[actionKey];
   if (!required) return true;
@@ -791,7 +956,7 @@ export function canAction(actionKey) {
 }
 
 export function canAccessByRole(pageName) {
-  if (!isSupabaseConfigured) return true;
+  if (!isSupabaseConfigured) return !import.meta.env.PROD;
   if (!userProfile) return false;
   const minRole = AUTH_PAGE_MIN_ROLE[pageName] || PAGE_MIN_ROLE[pageName];
   if (!minRole) return true;
@@ -801,25 +966,5 @@ export function canAccessByRole(pageName) {
 export function renderLoginScreen(container) {
   return renderVanillaLoginScreen(container, {
     onGoogleLogin: () => loginWithGoogle(),
-  });
-
-  container.innerHTML = `
-    <div style="display:flex; align-items:center; justify-content:center; min-height:80vh;">
-      <div style="text-align:center; max-width:400px; padding:40px;">
-        <div style="font-size:48px; margin-bottom:16px;">INVEX</div>
-        <h1 style="font-size:28px; font-weight:800; margin-bottom:8px;">INVEX</h1>
-        <p style="color:var(--text-muted); margin-bottom:32px; font-size:14px;">
-          중소기업 맞춤 재고/경영 관리 시스템
-        </p>
-        <button class="btn btn-primary btn-lg" id="btn-google-login" style="width:100%; gap:12px; padding:16px; font-size:16px; background:#ffffff; color:#0f172a; border:1px solid rgba(255,255,255,0.08); box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
-          <svg width="28" height="28" viewBox="0 0 48 48" aria-hidden="true" style="display:block;"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/><path fill="none" d="M0 0h48v48H0z"/></svg>
-          Google 계정으로 시작하기
-        </button>
-      </div>
-    </div>
-  `;
-
-  container.querySelector('#btn-google-login')?.addEventListener('click', async () => {
-    await loginWithGoogle();
   });
 }

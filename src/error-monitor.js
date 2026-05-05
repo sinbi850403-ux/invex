@@ -16,9 +16,9 @@
 import * as Sentry from '@sentry/browser';
 import { showToast } from './toast.js';
 
-// ⚠️ Sentry 프로젝트 DSN을 여기에 입력하세요
-// 예시: 'https://abcdef1234567890@o123456.ingest.sentry.io/1234567'
-const SENTRY_DSN = '';
+// Sentry DSN — 환경변수로 관리 (.env: VITE_SENTRY_DSN=https://...)
+// 소스코드에 DSN을 직접 넣으면 public 저장소에서 노출됨 → 반드시 환경변수 사용
+const SENTRY_DSN = import.meta.env.VITE_SENTRY_DSN || '';
 
 /**
  * 에러 모니터링 초기화
@@ -173,12 +173,28 @@ export function handlePageError(error, context = {}, userMsg = null, toastType =
   return msg;
 }
 
+// 브라우저 확장 프로그램(MetaMask 등) 및 외부 라이브러리 에러 패턴
+const EXTENSION_ERROR_PATTERNS = [
+  /metamask/i,
+  /ethereum/i,
+  /inpage\.js/i,
+  /chrome-extension:\/\//i,
+  /moz-extension:\/\//i,
+  /extension:\/\//i,
+];
+
+function isExternalError(message = '', filename = '') {
+  const text = `${message} ${filename}`;
+  return EXTENSION_ERROR_PATTERNS.some(p => p.test(text));
+}
+
 /**
  * Sentry 미설정 시 콘솔에 에러를 출력하는 폴백 핸들러
  * 왜? → DSN이 없어도 개발 중 에러를 놓치지 않기 위함
  */
 function setupFallbackErrorHandler() {
   window.addEventListener('error', (event) => {
+    if (isExternalError(event.error?.message || event.message, event.filename)) return;
     console.error('[INVEX 미포착 에러]', event.error?.message || event.message, {
       filename: event.filename,
       lineno: event.lineno,
@@ -187,6 +203,9 @@ function setupFallbackErrorHandler() {
   });
 
   window.addEventListener('unhandledrejection', (event) => {
-    console.error('[INVEX 미포착 Promise 거부]', event.reason?.message || event.reason);
+    const msg = event.reason?.message || String(event.reason || '');
+    const stack = event.reason?.stack || '';
+    if (isExternalError(msg, stack)) return;
+    console.error('[INVEX 미포착 Promise 거부]', msg);
   });
 }

@@ -1,0 +1,778 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>INVEX vs 타사 ERP 비교 분석</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Noto Sans KR', sans-serif;
+    font-size: 12px;
+    color: #1a1a2e;
+    background: #fff;
+    padding: 40px;
+    max-width: 900px;
+    margin: 0 auto;
+  }
+
+  /* 커버 */
+  .cover {
+    text-align: center;
+    padding: 60px 0 48px;
+    border-bottom: 2px solid #e2e6eb;
+    margin-bottom: 36px;
+  }
+  .cover-badge {
+    display: inline-block;
+    background: #1a1a2e;
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    padding: 4px 14px;
+    border-radius: 20px;
+    margin-bottom: 20px;
+  }
+  .cover h1 {
+    font-size: 26px;
+    font-weight: 700;
+    color: #1a1a2e;
+    line-height: 1.3;
+    margin-bottom: 10px;
+  }
+  .cover-sub {
+    font-size: 13px;
+    color: #5a6474;
+    margin-bottom: 28px;
+  }
+  .cover-meta {
+    display: flex;
+    justify-content: center;
+    gap: 32px;
+    font-size: 11px;
+    color: #8b949e;
+  }
+  .cover-meta span { font-weight: 600; color: #1a1a2e; }
+
+  /* 섹션 */
+  .section { margin-bottom: 32px; }
+
+  h2 {
+    font-size: 14px;
+    font-weight: 700;
+    color: #1a1a2e;
+    border-left: 3px solid #1a1a2e;
+    padding-left: 10px;
+    margin-bottom: 14px;
+  }
+
+  h3 {
+    font-size: 12px;
+    font-weight: 700;
+    color: #5a6474;
+    margin: 18px 0 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  p { color: #3d4452; line-height: 1.7; margin-bottom: 8px; }
+
+  /* 요약 카드 */
+  .summary-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-bottom: 28px;
+  }
+  .summary-card {
+    background: #f6f8fa;
+    border-radius: 8px;
+    padding: 14px 12px;
+    text-align: center;
+  }
+  .summary-card .s-val {
+    font-size: 22px;
+    font-weight: 700;
+    color: #1a1a2e;
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+  .summary-card .s-val.green { color: #16a34a; }
+  .summary-card .s-val.red   { color: #dc2626; }
+  .summary-card .s-val.blue  { color: #2563eb; }
+  .summary-card .s-label { font-size: 10px; color: #8b949e; font-weight: 500; }
+
+  /* 테이블 */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 11px;
+    margin-bottom: 8px;
+  }
+  thead tr { background: #1a1a2e; color: #fff; }
+  thead th {
+    padding: 8px 10px;
+    text-align: left;
+    font-weight: 600;
+    font-size: 10px;
+    letter-spacing: 0.3px;
+  }
+  tbody tr { border-bottom: 1px solid #e2e6eb; }
+  tbody tr:nth-child(even) { background: #f6f8fa; }
+  tbody td { padding: 7px 10px; color: #3d4452; vertical-align: middle; }
+  tbody td:first-child { font-weight: 600; color: #1a1a2e; }
+
+  .tag {
+    display: inline-block;
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 600;
+    line-height: 1.6;
+  }
+  .tag-ok   { background: #dcfce7; color: #15803d; }
+  .tag-no   { background: #fee2e2; color: #b91c1c; }
+  .tag-part { background: #fef9c3; color: #92400e; }
+  .tag-up   { background: #dbeafe; color: #1d4ed8; }
+
+  /* 우선순위 */
+  .priority-list { display: flex; flex-direction: column; gap: 10px; }
+  .priority-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 12px 14px;
+    border-radius: 8px;
+    border: 1px solid #e2e6eb;
+  }
+  .priority-item.high   { border-left: 4px solid #dc2626; background: #fff5f5; }
+  .priority-item.medium { border-left: 4px solid #d97706; background: #fffbeb; }
+  .priority-item.low    { border-left: 4px solid #2563eb; background: #eff6ff; }
+  .priority-badge {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    padding: 2px 7px;
+    border-radius: 20px;
+    white-space: nowrap;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+  .priority-item.high   .priority-badge { background: #dc2626; color: #fff; }
+  .priority-item.medium .priority-badge { background: #d97706; color: #fff; }
+  .priority-item.low    .priority-badge { background: #2563eb; color: #fff; }
+  .priority-content h4 { font-size: 12px; font-weight: 700; color: #1a1a2e; margin-bottom: 3px; }
+  .priority-content p  { font-size: 11px; color: #5a6474; margin: 0; }
+
+  /* 강점/약점 */
+  .sw-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .sw-box { border-radius: 8px; padding: 14px 16px; }
+  .sw-box.strength { background: #f0fdf4; border: 1px solid #bbf7d0; }
+  .sw-box.weakness { background: #fff5f5; border: 1px solid #fecaca; }
+  .sw-box h3 { margin: 0 0 10px; font-size: 11px; }
+  .sw-box.strength h3 { color: #15803d; }
+  .sw-box.weakness h3 { color: #b91c1c; }
+  .sw-box ul { list-style: none; display: flex; flex-direction: column; gap: 5px; }
+  .sw-box li { font-size: 11px; color: #3d4452; padding-left: 14px; position: relative; line-height: 1.5; }
+  .sw-box.strength li::before { content: '+'; position: absolute; left: 0; color: #16a34a; font-weight: 700; }
+  .sw-box.weakness li::before { content: '−'; position: absolute; left: 0; color: #dc2626; font-weight: 700; }
+
+  /* 로드맵 */
+  .roadmap { display: flex; flex-direction: column; gap: 0; }
+  .roadmap-item {
+    display: flex;
+    gap: 16px;
+    padding: 0 0 20px;
+    position: relative;
+  }
+  .roadmap-item:not(:last-child)::before {
+    content: '';
+    position: absolute;
+    left: 16px;
+    top: 32px;
+    bottom: 0;
+    width: 2px;
+    background: #e2e6eb;
+  }
+  .roadmap-dot {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 700;
+    color: #fff;
+    flex-shrink: 0;
+    position: relative;
+    z-index: 1;
+  }
+  .dot-1 { background: #dc2626; }
+  .dot-2 { background: #d97706; }
+  .dot-3 { background: #2563eb; }
+  .roadmap-body { padding-top: 5px; }
+  .roadmap-body h4 { font-size: 12px; font-weight: 700; color: #1a1a2e; margin-bottom: 4px; }
+  .roadmap-body p  { font-size: 11px; color: #5a6474; margin: 0; }
+  .roadmap-body .tags { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 6px; }
+  .roadmap-tag {
+    font-size: 10px;
+    background: #f0f0f5;
+    color: #5a6474;
+    padding: 2px 7px;
+    border-radius: 4px;
+  }
+
+  /* 푸터 */
+  footer {
+    margin-top: 40px;
+    padding-top: 16px;
+    border-top: 1px solid #e2e6eb;
+    display: flex;
+    justify-content: space-between;
+    font-size: 10px;
+    color: #8b949e;
+  }
+
+  @media print {
+    body { padding: 20px; }
+    .no-print { display: none; }
+    .section { page-break-inside: avoid; }
+    .priority-item { page-break-inside: avoid; }
+  }
+
+  /* 인쇄 버튼 */
+  .print-btn {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    background: #1a1a2e;
+    color: #fff;
+    border: none;
+    padding: 12px 20px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  }
+  .print-btn:hover { background: #2d2d4e; }
+</style>
+</head>
+<body>
+
+<!-- 커버 -->
+<div class="cover">
+  <div class="cover-badge">COMPETITIVE ANALYSIS</div>
+  <h1>INVEX vs 타사 ERP<br>비교 분석 보고서</h1>
+  <div class="cover-sub">Odoo · ERPNext · Cin7 · Zoho Inventory · 이카운트 비교</div>
+  <div class="cover-meta">
+    <div>작성일 <span>2026년 4월 28일</span></div>
+    <div>분류 <span>내부 전략 문서</span></div>
+    <div>버전 <span>v1.0</span></div>
+  </div>
+</div>
+
+<!-- 총평 요약 -->
+<div class="section">
+  <h2>총평 요약</h2>
+  <div class="summary-grid">
+    <div class="summary-card">
+      <div class="s-val green">73%</div>
+      <div class="s-label">핵심 기능 구현율</div>
+    </div>
+    <div class="summary-card">
+      <div class="s-val blue">5개</div>
+      <div class="s-label">타사 대비 우위 항목</div>
+    </div>
+    <div class="summary-card">
+      <div class="s-val red">8개</div>
+      <div class="s-label">주요 미구현 항목</div>
+    </div>
+    <div class="summary-card">
+      <div class="s-val">3단계</div>
+      <div class="s-label">개선 우선순위 그룹</div>
+    </div>
+  </div>
+  <p>
+    INVEX는 중소기업 재고·입출고 핵심 기능에서 타사와 대등한 수준을 갖추고 있으며,
+    한국어 특화 세무·급여 모듈과 다크모드 등에서 명확한 우위를 보입니다.
+    그러나 실시간 데이터 갱신, 시리얼/LOT 추적, 커스텀 리포트 등
+    <strong>중급 사용자가 필요로 하는 기능에서 공백</strong>이 존재해 업셀링과 이탈 방어에 리스크가 됩니다.
+  </p>
+</div>
+
+<!-- 1. 홈 대시보드 비교 -->
+<div class="section">
+  <h2>1. 홈 대시보드 비교</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>항목</th>
+        <th>Odoo</th>
+        <th>ERPNext</th>
+        <th>Cin7</th>
+        <th>이카운트</th>
+        <th>INVEX</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>KPI 카드 수</td>
+        <td>8~12개</td>
+        <td>6~10개</td>
+        <td>6~8개</td>
+        <td>6~8개</td>
+        <td><span class="tag tag-part">6개</span></td>
+      </tr>
+      <tr>
+        <td>전월 대비 증감(▲▼%)</td>
+        <td><span class="tag tag-ok">지원</span></td>
+        <td><span class="tag tag-ok">지원</span></td>
+        <td><span class="tag tag-ok">지원</span></td>
+        <td><span class="tag tag-ok">지원</span></td>
+        <td><span class="tag tag-ok">지원</span></td>
+      </tr>
+      <tr>
+        <td>스파크라인 미니 차트</td>
+        <td><span class="tag tag-ok">지원</span></td>
+        <td><span class="tag tag-no">미지원</span></td>
+        <td><span class="tag tag-ok">지원</span></td>
+        <td><span class="tag tag-no">미지원</span></td>
+        <td><span class="tag tag-ok">지원</span></td>
+      </tr>
+      <tr>
+        <td>차트 기간 필터</td>
+        <td><span class="tag tag-ok">지원</span></td>
+        <td><span class="tag tag-ok">지원</span></td>
+        <td><span class="tag tag-ok">지원</span></td>
+        <td><span class="tag tag-part">제한적</span></td>
+        <td><span class="tag tag-ok">7일/1달/3달/전체</span></td>
+      </tr>
+      <tr>
+        <td>목표치/달성률 표시</td>
+        <td><span class="tag tag-ok">지원</span></td>
+        <td><span class="tag tag-ok">지원</span></td>
+        <td><span class="tag tag-ok">지원</span></td>
+        <td><span class="tag tag-part">일부</span></td>
+        <td><span class="tag tag-no">미구현</span></td>
+      </tr>
+      <tr>
+        <td>실시간 자동 갱신</td>
+        <td><span class="tag tag-ok">지원</span></td>
+        <td><span class="tag tag-ok">지원</span></td>
+        <td><span class="tag tag-ok">지원</span></td>
+        <td><span class="tag tag-no">미지원</span></td>
+        <td><span class="tag tag-no">새로고침 필요</span></td>
+      </tr>
+      <tr>
+        <td>위젯 커스터마이징</td>
+        <td><span class="tag tag-ok">드래그</span></td>
+        <td><span class="tag tag-part">제한적</span></td>
+        <td><span class="tag tag-no">고정</span></td>
+        <td><span class="tag tag-no">고정</span></td>
+        <td><span class="tag tag-ok">드래그 지원</span></td>
+      </tr>
+      <tr>
+        <td>역할별 대시보드</td>
+        <td><span class="tag tag-ok">지원</span></td>
+        <td><span class="tag tag-ok">지원</span></td>
+        <td><span class="tag tag-no">미지원</span></td>
+        <td><span class="tag tag-no">미지원</span></td>
+        <td><span class="tag tag-ok">경영자/직원</span></td>
+      </tr>
+      <tr>
+        <td>다크모드</td>
+        <td><span class="tag tag-no">미지원</span></td>
+        <td><span class="tag tag-no">미지원</span></td>
+        <td><span class="tag tag-no">미지원</span></td>
+        <td><span class="tag tag-no">미지원</span></td>
+        <td><span class="tag tag-up">우위</span></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- 2. 재고 관리 기능 비교 -->
+<div class="section">
+  <h2>2. 재고 관리 핵심 기능 비교</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>항목</th>
+        <th>Odoo</th>
+        <th>ERPNext</th>
+        <th>Cin7</th>
+        <th>이카운트</th>
+        <th>INVEX</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>입출고 관리</td>
+        <td><span class="tag tag-ok">지원</span></td>
+        <td><span class="tag tag-ok">지원</span></td>
+        <td><span class="tag tag-ok">지원</span></td>
+        <td><span class="tag tag-ok">지원</span></td>
+        <td><span class="tag tag-ok">지원</span></td>
+      </tr>
+      <tr>
+        <td>다창고 관리</td>
+        <td><span class="tag tag-ok">지원</span></td>
+        <td><span class="tag tag-ok">지원</span></td>
+        <td><span class="tag tag-ok">지원</span></td>
+        <td><span class="tag tag-ok">지원</span></td>
+        <td><span class="tag tag-ok">지원</span></td>
+      </tr>
+      <tr>
+        <td>바코드/QR 스캔</td>
+        <td><span class="tag tag-ok">지원</span></td>
+        <td><span class="tag tag-ok">지원</span></td>
+        <td><span class="tag tag-ok">지원</span></td>
+        <td><span class="tag tag-ok">지원</span></td>
+        <td><span class="tag tag-ok">지원</span></td>
+      </tr>
+      <tr>
+        <td>자동 발주 추천</td>
+        <td><span class="tag tag-ok">지원</span></td>
+        <td><span class="tag tag-ok">지원</span></td>
+        <td><span class="tag tag-ok">지원</span></td>
+        <td><span class="tag tag-part">제한적</span></td>
+        <td><span class="tag tag-ok">지원</span></td>
+      </tr>
+      <tr>
+        <td>시리얼/LOT 번호 추적</td>
+        <td><span class="tag tag-ok">지원</span></td>
+        <td><span class="tag tag-ok">지원</span></td>
+        <td><span class="tag tag-ok">지원</span></td>
+        <td><span class="tag tag-ok">지원</span></td>
+        <td><span class="tag tag-no">미구현</span></td>
+      </tr>
+      <tr>
+        <td>로케이션(선반/구역) 관리</td>
+        <td><span class="tag tag-ok">지원</span></td>
+        <td><span class="tag tag-ok">지원</span></td>
+        <td><span class="tag tag-ok">지원</span></td>
+        <td><span class="tag tag-part">제한적</span></td>
+        <td><span class="tag tag-no">미구현</span></td>
+      </tr>
+      <tr>
+        <td>재고 조정 이력</td>
+        <td><span class="tag tag-ok">지원</span></td>
+        <td><span class="tag tag-ok">지원</span></td>
+        <td><span class="tag tag-ok">지원</span></td>
+        <td><span class="tag tag-ok">지원</span></td>
+        <td><span class="tag tag-no">미구현</span></td>
+      </tr>
+      <tr>
+        <td>유통기한 관리</td>
+        <td><span class="tag tag-ok">지원</span></td>
+        <td><span class="tag tag-ok">지원</span></td>
+        <td><span class="tag tag-ok">지원</span></td>
+        <td><span class="tag tag-part">제한적</span></td>
+        <td><span class="tag tag-ok">임박 알림</span></td>
+      </tr>
+      <tr>
+        <td>엑셀 일괄 업로드</td>
+        <td><span class="tag tag-ok">지원</span></td>
+        <td><span class="tag tag-ok">지원</span></td>
+        <td><span class="tag tag-ok">지원</span></td>
+        <td><span class="tag tag-ok">지원</span></td>
+        <td><span class="tag tag-ok">지원</span></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- 3. 분석/보고서 비교 -->
+<div class="section">
+  <h2>3. 분석 및 보고서 비교</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>항목</th>
+        <th>Odoo</th>
+        <th>ERPNext</th>
+        <th>Cin7</th>
+        <th>이카운트</th>
+        <th>INVEX</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>ABC 분석</td>
+        <td><span class="tag tag-ok">지원</span></td>
+        <td><span class="tag tag-ok">지원</span></td>
+        <td><span class="tag tag-ok">지원</span></td>
+        <td><span class="tag tag-part">제한적</span></td>
+        <td><span class="tag tag-ok">지원</span></td>
+      </tr>
+      <tr>
+        <td>재고회전율</td>
+        <td><span class="tag tag-ok">지원</span></td>
+        <td><span class="tag tag-ok">지원</span></td>
+        <td><span class="tag tag-ok">지원</span></td>
+        <td><span class="tag tag-ok">지원</span></td>
+        <td><span class="tag tag-ok">지원</span></td>
+      </tr>
+      <tr>
+        <td>AI 수요 예측</td>
+        <td><span class="tag tag-ok">지원</span></td>
+        <td><span class="tag tag-part">제한적</span></td>
+        <td><span class="tag tag-ok">지원</span></td>
+        <td><span class="tag tag-no">미지원</span></td>
+        <td><span class="tag tag-ok">지원</span></td>
+      </tr>
+      <tr>
+        <td>손익 분석</td>
+        <td><span class="tag tag-ok">지원</span></td>
+        <td><span class="tag tag-ok">지원</span></td>
+        <td><span class="tag tag-ok">지원</span></td>
+        <td><span class="tag tag-ok">지원</span></td>
+        <td><span class="tag tag-ok">지원</span></td>
+      </tr>
+      <tr>
+        <td>비교 기간 분석</td>
+        <td><span class="tag tag-ok">지원</span></td>
+        <td><span class="tag tag-ok">지원</span></td>
+        <td><span class="tag tag-ok">지원</span></td>
+        <td><span class="tag tag-ok">지원</span></td>
+        <td><span class="tag tag-no">미구현</span></td>
+      </tr>
+      <tr>
+        <td>커스텀 리포트 빌더</td>
+        <td><span class="tag tag-ok">지원</span></td>
+        <td><span class="tag tag-ok">지원</span></td>
+        <td><span class="tag tag-part">제한적</span></td>
+        <td><span class="tag tag-no">미지원</span></td>
+        <td><span class="tag tag-no">미구현</span></td>
+      </tr>
+      <tr>
+        <td>엑셀/PDF 내보내기</td>
+        <td><span class="tag tag-ok">지원</span></td>
+        <td><span class="tag tag-ok">지원</span></td>
+        <td><span class="tag tag-ok">지원</span></td>
+        <td><span class="tag tag-ok">지원</span></td>
+        <td><span class="tag tag-ok">지원</span></td>
+      </tr>
+      <tr>
+        <td>주간 보고서 자동화</td>
+        <td><span class="tag tag-ok">지원</span></td>
+        <td><span class="tag tag-part">제한적</span></td>
+        <td><span class="tag tag-no">미지원</span></td>
+        <td><span class="tag tag-no">미지원</span></td>
+        <td><span class="tag tag-ok">지원</span></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- 4. 한국 특화 기능 -->
+<div class="section">
+  <h2>4. 한국 특화 기능 비교</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>항목</th>
+        <th>Odoo</th>
+        <th>ERPNext</th>
+        <th>Cin7</th>
+        <th>이카운트</th>
+        <th>INVEX</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>세금계산서 발행</td>
+        <td><span class="tag tag-part">플러그인</span></td>
+        <td><span class="tag tag-part">플러그인</span></td>
+        <td><span class="tag tag-no">미지원</span></td>
+        <td><span class="tag tag-ok">지원</span></td>
+        <td><span class="tag tag-ok">서류 생성</span></td>
+      </tr>
+      <tr>
+        <td>4대보험/소득세 자동계산</td>
+        <td><span class="tag tag-no">미지원</span></td>
+        <td><span class="tag tag-no">미지원</span></td>
+        <td><span class="tag tag-no">미지원</span></td>
+        <td><span class="tag tag-ok">지원</span></td>
+        <td><span class="tag tag-ok">지원</span></td>
+      </tr>
+      <tr>
+        <td>연말정산 보조</td>
+        <td><span class="tag tag-no">미지원</span></td>
+        <td><span class="tag tag-no">미지원</span></td>
+        <td><span class="tag tag-no">미지원</span></td>
+        <td><span class="tag tag-ok">지원</span></td>
+        <td><span class="tag tag-ok">지원</span></td>
+      </tr>
+      <tr>
+        <td>퇴직금 계산</td>
+        <td><span class="tag tag-no">미지원</span></td>
+        <td><span class="tag tag-no">미지원</span></td>
+        <td><span class="tag tag-no">미지원</span></td>
+        <td><span class="tag tag-ok">지원</span></td>
+        <td><span class="tag tag-ok">지원</span></td>
+      </tr>
+      <tr>
+        <td>한국어 UI 완성도</td>
+        <td><span class="tag tag-part">일부</span></td>
+        <td><span class="tag tag-part">일부</span></td>
+        <td><span class="tag tag-no">영어 전용</span></td>
+        <td><span class="tag tag-ok">완전 지원</span></td>
+        <td><span class="tag tag-up">완전 지원</span></td>
+      </tr>
+      <tr>
+        <td>무료 플랜 제공</td>
+        <td><span class="tag tag-part">커뮤니티판</span></td>
+        <td><span class="tag tag-ok">오픈소스</span></td>
+        <td><span class="tag tag-no">없음</span></td>
+        <td><span class="tag tag-no">없음</span></td>
+        <td><span class="tag tag-up">100품목 무료</span></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- 5. 강점 / 약점 -->
+<div class="section">
+  <h2>5. INVEX 강점 및 약점</h2>
+  <div class="sw-grid">
+    <div class="sw-box strength">
+      <h3>강점 (Strengths)</h3>
+      <ul>
+        <li>한국어 특화 — 세무·급여·연말정산 내장</li>
+        <li>다크모드 기본 지원 (타사 모두 미지원)</li>
+        <li>위젯 드래그 커스터마이징</li>
+        <li>역할별 대시보드 (경영자/직원)</li>
+        <li>AI 수요 예측 탑재</li>
+        <li>주간 보고서 자동화</li>
+        <li>Free 플랜 제공 (100품목 영구 무료)</li>
+        <li>1년 전체 기능 무료 개방 정책</li>
+        <li>빠른 로딩 속도 (Vite + Supabase)</li>
+      </ul>
+    </div>
+    <div class="sw-box weakness">
+      <h3>약점 (Weaknesses)</h3>
+      <ul>
+        <li>실시간 자동 갱신 미지원 (새로고침 필요)</li>
+        <li>시리얼/LOT 번호 추적 없음</li>
+        <li>로케이션(선반/구역) 관리 없음</li>
+        <li>재고 조정 이력 미구현</li>
+        <li>비교 기간 분석 없음</li>
+        <li>커스텀 리포트 빌더 없음</li>
+        <li>목표치/달성률 KPI 없음</li>
+        <li>모바일 UX 완성도 낮음</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- 6. 개선 우선순위 -->
+<div class="section">
+  <h2>6. 개선 우선순위 로드맵</h2>
+  <div class="priority-list">
+    <div class="priority-item high">
+      <span class="priority-badge">HIGH</span>
+      <div class="priority-content">
+        <h4>실시간 데이터 갱신</h4>
+        <p>Supabase Realtime 구독으로 새로고침 없이 KPI 자동 업데이트. 협업 환경에서 데이터 불일치 해소. 구현 난이도 낮음, 임팩트 높음.</p>
+      </div>
+    </div>
+    <div class="priority-item high">
+      <span class="priority-badge">HIGH</span>
+      <div class="priority-content">
+        <h4>시리얼/LOT 번호 추적</h4>
+        <p>제조업·식품·의료 고객 온보딩의 핵심 블로커. 해당 산업 고객의 이탈을 막으려면 우선 구현 필요. DB 컬럼 추가 + UI 입력 필드.</p>
+      </div>
+    </div>
+    <div class="priority-item medium">
+      <span class="priority-badge">MEDIUM</span>
+      <div class="priority-content">
+        <h4>비교 기간 분석 (이번 달 vs 지난 달)</h4>
+        <p>경영자가 가장 자주 묻는 "지난달 대비 얼마나 좋아졌나"에 답하는 뷰. 고급분석 페이지에 기간 비교 토글 추가로 구현 가능.</p>
+      </div>
+    </div>
+    <div class="priority-item medium">
+      <span class="priority-badge">MEDIUM</span>
+      <div class="priority-content">
+        <h4>재고 조정 이력 추적</h4>
+        <p>감사·회계 목적으로 재고 수량 변경 이력을 별도 테이블에 기록. 이카운트 전환 고객이 필수로 요구하는 기능.</p>
+      </div>
+    </div>
+    <div class="priority-item low">
+      <span class="priority-badge">LOW</span>
+      <div class="priority-content">
+        <h4>로케이션(선반/구역) 관리</h4>
+        <p>창고 내 세부 위치 지정. 물류 창고 고객 확장 시 필요. 현재 다창고 구조를 기반으로 하위 레벨 추가 형태로 설계 가능.</p>
+      </div>
+    </div>
+    <div class="priority-item low">
+      <span class="priority-badge">LOW</span>
+      <div class="priority-content">
+        <h4>목표치 설정 및 달성률 표시</h4>
+        <p>월 목표 매출·입고량을 설정하고 KPI 카드에 진행률 바 표시. user_settings 테이블 활용으로 추가 DB 불필요.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 7. 개발 로드맵 -->
+<div class="section">
+  <h2>7. 단계별 개발 로드맵</h2>
+  <div class="roadmap">
+    <div class="roadmap-item">
+      <div class="roadmap-dot dot-1">1</div>
+      <div class="roadmap-body">
+        <h4>즉시 (1~2개월) — 이탈 방지</h4>
+        <p>현재 사용자 이탈을 막는 기능 보완. 구현 난이도 낮고 효과 즉시.</p>
+        <div class="tags">
+          <span class="roadmap-tag">실시간 갱신 (Supabase Realtime)</span>
+          <span class="roadmap-tag">재고 조정 이력</span>
+          <span class="roadmap-tag">비교 기간 분석</span>
+          <span class="roadmap-tag">모바일 UX 개선</span>
+        </div>
+      </div>
+    </div>
+    <div class="roadmap-item">
+      <div class="roadmap-dot dot-2">2</div>
+      <div class="roadmap-body">
+        <h4>단기 (3~5개월) — 신규 고객 확장</h4>
+        <p>제조·식품·물류 업종 고객 온보딩을 가능하게 하는 기능 추가.</p>
+        <div class="tags">
+          <span class="roadmap-tag">시리얼/LOT 추적</span>
+          <span class="roadmap-tag">로케이션 관리</span>
+          <span class="roadmap-tag">목표치/달성률 KPI</span>
+          <span class="roadmap-tag">커스텀 필드 확장</span>
+        </div>
+      </div>
+    </div>
+    <div class="roadmap-item">
+      <div class="roadmap-dot dot-3">3</div>
+      <div class="roadmap-body">
+        <h4>중기 (6~12개월) — Enterprise 업셀링</h4>
+        <p>대형 고객 전환 및 Enterprise 플랜 가치 증대.</p>
+        <div class="tags">
+          <span class="roadmap-tag">커스텀 리포트 빌더</span>
+          <span class="roadmap-tag">API Webhook 강화</span>
+          <span class="roadmap-tag">모바일 앱 (PWA 고도화)</span>
+          <span class="roadmap-tag">멀티 테넌시</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<footer>
+  <div>INVEX ERP-Lite — 내부 전략 문서 (비공개)</div>
+  <div>2026년 4월 28일 기준 · 작성: INVEX 개발팀</div>
+</footer>
+
+<button class="print-btn no-print" onclick="window.print()">PDF로 저장</button>
+
+</body>
+</html>

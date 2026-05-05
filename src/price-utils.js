@@ -56,3 +56,17 @@ export function calcSaleAmount(tx) {
 export function calcPurchaseAmount(tx) {
   return Math.round((parseFloat(tx.quantity) || 0) * (parseFloat(tx.unitCost) || parseFloat(tx.unitPrice) || 0));
 }
+
+/**
+ * 부가세 계산
+ * - 매출(out): 원 미만 절사 (Math.floor) — 공급자 유리
+ * - 매입(in):  원 미만 올림 (Math.ceil)  — 매입세액 공제 최대화
+ *
+ * @param {number} supplyAmount - 공급가액 (VAT 제외)
+ * @param {'in'|'out'} type - 거래 유형
+ * @returns {number} 부가세액
+ */
+export function calcVAT(supplyAmount, type) {
+  const raw = (supplyAmount || 0) * 0.1;
+  return type === 'in' ? Math.ceil(raw) : Math.floor(raw);
+}

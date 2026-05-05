@@ -1,0 +1,342 @@
+import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
+import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
+import { PLANS } from '../../plan.js';
+import { useAuth } from '../../contexts/AuthContext.jsx';
+import Sidebar from './Sidebar.jsx';
+import TopHeader from './TopHeader.jsx';
+import { PAGE_LOADERS } from '../../router-config.js';
+import { initGlobalSearch } from '../../global-search.js';
+import { checkAndShowOnboarding } from '../../onboarding.js';
+import { showToast } from '../../toast.js';
+import { usePermission } from '../../hooks/usePermission.js';
+
+// 네이티브 React 컴포넌트로 변환된 페이지
+const REACT_PAGES = {
+  // 1차 변환 (정적/단순 페이지)
+  guide:           lazy(() => import('../../pages/GuidePage.jsx')),
+  referral:        lazy(() => import('../../pages/ReferralPage.jsx')),
+  settings:        lazy(() => import('../../pages/SettingsPage.jsx')),
+  backup:          lazy(() => import('../../pages/BackupPage.jsx')),
+  mypage:          lazy(() => import('../../pages/MyPage.jsx')),
+  support:         lazy(() => import('../../pages/SupportPage.jsx')),
+  // 2차 변환 (허브·보고서·예측·HR)
+  'hub-inventory': lazy(() => import('../../pages/HubsPage.jsx').then(m => ({ default: m.HubInventoryPage }))),
+  'hub-warehouse': lazy(() => import('../../pages/HubsPage.jsx').then(m => ({ default: m.HubWarehousePage }))),
+  'hub-order':     lazy(() => import('../../pages/HubsPage.jsx').then(m => ({ default: m.HubOrderPage }))),
+  'hub-report':    lazy(() => import('../../pages/HubsPage.jsx').then(m => ({ default: m.HubReportPage }))),
+  'hub-documents': lazy(() => import('../../pages/HubsPage.jsx').then(m => ({ default: m.HubDocumentsPage }))),
+  'hub-settings':  lazy(() => import('../../pages/HubsPage.jsx').then(m => ({ default: m.HubSettingsPage }))),
+  'hub-hr':        lazy(() => import('../../pages/HubsPage.jsx').then(m => ({ default: m.HubHrPage }))),
+  'hub-support':   lazy(() => import('../../pages/HubsPage.jsx').then(m => ({ default: m.HubSupportPage }))),
+  'weekly-report': lazy(() => import('../../pages/WeeklyReportPage.jsx')),
+  'hr-dashboard':  lazy(() => import('../../pages/HrDashboardPage.jsx')),
+  forecast:        lazy(() => import('../../pages/ForecastPage.jsx')),
+  home:            lazy(() => import('../../pages/HomePage.jsx')),
+  summary:         lazy(() => import('../../pages/SummaryPage.jsx')),
+  // 3차 변환 (결제·팀·감사)
+  billing:         lazy(() => import('../../pages/BillingPage.jsx')),
+  team:            lazy(() => import('../../pages/TeamPage.jsx')),
+  auditlog:        lazy(() => import('../../pages/AuditLogPage.jsx')),
+  // 4차 변환 (창고이동·라벨·실사·창고관리)
+  transfer:        lazy(() => import('../../pages/TransferPage.jsx')),
+  labels:          lazy(() => import('../../pages/LabelsPage.jsx')),
+  stocktake:       lazy(() => import('../../pages/StocktakePage.jsx')),
+  warehouses:      lazy(() => import('../../pages/WarehousesPage.jsx')),
+  // 5차 변환 (거래처·발주)
+  vendors:         lazy(() => import('../../pages/VendorsPage.jsx')),
+  orders:          lazy(() => import('../../pages/OrdersPage.jsx')),
+  // 6차 변환 (업로드·매핑·스캐너·일괄·고급분석)
+  upload:          lazy(() => import('../../pages/UploadPage.jsx')),
+  mapping:         lazy(() => import('../../pages/MappingPage.jsx')),
+  scanner:         lazy(() => import('../../pages/ScannerPage.jsx')),
+  bulk:            lazy(() => import('../../pages/BulkPage.jsx')),
+  dashboard:       lazy(() => import('../../pages/DashboardPage.jsx')),
+  // 7차 변환 (수불부·원가·장부·권한)
+  ledger:          lazy(() => import('../../pages/LedgerPage.jsx')),
+  costing:         lazy(() => import('../../pages/CostingPage.jsx')),
+  accounts:        lazy(() => import('../../pages/AccountsPage.jsx')),
+  roles:           lazy(() => import('../../pages/RolesPage.jsx')),
+  // 8차 변환 (API·문서·세무·손익)
+  api:             lazy(() => import('../../pages/ApiPage.jsx')),
+  documents:       lazy(() => import('../../pages/DocumentsPage.jsx')),
+  'tax-reports':   lazy(() => import('../../pages/TaxReportsPage.jsx')),
+  profit:          lazy(() => import('../../pages/ProfitPage.jsx')),
+  // 9차 변환 (POS·관리자)
+  pos:             lazy(() => import('../../pages/PosPage.jsx')),
+  admin:           lazy(() => import('../../pages/AdminPage.jsx')),
+  // 10차 변환 (HR: 직원·근태·급여·휴가·퇴직금·연말정산)
+  'org-chart':     lazy(() => import('../../pages/OrgChartPage.jsx')),
+  employees:       lazy(() => import('../../pages/EmployeesPage.jsx')),
+  attendance:      lazy(() => import('../../pages/AttendancePage.jsx')),
+  payroll:         lazy(() => import('../../pages/PayrollPage.jsx')),
+  leaves:          lazy(() => import('../../pages/LeavesPage.jsx')),
+  severance:       lazy(() => import('../../pages/SeverancePage.jsx')),
+  'yearend-settlement': lazy(() => import('../../pages/YearendSettlementPage.jsx')),
+  // 11차 변환 (재고현황·입출고·수주관리 — 마지막 3개 핵심 페이지)
+  inventory:       lazy(() => import('../../pages/InventoryPage.jsx')),
+  in:              lazy(() => import('../../pages/InoutPage.jsx').then(m => ({ default: m.InPage || m.default }))),
+  out:             lazy(() => import('../../pages/InoutPage.jsx').then(m => ({ default: m.OutPage || m.default }))),
+  sales:           lazy(() => import('../../pages/SalesPage.jsx')),
+};
+
+// 모든 페이지가 React로 완전 변환됨 — REACT_PAGES에서 직접 조회
+const PAGE_COMPONENTS = Object.fromEntries(
+  Object.entries(PAGE_LOADERS).map(([id]) => [id, REACT_PAGES[id]])
+);
+
+// 권한 가드 예외 페이지 — 항상 접근 허용 (허브, 홈, 설정계열 등)
+const UNGUARDED_PAGES = new Set([
+  'home',
+  'hub-inventory', 'hub-warehouse', 'hub-order', 'hub-report',
+  'hub-documents', 'hub-settings', 'hub-hr', 'hub-support',
+  'settings', 'mypage', 'guide', 'support', 'referral',
+  'billing', 'team',
+  'admin', 'pos',  // adminOnly는 Sidebar에서 이미 숨김, 여기선 차단 안 함
+]);
+
+/** 역할별 접근 제어 게이트 — 권한 없는 페이지 접근 시 안내 화면 표시 */
+function PermissionGuard({ pageId, children }) {
+  const { canAccess, currentRole } = usePermission();
+
+  // 예외 페이지 또는 접근 가능한 페이지
+  if (UNGUARDED_PAGES.has(pageId) || canAccess(pageId)) {
+    return children;
+  }
+
+  return (
+    <div style={{ padding: '48px', textAlign: 'center' }}>
+      <div style={{ fontSize: '40px', marginBottom: '12px' }}>🔒</div>
+      <h2 style={{ fontWeight: 700, marginBottom: '8px' }}>접근 권한이 없습니다</h2>
+      <p style={{ color: 'var(--text-muted)', fontSize: '14px', marginBottom: '8px' }}>
+        이 페이지에 접근하려면 관리자에게 권한을 요청하세요.
+      </p>
+      <p style={{ color: 'var(--text-muted)', fontSize: '12px' }}>
+        현재 역할: <strong>{currentRole}</strong>
+      </p>
+    </div>
+  );
+}
+
+function PageNotFound() {
+  return (
+    <div style={{padding:'40px', textAlign:'center'}}>
+      <h2>페이지를 찾을 수 없습니다</h2>
+    </div>
+  );
+}
+
+/** 페이지 렌더링 오류 격리 — 전체 앱 크래시 방지 */
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+  componentDidCatch(error, info) {
+    console.error('[AppLayout] 페이지 렌더링 오류:', error, info?.componentStack);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{ padding: '48px', textAlign: 'center' }}>
+          <div style={{ fontSize: '40px', marginBottom: '12px' }}>⚠️</div>
+          <h2 style={{ fontWeight: 700, marginBottom: '8px' }}>페이지를 불러오는 중 오류가 발생했습니다</h2>
+          <p style={{ color: 'var(--text-muted)', fontSize: '13px', marginBottom: '20px' }}>
+            {this.state.error?.message || '알 수 없는 오류'}
+          </p>
+          <button
+            className="btn btn-primary"
+            onClick={() => this.setState({ hasError: false, error: null })}
+          >
+            다시 시도
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+/** 업그레이드 안내 모달 (plan.js의 showUpgradeModal CustomEvent 수신) */
+function UpgradeModal({ data, onClose }) {
+  const plan = data?.plan || PLANS[data?.minPlan];
+  if (!plan) return null;
+  return (
+    <div className="modal-overlay" style={{ display: 'flex' }} onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="modal" style={{ maxWidth: '440px', textAlign: 'center' }}>
+        <div style={{ padding: '32px 24px' }}>
+          <div style={{ fontSize: '48px', marginBottom: '12px' }}>🔒</div>
+          <h3 style={{ fontSize: '20px', fontWeight: 800, marginBottom: '8px' }}>
+            {plan.name} 요금제 기능입니다
+          </h3>
+          <p style={{ color: 'var(--text-muted)', fontSize: '14px', marginBottom: '24px', lineHeight: 1.6 }}>
+            이 기능은 <strong style={{ color: plan.color }}>{plan.icon} {plan.name}</strong> 이상 요금제에서 사용할 수 있습니다.
+            <br />업그레이드 후 이용해주세요.
+          </p>
+          <div style={{ background: 'var(--bg-secondary)', borderRadius: '12px', padding: '20px', marginBottom: '24px', textAlign: 'left' }}>
+            <div style={{ fontWeight: 700, marginBottom: '8px' }}>{plan.icon} {plan.name} — {plan.price}/{plan.period}</div>
+            <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>{plan.description}</div>
+          </div>
+          <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
+            <button className="btn btn-ghost" onClick={onClose}>닫기</button>
+            <button
+              className="btn btn-primary"
+              style={{ background: `linear-gradient(135deg, ${plan.color}, ${plan.color}dd)` }}
+              onClick={() => { onClose(); window.location.href = '/billing'; }}
+            >
+              {plan.name}로 업그레이드
+            </button>
+          </div>
+          <div style={{ marginTop: '16px', fontSize: '11px', color: 'var(--text-muted)' }}>
+            Pro 플랜부터 모든 고급 기능을 사용할 수 있습니다
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default function AppLayout() {
+  const { user, profile, startPage } = useAuth();
+  const navigate = useNavigate();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => localStorage.getItem('invex:sidebar-collapsed') === '1');
+  const [upgradeModal, setUpgradeModal] = useState(null); // showUpgradeModal CustomEvent 수신
+
+  const toggleSidebarCollapse = () => {
+    setSidebarCollapsed(prev => {
+      const next = !prev;
+      localStorage.setItem('invex:sidebar-collapsed', next ? '1' : '0');
+      return next;
+    });
+  };
+
+  const hasNavigated = useRef(false);
+
+  // 앱 초기 진입 시 startPage로 이동 — 직접 URL 접근(/inventory 등)은 유지
+  useEffect(() => {
+    if (hasNavigated.current) return;
+    const isRoot = ['/', '/home'].includes(window.location.pathname);
+    if (isRoot && startPage && startPage !== 'home') {
+      hasNavigated.current = true;
+      navigate('/' + startPage, { replace: true });
+    }
+  }, [startPage, navigate]);
+
+  // 온보딩 체크 — restoreState 완료(invex:store-updated '*') 이후 실행
+  // 기존 1초 타임아웃 방식: Supabase 로딩(~1-2s)보다 빠를 수 있어 기존 사용자에게도 모달 노출되는 버그
+  useEffect(() => {
+    if (!user) return;
+    let checked = false;
+    const runCheck = () => {
+      if (checked) return;
+      checked = true;
+      checkAndShowOnboarding((pageId) => navigate('/' + pageId));
+    };
+    // store-updated '*' 이벤트 = restoreState 완료 신호
+    const handler = (e) => {
+      if (e.detail?.changedKeys?.includes('*')) runCheck();
+    };
+    window.addEventListener('invex:store-updated', handler);
+    // 혹시 이벤트가 이미 지나쳤을 경우를 대비한 폴백 (4초)
+    const fallback = setTimeout(runCheck, 4000);
+    return () => {
+      window.removeEventListener('invex:store-updated', handler);
+      clearTimeout(fallback);
+    };
+  }, [user, navigate]);
+
+  // 키보드 단축키 (Alt+숫자)
+  useEffect(() => {
+    const handler = (e) => {
+      if (e.altKey && !e.shiftKey && !e.ctrlKey && !e.metaKey && /^[1-9]$/.test(e.key)) {
+        const btns = Array.from(document.querySelectorAll('.nav-btn[data-page]')).filter(b => b.offsetParent !== null);
+        const target = btns[Number(e.key) - 1];
+        if (target?.dataset?.page) {
+          e.preventDefault();
+          navigate('/' + target.dataset.page);
+        }
+      }
+    };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, [navigate]);
+
+  // smart-details 토글 (details.smart-details)
+  useEffect(() => {
+    const handler = (e) => {
+      const summary = e.target.closest('details.smart-details > summary');
+      if (!summary) return;
+      const details = summary.parentElement;
+      if (!details || !(details instanceof HTMLDetailsElement)) return;
+      e.preventDefault();
+      details.open = !details.open;
+    };
+    document.addEventListener('click', handler, true);
+    return () => document.removeEventListener('click', handler, true);
+  }, []);
+
+  // 오류 이벤트 처리
+  useEffect(() => {
+    const handleSyncFailed = () => {
+      showToast('일부 데이터가 클라우드에 저장되지 않았습니다.', 'warning');
+    };
+    window.addEventListener('invex:sync-failed', handleSyncFailed);
+    return () => window.removeEventListener('invex:sync-failed', handleSyncFailed);
+  }, []);
+
+  // 업그레이드 모달 (plan.js showUpgradeModal → CustomEvent → React 모달)
+  useEffect(() => {
+    const handler = (e) => setUpgradeModal(e.detail || {});
+    window.addEventListener('invex:show-upgrade-modal', handler);
+    return () => window.removeEventListener('invex:show-upgrade-modal', handler);
+  }, []);
+
+  return (
+    <div id="app">
+      <button
+        className="mobile-toggle"
+        id="mobile-toggle"
+        onClick={() => setSidebarOpen(prev => !prev)}
+      ></button>
+      {sidebarOpen && <div className="sidebar-overlay active" onClick={() => setSidebarOpen(false)} />}
+
+      <Sidebar
+        isOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+        collapsed={sidebarCollapsed}
+        onToggleCollapse={toggleSidebarCollapse}
+      />
+
+<TopHeader user={user} profile={profile} sidebarCollapsed={sidebarCollapsed} />
+
+      <main id="main-content" className={sidebarCollapsed ? 'sidebar-collapsed' : ''}>
+        <ErrorBoundary>
+          <Suspense fallback={<div style={{padding:'40px',textAlign:'center',color:'var(--text-muted)'}}>로딩 중....</div>}>
+            <Routes>
+              <Route index element={<Navigate to="/home" replace />} />
+              {Object.entries(PAGE_COMPONENTS).map(([id, Component]) => (
+                <Route
+                  key={id}
+                  path={'/' + id}
+                  element={
+                    <PermissionGuard pageId={id}>
+                      <Component />
+                    </PermissionGuard>
+                  }
+                />
+              ))}
+              <Route path="*" element={<PageNotFound />} />
+            </Routes>
+          </Suspense>
+        </ErrorBoundary>
+      </main>
+
+      {upgradeModal && (
+        <UpgradeModal data={upgradeModal} onClose={() => setUpgradeModal(null)} />
+      )}
+    </div>
+  );
+}
