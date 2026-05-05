@@ -105,9 +105,9 @@ export default function PayrollPage() {
   const now = new Date();
   const defaultMonth = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
   const [monthStr, setMonthStr] = useState(defaultMonth);
-  const [dept, setDept] = useState('');
   const [depts, setDepts] = useState([]);
   const [payrolls, setPayrolls] = useState([]);
+  const [deptFilter, setDeptFilter] = useState(''); // 결과 테이블 필터 (계산과 분리)
   const [calcYear, setCalcYear] = useState(now.getFullYear());
   const [calcMonth, setCalcMonth] = useState(now.getMonth() + 1);
   const [loading, setLoading] = useState(false);
@@ -131,7 +131,7 @@ export default function PayrollPage() {
     setLoading(true);
     const [y, m] = monthStr.split('-').map(Number);
     try {
-      const filtered = dept ? emps.filter(e => e.dept === dept && !e.resignDate) : emps.filter(e => !e.resignDate);
+      const filtered = emps.filter(e => !e.resignDate); // 항상 전체 직원 계산, 부서 필터는 결과 테이블에서
       // limit: 5000 — Supabase 기본 상한 1000행 초과 방지.
       // 직원 100명 × 31일 = 최대 3100행. 5000은 충분한 여유.
       const allAtt = await attendanceDb.list({ from: `${y}-${String(m).padStart(2,'0')}-01`, to: `${y}-${String(m).padStart(2,'0')}-31`, limit: 5000 });
@@ -275,9 +275,11 @@ export default function PayrollPage() {
     commitOvertime();
   }
 
-  const totalGross = payrolls.reduce((s, p) => s + (p.gross || 0), 0);
-  const totalDeduct = payrolls.reduce((s, p) => s + (p.total_deduct || 0), 0);
-  const totalNet = payrolls.reduce((s, p) => s + (p.net || 0), 0);
+  // 부서 필터 적용 (계산은 전체, 보기/집계는 필터 기준)
+  const visiblePayrolls = deptFilter ? payrolls.filter(p => p.dept === deptFilter) : payrolls;
+  const totalGross  = visiblePayrolls.reduce((s, p) => s + (p.gross        || 0), 0);
+  const totalDeduct = visiblePayrolls.reduce((s, p) => s + (p.total_deduct || 0), 0);
+  const totalNet    = visiblePayrolls.reduce((s, p) => s + (p.net          || 0), 0);
 
   return (
     <div>
@@ -294,14 +296,14 @@ export default function PayrollPage() {
             <label style={{ display: 'block', fontSize: 12, marginBottom: 4, fontWeight: 500 }}>정산 월</label>
             <input type="month" className="form-input" value={monthStr} onChange={e => setMonthStr(e.target.value)} />
           </div>
-          <div className="form-group" style={{ flex: 1, margin: 0 }}>
-            <label style={{ display: 'block', fontSize: 12, marginBottom: 4, fontWeight: 500 }}>부서</label>
-            <select className="form-select" value={dept} onChange={e => setDept(e.target.value)}>
-              <option value="">전체</option>
-              {depts.map(d => <option key={d}>{d}</option>)}
-            </select>
-          </div>
-          <button className="btn btn-primary" style={{ whiteSpace: 'nowrap' }} onClick={calcAll} disabled={loading}>{loading ? '계산 중…' : '계산'}</button>
+          <button className="btn btn-primary" style={{ whiteSpace: 'nowrap' }} onClick={calcAll} disabled={loading}>
+            {loading ? '계산 중…' : '🧮 전체 직원 계산'}
+          </button>
+          {emps.length > 0 && (
+            <span style={{ fontSize: 12, color: 'var(--text-muted)', alignSelf: 'center' }}>
+              재직 중 {emps.filter(e => !e.resignDate).length}명 일괄 계산
+            </span>
+          )}
         </div>
       </div>
 
@@ -310,7 +312,7 @@ export default function PayrollPage() {
           <h3 style={{ marginBottom: 12 }}>이번달 급여 요약</h3>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12 }}>
             {[
-              { label: '대상 직원', val: payrolls.length + '명' },
+              { label: deptFilter ? `${deptFilter} 직원` : '대상 직원', val: visiblePayrolls.length + '명' },
               { label: '총 지급액', val: fmtWon(totalGross) },
               { label: '총 공제액', val: fmtWon(totalDeduct) },
               { label: '총 실지급', val: fmtWon(totalNet) },
@@ -325,7 +327,25 @@ export default function PayrollPage() {
       )}
 
       <div className="card">
-        <h3 style={{ marginBottom: 12 }}>급여 계산 결과</h3>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, flexWrap: 'wrap', gap: 8 }}>
+          <h3 style={{ margin: 0 }}>급여 계산 결과
+            {payrolls.length > 0 && (
+              <span style={{ fontSize: 12, fontWeight: 400, color: 'var(--text-muted)', marginLeft: 8 }}>
+                {deptFilter ? `${deptFilter} ${visiblePayrolls.length}명` : `전체 ${payrolls.length}명`}
+              </span>
+            )}
+          </h3>
+          {payrolls.length > 0 && depts.length > 1 && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>부서 필터</span>
+              <select className="form-select" style={{ fontSize: 13, padding: '4px 8px', width: 'auto' }}
+                value={deptFilter} onChange={e => setDeptFilter(e.target.value)}>
+                <option value="">전체</option>
+                {depts.map(d => <option key={d}>{d}</option>)}
+              </select>
+            </div>
+          )}
+        </div>
         {payrolls.length === 0 ? <div style={{ color: 'var(--text-muted)', padding: 20 }}>월을 선택하고 "계산" 버튼을 클릭하세요.</div> : (
           <div className="table-wrapper">
             <table className="data-table">
@@ -341,7 +361,7 @@ export default function PayrollPage() {
                 </tr>
               </thead>
               <tbody>
-                {payrolls.map(p => {
+                {visiblePayrolls.map(p => {
                   const insurance = (p.np||0)+(p.hi||0)+(p.ltc||0)+(p.ei||0);
                   const tax = (p.income_tax||0)+(p.local_tax||0);
                   const overtime = (p.overtime_pay||0)+(p.night_pay||0)+(p.holiday_pay||0);
@@ -409,12 +429,14 @@ export default function PayrollPage() {
                   );
                 })}
                 <tr style={{ background: 'var(--bg-main)', fontWeight: 'bold', borderTop: '2px solid var(--border)' }}>
-                  <td colSpan={3} style={{ color: 'var(--text-secondary)', fontSize: 12, letterSpacing: '0.5px' }}>합계</td>
-                  <td className="text-right">{fmtWon(payrolls.reduce((s,p)=>s+(p.base||0),0))}</td>
-                  <td className="text-right">{fmtWon(payrolls.reduce((s,p)=>s+Object.values(p.allowances||{}).reduce((a,b)=>a+b,0),0))}</td>
-                  <td className="text-right">{fmtWon(payrolls.reduce((s,p)=>s+((p.overtime_pay||0)+(p.night_pay||0)+(p.holiday_pay||0)),0))}</td>
-                  <td className="text-right">{fmtWon(payrolls.reduce((s,p)=>s+((p.np||0)+(p.hi||0)+(p.ltc||0)+(p.ei||0)),0))}</td>
-                  <td className="text-right">{fmtWon(payrolls.reduce((s,p)=>s+((p.income_tax||0)+(p.local_tax||0)),0))}</td>
+                  <td colSpan={3} style={{ color: 'var(--text-secondary)', fontSize: 12, letterSpacing: '0.5px' }}>
+                    합계 {deptFilter && <span style={{ fontWeight: 400 }}>({deptFilter})</span>}
+                  </td>
+                  <td className="text-right">{fmtWon(visiblePayrolls.reduce((s,p)=>s+(p.base||0),0))}</td>
+                  <td className="text-right">{fmtWon(visiblePayrolls.reduce((s,p)=>s+Object.values(p.allowances||{}).reduce((a,b)=>a+b,0),0))}</td>
+                  <td className="text-right">{fmtWon(visiblePayrolls.reduce((s,p)=>s+((p.overtime_pay||0)+(p.night_pay||0)+(p.holiday_pay||0)),0))}</td>
+                  <td className="text-right">{fmtWon(visiblePayrolls.reduce((s,p)=>s+((p.np||0)+(p.hi||0)+(p.ltc||0)+(p.ei||0)),0))}</td>
+                  <td className="text-right">{fmtWon(visiblePayrolls.reduce((s,p)=>s+((p.income_tax||0)+(p.local_tax||0)),0))}</td>
                   <td className="text-right" style={{ color: 'var(--accent)', background: 'var(--accent-light)' }}>{fmtWon(totalNet)}</td>
                   <td />
                 </tr>
