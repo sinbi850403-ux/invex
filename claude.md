@@ -390,7 +390,7 @@ landing.html (비로그인)
 ```
 viewer < staff < manager < admin
 
-총관리자: sinbi0214@naver.com, sinbi850403@gmail.com, admin@invex.io.kr
+총관리자: sinbi850403@gmail.com, sinbi021499@gmail.com, sinbi0214@naver.com
 → 요금제 무관, 모든 기능 접근 가능
 ```
 
