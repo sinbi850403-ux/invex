@@ -337,8 +337,8 @@ export default function BillingPage() {
                 <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '16px' }}>{p.period}</div>
                 <div style={{ textAlign: 'left', fontSize: '13px', lineHeight: '2' }}>
                   {p.id === 'free' && <> 품목 100개까지<br /> 기본 재고 관리<br /> 입출고 관리<br /> 엑셀 업로드<br /> 다크 모드</>}
-                  {p.id === 'pro' && <> 품목 <strong>무제한</strong><br /> AI 자동 발주 추천<br /> 원가 분석 (FIFO)<br /> 매출/매입 장부<br /> 감사 추적<br /> 바코드 라벨 인쇄<br /> 사용자 5명</>}
-                  {p.id === 'enterprise' && <> Pro 전체 기능<br /> 다중 창고 관리<br /> 사용자 <strong>무제한</strong><br /> 권한 관리 (RBAC)<br /> API 연동<br /> 전담 고객 지원<br /> SLA 99.9%</>}
+                  {p.id === 'pro' && <> 품목 <strong>무제한</strong><br /> AI 자동 발주 추천<br /> 원가 분석 (FIFO)<br /> 매출/매입 장부<br /> 감사 추적<br /> 사용자 5명</>}
+                  {p.id === 'enterprise' && <> Pro 전체 기능<br /> 다중 창고 관리<br /> 사용자 <strong>무제한</strong><br /> 권한 관리 (RBAC)<br /> API 연동<br /> SLA 99.9%</>}
                 </div>
                 <div style={{ marginTop: '16px' }}>
                   {isCurrent ? (
