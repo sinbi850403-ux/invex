@@ -5,7 +5,7 @@ import { downloadExcel } from '../excel.js';
 import { getState as getRawState } from '../store.js';
 import { vendors as vendorsDb } from '../db.js';
 import { dbVendorToStore, storeVendorToDb } from '../db/converters.js';
-import { TYPE_LABEL, TYPE_BADGE, PAYMENT_TERMS, EMPTY_FORM, fmt, buildStats } from '../domain/vendorsConfig.js';
+import { TYPE_LABEL, TYPE_BADGE, PAYMENT_TERMS, EMPTY_FORM, fmt, buildStats, genVendorCode } from '../domain/vendorsConfig.js';
 import { VendorModal }        from '../components/vendors/VendorModal.jsx';
 import { VendorDetail }       from '../components/vendors/VendorDetail.jsx';
 import { VendorImportModal }  from '../components/vendors/VendorImportModal.jsx';
@@ -94,6 +94,35 @@ export default function VendorsPage() {
     }
   }, [vendors, detailVendor, setState]);
 
+  // 트랜잭션에 있는 거래처명을 자동으로 마스터에 등록
+  const handleAutoRegister = useCallback(async () => {
+    const existingNames = new Set(vendors.map(v => v.name));
+    const txVendors = [...new Set(
+      transactions.map(tx => String(tx.vendor || '').trim()).filter(Boolean)
+    )].filter(name => !existingNames.has(name));
+
+    if (!txVendors.length) {
+      showToast('새로 등록할 거래처가 없습니다. (이미 모두 등록됨)', 'info');
+      return;
+    }
+    if (!confirm(`입출고 기록에서 발견된 거래처 ${txVendors.length}개를 자동 등록하시겠습니까?\n\n${txVendors.slice(0, 10).join(', ')}${txVendors.length > 10 ? ' 외...' : ''}`)) return;
+
+    const saved = [];
+    for (const name of txVendors) {
+      try {
+        const payload = storeVendorToDb({ ...EMPTY_FORM, name, type: 'supplier' });
+        const result  = await vendorsDb.create(payload);
+        saved.push(result ? dbVendorToStore(result) : { ...EMPTY_FORM, name, type: 'supplier' });
+      } catch { /* skip */ }
+    }
+    if (saved.length) {
+      setState({ vendorMaster: [...vendors, ...saved] });
+      showToast(`${saved.length}개 거래처를 자동 등록했습니다.`, 'success');
+    } else {
+      showToast('등록에 실패했습니다.', 'error');
+    }
+  }, [vendors, transactions, setState]);
+
   const handleExport = () => {
     if (!vendors.length) { showToast('내보낼 거래처가 없습니다.', 'warning'); return; }
     const rows = vendors.map(v => ({
@@ -135,6 +164,18 @@ export default function VendorsPage() {
           <div className="page-desc">공급처·고객사 마스터 데이터를 관리합니다. 발주서·거래명세서·세금계산서에 자동 연동됩니다.</div>
         </div>
         <div className="page-actions">
+          {/* 트랜잭션에 거래처가 있지만 마스터에 없는 경우 자동 등록 안내 */}
+          {(() => {
+            const txNames = new Set(transactions.map(tx => String(tx.vendor || '').trim()).filter(Boolean));
+            const vmNames = new Set(vendors.map(v => v.name));
+            const missing = [...txNames].filter(n => !vmNames.has(n));
+            if (!missing.length) return null;
+            return (
+              <button className="btn btn-outline" style={{ color: 'var(--warning)', borderColor: 'var(--warning)' }} onClick={handleAutoRegister}>
+                 거래처 자동 등록 ({missing.length}개)
+              </button>
+            );
+          })()}
           <button className="btn btn-outline" onClick={() => setShowImport(true)}> 엑셀 가져오기</button>
           <button className="btn btn-outline" onClick={handleExport}> 내보내기</button>
           <button className="btn btn-primary" onClick={() => setEditVendor({ ...EMPTY_FORM })}>+ 거래처 등록</button>
