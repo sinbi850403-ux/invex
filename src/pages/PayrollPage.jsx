@@ -27,9 +27,9 @@ function PayrollDetailModal({ payroll: p, year, month, onClose }) {
   ].filter(r => r.always || (r.cond ?? (r.val || 0) > 0));
 
   const deductRows = [
-    { label: '국민연금', rate: '4.5%',         val: p.np },
-    { label: '건강보험', rate: '3.545%',        val: p.hi },
-    { label: '장기요양', rate: '건보×12.95%',   val: p.ltc },
+    { label: '국민연금', rate: '4.75%',         val: p.np },
+    { label: '건강보험', rate: '3.595%',        val: p.hi },
+    { label: '장기요양', rate: '건보×13.14%',   val: p.ltc },
     { label: '고용보험', rate: '0.9%',          val: p.ei },
     { label: '소득세',   rate: '간이세액표',     val: p.income_tax },
     { label: '지방소득세', rate: '소득세×10%',  val: p.local_tax },

@@ -376,9 +376,9 @@ async function _renderPayslipPage(doc, payroll, year, month, options = {}) {
   if ((payroll.holiday_pay  || 0) > 0) payItems.push(['휴일근무수당', payroll.holiday_pay]);
 
   const deductItems = [];
-  if ((payroll.np         || 0) > 0) deductItems.push(['국민연금 4.5%',          payroll.np]);
-  if ((payroll.hi         || 0) > 0) deductItems.push(['건강보험 3.545%',         payroll.hi]);
-  if ((payroll.ltc        || 0) > 0) deductItems.push(['장기요양 건보×12.95%',   payroll.ltc]);
+  if ((payroll.np         || 0) > 0) deductItems.push(['국민연금 4.75%',          payroll.np]);
+  if ((payroll.hi         || 0) > 0) deductItems.push(['건강보험 3.595%',         payroll.hi]);
+  if ((payroll.ltc        || 0) > 0) deductItems.push(['장기요양 건보×13.14%',   payroll.ltc]);
   if ((payroll.ei         || 0) > 0) deductItems.push(['고용보험 0.9%',           payroll.ei]);
   if ((payroll.income_tax || 0) > 0) deductItems.push(['소득세',                  payroll.income_tax]);
   if ((payroll.local_tax  || 0) > 0) deductItems.push(['지방소득세',              payroll.local_tax]);
@@ -502,7 +502,7 @@ async function _renderPayslipPage(doc, payroll, year, month, options = {}) {
   doc.setFont(kf.font, 'normal');
   doc.setTextColor(...MUTED);
   doc.text(
-    '※ 4대보험 요율: 국민연금 4.5% | 건강보험 3.545% | 장기요양 건강보험료×12.95% | 고용보험 0.9%',
+    '※ 4대보험 요율: 국민연금 4.75% | 건강보험 3.595% | 장기요양 건강보험료×13.14% | 고용보험 0.9%',
     ML, noteY
   );
 
