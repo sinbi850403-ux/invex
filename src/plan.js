@@ -48,7 +48,7 @@ const PAGE_MIN_PLAN = {
   // 허브 페이지 — 항상 무료 (네비게이션 전용)
   'hub-inventory': 'free', 'hub-warehouse': 'free',
   'hub-order': 'free', 'hub-report': 'free', 'hub-documents': 'free',
-  'hub-settings': 'free', 'hub-support': 'free', 'hub-hr': 'free',
+  'hub-settings': 'free', 'hub-support': 'free', 'hub-hr': 'pro',
   // Free 기능
   home: 'free', upload: 'free', mapping: 'free',
   inventory: 'free', in: 'free', out: 'free', ledger: 'free',
@@ -59,8 +59,11 @@ const PAGE_MIN_PLAN = {
   stocktake: 'pro', vendors: 'pro', summary: 'pro', dashboard: 'pro',
   costing: 'pro', accounts: 'pro', documents: 'pro', auditlog: 'pro',
   'tax-reports': 'pro', orders: 'pro', profit: 'pro', forecast: 'pro', 'weekly-report': 'pro',
+  'hr-dashboard': 'pro', employees: 'pro', attendance: 'pro', payroll: 'pro',
+  leaves: 'pro', severance: 'pro', 'yearend-settlement': 'pro',
+  'org-chart': 'free',
   // Enterprise 기능
-  warehouses: 'enterprise', roles: 'enterprise', api: 'enterprise', 'org-chart': 'enterprise',
+  warehouses: 'enterprise', roles: 'enterprise', api: 'enterprise',
 };
 
 // 요금제 등급 순서 (비교용)
