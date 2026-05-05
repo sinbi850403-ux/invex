@@ -126,12 +126,20 @@ export default function Sidebar({ isOpen, onClose, collapsed = false, onToggleCo
     return () => window.removeEventListener('notifications-updated', update);
   }, []);
 
-  // plan 변경 감지
+  // plan 변경 감지 (invex:plan-changed 이벤트)
   useEffect(() => {
     const update = () => setPlanId(getCurrentPlan());
     window.addEventListener('invex:plan-changed', update);
     return () => window.removeEventListener('invex:plan-changed', update);
   }, []);
+
+  // profile 로드 후 planId 동기화
+  // 이벤트가 Sidebar 마운트 전에 발생한 경우(race condition) 대비
+  useEffect(() => {
+    if (profile?.plan && PLANS[profile.plan]) {
+      setPlanId(profile.plan);
+    }
+  }, [profile]);
 
   // Global search 초기화
   useEffect(() => {
