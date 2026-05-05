@@ -9,6 +9,7 @@ import { PlanChangeModal } from '../components/admin/PlanChangeModal.jsx';
 import { NoticeModal }    from '../components/admin/NoticeModal.jsx';
 import { UserCard }       from '../components/admin/UserCard.jsx';
 import { TicketsArea }    from '../components/admin/TicketsArea.jsx';
+import { isSuperAdminEmail } from '../admin-emails.js';
 
 export default function AdminPage() {
   const { user, profile } = useAuth();
@@ -21,7 +22,9 @@ export default function AdminPage() {
   const [showNotice, setShowNotice] = useState(false);
   const [ticketsKey, setTicketsKey] = useState(0);
 
-  const isAdmin = profile?.role === 'admin';
+  // 총관리자 체크: VITE_ADMIN_EMAILS에 등록된 이메일만 접근 가능
+  // profile.role === 'admin'은 워크스페이스 소유자도 해당되므로 이메일 기반 체크 사용
+  const isAdmin = isSuperAdminEmail(user?.email);
 
   const loadUsers = useCallback(async () => {
     setLoading(true);

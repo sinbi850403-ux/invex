@@ -186,13 +186,10 @@ export async function createWorkspace(name) {
     }
     currentWorkspaceId = validUid;
 
-    // ⑤ 워크스페이스 생성자(대표)는 profiles.role = 'admin'으로 승격
-    //    DB CHECK 제약: viewer/staff/manager/admin (owner는 앱에서 admin으로 저장)
-    try {
-      await supabase.from('profiles').update({ role: 'admin' }).eq('id', validUid);
-      const profile = getUserProfileData();
-      if (profile) profile.role = 'admin';
-    } catch (_) { /* role 업그레이드 실패는 무시 */ }
+    // ⑤ [FIXED] 워크스페이스 생성자를 profiles.role='admin'으로 승격하지 않음
+    //    이유: AdminPage 접근 권한은 VITE_ADMIN_EMAILS 기반으로 판단하므로
+    //          role='admin' 자동 부여는 일반 사용자가 총관리자 대시보드에 진입하는 보안 결함
+    //          워크스페이스 소유자 여부는 team_workspaces.owner_id로 판단
 
     showToast(`워크스페이스 "${name || 'My Workspace'}" 생성 완료!`, 'success');
     return validUid;
