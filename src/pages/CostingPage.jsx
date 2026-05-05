@@ -25,22 +25,35 @@ const fmtMoney = v => v ? `₩${Math.round(v).toLocaleString('ko-KR')}` : '-';
 const fmtSigned = v => !v ? '-' : `${v < 0 ? '-₩' : '₩'}${Math.abs(Math.round(v)).toLocaleString('ko-KR')}`;
 const getMarginRate = row => row.marketValue ? Number((((row.profit || 0) / row.marketValue) * 100).toFixed(1)) : null;
 
+// 품목 매칭: itemCode 우선, 없으면 itemName (공백·대소문자 정규화)
+const normStr = (v) => String(v ?? '').trim().toLowerCase().replace(/\s+/g, '');
+const txMatchesItem = (tx, item) => {
+  const tc = normStr(tx.itemCode);
+  const ic = normStr(item.itemCode);
+  if (tc && ic && tc === ic) return true;
+  return normStr(tx.itemName) === normStr(item.itemName);
+};
+
 function calculateCosts(items, transactions, method) {
   return items.map(item => {
     const qty = parseFloat(item.quantity) || 0;
     const itemUnitPrice = parseFloat(item.unitPrice) || 0;
     const inTx = transactions
-      .filter(tx => tx.type === 'in' && tx.itemName === item.itemName)
+      .filter(tx => tx.type === 'in' && txMatchesItem(tx, item))
       .sort((a, b) => (a.date || '').localeCompare(b.date || ''));
 
-    // 원가법별 unitCost 계산 (판매가 fallback에도 사용)
+    // 원가법별 unitCost 계산
+    // unitPrice=0인 트랜잭션은 원가 데이터 없음으로 처리 (itemUnitPrice 폴백 사용 안 함)
+    const validInTx = inTx.filter(tx => parseFloat(tx.unitPrice) > 0);
     let unitCost = itemUnitPrice;
-    if (method === 'fifo' && inTx.length > 0) unitCost = parseFloat(inTx[0].unitPrice) || itemUnitPrice;
-    else if (method === 'latest' && inTx.length > 0) unitCost = parseFloat(inTx[inTx.length - 1].unitPrice) || itemUnitPrice;
-    else if (method === 'weighted-avg' && inTx.length > 0) {
+    if (method === 'fifo' && validInTx.length > 0) {
+      unitCost = parseFloat(validInTx[0].unitPrice);
+    } else if (method === 'latest' && validInTx.length > 0) {
+      unitCost = parseFloat(validInTx[validInTx.length - 1].unitPrice);
+    } else if (method === 'weighted-avg' && validInTx.length > 0) {
       let tq = 0, tv = 0;
-      inTx.forEach(tx => { const q = parseFloat(tx.quantity) || 0; tq += q; tv += q * (parseFloat(tx.unitPrice) || itemUnitPrice); });
-      unitCost = tq > 0 ? Math.round(tv / tq) : itemUnitPrice;
+      validInTx.forEach(tx => { const q = parseFloat(tx.quantity) || 0; tq += q; tv += q * parseFloat(tx.unitPrice); });
+      unitCost = tq > 0 ? tv / tq : itemUnitPrice;
     }
     unitCost = Math.round(unitCost);
 
