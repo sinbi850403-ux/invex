@@ -73,10 +73,12 @@ export function usePermission(explicitRole) {
     }
 
     // workspaceMeta 아직 로드되지 않음 → 단독 사용자(오너)로 간주
-    // 멀티 멤버 워크스페이스의 구성원은 TeamPage 방문 시 wsMeta가 store에 저장되어
-    // 이후 canAccess 재평가에서 올바른 역할이 적용됨
+    // 재로그인 직후 restoreState가 비동기로 완료되기 전에 컴포넌트가 렌더링되면
+    // wsMeta가 null인 상태로 진입한다. 이때 viewer를 반환하면 "접근 권한이 없습니다"
+    // 화면이 표시되므로, 로드 완료 전에는 owner로 간주하고 이후 재렌더링 시 정정한다.
+    // (RLS는 DB 레벨에서 보호하므로 클라이언트 역할이 owner여도 타인 데이터 노출 없음)
     if (!wsMeta) {
-      return { currentRole: 'viewer', isOwner: false, isOwnerOrAdmin: false };
+      return { currentRole: 'owner', isOwner: true, isOwnerOrAdmin: true };
     }
     // wsMeta는 있는데 구성원 목록에 없는 경우 → 최소 권한
     return { currentRole: 'viewer', isOwner: false, isOwnerOrAdmin: false };
