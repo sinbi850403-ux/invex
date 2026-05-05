@@ -126,19 +126,6 @@ function PayrollDetailModal({ payroll: p, year, month, onClose }) {
             </div>
           </div>
 
-          {/* 회사부담금 + 총인건비 */}
-          <div style={{ marginTop: 14, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-            <div style={{ background: 'rgba(99,102,241,0.08)', borderRadius: 8, padding: '10px 12px' }}>
-              <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>회사부담금</div>
-              <div style={{ fontSize: 14, fontWeight: 700, color: '#6366f1', fontVariantNumeric: 'tabular-nums' }}>{fmtWon(p.employer_total || 0)}</div>
-              <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 2 }}>4대보험 사업주 부담</div>
-            </div>
-            <div style={{ background: 'rgba(245,158,11,0.08)', borderRadius: 8, padding: '10px 12px' }}>
-              <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>총인건비</div>
-              <div style={{ fontSize: 14, fontWeight: 700, color: '#f59e0b', fontVariantNumeric: 'tabular-nums' }}>{fmtWon(p.total_labor_cost || (p.gross + (p.employer_total || 0)))}</div>
-              <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 2 }}>총지급액 + 회사부담금</div>
-            </div>
-          </div>
         </div>
 
         {/* ── 푸터 ── */}
