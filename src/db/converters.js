@@ -204,6 +204,7 @@ export function dbEmployeeToStore(r) {
     annualLeaveUsed: r.annual_leave_used,
     status: r.status,
     memo: r.memo,
+    allowances: r.allowances || {},
     smeReduction: r.sme_reduction || null,  // 중소기업 취업자 소득세 감면 설정
     createdAt: r.created_at,
     updatedAt: r.updated_at,
@@ -236,6 +237,7 @@ export function storeEmployeeToDb(e) {
   if ('annualLeaveUsed' in e) out.annual_leave_used = e.annualLeaveUsed;
   if ('status' in e) out.status = e.status;
   if ('memo' in e) out.memo = e.memo;
+  if ('allowances' in e) out.allowances = e.allowances || {};
   if ('smeReduction' in e) out.sme_reduction = e.smeReduction || null;
   return out;
 }

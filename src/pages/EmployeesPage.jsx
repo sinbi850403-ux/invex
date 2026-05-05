@@ -46,6 +46,7 @@ function EmpModal({ emp, onClose, onSaved }) {
     dependents: emp?.dependents || 0,
     children: emp?.children || 0,
     insuranceFlags: emp?.insuranceFlags || { np: true, hi: true, ei: true, wc: true },
+    allowances: emp?.allowances || { 식대: 0, 직책수당: 0, 상여금: 0, 기타수당: 0 },
     smeReduction: emp?.smeReduction || { enabled: false, category: 'youth', startDate: '' },
     status: emp?.status || 'active',
     resignDate: emp?.resignDate || '',
@@ -221,6 +222,39 @@ function EmpModal({ emp, onClose, onSaved }) {
                 <div className="form-group">
                   <label className="form-label">20세 이하 자녀수</label>
                   <input type="number" className="form-input" min="0" value={form.children} onChange={e => setF('children', parseInt(e.target.value) || 0)} />
+                </div>
+              </div>
+
+              {/* 수당 설정 */}
+              <div className="form-group" style={{ marginTop: 8, padding: '14px 16px', borderRadius: 10, border: '1px solid var(--border)', background: 'var(--bg-secondary)' }}>
+                <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 12, color: 'var(--text)' }}>수당 설정 (기본값)</div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                  {[
+                    ['식대', '월 20만원 이하 비과세'],
+                    ['직책수당', '직위·직책 수당'],
+                    ['상여금', '정기 상여 (0이면 미지급)'],
+                    ['기타수당', '기타 지급 수당'],
+                  ].map(([key, hint]) => (
+                    <div key={key} className="form-group" style={{ margin: 0 }}>
+                      <label className="form-label" style={{ fontSize: 12 }}>
+                        {key}
+                        {key === '식대' && <span style={{ fontSize: 10, color: 'var(--text-muted)', marginLeft: 4 }}>⚡비과세 20만↓</span>}
+                      </label>
+                      <input
+                        type="number" min="0" step="10000"
+                        className="form-input"
+                        placeholder={hint}
+                        value={form.allowances?.[key] || 0}
+                        onChange={e => setForm(f => ({
+                          ...f,
+                          allowances: { ...f.allowances, [key]: parseFloat(e.target.value) || 0 },
+                        }))}
+                      />
+                    </div>
+                  ))}
+                </div>
+                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 8 }}>
+                  · 급여 계산 시 기본값으로 적용 · 매월 급여 화면에서 항목별 수정 가능
                 </div>
               </div>
 

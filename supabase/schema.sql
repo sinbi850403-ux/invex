@@ -619,6 +619,7 @@ ALTER TABLE employees ADD COLUMN IF NOT EXISTS annual_leave_used  NUMERIC(4,1) D
 -- v3.1: 중소기업 취업자 소득세 감면 설정 (조세특례제한법 제30조)
 ALTER TABLE employees ADD COLUMN IF NOT EXISTS sme_reduction JSONB DEFAULT NULL;
 -- 예: {"enabled":true,"category":"youth","startDate":"2024-03-01"}
+ALTER TABLE employees ADD COLUMN IF NOT EXISTS allowances     JSONB DEFAULT '{}';
 
 CREATE INDEX IF NOT EXISTS idx_emp_user       ON employees(user_id);
 CREATE INDEX IF NOT EXISTS idx_emp_dept       ON employees(user_id, dept);

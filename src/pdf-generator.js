@@ -369,20 +369,25 @@ async function _renderPayslipPage(doc, payroll, year, month, options = {}) {
 
   // ── 지급 / 공제 항목 수집 ──────────────────────────────
   const allowances = payroll.allowances || {};
+  const mealAmt    = allowances['식대'] || 0;
+
   const payItems = [['기본급', payroll.base || 0]];
-  Object.entries(allowances).forEach(([k, v]) => { if (v > 0) payItems.push([k, v]); });
-  if ((payroll.overtime_pay || 0) > 0) payItems.push(['초과근무수당', payroll.overtime_pay]);
-  if ((payroll.night_pay    || 0) > 0) payItems.push(['야간근무수당', payroll.night_pay]);
-  if ((payroll.holiday_pay  || 0) > 0) payItems.push(['휴일근무수당', payroll.holiday_pay]);
+  // 식대 (비과세 태그)
+  if (mealAmt > 0) payItems.push([mealAmt <= 200000 ? '식대(비과세)' : '식대', mealAmt]);
+  // 나머지 수당
+  Object.entries(allowances).forEach(([k, v]) => { if (k !== '식대' && v > 0) payItems.push([k, v]); });
+  if ((payroll.overtime_pay || 0) > 0) payItems.push(['연장수당', payroll.overtime_pay]);
+  if ((payroll.night_pay    || 0) > 0) payItems.push(['야간수당', payroll.night_pay]);
+  if ((payroll.holiday_pay  || 0) > 0) payItems.push(['휴일수당', payroll.holiday_pay]);
 
   const deductItems = [];
-  if ((payroll.np         || 0) > 0) deductItems.push(['국민연금 4.75%',          payroll.np,      false]);
-  if ((payroll.hi         || 0) > 0) deductItems.push(['건강보험 3.595%',         payroll.hi,      false]);
-  if ((payroll.ltc        || 0) > 0) deductItems.push(['장기요양 건보×13.14%',   payroll.ltc,     false]);
-  if ((payroll.ei           || 0) > 0) deductItems.push(['고용보험 0.9%',              payroll.ei,            false]);
-  if ((payroll.income_tax   || 0) > 0) deductItems.push(['소득세',                     payroll.income_tax,    false]);
-  if ((payroll.sme_reduction|| 0) > 0) deductItems.push(['중소기업감면(조특§30)',      -payroll.sme_reduction, true]);
-  if ((payroll.local_tax    || 0) > 0) deductItems.push(['지방소득세',                 payroll.local_tax,     false]);
+  if ((payroll.np          || 0) > 0) deductItems.push(['국민연금 4.75%',       payroll.np,           false]);
+  if ((payroll.hi          || 0) > 0) deductItems.push(['건강보험 3.595%',      payroll.hi,           false]);
+  if ((payroll.ltc         || 0) > 0) deductItems.push(['장기요양 건보×13.14%', payroll.ltc,          false]);
+  if ((payroll.ei          || 0) > 0) deductItems.push(['고용보험 0.9%',        payroll.ei,           false]);
+  if ((payroll.income_tax  || 0) > 0) deductItems.push(['소득세',               payroll.income_tax,   false]);
+  if ((payroll.sme_reduction|| 0) > 0) deductItems.push(['중소기업감면(조특§30)', -payroll.sme_reduction, true]);
+  if ((payroll.local_tax   || 0) > 0) deductItems.push(['지방소득세',           payroll.local_tax,    false]);
 
   // ── 테이블 시작 Y ──────────────────────────────────────
   const tblStart = iY2 + 12;
@@ -500,8 +505,41 @@ async function _renderPayslipPage(doc, payroll, year, month, options = {}) {
   doc.setTextColor(255, 255, 255);
   doc.text(WON(payroll.net || 0), MR - 5, netY + 14.5, { align: 'right' });
 
+  // ── 과세/비과세 + 회사부담금 요약 ─────────────────────
+  const infoY = netY + 22;
+  const taxableGross = payroll.taxable_gross != null ? payroll.taxable_gross : payroll.gross;
+  const exemptGross  = payroll.exempt_gross  || 0;
+  const employerTotal = payroll.employer_total || 0;
+  const totalLaborCost = payroll.total_labor_cost || (payroll.gross + employerTotal);
+
+  if (taxableGross > 0 || exemptGross > 0 || employerTotal > 0) {
+    doc.setFillColor(245, 247, 255);
+    doc.roundedRect(ML, infoY, TW, 18, 2, 2, 'F');
+
+    doc.setFontSize(7);
+    doc.setFont(kf.font, 'normal');
+    doc.setTextColor(...MUTED);
+    const col4 = TW / 4;
+
+    const infoItems = [
+      ['과세급여', WON(taxableGross)],
+      ['비과세급여', WON(exemptGross)],
+      ['회사부담금', WON(employerTotal)],
+      ['총인건비', WON(totalLaborCost)],
+    ];
+    infoItems.forEach(([lbl, val], i) => {
+      const x = ML + col4 * i + 3;
+      doc.setTextColor(...MUTED);
+      doc.text(lbl, x, infoY + 7);
+      doc.setFont(kf.font, 'bold');
+      doc.setTextColor(...SLATE);
+      doc.text(val, x, infoY + 14);
+      doc.setFont(kf.font, 'normal');
+    });
+  }
+
   // ── 주석 ──────────────────────────────────────────────
-  const noteY = netY + 27;
+  const noteY = netY + 46;
   doc.setFontSize(6.5);
   doc.setFont(kf.font, 'normal');
   doc.setTextColor(...MUTED);

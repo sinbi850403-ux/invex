@@ -19,6 +19,8 @@
 
 import {
   INSURANCE_RATES,
+  EMPLOYER_INSURANCE_RATES,
+  TAX_EXEMPT_LIMITS,
   WAGE_MULTIPLIERS,
   SME_REDUCTION,
   calculateIncomeTaxInterpolated,
@@ -39,6 +41,25 @@ export function calcInsurance(gross, insuranceFlags = {}) {
   const ei = flags.ei ? Math.round(gross * INSURANCE_RATES.ei) : 0;
 
   return { np, hi, ltc, ei };
+}
+
+/**
+ * 사업주 부담 4대보험 계산
+ * @param {number} taxableGross - 과세급여 (소득세 기준)
+ * @param {object} insuranceFlags
+ * @returns {object} { employer_np, employer_hi, employer_ltc, employer_ei, employer_wc, employer_total }
+ */
+export function calcEmployerContribution(taxableGross, insuranceFlags = {}) {
+  const flags = { np: true, hi: true, ei: true, wc: true, ...insuranceFlags };
+
+  const np  = flags.np ? Math.round(taxableGross * EMPLOYER_INSURANCE_RATES.np)  : 0;
+  const hi  = flags.hi ? Math.round(taxableGross * EMPLOYER_INSURANCE_RATES.hi)  : 0;
+  const ltc = flags.hi ? Math.round(hi           * EMPLOYER_INSURANCE_RATES.ltc_rate) : 0;
+  const ei  = flags.ei ? Math.round(taxableGross * EMPLOYER_INSURANCE_RATES.ei)  : 0;
+  const wc  = flags.wc ? Math.round(taxableGross * EMPLOYER_INSURANCE_RATES.wc)  : 0;
+
+  return { employer_np: np, employer_hi: hi, employer_ltc: ltc, employer_ei: ei, employer_wc: wc,
+           employer_total: np + hi + ltc + ei + wc };
 }
 
 /**
@@ -213,10 +234,12 @@ export function calcWageFromAttendance(hourlyWage, attendance = {}) {
 
 /**
  * 종합 급여 계산
- * @param {object} employee    - {name, base_salary, hourly_wage, employment_type, insurance_flags, dependents, children, sme_reduction}
- * @param {object} attendance  - {total_min, overtime_min, night_min, holiday_min}
- * @param {object} allowances  - {식대: 100000, 차량비: 50000, ...}
- * @param {object} otherDeduct - {대출금: 50000, ...}
+ * @param {object} employee    - {base_salary, hourly_wage, employment_type, insurance_flags,
+ *                                dependents, children, sme_reduction}
+ * @param {object} attendance  - {total_min, overtime_min, night_min, holiday_min, work_days, leave_days}
+ * @param {object} allowances  - { 식대: n, 직책수당: n, 상여금: n, 기타수당: n, ... }
+ *                               ※ '식대' 키는 월 200,000원까지 비과세 처리
+ * @param {object} otherDeduct - { 기타공제명: n, ... }
  * @returns {object} complete payroll object
  */
 export function calcPayroll(
@@ -242,86 +265,105 @@ export function calcPayroll(
     overtime_pay: 0,
     night_pay: 0,
     holiday_pay: 0,
+    // ── 과세/비과세 분리 ──
+    taxable_gross: 0,
+    exempt_gross: 0,
     gross: 0,
-    np: 0,
-    hi: 0,
-    ltc: 0,
-    ei: 0,
-    income_tax: 0,       // 감면 전 소득세
-    sme_reduction: 0,    // 중소기업 취업자 소득세 감면액
-    income_tax_final: 0, // 감면 후 실납부 소득세
+    // ── 공제 ──
+    np: 0, hi: 0, ltc: 0, ei: 0,
+    income_tax: 0,
+    sme_reduction: 0,
+    income_tax_final: 0,
     local_tax: 0,
     other_deduct: { ...otherDeduct },
     total_deduct: 0,
     net: 0,
+    // ── 회사부담금 ──
+    employer_np: 0, employer_hi: 0, employer_ltc: 0,
+    employer_ei: 0, employer_wc: 0, employer_total: 0,
+    total_labor_cost: 0,
   };
 
   // 기본급 또는 시급 계산
   if (employment_type === '시급' || employment_type === '일용') {
     const wage = calcWageFromAttendance(hourly_wage, attendance);
-    result.base = wage.base;
+    result.base        = wage.base;
     result.overtime_pay = wage.overtime_pay;
-    result.night_pay = wage.night_pay;
-    result.holiday_pay = wage.holiday_pay;
+    result.night_pay   = wage.night_pay;
+    result.holiday_pay  = wage.holiday_pay;
   } else {
-    // 월급 근로자
     result.base = base_salary;
-    // 고정급 근로자는 근태 기반 추가 계산 없음
-    // (별도 정책에 따라 추가 로직 가능)
   }
 
-  // 무급휴가 차감 (병가, 경조, 무급 등)
-  // 출석 데이터에서 휴가 일수만 파악 가능하므로
-  // 현재는 모든 휴가를 무급으로 처리
+  // 무급휴가 차감
   const leaveDays = attendance.leave_days || 0;
   if (leaveDays > 0 && result.base > 0) {
-    const workDaysInMonth = Math.max(1, (attendance.work_days || 22)); // 기본값 22일
-    const dailyWage = result.base / workDaysInMonth;
-    const leaveDeduction = Math.round(leaveDays * dailyWage);
-    result.base = Math.max(0, result.base - leaveDeduction);
+    const workDaysInMonth = Math.max(1, attendance.work_days || 22);
+    result.base = Math.max(0, result.base - Math.round((result.base / workDaysInMonth) * leaveDays));
   }
 
-  // 2. 총지급액 계산
-  const allowanceSum = Object.values(allowances).reduce((a, b) => a + b, 0);
-  result.gross =
+  // 2. 수당 과세/비과세 분리
+  //    '식대' 키: 월 200,000원까지 비과세 (소득세법 시행령)
+  const mealAmt   = allowances['식대'] || 0;
+  const mealExempt  = Math.min(mealAmt, TAX_EXEMPT_LIMITS.meal);
+  const mealTaxable = Math.max(0, mealAmt - TAX_EXEMPT_LIMITS.meal);
+
+  // 식대 외 수당은 전부 과세
+  const otherAllowanceSum = Object.entries(allowances)
+    .filter(([k]) => k !== '식대')
+    .reduce((s, [, v]) => s + (v || 0), 0);
+
+  // 3. 과세급여 / 비과세급여 / 총지급액
+  const taxableAllowanceSum = mealTaxable + otherAllowanceSum;
+  const exemptAllowanceSum  = mealExempt;
+
+  result.taxable_gross =
     result.base +
-    allowanceSum +
+    taxableAllowanceSum +
     result.overtime_pay +
     result.night_pay +
     result.holiday_pay;
 
-  // 3. 4대보험 계산
-  const insurance = calcInsurance(result.gross, insurance_flags);
-  result.np = insurance.np;
-  result.hi = insurance.hi;
-  result.ltc = insurance.ltc;
-  result.ei = insurance.ei;
+  result.exempt_gross = exemptAllowanceSum;
+  result.gross        = result.taxable_gross + result.exempt_gross;
 
-  // 4. 소득세 계산 (부양가족 기준)
-  const tax = calcIncomeTax(result.gross, dependents);
+  // 4. 4대보험 (과세급여 기준)
+  const insurance = calcInsurance(result.taxable_gross, insurance_flags);
+  result.np  = insurance.np;
+  result.hi  = insurance.hi;
+  result.ltc = insurance.ltc;
+  result.ei  = insurance.ei;
+
+  // 5. 소득세 (과세급여 기준)
+  const tax = calcIncomeTax(result.taxable_gross, dependents);
   result.income_tax = tax.income_tax;
 
-  // 4-1. 중소기업 취업자 소득세 감면 (조세특례제한법 제30조)
-  const smeResult = calcSmeReduction(result.income_tax, sme_reduction);
-  result.sme_reduction    = smeResult.sme_reduction;
-  result.income_tax_final = smeResult.income_tax_after;
+  // 5-1. 중소기업 취업자 소득세 감면
+  const smeResult          = calcSmeReduction(result.income_tax, sme_reduction);
+  result.sme_reduction     = smeResult.sme_reduction;
+  result.income_tax_final  = smeResult.income_tax_after;
 
   // 지방소득세 = 감면 후 소득세 × 10%
   result.local_tax = Math.round(result.income_tax_final * INSURANCE_RATES.local_tax_rate);
 
-  // 5. 총공제
+  // 6. 총공제
   const otherDeductSum = Object.values(otherDeduct).reduce((a, b) => a + b, 0);
   result.total_deduct =
-    result.np +
-    result.hi +
-    result.ltc +
-    result.ei +
-    result.income_tax_final +
-    result.local_tax +
-    otherDeductSum;
+    result.np + result.hi + result.ltc + result.ei +
+    result.income_tax_final + result.local_tax + otherDeductSum;
 
-  // 6. 실지급액
+  // 7. 실지급액
   result.net = Math.max(0, result.gross - result.total_deduct);
+
+  // 8. 사업주 부담 4대보험 + 총인건비
+  const employer = calcEmployerContribution(result.taxable_gross, insurance_flags);
+  result.employer_np    = employer.employer_np;
+  result.employer_hi    = employer.employer_hi;
+  result.employer_ltc   = employer.employer_ltc;
+  result.employer_ei    = employer.employer_ei;
+  result.employer_wc    = employer.employer_wc;
+  result.employer_total = employer.employer_total;
+  result.total_labor_cost = result.gross + result.employer_total;
 
   return result;
 }
