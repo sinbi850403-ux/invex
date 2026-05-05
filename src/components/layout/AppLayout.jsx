@@ -176,18 +176,42 @@ class ErrorBoundary extends React.Component {
         );
       }
       return (
-        <div style={{ padding: '48px', textAlign: 'center' }}>
-          <div style={{ fontSize: '40px', marginBottom: '12px' }}>⚠️</div>
-          <h2 style={{ fontWeight: 700, marginBottom: '8px' }}>페이지를 불러오는 중 오류가 발생했습니다</h2>
-          <p style={{ color: 'var(--text-muted)', fontSize: '13px', marginBottom: '20px' }}>
+        <div style={{
+          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+          minHeight: '60vh', padding: '48px', textAlign: 'center',
+        }}>
+          <div style={{
+            width: 72, height: 72, borderRadius: '50%',
+            background: 'var(--danger-bg, #fef2f2)', display: 'flex', alignItems: 'center',
+            justifyContent: 'center', fontSize: 32, marginBottom: 20,
+          }}>⚠️</div>
+          <h2 style={{ fontWeight: 700, fontSize: 18, marginBottom: 8, color: 'var(--text-primary)' }}>
+            페이지 로드 중 문제가 발생했습니다
+          </h2>
+          <p style={{ color: 'var(--text-muted)', fontSize: 13, marginBottom: 8, maxWidth: 420 }}>
+            일시적인 오류입니다. 다시 시도하거나 페이지를 새로고침해 주세요.
+          </p>
+          <p style={{
+            color: 'var(--text-muted)', fontSize: 11, marginBottom: 24,
+            background: 'var(--bg-subtle)', padding: '6px 12px', borderRadius: 6,
+            maxWidth: 480, wordBreak: 'break-all',
+          }}>
             {this.state.error?.message || '알 수 없는 오류'}
           </p>
-          <button
-            className="btn btn-primary"
-            onClick={() => this.setState({ hasError: false, error: null, isChunkError: false })}
-          >
-            다시 시도
-          </button>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button
+              className="btn btn-primary"
+              onClick={() => this.setState({ hasError: false, error: null, isChunkError: false })}
+            >
+              다시 시도
+            </button>
+            <button
+              className="btn btn-ghost"
+              onClick={() => window.location.reload()}
+            >
+              새로고침
+            </button>
+          </div>
         </div>
       );
     }

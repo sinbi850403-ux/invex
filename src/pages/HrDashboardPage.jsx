@@ -93,23 +93,27 @@ export default function HrDashboardPage() {
     load();
   }, []);
 
+  // ✅ Hooks 규칙: useMemo는 항상 조건부 return 이전에 선언 (React error #310 방지)
+  const DEPT_COLORS = ['var(--primary)', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#f97316'];
+
+  const aiPrompt = useMemo(() => {
+    if (!data) return null;
+    return buildHRPrompt({
+      activeCount: data.active.length,
+      resignedCount: data.resigned.length,
+      totalGross: data.totalGross,
+      totalNet: data.totalNet,
+      depts: data.depts,
+      absentCount: data.absentCount,
+      lateCount: data.lateCount,
+      earlyLeaveCount: data.earlyLeaveCount,
+      pendingLeaveCount: (data.pendingLeaves || []).length,
+      monthLabel: `${year}년 ${month}월`,
+    });
+  }, [data, year, month]);
+
   if (loading) return <div style={{ padding: '60px', textAlign: 'center', color: 'var(--text-muted)' }}>불러오는 중…</div>;
   if (error) return <div className="empty-state"><div className="msg">{error}</div></div>;
-
-  const DEPT_COLORS =['var(--primary)', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#f97316'];
-
-  const aiPrompt = useMemo(() => buildHRPrompt({
-    activeCount: data.active.length,
-    resignedCount: data.resigned.length,
-    totalGross: data.totalGross,
-    totalNet: data.totalNet,
-    depts: data.depts,
-    absentCount: data.absentCount,
-    lateCount: data.lateCount,
-    earlyLeaveCount: data.earlyLeaveCount,
-    pendingLeaveCount: (data.pendingLeaves || []).length,
-    monthLabel: `${year}년 ${month}월`,
-  }), [data, year, month]);
 
   return (
     <div>
