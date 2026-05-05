@@ -8,6 +8,7 @@ import { PAGE_LOADERS } from '../../router-config.js';
 import { initGlobalSearch } from '../../global-search.js';
 import { checkAndShowOnboarding } from '../../onboarding.js';
 import { showToast } from '../../toast.js';
+import { usePermission } from '../../hooks/usePermission.js';
 
 // 네이티브 React 컴포넌트로 변환된 페이지
 const REACT_PAGES = {
@@ -82,6 +83,39 @@ const REACT_PAGES = {
 const PAGE_COMPONENTS = Object.fromEntries(
   Object.entries(PAGE_LOADERS).map(([id]) => [id, REACT_PAGES[id]])
 );
+
+// 권한 가드 예외 페이지 — 항상 접근 허용 (허브, 홈, 설정계열 등)
+const UNGUARDED_PAGES = new Set([
+  'home',
+  'hub-inventory', 'hub-warehouse', 'hub-order', 'hub-report',
+  'hub-documents', 'hub-settings', 'hub-hr', 'hub-support',
+  'settings', 'mypage', 'guide', 'support', 'referral',
+  'billing', 'team',
+  'admin', 'pos',  // adminOnly는 Sidebar에서 이미 숨김, 여기선 차단 안 함
+]);
+
+/** 역할별 접근 제어 게이트 — 권한 없는 페이지 접근 시 안내 화면 표시 */
+function PermissionGuard({ pageId, children }) {
+  const { canAccess, currentRole } = usePermission();
+
+  // 예외 페이지 또는 접근 가능한 페이지
+  if (UNGUARDED_PAGES.has(pageId) || canAccess(pageId)) {
+    return children;
+  }
+
+  return (
+    <div style={{ padding: '48px', textAlign: 'center' }}>
+      <div style={{ fontSize: '40px', marginBottom: '12px' }}>🔒</div>
+      <h2 style={{ fontWeight: 700, marginBottom: '8px' }}>접근 권한이 없습니다</h2>
+      <p style={{ color: 'var(--text-muted)', fontSize: '14px', marginBottom: '8px' }}>
+        이 페이지에 접근하려면 관리자에게 권한을 요청하세요.
+      </p>
+      <p style={{ color: 'var(--text-muted)', fontSize: '12px' }}>
+        현재 역할: <strong>{currentRole}</strong>
+      </p>
+    </div>
+  );
+}
 
 function PageNotFound() {
   return (
@@ -287,7 +321,11 @@ export default function AppLayout() {
                 <Route
                   key={id}
                   path={'/' + id}
-                  element={<Component />}
+                  element={
+                    <PermissionGuard pageId={id}>
+                      <Component />
+                    </PermissionGuard>
+                  }
                 />
               ))}
               <Route path="*" element={<PageNotFound />} />

@@ -564,6 +564,17 @@ export async function changeMemberRole(wsId, targetUid, newRole) {
   try {
     const ws = await wsGet(wsId);
     if (!ws) return false;
+    // 오너만 역할 변경 가능
+    const callerUid = getCurrentUser()?.uid;
+    if (!callerUid || ws.owner_id !== callerUid) {
+      showToast('역할 변경 권한이 없습니다.', 'error');
+      return false;
+    }
+    // 오너 자신의 역할은 변경 불가
+    if (targetUid === callerUid) {
+      showToast('오너의 역할은 변경할 수 없습니다.', 'error');
+      return false;
+    }
     const updated = (ws.members || []).map(m =>
       (m.uid === targetUid || m.id === targetUid) ? { ...m, role: newRole } : m
     );
@@ -586,6 +597,12 @@ export async function addTestMembers(wsId) {
   try {
     const ws = await wsGet(wsId);
     if (!ws) return false;
+    // 오너만 테스트 팀원 추가 가능
+    const callerUid = getCurrentUser()?.uid;
+    if (!callerUid || ws.owner_id !== callerUid) {
+      showToast('권한이 없습니다.', 'error');
+      return false;
+    }
     const today = new Date().toISOString();
     const testMembers = [
       { uid: 'test-admin-001',  name: '김관리 (테스트)',  email: 'admin@test.invex',   role: 'admin',   status: 'active', joinedAt: today, isTest: true },
@@ -611,6 +628,12 @@ export async function removeTestMembers(wsId) {
   try {
     const ws = await wsGet(wsId);
     if (!ws) return false;
+    // 오너만 테스트 팀원 제거 가능
+    const callerUid = getCurrentUser()?.uid;
+    if (!callerUid || ws.owner_id !== callerUid) {
+      showToast('권한이 없습니다.', 'error');
+      return false;
+    }
     const filtered = (ws.members || []).filter(m => !String(m.uid || '').startsWith('test-'));
     await wsUpdateMembers(wsId, filtered);
     return true;

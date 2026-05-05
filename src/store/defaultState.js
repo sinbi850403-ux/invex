@@ -72,6 +72,8 @@ export const DEFAULT_STATE = {
   members: [],            // [{id, name, email, roleId, status, joinedAt}]
   // 역할별 기능 접근 권한 행렬 (role_permissions 테이블)
   rolePermissions: null,  // { admin: { pageId: boolean }, manager: {...}, staff: {...}, viewer: {...} }
+  // 워크스페이스 메타 (팀 관리에서 로드 후 저장 — 권한 판단에 사용)
+  workspaceMeta: null,    // { id, name, owner_id, members: [...] }
   // API 연동 (Enterprise)
   apiKeys: [],            // [{id, name, key, scope, createdAt, lastUsed, visible}]
   webhooks: [],           // [{id, name, url, events, active, createdAt}]

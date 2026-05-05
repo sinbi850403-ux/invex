@@ -213,6 +213,8 @@ export default function TeamPage() {
         // created === null 이면 meta는 null로 유지 → UI에서 재시도 버튼 표시
       }
       setData({ meta, myPendingInvite });
+      // 워크스페이스 메타를 store에 저장 → usePermission 훅에서 오너/역할 판단에 사용
+      if (meta) setStoreState({ workspaceMeta: meta });
     } catch (e) {
       showToast('팀 정보를 불러오지 못했습니다: ' + e.message, 'error');
       setData({ meta: null, myPendingInvite: null });
@@ -377,7 +379,7 @@ export default function TeamPage() {
         <div className="page-actions">
           {isOwner && meta && (
             <>
-              {hasTestMembers ? (
+              {import.meta.env.DEV && (hasTestMembers ? (
                 <button className="btn btn-ghost" onClick={handleRemoveTestMembers} disabled={testLoading}
                   style={{ color: 'var(--danger)' }}>
                   {testLoading ? '처리 중…' : '🗑 테스트 삭제'}
@@ -387,7 +389,7 @@ export default function TeamPage() {
                   title="관리자·매니저·직원·열람자 가상 팀원 4명 자동 생성">
                   {testLoading ? '처리 중…' : '🧪 테스트 팀원'}
                 </button>
-              )}
+              ))}
               <button className="btn btn-primary" onClick={() => setShowInvite(true)}>+ 팀원 초대</button>
             </>
           )}
@@ -543,7 +545,7 @@ export default function TeamPage() {
                             >🗑</button>
                           </div>
                         ) : (
-                          <td></td>
+                          null
                         )}
                       </td>
                     )}
