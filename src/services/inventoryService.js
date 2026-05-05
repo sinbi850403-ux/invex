@@ -3,6 +3,7 @@
  */
 import { deleteItem, rebuildInventoryFromTransactions } from '../store.js';
 import { showToast } from '../toast.js';
+import { addAuditLog } from '../audit-log.js';
 
 /**
  * 품목 삭제 (confirm 포함)
@@ -18,6 +19,7 @@ export function removeItem(id, itemName, canDelete) {
   }
   if (!confirm(`"${itemName}" 품목을 삭제하시겠습니까?`)) return false;
   deleteItem(id);
+  addAuditLog('품목삭제', itemName || id, { id });
   showToast('품목이 삭제되었습니다.', 'success');
   return true;
 }
@@ -28,5 +30,6 @@ export function removeItem(id, itemName, canDelete) {
  */
 export function rebuildInventory() {
   rebuildInventoryFromTransactions();
+  addAuditLog('재고재계산', '전체 품목', { action: '이동평균원가 재계산' });
   showToast('재고를 재계산했습니다.', 'success');
 }

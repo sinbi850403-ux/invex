@@ -595,6 +595,8 @@ const plan = useStore(s => s.currentPlan);         // store 초기값 'free' 고
 | `ai-report.js` | AI 프롬프트 빌더 | 페이지별 systemPrompt/userPrompt 생성, /api/ai-proxy 스트리밍 호출 |
 | `api/ai-proxy.js` | Vercel Edge Function | 서버 사이드 OpenAI API 호출 (API 키 보안) |
 | `components/AIAnalysisPanel.jsx` | AI 분석 UI | 스트리밍 분석 결과 표시, 마크다운 렌더링 |
+| `services/inoutService.js` | 입출고 서비스 | createTransaction/removeTransaction + 감사 로그 + 회계 자동 분개 |
+| `services/inventoryService.js` | 재고 서비스 | removeItem/rebuildInventory + 감사 로그 |
 
 ---
 
@@ -841,6 +843,17 @@ export default function MyPage() {
   );
 }
 ```
+
+### 회계 자동 분개 규칙
+
+입출고 service를 통해 등록하면 `account_entries`에 자동 분개됩니다.
+
+- 입고(`in`) → `payable` (매입채무, 거래처에 돈 내야 함)
+- 출고(`out`) → `receivable` (매출채권, 거래처에서 돈 받아야 함)
+- 금액 = 공급가액(원가×수량) + 부가세(10%)
+- `status = 'pending'` (결제 완료 후 수동으로 `settled`로 변경)
+- 단가(`unitPrice`)가 0이거나 없으면 분개 생성 없음 (totalAmount = 0 조건)
+- 분개 실패는 입출고 등록을 중단시키지 않음 (try/catch 격리)
 
 ### 인증·요금제 상태 읽기 (useAuth)
 

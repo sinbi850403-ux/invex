@@ -19,6 +19,7 @@ export function TxModal({ txType, items, vendors, onClose, onSave }) {
     quantity: '',
     unitPrice: '',
     sellingPrice: '',
+    lot_no: '',
     note: '',
   });
   const [itemSearch, setItemSearch] = useState('');
@@ -90,6 +91,7 @@ export function TxModal({ txType, items, vendors, onClose, onSave }) {
       totalAmount: supplyValue + vat,
       actualSellingPrice: sellingPrice,
       note: form.note.trim(),
+      lot_no: form.lot_no.trim() || null,
       date: form.date || today,
     });
   };
@@ -196,6 +198,17 @@ export function TxModal({ txType, items, vendors, onClose, onSave }) {
                   value={form.sellingPrice}
                   onChange={e => setForm(f => ({ ...f, sellingPrice: e.target.value }))}
                   placeholder="선택 사항"
+                />
+              </div>
+
+              {/* 로트번호 */}
+              <div className="form-group" style={{ marginBottom: '12px' }}>
+                <label className="form-label">로트번호 <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>선택</span></label>
+                <input
+                  className="form-input"
+                  placeholder="예: LOT-2026-001 (선택 입력)"
+                  value={form.lot_no}
+                  onChange={e => setForm(f => ({ ...f, lot_no: e.target.value }))}
                 />
               </div>
 

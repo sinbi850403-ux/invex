@@ -6,6 +6,29 @@ import { SortTh } from './SortTh.jsx';
 import { fmtNum as fmt, fmtWon as W, normalizeCurrency } from '../../utils/formatters.js';
 import { formatDateStr as formatDate } from '../../domain/inoutExcelParser.js';
 
+// ── 계산 기준 툴팁 ──────────────────────────────────────────────────────────────
+function CalcTooltip({ children, tip }) {
+  const [show, setShow] = React.useState(false);
+  return (
+    <span style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+      {children}
+      <span
+        style={{ cursor: 'help', color: 'var(--text-muted)', fontSize: '11px' }}
+        onMouseEnter={() => setShow(true)}
+        onMouseLeave={() => setShow(false)}
+      >ⓘ</span>
+      {show && (
+        <span style={{
+          position: 'absolute', bottom: '100%', left: '50%', transform: 'translateX(-50%)',
+          background: 'var(--bg-dark,#1a1a1a)', color: '#fff', padding: '4px 8px',
+          borderRadius: '4px', fontSize: '11px', whiteSpace: 'nowrap', zIndex: 999,
+          marginBottom: '4px', pointerEvents: 'none',
+        }}>{tip}</span>
+      )}
+    </span>
+  );
+}
+
 // ── 구분 배지 ──────────────────────────────────────────────────────────────────
 function TypeBadge({ type }) {
   return (
@@ -56,6 +79,8 @@ export function InoutTable({
   const isInMode  = mode === 'in';
   const isOutMode = mode === 'out';
 
+  const hasLotNo = sorted.some(tx => tx.lot_no);
+
   const allOnPageSelected = sorted.length > 0 && sorted.every(tx => selectedIds.has(tx.id));
 
   return (
@@ -77,18 +102,19 @@ export function InoutTable({
               <SortTh sortKey="spec" sort={sort} onSort={onSort}>규격</SortTh>
               <SortTh sortKey="unit" sort={sort} onSort={onSort}>단위</SortTh>
               <SortTh sortKey="quantity" className="text-right" sort={sort} onSort={onSort}>출고수량</SortTh>
-              {[
-                { key: 'sellingPrice', label: '출고단가' },
-                { key: 'outAmt',       label: '판매가'   },
-                { key: 'outVat',       label: '부가세'   },
-                { key: 'outTotal',     label: '출고합계' },
-                { key: 'profit',       label: '이익액'   },
-                { key: 'profitMargin', label: '이익률'   },
-              ].map(({ key, label }) => (
-                <SortTh key={key} sortKey={key} sort={sort} onSort={onSort} className="text-right" style={{
-                  fontWeight: 700, fontSize: '11px', textTransform: 'none', whiteSpace: 'nowrap', minWidth: 72,
-                }}>{label}</SortTh>
-              ))}
+              {hasLotNo && <th style={{ fontWeight: 700, fontSize: '11px', textTransform: 'none', whiteSpace: 'nowrap' }}>로트번호</th>}
+              <SortTh sortKey="sellingPrice" sort={sort} onSort={onSort} className="text-right" style={{ fontWeight: 700, fontSize: '11px', textTransform: 'none', whiteSpace: 'nowrap', minWidth: 72 }}>출고단가</SortTh>
+              <SortTh sortKey="outAmt" sort={sort} onSort={onSort} className="text-right" style={{ fontWeight: 700, fontSize: '11px', textTransform: 'none', whiteSpace: 'nowrap', minWidth: 72 }}>판매가</SortTh>
+              <SortTh sortKey="outVat" sort={sort} onSort={onSort} className="text-right" style={{ fontWeight: 700, fontSize: '11px', textTransform: 'none', whiteSpace: 'nowrap', minWidth: 72 }}>
+                <CalcTooltip tip="판매가 × 10%">부가세</CalcTooltip>
+              </SortTh>
+              <SortTh sortKey="outTotal" sort={sort} onSort={onSort} className="text-right" style={{ fontWeight: 700, fontSize: '11px', textTransform: 'none', whiteSpace: 'nowrap', minWidth: 72 }}>출고합계</SortTh>
+              <SortTh sortKey="profit" sort={sort} onSort={onSort} className="text-right" style={{ fontWeight: 700, fontSize: '11px', textTransform: 'none', whiteSpace: 'nowrap', minWidth: 72 }}>
+                <CalcTooltip tip="판매가 - (이동평균원가 × 수량)">이익액</CalcTooltip>
+              </SortTh>
+              <SortTh sortKey="profitMargin" sort={sort} onSort={onSort} className="text-right" style={{ fontWeight: 700, fontSize: '11px', textTransform: 'none', whiteSpace: 'nowrap', minWidth: 72 }}>
+                <CalcTooltip tip="이익액 ÷ 판매가 × 100%">이익률</CalcTooltip>
+              </SortTh>
               <th style={{ textTransform: 'none', fontSize: '13px' }}>관리</th>
             </tr>
           ) : (
@@ -105,20 +131,26 @@ export function InoutTable({
                   <SortTh sortKey="vendor" sort={sort} onSort={onSort}>거래처</SortTh>
                   <SortTh sortKey="itemCode" sort={sort} onSort={onSort} style={{ color: 'var(--text-muted)' }}>상품코드</SortTh>
                   <SortTh sortKey="itemName" className="col-fill" sort={sort} onSort={onSort}>품명</SortTh>
+                  {hasLotNo && <th style={{ fontWeight: 700, fontSize: '11px', textTransform: 'none', whiteSpace: 'nowrap' }}>로트번호</th>}
                   <SortTh sortKey="color" sort={sort} onSort={onSort} style={{ color: 'var(--text-muted)' }}>색상</SortTh>
                   <SortTh sortKey="spec" sort={sort} onSort={onSort} style={{ color: 'var(--text-muted)' }}>규격</SortTh>
                   <SortTh sortKey="unit" sort={sort} onSort={onSort} style={{ color: 'var(--text-muted)' }}>단위</SortTh>
                   <SortTh sortKey="quantity" className="text-right" sort={sort} onSort={onSort}>입고수량</SortTh>
                   <SortTh sortKey="unitPrice" className="text-right" sort={sort} onSort={onSort}>매입원가</SortTh>
                   <SortTh sortKey="supply" className="text-right" sort={sort} onSort={onSort}>공급가액</SortTh>
-                  <SortTh sortKey="vat" className="text-right" sort={sort} onSort={onSort}>부가세</SortTh>
-                  <SortTh sortKey="totalPrice" className="text-right" sort={sort} onSort={onSort}>합계금액</SortTh>
+                  <SortTh sortKey="vat" className="text-right" sort={sort} onSort={onSort}>
+                    <CalcTooltip tip="공급가액(원가×수량) × 10%">부가세</CalcTooltip>
+                  </SortTh>
+                  <SortTh sortKey="totalPrice" className="text-right" sort={sort} onSort={onSort}>
+                    <CalcTooltip tip="공급가액 + 부가세">합계금액</CalcTooltip>
+                  </SortTh>
                 </>
               ) : (
                 <>
                   <SortTh sortKey="date" sort={sort} onSort={onSort}>날짜</SortTh>
                   <SortTh sortKey="vendor" sort={sort} onSort={onSort}>거래처</SortTh>
                   <SortTh sortKey="itemName" className="col-fill" sort={sort} onSort={onSort}>품목명</SortTh>
+                  {hasLotNo && <th style={{ fontWeight: 700, fontSize: '11px', textTransform: 'none', whiteSpace: 'nowrap' }}>로트번호</th>}
                   <SortTh sortKey="color" sort={sort} onSort={onSort} style={{ color: 'var(--text-muted)' }}>색상</SortTh>
                   <SortTh sortKey="quantity" className="text-right" sort={sort} onSort={onSort} style={{ color: 'var(--danger)', fontWeight: 700 }}>수량</SortTh>
                   <SortTh sortKey="unitPrice" className="text-right" sort={sort} onSort={onSort}>원가</SortTh>
@@ -167,6 +199,7 @@ export function InoutTable({
                     <td style={{ fontSize: '12px' }}>{tx.vendor || '-'}</td>
                     <td style={{ fontSize: '12px' }}>{itemCode || '-'}</td>
                     <td className="col-fill"><strong>{tx.itemName || '-'}</strong></td>
+                    {hasLotNo && <td style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{tx.lot_no || '-'}</td>}
                     <td style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{tx.color || itemData.color || '-'}</td>
                     <td style={{ fontSize: '12px' }}>{spec || '-'}</td>
                     <td style={{ fontSize: '12px' }}>{unit || '-'}</td>
@@ -203,6 +236,7 @@ export function InoutTable({
                     <td style={{ fontSize: '13px' }}>{tx.vendor || '-'}</td>
                     <td style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{itemCode || '-'}</td>
                     <td className="col-fill"><strong>{tx.itemName || '-'}</strong></td>
+                    {hasLotNo && <td style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{tx.lot_no || '-'}</td>}
                     <td style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{tx.color || itemData.color || '-'}</td>
                     <td style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{spec || '-'}</td>
                     <td style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{unit || '-'}</td>
@@ -222,6 +256,7 @@ export function InoutTable({
                       <strong>{tx.itemName || '-'}</strong>
                       {itemCode && <span style={{ fontSize: '11px', color: 'var(--text-muted)', marginLeft: '6px' }}>{itemCode}</span>}
                     </td>
+                    {hasLotNo && <td style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{tx.lot_no || '-'}</td>}
                     <td style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{tx.color || itemData.color || '-'}</td>
                     <td className="text-right">
                       <span style={{ color: tx.type === 'in' ? '#16a34a' : '#ef4444', fontWeight: 600 }}>
@@ -251,10 +286,12 @@ export function InoutTable({
         </tbody>
         {isInMode && inTotals && sorted.length > 0 && (() => {
           const S = { fontWeight: 700, padding: '8px 12px', borderTop: '2px solid var(--border-color,#333)' };
+          // 체크박스(1) + #(1) + 자산(1) + 날짜(1) + 거래처(1) + 코드(1) + 품명(1) + [로트번호(1)] + 색상(1) + 규격(1) + 단위(1) = 10 또는 11
+          const baseColSpan = 10 + (hasLotNo ? 1 : 0);
           return (
             <tfoot>
               <tr style={{ background: 'var(--bg-lighter)', fontWeight: 700 }}>
-                <td colSpan={10} className="text-right" style={{ ...S, color: 'var(--text-muted)', fontSize: '12px' }}>
+                <td colSpan={baseColSpan} className="text-right" style={{ ...S, color: 'var(--text-muted)', fontSize: '12px' }}>
                   합계 ({sorted.length.toLocaleString()}건)
                 </td>
                 <td className="text-right" style={{ ...S, fontSize: '13px' }}>
@@ -271,10 +308,12 @@ export function InoutTable({
         })()}
         {isOutMode && outTotals && sorted.length > 0 && (() => {
           const S = { fontWeight: 700, padding: '8px 12px', borderTop: '2px solid var(--border-color,#333)' };
+          // 체크박스(1) + #(1) + 자산(1) + 날짜(1) + 거래처(1) + 코드(1) + 품명(1) + [로트번호(1)] + 색상(1) + 규격(1) + 단위(1) + 수량(1) = 11 또는 12
+          const baseColSpan = 11 + (hasLotNo ? 1 : 0);
           return (
             <tfoot>
               <tr style={{ background: 'var(--bg-lighter)', fontWeight: 700 }}>
-                <td colSpan={11} className="text-right" style={{ ...S, color: 'var(--text-muted)', fontSize: '12px' }}>
+                <td colSpan={baseColSpan} className="text-right" style={{ ...S, color: 'var(--text-muted)', fontSize: '12px' }}>
                   합계 ({sorted.length.toLocaleString()}건)
                 </td>
                 <td className="text-right" style={{ ...S, fontWeight: 400 }}>-</td>

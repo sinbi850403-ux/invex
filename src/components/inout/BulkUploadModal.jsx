@@ -224,58 +224,83 @@ export function BulkUploadModal({ items, modeDefault, onClose, onSuccess }) {
           {error && <div className="alert alert-danger" style={{ marginTop: '12px' }}>{error}</div>}
 
           {/* 미리보기 */}
-          {previewRows && (
-            <div style={{ marginTop: '16px' }}>
-              <div style={{ marginBottom: '8px', fontSize: '13px' }}>
-                <strong>분석 결과</strong>
-                <span style={{ marginLeft: '8px', color: 'var(--success)' }}>입고 {previewRows.filter(r => r.type === 'in').length}건</span>
-                <span style={{ marginLeft: '8px', color: 'var(--danger)' }}>출고 {previewRows.filter(r => r.type === 'out').length}건</span>
-                {previewRows.filter(r => !r.matched).length > 0 && (
-                  <span style={{ marginLeft: '8px', color: 'var(--warning)' }}>미매칭 {previewRows.filter(r => !r.matched).length}건</span>
-                )}
-              </div>
-              <div className="table-wrapper" style={{ maxHeight: '240px', overflowY: 'auto', marginBottom: '12px' }}>
-                <table className="data-table" style={{ fontSize: '12px' }}>
-                  <thead>
-                    <tr>
-                      <th>구분</th><th>거래처</th><th>품목명</th>
-                      <th className="text-right">수량</th><th className="text-right">원가</th>
-                      <th>날짜</th><th>상태</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {previewRows.map((r, i) => (
-                      <tr key={i}>
-                        <td>
-                          <span style={{
-                            background: r.type === 'in' ? 'rgba(22,163,74,0.12)' : 'rgba(239,68,68,0.12)',
-                            color: r.type === 'in' ? '#16a34a' : '#ef4444',
-                            padding: '2px 6px', borderRadius: '10px', fontSize: '11px', fontWeight: 600,
-                          }}>
-                            {r.type === 'in' ? '입고' : '출고'}
-                          </span>
-                        </td>
-                        <td>{r.vendor || '-'}</td>
-                        <td>{r.itemName}</td>
-                        <td className="text-right">{fmt(r.quantity)}</td>
-                        <td className="text-right">{r.unitPrice ? W(r.unitPrice) : '-'}</td>
-                        <td>{r.date}</td>
-                        <td>
-                          {r.matched
-                            ? <span style={{ color: 'var(--success)', fontSize: '11px' }}>매칭</span>
-                            : <span style={{ color: 'var(--warning)', fontSize: '11px' }}>신규</span>}
-                        </td>
+          {previewRows && (() => {
+            const errorRows = previewRows.filter(r => !r.matched || !r.quantity || r.quantity <= 0);
+            const errorCount = errorRows.length;
+            const validCount = previewRows.length - errorCount;
+            return (
+              <div style={{ marginTop: '16px' }}>
+                <div style={{ marginBottom: '8px', fontSize: '13px' }}>
+                  <strong>분석 결과</strong>
+                  <span style={{ marginLeft: '8px', color: 'var(--success)' }}>입고 {previewRows.filter(r => r.type === 'in').length}건</span>
+                  <span style={{ marginLeft: '8px', color: 'var(--danger)' }}>출고 {previewRows.filter(r => r.type === 'out').length}건</span>
+                  {previewRows.filter(r => !r.matched).length > 0 && (
+                    <span style={{ marginLeft: '8px', color: 'var(--warning)' }}>미매칭 {previewRows.filter(r => !r.matched).length}건</span>
+                  )}
+                  {errorCount > 0 && (
+                    <span style={{ marginLeft: '8px', color: 'var(--danger)', fontWeight: 600 }}>
+                      ⚠ 오류 {errorCount}건
+                    </span>
+                  )}
+                </div>
+                <div className="table-wrapper" style={{ maxHeight: '240px', overflowY: 'auto', marginBottom: '12px' }}>
+                  <table className="data-table" style={{ fontSize: '12px' }}>
+                    <thead>
+                      <tr>
+                        <th>구분</th><th>거래처</th><th>품목명</th>
+                        <th className="text-right">수량</th><th className="text-right">원가</th>
+                        <th>날짜</th><th>상태</th><th>오류</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {previewRows.map((r, i) => {
+                        const rowErrors = [];
+                        if (!r.matched) rowErrors.push('품목 미매칭');
+                        if (!r.quantity || r.quantity <= 0) rowErrors.push('수량 오류');
+                        if (!r.date) rowErrors.push('날짜 없음');
+                        if (!r.vendor) rowErrors.push('거래처 미입력');
+                        const hasError = rowErrors.length > 0;
+                        return (
+                          <tr key={i} style={hasError ? { background: 'rgba(239,68,68,0.07)' } : {}}>
+                            <td>
+                              <span style={{
+                                background: r.type === 'in' ? 'rgba(22,163,74,0.12)' : 'rgba(239,68,68,0.12)',
+                                color: r.type === 'in' ? '#16a34a' : '#ef4444',
+                                padding: '2px 6px', borderRadius: '10px', fontSize: '11px', fontWeight: 600,
+                              }}>
+                                {r.type === 'in' ? '입고' : '출고'}
+                              </span>
+                            </td>
+                            <td>{r.vendor || '-'}</td>
+                            <td>{r.itemName}</td>
+                            <td className="text-right">{fmt(r.quantity)}</td>
+                            <td className="text-right">{r.unitPrice ? W(r.unitPrice) : '-'}</td>
+                            <td>{r.date}</td>
+                            <td>
+                              {r.matched
+                                ? <span style={{ color: 'var(--success)', fontSize: '11px' }}>매칭</span>
+                                : <span style={{ color: 'var(--warning)', fontSize: '11px' }}>신규</span>}
+                            </td>
+                            <td style={{ fontSize: '11px', color: 'var(--danger)' }}>
+                              {rowErrors.length > 0 ? rowErrors.join(', ') : ''}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+                  <button className="btn btn-outline" onClick={() => setPreviewRows(null)}>취소</button>
+                  <button className="btn btn-primary" onClick={handleConfirm}>
+                    {errorCount > 0
+                      ? `오류 ${errorCount}건 제외하고 ${validCount}건 등록`
+                      : `전체 ${previewRows.length}건 등록`}
+                  </button>
+                </div>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
-                <button className="btn btn-outline" onClick={() => setPreviewRows(null)}>취소</button>
-                <button className="btn btn-primary" onClick={handleConfirm}>총 {previewRows.length}건 등록</button>
-              </div>
-            </div>
-          )}
+            );
+          })()}
         </div>
       </div>
     </div>

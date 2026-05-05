@@ -91,6 +91,7 @@ export function buildColMap(headers, modeDefault) {
     unit:         findCol('단위', 'unit', 'uom'),
     color:        findCol('색상', '컬러', '칼라', 'color'),
     category:     findCol('자산', '분류', '카테고리', '유형', '종류', '구분', 'category'),
+    lot_no:       findCol('로트번호', '로트', 'lot', 'lotnumber', 'lot_no', 'lot번호', '배치번호'),
   };
 }
 
@@ -141,6 +142,7 @@ export function parseExcelRows(sheetData, colMap, modeDefault, items) {
       unit:         colMap.unit >= 0     ? String(row[colMap.unit] ?? '').trim()     : (matchedItem?.unit     || ''),
       color:        colMap.color >= 0    ? String(row[colMap.color] ?? '').trim()    : (matchedItem?.color    || ''),
       category:     colMap.category >= 0 ? String(row[colMap.category] ?? '').trim() : (matchedItem?.category || ''),
+      lot_no:       colMap.lot_no >= 0   ? String(row[colMap.lot_no] ?? '').trim()   : '',
       matched:      Boolean(matchedItem),
     });
   }
