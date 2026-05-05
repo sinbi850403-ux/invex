@@ -313,6 +313,8 @@ export default function EmployeesPage() {
   const [deptFilter, setDeptFilter] = useState('');
   const [typeFilter, setTypeFilter] = useState('');
   const [modalEmp, setModalEmp] = useState(undefined);
+  // [SECURITY] alert() 대체 — 시간제한(15초) 주민번호 조회 모달
+  const [rrnModal, setRrnModal] = useState({ visible: false, value: '' });
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -357,7 +359,9 @@ export default function EmployeesPage() {
     try {
       const plain = await employeesDb.getRRN(id);
       if (plain) {
-        alert('주민등록번호: ' + plain + '\n\n※ 감사 로그에 조회 기록이 남습니다.');
+        // [SECURITY] alert() 대신 시간제한 모달 사용 — 화면 캡처·XSS 공격 노출 최소화
+        setRrnModal({ visible: true, value: plain });
+        setTimeout(() => setRrnModal({ visible: false, value: '' }), 15000);
       } else showToast('조회 실패', 'error');
     } catch (e) { showToast('조회 실패: ' + e.message, 'error'); }
   }
@@ -402,6 +406,34 @@ export default function EmployeesPage() {
 
   return (
     <div>
+      {/* [SECURITY] 주민번호 보안 조회 모달 — 15초 자동 소멸, 복사 방지 */}
+      {rrnModal.visible && (
+        <div className="modal-overlay" style={{ display: 'flex', zIndex: 9999 }} onClick={() => setRrnModal({ visible: false, value: '' })}>
+          <div className="modal" style={{ maxWidth: 360, textAlign: 'center' }} onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>🔒 주민등록번호 조회</h3>
+              <button className="btn btn-ghost btn-sm" onClick={() => setRrnModal({ visible: false, value: '' })}>✕</button>
+            </div>
+            <div className="modal-body" style={{ padding: '20px 24px' }}>
+              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 12 }}>
+                감사 로그에 조회 기록이 저장되었습니다.
+              </div>
+              <div
+                style={{ fontFamily: 'monospace', fontSize: 20, fontWeight: 700, letterSpacing: 3,
+                  padding: '12px 16px', background: 'var(--bg-secondary)', borderRadius: 8,
+                  userSelect: 'none', WebkitUserSelect: 'none' }}
+                onCopy={e => e.preventDefault()}
+              >
+                {rrnModal.value.replace(/(\d{6})(\d{7})/, '$1-$2')}
+              </div>
+              <div style={{ marginTop: 12, fontSize: 11, color: 'var(--warning)' }}>
+                ⏱ 15초 후 자동으로 닫힙니다
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="page-header">
         <div>
           <h1 className="page-title">직원 관리</h1>
