@@ -16,6 +16,10 @@ export function AuthProvider({ children }) {
   const [isReady, setIsReady] = useState(false);
   const [isInitializing, setIsInitializing] = useState(false);
   const [startPage, setStartPage] = useState('home');
+  // ── 단일 플랜 소스 ──────────────────────────────────────────────────────────
+  // 이전: getCurrentPlan()/profile?.plan/state.currentPlan 3곳에서 각자 읽어 race condition
+  // 개선: AuthContext에서만 관리 → 모든 컴포넌트가 useAuth().plan으로 통일
+  const [plan, setPlanState] = useState('free');
   const initializingRef = useRef(false);
   const hasRetriedBootstrapRef = useRef(false);
 
@@ -23,6 +27,25 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     injectGetCurrentUser(getCurrentUser);
     injectGetUserProfile(getUserProfileData);
+  }, []);
+
+  // profile 변경 시 plan 동기화 (로그인·프로필 로드 타이밍 커버)
+  useEffect(() => {
+    if (profile?.plan && PLANS[profile.plan]) {
+      setPlanState(profile.plan);
+    } else if (!profile) {
+      setPlanState('free');
+    }
+  }, [profile]);
+
+  // invex:plan-changed 이벤트 구독 (관리자가 세션 중 플랜 변경 시 커버)
+  useEffect(() => {
+    const handler = () => {
+      const p = getCurrentPlan();
+      if (p && PLANS[p]) setPlanState(p);
+    };
+    window.addEventListener('invex:plan-changed', handler);
+    return () => window.removeEventListener('invex:plan-changed', handler);
   }, []);
 
   const initApp = useCallback(async (loggedInUser) => {
@@ -171,7 +194,7 @@ export function AuthProvider({ children }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, profile, isReady, isInitializing, startPage, logout, getCurrentPlan }}>
+    <AuthContext.Provider value={{ user, profile, plan, isReady, isInitializing, startPage, logout, getCurrentPlan }}>
       {children}
     </AuthContext.Provider>
   );

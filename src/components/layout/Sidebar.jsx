@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext.jsx';
-import { getPageBadge, getCurrentPlan, PLANS, setPlan } from '../../plan.js';
+import { getPageBadge, PLANS } from '../../plan.js';
 import { getNotificationCount, renderNotificationPanel } from '../../notifications.js';
 import { initGlobalSearch, toggleGlobalSearch } from '../../global-search.js';
 import { toggleTheme } from '../../theme.js';
@@ -95,10 +95,9 @@ const NAV_SECTIONS = [
 export default function Sidebar({ isOpen, onClose, collapsed = false, onToggleCollapse }) {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, profile, logout } = useAuth();
+  const { user, profile, plan: planId, logout } = useAuth();
   const [openSections, setOpenSections] = useState({});
   const [notifCount, setNotifCount] = useState(0);
-  const [planId, setPlanId] = useState(getCurrentPlan());
   const [fontScale, setFontScale] = useState(parseInt(localStorage.getItem('invex_font_scale') || '0', 10));
   const [isDark, setIsDark] = useState(() => document.documentElement.classList.contains('dark-mode'));
 
@@ -125,21 +124,6 @@ export default function Sidebar({ isOpen, onClose, collapsed = false, onToggleCo
     window.addEventListener('notifications-updated', update);
     return () => window.removeEventListener('notifications-updated', update);
   }, []);
-
-  // plan 변경 감지 (invex:plan-changed 이벤트)
-  useEffect(() => {
-    const update = () => setPlanId(getCurrentPlan());
-    window.addEventListener('invex:plan-changed', update);
-    return () => window.removeEventListener('invex:plan-changed', update);
-  }, []);
-
-  // profile 로드 후 planId 동기화
-  // 이벤트가 Sidebar 마운트 전에 발생한 경우(race condition) 대비
-  useEffect(() => {
-    if (profile?.plan && PLANS[profile.plan]) {
-      setPlanId(profile.plan);
-    }
-  }, [profile]);
 
   // Global search 초기화
   useEffect(() => {
@@ -171,7 +155,7 @@ export default function Sidebar({ isOpen, onClose, collapsed = false, onToggleCo
     showToast(`글자 크기: ${labels[next]}`, 'success');
   }, [fontScale]);
 
-  const plan = PLANS[planId];
+  const plan = PLANS[planId] || PLANS.free;
   const userName = profile?.name || user?.displayName || '사용자';
   const userPhoto = user?.photoURL;
   const adminMode = isSuperAdminEmail(user?.email);

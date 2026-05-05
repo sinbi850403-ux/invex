@@ -8,9 +8,7 @@ import { showToast } from '../toast.js';
 import { PLANS } from '../plan.js';
 
 export default function MyPage() {
-  const { user, profile, logout } = useAuth();
-  // profile.plan 사용 — getCurrentPlan()은 store 초기값이 'free'라 race condition 발생 가능
-  const plan = profile?.plan || 'free';
+  const { user, profile, plan, logout } = useAuth();
   const planInfo = PLANS[plan] || PLANS.free;
 
   const [name, setName] = useState(profile?.name || user?.displayName || '');
