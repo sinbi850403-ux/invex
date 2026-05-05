@@ -92,6 +92,7 @@ export function calcSmeReduction(incomeTax, smeReduction) {
 
   return {
     sme_reduction:    reduction,
+    sme_rate:         cfg.rate,   // 감면율 (0.9 = 90%, 0.7 = 70%)
     income_tax_after: Math.max(0, incomeTax - reduction),
   };
 }
@@ -341,6 +342,7 @@ export function calcPayroll(
   // 5-1. 중소기업 취업자 소득세 감면
   const smeResult          = calcSmeReduction(result.income_tax, sme_reduction);
   result.sme_reduction     = smeResult.sme_reduction;
+  result.sme_rate          = smeResult.sme_rate || 0;
   result.income_tax_final  = smeResult.income_tax_after;
 
   // 지방소득세 = 감면 후 소득세 × 10%
