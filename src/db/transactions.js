@@ -137,6 +137,19 @@ export const transactions = {
     handleError(error, '입출고 삭제');
   },
 
+  /** 여러 ID 배치 삭제 — 1회 Supabase 쿼리로 처리 */
+  async removeByIds(ids) {
+    if (!ids || !ids.length) return;
+    const userId = await getUserId();
+    // Supabase PostgREST .in() 필터로 한 번에 삭제
+    const { error } = await supabase
+      .from('transactions')
+      .delete()
+      .in('id', ids)
+      .eq('user_id', userId);
+    handleError(error, '입출고 배치 삭제');
+  },
+
   async deleteAll() {
     const userId = await getUserId();
     const { error } = await supabase

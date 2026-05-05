@@ -7,7 +7,7 @@ import { useStore } from '../hooks/useStore.js';
 import { showToast } from '../toast.js';
 import { downloadExcel } from '../excel.js';
 import { canAction } from '../auth.js';
-import { addTransaction, deleteTransaction } from '../store.js';
+import { addTransaction, deleteTransaction, deleteTransactionsBulk } from '../store.js';
 import { enableColumnResize } from '../ux-toolkit.js';
 import { fmtNum as fmt, fmtWon as W, normalizeCurrency } from '../utils/formatters.js';
 import { formatDateStr as formatDate } from '../domain/inoutExcelParser.js';
@@ -102,14 +102,20 @@ export function InoutPage({ mode = 'all' }) {
     showToast('삭제되었습니다.', 'success');
   };
 
-  const handleBulkDelete = () => {
+  const handleBulkDelete = async () => {
     if (!canBulk) { showToast('일괄 삭제 권한이 없습니다. 매니저 이상만 가능합니다.', 'warning'); return; }
     if (!selectedIds.size) return;
     if (!confirm(`선택한 ${selectedIds.size}건의 기록을 삭제하시겠습니까?`)) return;
     const count = selectedIds.size;
-    selectedIds.forEach(id => deleteTransaction(id));
-    setSelectedIds(new Set());
-    showToast(`${count}건 삭제 완료`, 'success');
+    showToast(`${count}건 삭제 중...`, 'info');
+    try {
+      await deleteTransactionsBulk([...selectedIds]);
+      setSelectedIds(new Set());
+      showToast(`${count}건 삭제 완료`, 'success');
+    } catch (err) {
+      showToast('삭제 중 오류가 발생했습니다.', 'error');
+      console.error('[InoutPage] 배치 삭제 실패:', err);
+    }
   };
 
   // ── 엑셀 내보내기 ──────────────────────────────────────────────────────────

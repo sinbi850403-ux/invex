@@ -297,6 +297,63 @@ export function updateTransactionPrices(id, fields) {
 }
 
 /**
+ * 입출고 기록 배치 삭제 (선택 항목 일괄 삭제)
+ * - 개별 deleteTransaction 대신 이걸 사용해야 Supabase 쿼리 1회로 처리됨
+ */
+export async function deleteTransactionsBulk(ids) {
+  const idSet = new Set(ids);
+  if (!idSet.size) return 0;
+
+  const txList = stateHolder.current.transactions || [];
+  const toDelete = txList.filter(t => idSet.has(t.id));
+  if (!toDelete.length) return 0;
+
+  // 1) 재고 수량 역산 (삭제되는 트랜잭션 반영)
+  const itemMap = new Map();
+  (stateHolder.current.mappedData || []).forEach(d => {
+    const nameKey = String(d.itemName || '').trim();
+    const codeKey = String(d.itemCode || '').trim();
+    if (nameKey) itemMap.set('n:' + nameKey, d);
+    if (codeKey) itemMap.set('c:' + codeKey, d);
+  });
+
+  toDelete.forEach(target => {
+    const nameKey = String(target.itemName || '').trim();
+    const codeKey = String(target.itemCode || '').trim();
+    const item = (codeKey && itemMap.get('c:' + codeKey)) || (nameKey && itemMap.get('n:' + nameKey));
+    if (item) {
+      const qty = toNum(target.quantity);
+      const currentQty = toNum(item.quantity);
+      if (target.type === 'in') {
+        item.quantity = Math.max(0, currentQty - qty);
+      } else {
+        item.quantity = currentQty + qty;
+      }
+      recalcItemAmounts(item);
+    }
+  });
+
+  // 2) 로컬 상태에서 제거
+  stateHolder.current.transactions = txList.filter(t => !idSet.has(t.id));
+  saveToDB();
+  dispatchUpdate(['transactions', 'mappedData']);
+
+  // 3) Supabase 배치 삭제 (_synced 여부 무관하게 전체 시도)
+  if (isSupabaseConfigured) {
+    try {
+      await db.transactions.removeByIds([...idSet]);
+    } catch (err) {
+      console.warn('[Store] 배치 삭제 Supabase 실패:', err.message);
+    }
+  }
+
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('notifications-updated'));
+  }
+  return toDelete.length;
+}
+
+/**
  * 입출고 기록 삭제
  */
 export function deleteTransaction(id) {

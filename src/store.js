@@ -120,7 +120,7 @@ import {
 
 export {
   recalcItemAmounts, addTransaction, addTransactionsBulk, updateTransactionPrices,
-  deleteTransaction, setSafetyStock, addItem, updateItem, deleteItem,
+  deleteTransaction, deleteTransactionsBulk, setSafetyStock, addItem, updateItem, deleteItem,
   restoreItem, restoreTransaction, rebuildInventoryFromTransactions,
 } from './store/inventoryOps.js';
 
