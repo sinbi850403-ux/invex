@@ -185,6 +185,15 @@ export async function createWorkspace(name) {
       console.warn('[Workspace] settings.set failed (non-fatal):', settingsErr.message);
     }
     currentWorkspaceId = validUid;
+
+    // ⑤ 워크스페이스 생성자(대표)는 profiles.role = 'admin'으로 승격
+    //    DB CHECK 제약: viewer/staff/manager/admin (owner는 앱에서 admin으로 저장)
+    try {
+      await supabase.from('profiles').update({ role: 'admin' }).eq('id', validUid);
+      const profile = getUserProfileData();
+      if (profile) profile.role = 'admin';
+    } catch (_) { /* role 업그레이드 실패는 무시 */ }
+
     showToast(`워크스페이스 "${name || 'My Workspace'}" 생성 완료!`, 'success');
     return validUid;
   } catch (e) {
@@ -477,6 +486,44 @@ export async function startWorkspaceSync(userId) {
   if (!isConfigured || !userId) return;
   const wsId = await getWorkspaceId(userId);
   currentWorkspaceId = wsId;
+}
+
+/**
+ * 워크스페이스 오너(대표)의 프로필 역할 자동 승격
+ * 기존 사용자 대응 — initApp 시 한 번 호출
+ *
+ * profiles.role DB CHECK 제약(viewer/staff/manager/admin)으로 인해
+ * DB에는 'admin'으로 저장, 인메모리 userProfile.role은 'owner'로 설정
+ */
+export async function ensureOwnerAdminRole(userId) {
+  if (!isConfigured || !userId) return;
+  try {
+    const wsId = await getWorkspaceId(userId);
+    if (!wsId) return;
+
+    const meta = await wsGet(wsId);
+    if (!meta || meta.owner_id !== userId) return; // 오너가 아님
+
+    const profile = getUserProfileData();
+    if (!profile) return;
+
+    // 이미 admin 이상이면 스킵
+    const ROLE_WEIGHT = { viewer: 0, staff: 1, manager: 2, admin: 3, owner: 4 };
+    if ((ROLE_WEIGHT[profile.role] || 0) >= ROLE_WEIGHT.admin) return;
+
+    // DB admin으로 승격
+    const { error } = await supabase
+      .from('profiles')
+      .update({ role: 'admin' })
+      .eq('id', userId);
+
+    if (!error) {
+      profile.role = 'admin';
+      console.log('[Workspace] 대표 역할 admin으로 자동 승격');
+    }
+  } catch (e) {
+    console.warn('[Workspace] ensureOwnerAdminRole 실패:', e.message);
+  }
 }
 
 export function stopWorkspaceSync() {

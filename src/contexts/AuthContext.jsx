@@ -5,7 +5,7 @@ import { restoreState, setupRealtimeSync, cleanupRealtimeSync, getState as getSt
 import { primeUserIdCache, setWorkspaceUserId, clearWorkspaceUserId } from '../db.js';
 import { injectGetCurrentUser, injectGetUserProfile, PLANS, setPlan, getCurrentPlan } from '../plan.js';
 import { setMonitorUser, clearMonitorUser } from '../error-monitor.js';
-import { getWorkspaceId } from '../workspace.js';
+import { getWorkspaceId, ensureOwnerAdminRole } from '../workspace.js';
 import { LAST_PAGE_KEY, PAGE_LOADERS } from '../router-config.js';
 
 const AuthContext = createContext(null);
@@ -86,11 +86,19 @@ export function AuthProvider({ children }) {
       // Realtime 자동 동기화 비활성화 (2026-04-29)
       // 사용자가 수동으로 새로고침 버튼을 눌러야만 데이터 업데이트됨
       // setupRealtimeSync();
+
+      // 대표(오너) 역할 자동 승격 — profiles.role이 viewer인 기존 사용자 대응
+      if (uid) {
+        await ensureOwnerAdminRole(uid);
+        // 역할 변경 시 React 프로필 상태도 재동기화 (canAction 즉시 반영)
+        const updatedProfile = getUserProfileData();
+        if (updatedProfile) setProfile({ ...updatedProfile });
+      }
     } finally {
       initializingRef.current = false;
       setIsInitializing(false);
     }
-  }, []);
+  }, [setProfile]);
 
   useEffect(() => {
     // Supabase 미설정 처리
