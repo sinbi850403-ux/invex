@@ -12,6 +12,7 @@ export function BulkUploadModal({ items, modeDefault, onClose, onSuccess }) {
   const [previewRows, setPreviewRows] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [dragOver, setDragOver] = useState(false);
   const fileInputRef = useRef(null);
 
   const modalTitle = modeDefault === 'in' ? '엑셀 일괄 입고 등록'
@@ -212,20 +213,25 @@ export function BulkUploadModal({ items, modeDefault, onClose, onSuccess }) {
 
           {/* 드롭존 */}
           <div
-            onDrop={handleDrop}
-            onDragOver={e => e.preventDefault()}
+            onDrop={e => { e.preventDefault(); setDragOver(false); handleDrop(e); }}
+            onDragOver={e => { e.preventDefault(); setDragOver(true); }}
+            onDragLeave={() => setDragOver(false)}
             onClick={() => fileInputRef.current?.click()}
             style={{
-              border: '2px dashed var(--border-color)',
-              borderRadius: '8px',
-              padding: '32px',
+              border: dragOver ? '2px dashed #8b5cf6' : '2px dashed rgba(148,163,184,0.45)',
+              borderRadius: '10px',
+              padding: '36px 24px',
               textAlign: 'center',
               cursor: 'pointer',
+              background: dragOver ? 'rgba(139,92,246,0.07)' : 'rgba(148,163,184,0.04)',
+              transition: 'border-color 0.18s, background 0.18s',
             }}
           >
-            <div style={{ fontSize: '28px', marginBottom: '8px' }}></div>
-            <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>엑셀 파일을 끌어오거나 클릭해서 선택해 주세요</div>
-            <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>지원 형식: .xlsx, .xls</div>
+            <div style={{ fontSize: '32px', marginBottom: '10px', opacity: dragOver ? 1 : 0.7 }}>📂</div>
+            <div style={{ fontSize: '13px', fontWeight: 600, color: dragOver ? '#a78bfa' : 'var(--text-secondary)' }}>
+              엑셀 파일을 여기에 끌어다 놓거나 클릭해서 선택하세요
+            </div>
+            <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '6px' }}>지원 형식: .xlsx, .xls</div>
             <input ref={fileInputRef} type="file" accept=".xlsx,.xls" style={{ display: 'none' }} onChange={handleFileChange} />
           </div>
 
