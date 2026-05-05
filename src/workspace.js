@@ -558,3 +558,47 @@ export function getFreePeriodInfo(createdAt) {
     startDate: created.toLocaleDateString('ko-KR'),
   };
 }
+
+/**
+ * 테스트용 가상 팀원 4명을 워크스페이스 members JSONB에 직접 추가
+ * 실제 Supabase 계정 없이 역할별 UI를 확인할 때 사용
+ * uid가 'test-' 로 시작하는 멤버는 테스트 멤버로 구분됨
+ */
+export async function addTestMembers(wsId) {
+  if (!wsId || !isConfigured) return false;
+  try {
+    const ws = await wsGet(wsId);
+    if (!ws) return false;
+    const today = new Date().toISOString();
+    const testMembers = [
+      { uid: 'test-admin-001',  name: '김관리 (테스트)',  email: 'admin@test.invex',   role: 'admin',   status: 'active', joinedAt: today, isTest: true },
+      { uid: 'test-mgr-001',   name: '이매니저 (테스트)', email: 'manager@test.invex', role: 'manager', status: 'active', joinedAt: today, isTest: true },
+      { uid: 'test-staff-001', name: '박직원 (테스트)',   email: 'staff@test.invex',   role: 'staff',   status: 'active', joinedAt: today, isTest: true },
+      { uid: 'test-viewer-001',name: '최열람 (테스트)',   email: 'viewer@test.invex',  role: 'viewer',  status: 'active', joinedAt: today, isTest: true },
+    ];
+    // 기존 테스트 멤버 교체 (중복 방지)
+    const existing = (ws.members || []).filter(m => !String(m.uid || '').startsWith('test-'));
+    await wsUpdateMembers(wsId, [...existing, ...testMembers]);
+    return true;
+  } catch (e) {
+    showToast('테스트 팀원 추가 실패: ' + e.message, 'error');
+    return false;
+  }
+}
+
+/**
+ * 테스트 팀원 전체 제거
+ */
+export async function removeTestMembers(wsId) {
+  if (!wsId || !isConfigured) return false;
+  try {
+    const ws = await wsGet(wsId);
+    if (!ws) return false;
+    const filtered = (ws.members || []).filter(m => !String(m.uid || '').startsWith('test-'));
+    await wsUpdateMembers(wsId, filtered);
+    return true;
+  } catch (e) {
+    showToast('테스트 팀원 삭제 실패: ' + e.message, 'error');
+    return false;
+  }
+}

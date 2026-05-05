@@ -17,6 +17,8 @@ import {
   rejectInvite,
   getFreePeriodInfo,
   startWorkspaceSync,
+  addTestMembers,
+  removeTestMembers,
 } from '../workspace.js';
 
 const ROLE_LABELS = {
@@ -98,6 +100,8 @@ export default function TeamPage() {
   const [data, setData] = useState(null);
   const [showInvite, setShowInvite] = useState(false);
   const [acceptingInvite, setAcceptingInvite] = useState(false);
+  const [wsId, setWsId] = useState(null);
+  const [testLoading, setTestLoading] = useState(false);
 
   const load = useCallback(async () => {
     if (!isConfigured || !user) {
@@ -106,9 +110,10 @@ export default function TeamPage() {
     }
     setLoading(true);
     try {
-      const wsId = await getWorkspaceId(user.uid);
+      const resolvedWsId = await getWorkspaceId(user.uid);
+      setWsId(resolvedWsId);
       const [metaResult, myPendingInvite] = await Promise.all([
-        getWorkspaceMeta(wsId),
+        getWorkspaceMeta(resolvedWsId),
         getPendingInvite(user.uid),
       ]);
       let meta = metaResult;
@@ -118,7 +123,7 @@ export default function TeamPage() {
         const created = await createWorkspace(
           user.displayName ? `${user.displayName}의 워크스페이스` : 'My Workspace'
         );
-        if (created) meta = await getWorkspaceMeta(wsId);
+        if (created) meta = await getWorkspaceMeta(resolvedWsId);
         // created === null 이면 meta는 null로 유지 → UI에서 재시도 버튼 표시
       }
       setData({ meta, myPendingInvite });
@@ -167,6 +172,7 @@ export default function TeamPage() {
   const myMember = allMembers.find(m => m.uid === user.uid || m.id === user.uid);
   const myRole = isOwner ? 'owner' : (myMember?.role || myMember?.roleId || profile?.role || 'staff');
   const freePeriod = getFreePeriodInfo(profile?.createdAt);
+  const hasTestMembers = activeMembers.some(m => String(m.uid || '').startsWith('test-'));
 
   const handleAcceptInvite = async () => {
     setAcceptingInvite(true);
@@ -196,6 +202,28 @@ export default function TeamPage() {
     if (success) load();
   };
 
+  const handleAddTestMembers = async () => {
+    if (!wsId) return;
+    setTestLoading(true);
+    const ok = await addTestMembers(wsId);
+    if (ok) {
+      showToast('테스트 팀원 4명을 추가했습니다.', 'success');
+      await load();
+    }
+    setTestLoading(false);
+  };
+
+  const handleRemoveTestMembers = async () => {
+    if (!wsId) return;
+    setTestLoading(true);
+    const ok = await removeTestMembers(wsId);
+    if (ok) {
+      showToast('테스트 팀원을 삭제했습니다.', 'info');
+      await load();
+    }
+    setTestLoading(false);
+  };
+
   return (
     <div>
       {showInvite && (
@@ -211,8 +239,21 @@ export default function TeamPage() {
           <div className="page-desc">팀원을 초대하고 함께 재고를 관리하세요. 모든 데이터가 실시간으로 공유됩니다.</div>
         </div>
         <div className="page-actions">
-          {isOwner && (
-            <button className="btn btn-primary" onClick={() => setShowInvite(true)}>+ 팀원 초대</button>
+          {isOwner && meta && (
+            <>
+              {hasTestMembers ? (
+                <button className="btn btn-ghost" onClick={handleRemoveTestMembers} disabled={testLoading}
+                  style={{ color: 'var(--danger)' }}>
+                  {testLoading ? '처리 중…' : '🗑 테스트 삭제'}
+                </button>
+              ) : (
+                <button className="btn btn-ghost" onClick={handleAddTestMembers} disabled={testLoading}
+                  title="관리자·매니저·직원·열람자 가상 팀원 4명 자동 생성">
+                  {testLoading ? '처리 중…' : '🧪 테스트 팀원'}
+                </button>
+              )}
+              <button className="btn btn-primary" onClick={() => setShowInvite(true)}>+ 팀원 초대</button>
+            </>
           )}
           {!meta && !loading && (
             <button className="btn btn-outline" onClick={load}>⟳ 워크스페이스 생성 재시도</button>
@@ -322,13 +363,15 @@ export default function TeamPage() {
               {activeMembers.map(m => {
                 const rl = ROLE_LABELS[m.role] || ROLE_LABELS.staff;
                 const isMe = m.uid === user.uid;
+                const isTest = String(m.uid || '').startsWith('test-');
                 const joinDate = m.joinedAt ? new Date(m.joinedAt).toLocaleDateString('ko-KR') : '-';
                 return (
-                  <tr key={m.uid || m.id}>
+                  <tr key={m.uid || m.id} style={isTest ? { opacity: 0.8, background: 'rgba(245,158,11,0.04)' } : {}}>
                     <td style={{ fontSize: '20px', textAlign: 'center' }}>{rl.icon}</td>
                     <td>
                       <strong>{m.name || '사용자'}</strong>
                       {isMe && <span className="badge badge-info" style={{ marginLeft: '6px', fontSize: '10px' }}>나</span>}
+                      {isTest && <span style={{ marginLeft: '6px', fontSize: '10px', padding: '1px 5px', borderRadius: '8px', background: 'rgba(245,158,11,0.15)', color: '#f59e0b', border: '1px solid rgba(245,158,11,0.3)' }}>테스트</span>}
                     </td>
                     <td style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{m.email || '-'}</td>
                     <td>
