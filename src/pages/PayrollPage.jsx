@@ -3,7 +3,7 @@
  * page-payroll.js → React 변환 (10차)
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { showToast } from '../toast.js';
 import { employees as employeesDb, attendance as attendanceDb, payrolls as payrollsDb } from '../db.js';
 import { canAction, getCurrentUser } from '../auth.js';
@@ -13,6 +13,8 @@ import { calcPayroll } from '../payroll-calc.js';
 import { summarizeMonthAttendance } from '../attendance-calc.js';
 import { generatePayslipPDF, generatePayslipBulkPDF } from '../pdf-generator.js';
 import { fmtWon } from '../utils/formatters.js';
+import AIAnalysisPanel from '../components/AIAnalysisPanel.jsx';
+import { buildPayrollPrompt } from '../ai-report.js';
 
 // ─── 상세 모달 ────────────────────────────────────────
 function PayrollDetailModal({ payroll: p, year, month, onClose }) {
@@ -329,6 +331,20 @@ export default function PayrollPage() {
   const totalEmployer    = visiblePayrolls.reduce((s, p) => s + (p.employer_total || 0), 0);
   const totalLaborCost   = visiblePayrolls.reduce((s, p) => s + (p.total_labor_cost || (p.gross + (p.employer_total || 0))), 0);
 
+  const payrollAiPrompt = useMemo(() => {
+    if (visiblePayrolls.length === 0) return null;
+    const [y, m] = monthStr.split('-').map(Number);
+    const confirmedCount = visiblePayrolls.filter(p => p.status === 'confirmed').length;
+    const avgGross = totalGross / visiblePayrolls.length;
+    return buildPayrollPrompt({
+      year: y, month: m,
+      totalGross, totalNet, totalDeduct, totalEmployer,
+      empCount: visiblePayrolls.length,
+      draftCount: visiblePayrolls.length - confirmedCount,
+      confirmedCount, avgGross,
+    });
+  }, [visiblePayrolls, monthStr, totalGross, totalNet, totalDeduct, totalEmployer]);
+
   return (
     <div>
       <div className="page-header">
@@ -337,6 +353,11 @@ export default function PayrollPage() {
           <div className="page-desc">월별 급여를 자동 계산·검토·확정합니다. Admin만 확정 및 명세서 발행 가능합니다.</div>
         </div>
       </div>
+
+      {/* AI 급여 분석 — 급여 계산 후에만 표시 */}
+      {payrollAiPrompt && (
+        <AIAnalysisPanel {...payrollAiPrompt} title="AI 급여 분석" buttonLabel="AI 급여 분석" />
+      )}
 
       <div className="card" style={{ marginBottom: 12 }}>
         <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', flexWrap: 'wrap' }}>

@@ -7,9 +7,11 @@
  * - 승인 대기 휴가 목록
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { employees as employeesDb, attendance as attendanceDb, leaves as leavesDb, payrolls as payrollsDb } from '../db.js';
 import { showToast } from '../toast.js';
+import AIAnalysisPanel from '../components/AIAnalysisPanel.jsx';
+import { buildHRPrompt } from '../ai-report.js';
 
 function fmtWon(n) {
   const v = parseFloat(n) || 0;
@@ -96,6 +98,19 @@ export default function HrDashboardPage() {
 
   const DEPT_COLORS =['var(--primary)', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#f97316'];
 
+  const aiPrompt = useMemo(() => buildHRPrompt({
+    activeCount: data.active.length,
+    resignedCount: data.resigned.length,
+    totalGross: data.totalGross,
+    totalNet: data.totalNet,
+    depts: data.depts,
+    absentCount: data.absentCount,
+    lateCount: data.lateCount,
+    earlyLeaveCount: data.earlyLeaveCount,
+    pendingLeaveCount: (data.pendingLeaves || []).length,
+    monthLabel: `${year}년 ${month}월`,
+  }), [data, year, month]);
+
   return (
     <div>
       <div className="page-header">
@@ -104,6 +119,9 @@ export default function HrDashboardPage() {
           <div className="page-desc">{year}년 {month}월 · 인원·근태·급여·휴가 현황</div>
         </div>
       </div>
+
+      {/* AI HR 분석 패널 */}
+      <AIAnalysisPanel {...aiPrompt} title="AI HR 분석" buttonLabel="AI HR 분석" />
 
       {/* 핵심 지표 */}
       <div className="stat-grid" style={{ marginBottom: 20 }}>

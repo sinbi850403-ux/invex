@@ -14,8 +14,9 @@ import { ALL_FIELDS, FOCUS_CHIPS, SORT_OPTIONS, MONEY_KEYS, NUM_KEYS, toNum, fmt
 import { computeData, getVisibleFields, applyFilters, applySort } from '../domain/inventoryCompute.js';
 import { ItemModal } from '../components/inventory/ItemModal.jsx';
 import { ColumnPanel } from '../components/inventory/ColumnPanel.jsx';
-
 import { enrichItemsWithQty } from '../domain/inventoryStockCalc.js';
+import AIAnalysisPanel from '../components/AIAnalysisPanel.jsx';
+import { buildInventoryPrompt } from '../ai-report.js';
 
 export default function InventoryPage() {
   const navigate = useNavigate();
@@ -95,6 +96,22 @@ export default function InventoryPage() {
     price:    fmt(data.reduce((s, r) => s + toNum(r.totalPrice), 0)),
     warnings: data.filter(r => { const min = safetyStock[r.itemName]; return min != null && toNum(r.quantity) <= min; }).length,
   }), [data, safetyStock]);
+
+  const inventoryAiPrompt = useMemo(() => {
+    if (data.length === 0) return null;
+    const totalValue = data.reduce((s, r) => s + toNum(r.totalPrice || r.supplyValue), 0);
+    const lowStockCount = data.filter(r => { const min = safetyStock[r.itemName]; return min != null && toNum(r.quantity) <= min; }).length;
+    const zeroStockCount = data.filter(r => toNum(r.quantity) <= 0).length;
+    const topValueItems = [...data].sort((a,b)=>toNum(b.totalPrice||b.supplyValue)-toNum(a.totalPrice||a.supplyValue)).slice(0,5).map(r=>[r.itemName||'-', toNum(r.totalPrice||r.supplyValue)]);
+    const catMap = {};
+    data.forEach(r => { const c = r.category || '미분류'; catMap[c] = (catMap[c]||0)+1; });
+    const categoryStats = Object.entries(catMap).sort((a,b)=>b[1]-a[1]);
+    // 30일 이상 입출고 없는 품목 = 체류재고 (transactions 기준)
+    const thirtyDaysAgo = new Date(); thirtyDaysAgo.setDate(thirtyDaysAgo.getDate()-30);
+    const activeItems = new Set((transactions||[]).filter(t=>t.date && new Date(t.date)>=thirtyDaysAgo).map(t=>t.itemName));
+    const deadStockCount = data.filter(r => toNum(r.quantity)>0 && !activeItems.has(r.itemName)).length;
+    return buildInventoryPrompt({ totalItems: data.length, totalValue, lowStockCount, zeroStockCount, topValueItems, categoryStats, deadStockCount });
+  }, [data, safetyStock, transactions]);
 
   const categories = useMemo(() => [...new Set(data.map(r => r.category).filter(Boolean))].sort(), [data]);
   const warehouses = useMemo(() => [...new Set(data.map(r => r.warehouse).filter(Boolean))].sort(), [data]);
@@ -191,6 +208,11 @@ export default function InventoryPage() {
           {canCreate && <button className="btn btn-primary" onClick={() => setModal({ type: 'add' })}>+ 품목 추가</button>}
         </div>
       </div>
+
+      {/* AI 재고 분석 */}
+      {inventoryAiPrompt && (
+        <AIAnalysisPanel {...inventoryAiPrompt} title="AI 재고 분석" buttonLabel="AI 재고 분석" />
+      )}
 
       {/* KPI */}
       <div className="stat-grid" style={{ marginBottom: 16 }}>

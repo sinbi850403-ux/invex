@@ -11,6 +11,8 @@ import {
 } from '../domain/homeCompute.js';
 import { Sparkline }   from '../components/home/Sparkline.jsx';
 import { TrendBadge }  from '../components/home/TrendBadge.jsx';
+import AIAnalysisPanel from '../components/AIAnalysisPanel.jsx';
+import { buildDashboardPrompt } from '../ai-report.js';
 
 const CHART_WEEKLY_ID   = 'home-chart-weekly';
 const CHART_CATEGORY_ID = 'home-chart-category';
@@ -272,6 +274,32 @@ export default function HomePage() {
           <button className="btn btn-danger"  onClick={() => { sessionStorage.setItem('invex:quick-open-outbound', '1'); navigate('/out'); }}>출고 등록</button>
         </div>
       </div>
+
+      {/* AI 대시보드 분석 */}
+      {hasData && (() => {
+        const now = new Date();
+        const d30ago = new Date(now); d30ago.setDate(d30ago.getDate() - 30);
+        const d60ago = new Date(now); d60ago.setDate(d60ago.getDate() - 60);
+        const allTx = state.transactions || [];
+        const recent30 = allTx.filter(tx => tx.date && new Date(tx.date) >= d30ago);
+        const prev30   = allTx.filter(tx => tx.date && new Date(tx.date) >= d60ago && new Date(tx.date) < d30ago);
+        const recentSales    = recent30.filter(t=>t.type==='out').reduce((s,t)=>s+(parseFloat(t.quantity)||0)*(parseFloat(t.unitPrice)||0),0);
+        const prevSales      = prev30.filter(t=>t.type==='out').reduce((s,t)=>s+(parseFloat(t.quantity)||0)*(parseFloat(t.unitPrice)||0),0);
+        const recentPurchase = recent30.filter(t=>t.type==='in').reduce((s,t)=>s+(parseFloat(t.quantity)||0)*(parseFloat(t.unitPrice)||0),0);
+        const prevPurchase   = prev30.filter(t=>t.type==='in').reduce((s,t)=>s+(parseFloat(t.quantity)||0)*(parseFloat(t.unitPrice)||0),0);
+        const salesChange    = prevSales>0 ? Math.round((recentSales-prevSales)/prevSales*100) : 0;
+        const purchaseChange = prevPurchase>0 ? Math.round((recentPurchase-prevPurchase)/prevPurchase*100) : 0;
+        const outByItem = {};
+        recent30.filter(t=>t.type==='out').forEach(t=>{ const n=t.itemName||'-'; outByItem[n]=(outByItem[n]||0)+(parseFloat(t.quantity)||0); });
+        const topSellItems = Object.entries(outByItem).sort((a,b)=>b[1]-a[1]).slice(0,3);
+        const pendingOrderCount = (state.purchaseOrders||[]).filter(o=>o.status==='pending'||o.status==='draft').length;
+        const { systemPrompt, userPrompt } = buildDashboardPrompt({
+          totalItems, lowStockCount: lowStockItems.length,
+          recentSales, recentPurchase, salesChange, purchaseChange,
+          topSellItems, pendingOrderCount,
+        });
+        return <AIAnalysisPanel systemPrompt={systemPrompt} userPrompt={userPrompt} title="AI 경영 진단" buttonLabel="AI 경영 진단" />;
+      })()}
 
       {savedFilters.length > 0 && (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>
