@@ -6,7 +6,6 @@ import { useStore } from '../hooks/useStore.js';
 import { showToast } from '../toast.js';
 import { PLANS, setPlan } from '../plan.js';
 import { setState as storeSetState } from '../store.js';
-import { supabase } from '../supabase-client.js';
 
 const TOSS_CLIENT_KEY = import.meta.env.VITE_TOSS_CLIENT_KEY ?? '';
 
@@ -87,7 +86,6 @@ function ContactModal({ onClose }) {
 export default function BillingPage() {
   const [state] = useStore();
   const [showContact, setShowContact] = useState(false);
-  const [confirming, setConfirming] = useState(false);
 
   // state.currentPlan 사용 — useStore가 store 업데이트를 구독하므로 reactive
   // getCurrentPlan()은 렌더 시 한 번만 읽어 stale해질 수 있음
@@ -104,11 +102,8 @@ export default function BillingPage() {
     const planId = params.get('plan');
 
     if (paymentResult === 'success' && planId) {
+      // orderId 검증: sessionStorage에 저장된 주문과 일치해야만 처리
       const returnedOrderId = params.get('orderId');
-      const paymentKey = params.get('paymentKey');
-      const amount = Number(params.get('amount'));
-
-      // ── 1차 검증: sessionStorage 주문 정보 일치 확인 ───────────────────
       const pendingRaw = sessionStorage.getItem('invex_pending_order');
       const pending = pendingRaw ? JSON.parse(pendingRaw) : null;
       sessionStorage.removeItem('invex_pending_order');
@@ -116,72 +111,35 @@ export default function BillingPage() {
         window.history.replaceState({}, '', window.location.pathname);
         return; // 검증 실패 — 외부 조작 차단
       }
-
-      // ── 2차 검증: 서버사이드 Toss 승인 확인 (async IIFE) ─────────────
-      (async () => {
-        setConfirming(true);
-        try {
-          const { data: sessionData } = await supabase.auth.getSession();
-          const accessToken = sessionData?.session?.access_token;
-          if (!accessToken) {
-            showToast('로그인 세션이 만료되었습니다. 다시 로그인 후 시도해 주세요.', 'error');
-            window.history.replaceState({}, '', window.location.pathname);
-            return;
-          }
-
-          const resp = await fetch('/api/toss-confirm', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Bearer ${accessToken}`,
+      const p = PLANS[planId];
+      if (p) {
+        const now = new Date();
+        const nextPay = new Date(now);
+        nextPay.setMonth(nextPay.getMonth() + 1);
+        setPlan(planId);
+        const prevHistory = state.paymentHistory || [];
+        storeSetState({
+          subscription: {
+            planId,
+            status: 'active',
+            startDate: now.toISOString(),
+            nextPayDate: nextPay.toISOString(),
+          },
+          paymentHistory: [
+            {
+              id: 'pay-' + Date.now().toString(36),
+              date: now.toISOString(),
+              planName: p.name,
+              amount: p.price,
+              status: 'paid',
+              method: '토스페이먼츠',
             },
-            body: JSON.stringify({ paymentKey, orderId: returnedOrderId, amount, planId }),
-          });
-          const result = await resp.json();
-
-          if (!result.success) {
-            showToast('결제 서버 검증 실패: ' + (result.error || '알 수 없는 오류'), 'error');
-            window.history.replaceState({}, '', window.location.pathname);
-            return;
-          }
-
-          // ── 3. 서버 확인 후 클라이언트 상태 업데이트 ──────────────────
-          const p = PLANS[planId];
-          if (p) {
-            const now = new Date();
-            const nextPay = new Date(now);
-            nextPay.setMonth(nextPay.getMonth() + 1);
-            setPlan(planId);
-            const prevHistory = state.paymentHistory || [];
-            storeSetState({
-              subscription: {
-                planId,
-                status: 'active',
-                startDate: now.toISOString(),
-                nextPayDate: nextPay.toISOString(),
-              },
-              paymentHistory: [
-                {
-                  id: 'pay-' + Date.now().toString(36),
-                  date: now.toISOString(),
-                  planName: p.name,
-                  amount: p.price,
-                  status: 'paid',
-                  method: '토스페이먼츠',
-                },
-                ...prevHistory,
-              ],
-            });
-            showToast(`${p.icon} ${p.name} 결제가 완료되었습니다!`, 'success');
-          }
-        } catch (err) {
-          console.error('[BillingPage] 결제 서버 검증 오류:', err);
-          showToast('결제 검증 중 오류가 발생했습니다. 고객센터에 문의해 주세요.', 'error');
-        } finally {
-          setConfirming(false);
-          window.history.replaceState({}, '', window.location.pathname);
-        }
-      })();
+            ...prevHistory,
+          ],
+        });
+        showToast(`${p.icon} ${p.name} 결제가 완료되었습니다!`, 'success');
+      }
+      window.history.replaceState({}, '', window.location.pathname);
     } else if (paymentResult === 'fail') {
       showToast('결제가 실패했습니다. 다시 시도해 주세요.', 'error');
       window.history.replaceState({}, '', window.location.pathname);
@@ -315,21 +273,6 @@ export default function BillingPage() {
   return (
     <div>
       {showContact && <ContactModal onClose={() => setShowContact(false)} />}
-
-      {/* 결제 서버 검증 로딩 오버레이 */}
-      {confirming && (
-        <div className="modal-overlay" style={{ display: 'flex', zIndex: 9999 }}>
-          <div className="modal" style={{ maxWidth: '320px', textAlign: 'center', padding: '40px 32px' }}>
-            <div style={{ fontSize: '36px', marginBottom: '16px' }}>
-              <span style={{ display: 'inline-block', animation: 'spin 1s linear infinite' }}>⏳</span>
-            </div>
-            <div style={{ fontSize: '16px', fontWeight: '700', marginBottom: '8px' }}>결제 확인 중...</div>
-            <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
-              서버에서 결제를 검증하고 있습니다. 잠시만 기다려 주세요.
-            </div>
-          </div>
-        </div>
-      )}
 
       <div className="page-header">
         <div>
