@@ -1508,3 +1508,37 @@ FROM transactions
 WHERE item_id IS NOT NULL AND warehouse_id IS NOT NULL AND type = 'adjust'
 ORDER BY item_id, warehouse_id, txn_date DESC NULLS LAST, created_at DESC
 ON CONFLICT (item_id, warehouse_id) DO UPDATE SET quantity = EXCLUDED.quantity, last_updated_at = now();
+
+-- ============================================================
+-- 40. role_permissions — 역할별 기능 접근 권한 행렬
+-- ============================================================
+CREATE TABLE IF NOT EXISTS role_permissions (
+  id          UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id     UUID        NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  role        TEXT        NOT NULL CHECK (role IN ('admin', 'manager', 'staff', 'viewer')),
+  permissions JSONB       NOT NULL DEFAULT '{}',
+  updated_at  TIMESTAMPTZ DEFAULT now(),
+  UNIQUE(user_id, role)
+);
+
+ALTER TABLE role_permissions ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "role_permissions_owner" ON role_permissions;
+CREATE POLICY "role_permissions_owner"
+  ON role_permissions FOR ALL
+  USING  (user_id = auth.uid())
+  WITH CHECK (user_id = auth.uid());
+
+CREATE OR REPLACE FUNCTION update_role_permissions_updated_at()
+RETURNS TRIGGER LANGUAGE plpgsql AS $$
+BEGIN
+  NEW.updated_at = now();
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_role_permissions_updated_at ON role_permissions;
+CREATE TRIGGER trg_role_permissions_updated_at
+  BEFORE UPDATE ON role_permissions
+  FOR EACH ROW
+  EXECUTE FUNCTION update_role_permissions_updated_at();

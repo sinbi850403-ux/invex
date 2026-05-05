@@ -22,4 +22,5 @@ export { transfers, stocktakes, itemStocks, safetyStocks } from './db/inventory.
 export { auditLogs, accountEntries, purchaseOrders, posSales } from './db/accounts.js';
 export { settings, personalSettings, customFields } from './db/settings.js';
 export { employees, attendance, payrolls, leaves, salaryItems } from './db/hr.js';
+export { rolePermissions, DEFAULT_ROLE_PERMISSIONS } from './db/rolePermissions.js';
 export { loadAllData, clearAllUserData } from './db/loader.js';

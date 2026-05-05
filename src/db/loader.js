@@ -16,6 +16,7 @@ import { vendors } from './vendors.js';
 import { transfers, stocktakes, itemStocks, safetyStocks } from './inventory.js';
 import { auditLogs, accountEntries, purchaseOrders, posSales } from './accounts.js';
 import { settings, customFields } from './settings.js';
+import { rolePermissions } from './rolePermissions.js';
 import { dbItemToStoreItem, dbTxToStoreTx, dbVendorToStore, dbTransferToStore } from './converters.js';
 import { enrichItemsWithQty } from '../domain/inventoryStockCalc.js';
 
@@ -137,10 +138,11 @@ export async function loadAllData(onCriticalReady) {
     _fetchAllPages('purchase_orders', 50000),   // 5
     posSales.list({ limit: 1000 }),             // 6
     customFields.list({ limit: 999999 }),       // 7
+    rolePermissions.loadAll(),                  // 8
   ]);
 
   const secLabels = ['vendors', 'transfers', 'stocktakes', 'auditLogs',
-    'account_entries', 'purchase_orders', 'posSales', 'customFields'];
+    'account_entries', 'purchase_orders', 'posSales', 'customFields', 'rolePermissions'];
   const pickP2 = (idx, fallback) => {
     const r = phase2[idx];
     if (r.status === 'fulfilled') return r.value;
@@ -148,14 +150,15 @@ export async function loadAllData(onCriticalReady) {
     return fallback;
   };
 
-  const vendorsData   = pickP2(0, []);
-  const transfersData = pickP2(1, []);
-  const stocktakeData = pickP2(2, []);
-  const auditData     = pickP2(3, []);
-  const accountData   = pickP2(4, []);
-  const orderData     = pickP2(5, []);
-  const posData       = pickP2(6, []);
-  const fieldData     = pickP2(7, []);
+  const vendorsData         = pickP2(0, []);
+  const transfersData       = pickP2(1, []);
+  const stocktakeData       = pickP2(2, []);
+  const auditData           = pickP2(3, []);
+  const accountData         = pickP2(4, []);
+  const orderData           = pickP2(5, []);
+  const posData             = pickP2(6, []);
+  const fieldData           = pickP2(7, []);
+  const rolePermissionsData = pickP2(8, null);
 
   return {
     ...criticalState,
@@ -167,6 +170,7 @@ export async function loadAllData(onCriticalReady) {
     purchaseOrders:   orderData,
     posData:          posData,
     customFields:     fieldData,
+    rolePermissions:  rolePermissionsData,
   };
 }
 
