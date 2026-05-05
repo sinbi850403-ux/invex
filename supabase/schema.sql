@@ -1295,7 +1295,7 @@ CREATE TRIGGER trg_audit_profile_role
 -- ============================================================
 -- 38. 뷰 — 수불대장 (v_ledger)
 -- ============================================================
-CREATE OR REPLACE VIEW v_ledger AS
+CREATE OR REPLACE VIEW v_ledger WITH (security_invoker = on) AS
 SELECT
   t.id, t.user_id,
   t.txn_date,
@@ -1324,7 +1324,7 @@ LEFT JOIN item_stocks ist ON ist.item_id = t.item_id AND ist.warehouse_id = t.wa
 -- ============================================================
 -- 39. 뷰 — 안전재고 미달 알람 (v_low_stock_alert)
 -- ============================================================
-CREATE OR REPLACE VIEW v_low_stock_alert AS
+CREATE OR REPLACE VIEW v_low_stock_alert WITH (security_invoker = on) AS
 SELECT
   ss.user_id, ss.item_id,
   i.item_name, i.item_code, i.category,
