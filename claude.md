@@ -72,6 +72,9 @@ invex/
 ├── .env                     # 환경변수 (Supabase 키, Git 미포함)
 ├── .env.example             # 환경변수 템플릿
 │
+├── api/                     # Vercel Serverless/Edge Functions
+│   └── ai-proxy.js          # OpenAI 스트리밍 프록시 (서버 사이드 키 보안)
+│
 ├── src/                     # 소스 코드 (핵심)
 │   ├── main.jsx             # ★ React 루트 — BrowserRouter, 앱 진입점
 │   ├── App.jsx              # 루트 컴포넌트 (AuthProvider 래핑)
@@ -84,10 +87,11 @@ invex/
 │   │   ├── auth/
 │   │   │   ├── AuthGate.jsx        # 인증 게이트 UI
 │   │   │   └── LandingPage.jsx     # 랜딩 → 앱 전환
-│   │   └── layout/
-│   │       ├── AppLayout.jsx       # 전체 레이아웃 (lazy route 로딩)
-│   │       ├── Sidebar.jsx         # 사이드바 네비게이션
-│   │       └── TopHeader.jsx       # 상단 헤더
+│   │   ├── layout/
+│   │   │   ├── AppLayout.jsx       # 전체 레이아웃 (lazy route 로딩)
+│   │   │   ├── Sidebar.jsx         # 사이드바 네비게이션
+│   │   │   └── TopHeader.jsx       # 상단 헤더
+│   │   └── AIAnalysisPanel.jsx     # ★ AI 분석 범용 스트리밍 UI 패널
 │   │
 │   ├── contexts/
 │   │   └── AuthContext.jsx         # 인증 + 앱 초기화 상태 컨텍스트
@@ -132,6 +136,7 @@ invex/
 │   │   └── uploadDiff.js        # 업로드 차분 분석
 │   │
 │   ├── ── 유틸리티 ──
+│   ├── ai-report.js         # ★ AI 분석 프롬프트 빌더 + /api/ai-proxy 스트리밍 호출
 │   ├── traffic-manager.js   # API 트래픽 매니저 (레이트 리밋, 재시도)
 │   ├── error-monitor.js     # Sentry 에러 모니터링
 │   ├── global-search.js     # 전체 검색 기능
@@ -224,6 +229,30 @@ useStore() 훅 → store.js (상태관리)
 4. **순환 참조 방지**
    - `plan.js` ↔ `auth.js` 간 `injectGetCurrentUser()` 패턴 사용
    - `AuthContext.jsx`에서 의존성 주입
+
+5. **Plan 단일 소스 원칙**
+   - 모든 요금제 상태는 `AuthContext` 한 곳에서만 관리
+   - `profile` 변경 시 자동 동기화 + `invex:plan-changed` 이벤트 구독으로 세션 중 변경도 반영
+   ```jsx
+   // ✅ 항상 이것만 사용
+   const { user, profile, plan } = useAuth();
+
+   // ❌ 금지 — race condition 유발
+   getCurrentPlan()          // store 초기값이 'free'라 로드 전 항상 오표시
+   profile?.plan             // profile null 시점 불일치
+   state.currentPlan         // useStore 직접 접근
+   ```
+
+6. **AI 분석 아키텍처**
+   - API 키는 절대 클라이언트에 노출 금지 (`VITE_` 환경변수 사용 금지)
+   ```
+   클라이언트 (ai-report.js)
+       → POST /api/ai-proxy  (Vercel Edge Function)
+       → OpenAI API          (서버 환경변수 OPENAI_API_KEY 사용)
+       → SSE 스트리밍 응답
+       → AIAnalysisPanel.jsx (마크다운 렌더링)
+   ```
+   - Vercel Dashboard → Settings → Environment Variables에 `OPENAI_API_KEY` 등록 필수
 
 ### 4.4 네비게이션 구조
 
@@ -371,12 +400,33 @@ viewer < staff < manager < admin
 
 | 구분 | Free | Pro | Enterprise |
 |------|------|-----|------------|
-| 가격 | ₩0 (영구 무료) | ₩290,000/월 | ₩490,000/월 |
+| 가격 | ₩0 (영구 무료) | ₩29,000/월 | ₩59,000/월 |
 | 품목 수 | 100건 | 무제한 | 무제한 |
 | 사용자 수 | 1명 | 5명 | 무제한 |
-| 핵심 기능 | 재고·입출고 | + 분석·문서·바코드 | + 다창고·RBAC·API |
+| 핵심 기능 | 재고·입출고 | + 분석·문서·HR | + 다창고·RBAC·API |
 
 > **1년 무료 정책**: 가입 후 365일간 모든 기능 무료 개방
+
+### 8.1 페이지별 접근 권한 (PAGE_MIN_PLAN)
+
+주요 변경 이력:
+- `hub-hr` + 인사·급여 전 페이지 (`hr-dashboard`, `employees`, `attendance`, `payroll`, `leaves`, `severance`, `yearend-settlement`): `free` → **`pro`**
+- `org-chart` (조직도): `enterprise` → **`free`**
+
+접근 권한 변경 방법: `src/plan.js → PAGE_MIN_PLAN` 객체 수정
+
+### 8.2 플랜 변경 RPC
+
+관리자가 타 사용자 요금제를 변경할 때:
+```javascript
+// PlanChangeModal.jsx 에서 사용
+await supabase.rpc('admin_change_user_plan', {
+  target_user_id: userId,
+  new_plan: 'pro', // 'free' | 'pro' | 'enterprise'
+});
+```
+- 호출자가 `admin` role이 아니면 서버에서 거부
+- 변경 성공 시 `setPlan(planId)` → `invex:plan-changed` 이벤트 → `AuthContext.plan` 자동 갱신
 
 ---
 
@@ -461,7 +511,56 @@ export default function ExamplePage({ navigateTo }) {
 // → AppLayout이 LegacyPage.jsx로 자동 래핑
 ```
 
-### 10.5 CSS 클래스 규칙
+### 10.5 React Hooks 필수 규칙
+
+> ⚠️ 위반 시 **Minified React error #310** 발생 (실제 사례: HrDashboardPage)
+
+**Hooks는 반드시 조건부 return 이전에 선언한다.**
+
+```jsx
+// ❌ 잘못된 예 — if (loading) return 이후 useMemo → error #310
+if (loading) return <Spinner />;
+const x = useMemo(() => compute(data), [data]); // 위반!
+
+// ✅ 올바른 예 — Hooks 먼저, 조건부 return 나중에
+const x = useMemo(() => {
+  if (!data) return null; // data guard는 useMemo 내부에서
+  return compute(data);
+}, [data]);
+if (loading) return <Spinner />;
+```
+
+**useMemo 안에서 setState 호출 금지 (렌더 중 상태 변이)**
+
+```jsx
+// ❌ 잘못된 예 — useMemo 내부 setState → 무한 루프
+const data = useMemo(() => {
+  setStore({ referralData: newData }); // 위반!
+  return newData;
+}, [deps]);
+
+// ✅ 올바른 예 — setState는 useEffect에서
+useEffect(() => {
+  if (!referralData.code) setStore({ referralData: initData });
+}, [user]);
+const data = useMemo(() => computeData(referralData), [referralData]);
+```
+
+### 10.6 상태 소스 통일 규칙
+
+인증/프로필/요금제 상태는 **반드시 `useAuth()`에서만** 읽는다.
+
+```jsx
+// ✅ 항상 이것만 사용
+const { user, profile, plan, logout } = useAuth();
+
+// ❌ 아래 방법들은 모두 금지
+import { getCurrentPlan } from '../plan.js';       // 이벤트 놓칠 수 있음
+const plan = profile?.plan;                        // profile null 타이밍 불일치
+const plan = useStore(s => s.currentPlan);         // store 초기값 'free' 고정
+```
+
+### 10.8 CSS 클래스 규칙
 
 | 용도 | 패턴 | 예시 |
 |------|------|------|
@@ -493,6 +592,9 @@ export default function ExamplePage({ navigateTo }) {
 | `plan.js` | 요금제 | 기능 접근 제어, 업그레이드 모달 |
 | `pages/LegacyPage.jsx` | 레거시 래퍼 | page-*.js → React 컴포넌트 변환 |
 | `traffic-manager.js` | API 보호 | 레이트 리밋, 재시도, 큐 관리 |
+| `ai-report.js` | AI 프롬프트 빌더 | 페이지별 systemPrompt/userPrompt 생성, /api/ai-proxy 스트리밍 호출 |
+| `api/ai-proxy.js` | Vercel Edge Function | 서버 사이드 OpenAI API 호출 (API 키 보안) |
+| `components/AIAnalysisPanel.jsx` | AI 분석 UI | 스트리밍 분석 결과 표시, 마크다운 렌더링 |
 
 ---
 
@@ -640,6 +742,31 @@ CREATE TABLE salary_items (
 
    > `supabase/schema.sql` 파일도 동일하게 업데이트한다.
 
+### ⚠️ RPC 함수 배포 규칙
+
+RLS를 우회해야 하는 서버 로직(예: 관리자가 타 사용자 데이터 수정)은 **SECURITY DEFINER RPC**로 구현한다.
+
+```sql
+-- 1. 함수 내부에서 반드시 호출자 role 검증
+CREATE OR REPLACE FUNCTION public.my_admin_func(...)
+RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE caller_role TEXT;
+BEGIN
+  SELECT role INTO caller_role FROM profiles WHERE id = auth.uid();
+  IF caller_role IS DISTINCT FROM 'admin' THEN
+    RAISE EXCEPTION 'permission denied';
+  END IF;
+  -- 실제 로직
+END;
+$$;
+
+-- 2. 권한 설정 필수 (PUBLIC 전체 허용 금지)
+REVOKE ALL ON FUNCTION public.my_admin_func(...) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.my_admin_func(...) TO authenticated;
+```
+
+현재 등록된 SECURITY DEFINER RPC: `admin_change_user_plan(UUID, TEXT)` — `supabase/schema.sql` 하단 참조
+
 ---
 
 ## 15. 자주 쓰는 유틸 패턴
@@ -677,6 +804,53 @@ const items = await db.items.list({ category: '식품' });
 await db.items.create({ item_name: '사과', quantity: 100 });
 await db.transactions.create({ type: 'in', item_name: '사과', quantity: 50 });
 await db.clearAllUserData(); // 전체 삭제 (회원탈퇴/초기화)
+```
+
+### AI 분석 패널
+
+```jsx
+import { useMemo } from 'react';
+import AIAnalysisPanel from '../components/AIAnalysisPanel.jsx';
+import { buildInventoryPrompt } from '../ai-report.js';
+// 빌더 함수: buildDashboardPrompt / buildInventoryPrompt / buildHRPrompt / buildPayrollPrompt
+// 모두 { systemPrompt, userPrompt } 반환
+
+export default function MyPage() {
+  const [data, setData] = useState(null);
+
+  // ✅ Hooks 규칙: useMemo는 조건부 return 이전에
+  const aiPrompt = useMemo(() => {
+    if (!data) return null;
+    return buildInventoryPrompt({
+      totalItems: data.items.length,
+      totalValue: data.totalValue,
+      lowStockCount: data.lowStock.length,
+      // ... 기타 필드
+    });
+  }, [data]);
+
+  if (!data) return <Spinner />;
+
+  return (
+    <div>
+      <div className="page-header">...</div>
+      {/* page-header 바로 아래 배치 */}
+      {aiPrompt && <AIAnalysisPanel {...aiPrompt} title="AI 재고 분석" />}
+      {/* 나머지 콘텐츠 */}
+    </div>
+  );
+}
+```
+
+### 인증·요금제 상태 읽기 (useAuth)
+
+```jsx
+import { useAuth } from '../contexts/AuthContext.jsx';
+
+function MyComponent() {
+  const { user, profile, plan, logout } = useAuth();
+  // plan: 'free' | 'pro' | 'enterprise' — 단일 소스, 항상 최신값
+}
 ```
 
 ---
