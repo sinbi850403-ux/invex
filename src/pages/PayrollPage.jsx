@@ -408,13 +408,13 @@ export default function PayrollPage() {
           <h3 style={{ marginBottom: 12 }}>이번달 급여 요약</h3>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12 }}>
             {[
-              { label: deptFilter ? `${deptFilter} 직원` : '대상 직원', val: visiblePayrolls.length + '명' },
-              { label: '총 지급액', val: fmtWon(totalGross) },
-              { label: '총 공제액', val: fmtWon(totalDeduct) },
-              { label: '총 실지급', val: fmtWon(totalNet) },
-            ].map(({ label, val }) => (
-              <div key={label} className="stat-card" style={{ borderTop: '3px solid var(--accent)' }}>
-                <div className="stat-value" style={{ color: 'var(--accent)' }}>{val}</div>
+              { label: deptFilter ? `${deptFilter} 직원` : '대상 직원', val: visiblePayrolls.length + '명', color: '#6366f1' },
+              { label: '총 지급액',  val: fmtWon(totalGross),  color: '#3b82f6' },
+              { label: '총 공제액',  val: fmtWon(totalDeduct), color: '#ef4444' },
+              { label: '총 실지급', val: fmtWon(totalNet),    color: '#10b981' },
+            ].map(({ label, val, color }) => (
+              <div key={label} className="stat-card" style={{ borderTop: `3px solid ${color}` }}>
+                <div className="stat-value" style={{ color }}>{val}</div>
                 <div className="stat-label">{label}</div>
               </div>
             ))}
