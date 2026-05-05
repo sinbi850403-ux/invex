@@ -27,8 +27,11 @@ function isValidHttpsUrl(url) {
 }
 
 // Vite 환경변수에서 Supabase 설정 로드 (따옴표/공백 오입력 방어)
-const SUPABASE_URL = normalizeEnv(import.meta.env.VITE_SUPABASE_URL);
-const SUPABASE_ANON_KEY = normalizeEnv(import.meta.env.VITE_SUPABASE_ANON_KEY);
+// 서울 리전(ap-northeast-2) 프로젝트 — 환경변수 미주입 시 폴백
+const _FALLBACK_URL = 'https://ztulmihauytvzlgfbgsd.supabase.co';
+const _FALLBACK_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp0dWxtaWhhdXl0dnpsZ2ZiZ3NkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc5MzAyNzAsImV4cCI6MjA5MzUwNjI3MH0.pVIx1QZiPrItclWvpi_KQ3M2huv4RT-UZSk5t1cztk0';
+const SUPABASE_URL = normalizeEnv(import.meta.env.VITE_SUPABASE_URL || _FALLBACK_URL);
+const SUPABASE_ANON_KEY = normalizeEnv(import.meta.env.VITE_SUPABASE_ANON_KEY || _FALLBACK_KEY);
 const HAS_VALID_URL = isValidHttpsUrl(SUPABASE_URL);
 const HAS_VALID_KEY = SUPABASE_ANON_KEY.length > 20;
 
