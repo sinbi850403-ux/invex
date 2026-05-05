@@ -88,7 +88,7 @@ export function BulkUploadModal({ items, modeDefault, onClose, onSuccess }) {
         }
       }
 
-      // 2. 없는 상품 자동 생성
+      // 2. 없는 상품 자동 생성 (bulkUpsert로 N+1 API 호출 방지)
       const norm = (v) => String(v ?? '').trim().toLowerCase();
       const itemKey = (name, code) => {
         const c = norm(code);
@@ -96,46 +96,31 @@ export function BulkUploadModal({ items, modeDefault, onClose, onSuccess }) {
         const n = norm(name);
         return n ? `name:${n}` : '';
       };
-      const itemMap = new Map();
-      (items || []).forEach((it) => {
-        const k = itemKey(it.itemName, it.itemCode);
-        if (k) itemMap.set(k, it.id);
+
+      // 기존 품목 Key Set 구성
+      const existingItemKeys = new Set(
+        (items || []).map(it => itemKey(it.itemName, it.itemCode)).filter(Boolean)
+      );
+
+      // 신규 품목만 수집 (중복 제거)
+      const newItemsMap = new Map();
+      previewRows.forEach((r) => {
+        if (!r.itemName && !r.itemCode) return;
+        const k = itemKey(r.itemName, r.itemCode);
+        if (!k || existingItemKeys.has(k) || newItemsMap.has(k)) return;
+        newItemsMap.set(k, {
+          item_name: r.itemName || r.itemCode,
+          item_code: r.itemCode || '',
+          category: r.category || '',
+          unit: r.unit || 'EA',
+        });
       });
 
-      const candidateItems = previewRows
-        .map((r) => ({ itemName: r.itemName, itemCode: r.itemCode, unit: r.unit || 'EA', category: r.category || '' }))
-        .filter((r) => r.itemName || r.itemCode);
-
-      const LARGE_UPLOAD_ITEM_CREATE_THRESHOLD = 200;
-      let itemCreateDisabled = candidateItems.length > LARGE_UPLOAD_ITEM_CREATE_THRESHOLD;
-      if (itemCreateDisabled) {
-        console.warn(
-          `[BulkUploadModal] large upload detected (${candidateItems.length}), skip item auto-create for speed`
-        );
-      }
-      for (const c of candidateItems) {
-        if (itemCreateDisabled) break;
-        const k = itemKey(c.itemName, c.itemCode);
-        if (!k || itemMap.has(k)) continue;
+      if (newItemsMap.size > 0) {
         try {
-          const newItem = await db.items.create({
-            itemName: c.itemName || c.itemCode,
-            itemCode: c.itemCode || '',
-            category: c.category || '',
-            unit: c.unit || 'EA',
-          });
-          if (newItem?.id) {
-            itemMap.set(k, newItem.id);
-          }
+          await db.items.bulkUpsert([...newItemsMap.values()]);
         } catch (err) {
-          // 중복 생성 시 무시하고 기존 항목 사용
-          if (err.message?.includes('duplicate')) {
-            console.warn(`[BulkUploadModal] 상품 중복: ${c.itemName || c.itemCode}`);
-          } else {
-            itemCreateDisabled = true;
-            console.warn('[BulkUploadModal] item create blocked, stop item auto-create:', err);
-            break;
-          }
+          console.warn('[BulkUploadModal] item auto-create via bulkUpsert failed:', err);
         }
       }
 

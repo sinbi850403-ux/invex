@@ -31,15 +31,17 @@ BEGIN
     RETURN;
   END IF;
 
+  -- 암호화 + 평문 NULL 처리를 단일 UPDATE로 원자 처리 (AES-256 명시)
   UPDATE vendors
-     SET bank_account_enc  = pgp_sym_encrypt(bank_account, rrn_key),
+     SET bank_account_enc  = pgp_sym_encrypt(bank_account, rrn_key, 'cipher-algo=aes256'),
          bank_account_mask = CASE
            WHEN length(regexp_replace(bank_account, '[^0-9]', '', 'g')) >= 8
              THEN left (regexp_replace(bank_account, '[^0-9]', '', 'g'), 4)
                   || '****'
                   || right(regexp_replace(bank_account, '[^0-9]', '', 'g'), 4)
            ELSE repeat('*', COALESCE(length(bank_account), 0))
-         END
+         END,
+         bank_account      = NULL    -- 평문 즉시 제거 (원자적)
    WHERE bank_account IS NOT NULL
      AND bank_account != ''
      AND bank_account_enc IS NULL;   -- 이미 암호화된 행 재암호화 방지
@@ -49,13 +51,8 @@ BEGIN
 END $$;
 
 -- ============================================================
--- 2. 암호화 완료된 행 평문 null 처리
+-- 2. 잔여 평문 확인 (암호화 1번 DO 블록에서 원자적으로 처리됨)
 -- ============================================================
-UPDATE vendors
-   SET bank_account = NULL
- WHERE bank_account_enc IS NOT NULL
-   AND bank_account IS NOT NULL;
-
 -- 평문만 있고 암호화 안 된 행 경고
 DO $$
 DECLARE cnt INT;
@@ -119,7 +116,7 @@ BEGIN
   END;
 
   UPDATE vendors
-     SET bank_account_enc  = pgp_sym_encrypt(plain, rrn_key),
+     SET bank_account_enc  = pgp_sym_encrypt(plain, rrn_key, 'cipher-algo=aes256'),
          bank_account_mask = mask,
          bank_account      = NULL   -- 평문 즉시 제거
    WHERE id = p_vendor_id AND user_id = auth.uid();

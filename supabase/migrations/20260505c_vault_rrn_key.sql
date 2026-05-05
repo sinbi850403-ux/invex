@@ -51,6 +51,16 @@ AS $$
 DECLARE
   rrn_key TEXT;
 BEGIN
+  -- 트랜잭션 로컬 캐시 확인 (같은 트랜잭션 내 반복 호출 시 Vault 재조회 방지)
+  BEGIN
+    rrn_key := current_setting('invex.rrn_key_cache', true);
+    IF rrn_key IS NOT NULL AND length(rrn_key) >= 32 THEN
+      RETURN rrn_key;
+    END IF;
+  EXCEPTION WHEN OTHERS THEN
+    rrn_key := NULL;
+  END;
+
   -- Vault 우선 조회
   BEGIN
     SELECT decrypted_secret INTO rrn_key
@@ -62,6 +72,8 @@ BEGIN
   END;
 
   IF rrn_key IS NOT NULL AND length(rrn_key) >= 32 THEN
+    -- 트랜잭션 로컬 캐시에 저장 (is_local=true → 트랜잭션 종료 시 자동 소멸)
+    PERFORM set_config('invex.rrn_key_cache', rrn_key, true);
     RETURN rrn_key;
   END IF;
 
@@ -74,6 +86,7 @@ BEGIN
       'SET app.rrn_key = ''32자이상키'' 로 임시 설정하세요.';
   END IF;
 
+  PERFORM set_config('invex.rrn_key_cache', rrn_key, true);
   RETURN rrn_key;
 END;
 $$;
@@ -92,7 +105,7 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
 BEGIN
-  RETURN pgp_sym_encrypt(plain, public.get_rrn_key());
+  RETURN pgp_sym_encrypt(plain, public.get_rrn_key(), 'cipher-algo=aes256');
 END;
 $$;
 
@@ -114,7 +127,7 @@ BEGIN
      WHERE id = emp_id AND user_id = auth.uid();
   ELSE
     UPDATE employees
-       SET rrn_enc  = pgp_sym_encrypt(plain, public.get_rrn_key()),
+       SET rrn_enc  = pgp_sym_encrypt(plain, public.get_rrn_key(), 'cipher-algo=aes256'),
            rrn_mask = left(plain, 8) || '***'
      WHERE id = emp_id AND user_id = auth.uid();
   END IF;
@@ -158,7 +171,7 @@ BEGIN
   INSERT INTO public.audit_logs(user_id, action, target, detail)
   VALUES (auth.uid(), 'decrypt_rrn', emp_id::text, 'RRN plaintext viewed');
 
-  RETURN pgp_sym_decrypt(enc_val, public.get_rrn_key());
+  RETURN pgp_sym_decrypt(enc_val, public.get_rrn_key(), 'cipher-algo=aes256');
 END;
 $$;
 
@@ -192,7 +205,7 @@ BEGIN
   END;
 
   UPDATE employees
-     SET account_no_enc  = pgp_sym_encrypt(plain, public.get_rrn_key()),
+     SET account_no_enc  = pgp_sym_encrypt(plain, public.get_rrn_key(), 'cipher-algo=aes256'),
          account_no_mask = mask,
          account_no      = NULL   -- 평문 즉시 제거
    WHERE id = emp_id AND user_id = auth.uid();
@@ -236,7 +249,7 @@ BEGIN
   INSERT INTO public.audit_logs(user_id, action, target, detail)
   VALUES (auth.uid(), 'decrypt_account_no', emp_id::text, 'Account No plaintext viewed');
 
-  RETURN pgp_sym_decrypt(enc_val, public.get_rrn_key());
+  RETURN pgp_sym_decrypt(enc_val, public.get_rrn_key(), 'cipher-algo=aes256');
 END;
 $$;
 
