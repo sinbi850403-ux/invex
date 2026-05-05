@@ -1,7 +1,7 @@
 /**
  * SummaryPage.jsx - 요약 보고
  */
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '../hooks/useStore.js';
 import { showToast } from '../toast.js';
@@ -107,6 +107,35 @@ function buildSummary(data, transactions, safetyStock) {
   return { totalQty, totalPrice, categories, warehouses, vendors, topByQty, warnings, dailyTrend };
 }
 
+function sortArr(arr, { key, direction }) {
+  return [...arr].sort((a, b) => {
+    const av = typeof a[key] === 'string' ? a[key].toLowerCase() : a[key];
+    const bv = typeof b[key] === 'string' ? b[key].toLowerCase() : b[key];
+    if (av == null && bv == null) return 0;
+    if (av == null) return 1;
+    if (bv == null) return -1;
+    if (av < bv) return direction === 'asc' ? -1 : 1;
+    if (av > bv) return direction === 'asc' ? 1 : -1;
+    return 0;
+  });
+}
+
+function SortTh({ children, sortKey, sort, onSort, className, style }) {
+  const active = sort.key === sortKey;
+  return (
+    <th
+      className={className}
+      style={{ cursor: 'pointer', userSelect: 'none', whiteSpace: 'nowrap', ...style }}
+      onClick={() => onSort(sortKey)}
+    >
+      {children}{' '}
+      <span style={{ fontSize: 9, color: active ? 'var(--accent)' : 'var(--text-muted)', opacity: active ? 1 : 0.4 }}>
+        {active ? (sort.direction === 'asc' ? '▲' : '▼') : '⇅'}
+      </span>
+    </th>
+  );
+}
+
 const MEDAL = ['', '', ''];
 
 export default function SummaryPage() {
@@ -123,6 +152,17 @@ export default function SummaryPage() {
   }, [state.mappedData, state.transactions, state.safetyStock, state.fileName]);
 
   const hasData = data.length > 0 || transactions.length > 0;
+
+  const [catSort, setCatSort] = useState({ key: 'qty', direction: 'desc' });
+  const [whSort, setWhSort] = useState({ key: 'qty', direction: 'desc' });
+  const [vendorSort, setVendorSort] = useState({ key: 'qty', direction: 'desc' });
+
+  const toggleSort = (setter) => (key) =>
+    setter(s => ({ key, direction: s.key === key ? (s.direction === 'asc' ? 'desc' : 'asc') : 'desc' }));
+
+  const sortedCategories = useMemo(() => sortArr(summary.categories, catSort), [summary.categories, catSort]);
+  const sortedWarehouses = useMemo(() => sortArr(summary.warehouses, whSort), [summary.warehouses, whSort]);
+  const sortedVendors    = useMemo(() => sortArr(summary.vendors, vendorSort), [summary.vendors, vendorSort]);
 
   const handleExport = () => {
     try {
@@ -257,9 +297,17 @@ export default function SummaryPage() {
           <div className="card-title">분류별 현황</div>
           <div className="table-wrapper" style={{ border: 'none' }}>
             <table className="data-table">
-              <thead><tr><th>분류</th><th className="text-right">품목 수</th><th className="text-right">총 수량</th><th className="text-right">총 금액</th><th style={{ width: '200px' }}>비율</th></tr></thead>
+              <thead>
+                <tr>
+                  <SortTh sortKey="name"  sort={catSort} onSort={toggleSort(setCatSort)}>분류</SortTh>
+                  <SortTh sortKey="count" sort={catSort} onSort={toggleSort(setCatSort)} className="text-right">품목 수</SortTh>
+                  <SortTh sortKey="qty"   sort={catSort} onSort={toggleSort(setCatSort)} className="text-right">총 수량</SortTh>
+                  <SortTh sortKey="price" sort={catSort} onSort={toggleSort(setCatSort)} className="text-right">총 금액</SortTh>
+                  <th style={{ width: '200px' }}>비율</th>
+                </tr>
+              </thead>
               <tbody>
-                {summary.categories.map(cat => (
+                {sortedCategories.map(cat => (
                   <tr key={cat.name}>
                     <td><strong>{cat.name || '(미분류)'}</strong></td>
                     <td className="text-right">{cat.count}</td>
@@ -285,9 +333,16 @@ export default function SummaryPage() {
           <div className="card-title">창고/위치별 현황</div>
           <div className="table-wrapper" style={{ border: 'none' }}>
             <table className="data-table">
-              <thead><tr><th>창고/위치</th><th className="text-right">품목 수</th><th className="text-right">총 수량</th><th className="text-right">총 금액</th></tr></thead>
+              <thead>
+                <tr>
+                  <SortTh sortKey="name"  sort={whSort} onSort={toggleSort(setWhSort)}>창고/위치</SortTh>
+                  <SortTh sortKey="count" sort={whSort} onSort={toggleSort(setWhSort)} className="text-right">품목 수</SortTh>
+                  <SortTh sortKey="qty"   sort={whSort} onSort={toggleSort(setWhSort)} className="text-right">총 수량</SortTh>
+                  <SortTh sortKey="price" sort={whSort} onSort={toggleSort(setWhSort)} className="text-right">총 금액</SortTh>
+                </tr>
+              </thead>
               <tbody>
-                {summary.warehouses.map(wh => (
+                {sortedWarehouses.map(wh => (
                   <tr key={wh.name}>
                     <td><strong>{wh.name || '(미지정)'}</strong></td>
                     <td className="text-right">{wh.count}</td>
@@ -307,9 +362,16 @@ export default function SummaryPage() {
           <div className="card-title">거래처별 현황</div>
           <div className="table-wrapper" style={{ border: 'none' }}>
             <table className="data-table">
-              <thead><tr><th className="col-fill">거래처</th><th className="text-right">품목 수</th><th className="text-right">총 수량</th><th className="text-right">총 금액</th></tr></thead>
+              <thead>
+                <tr>
+                  <SortTh sortKey="name"  sort={vendorSort} onSort={toggleSort(setVendorSort)} className="col-fill">거래처</SortTh>
+                  <SortTh sortKey="count" sort={vendorSort} onSort={toggleSort(setVendorSort)} className="text-right">품목 수</SortTh>
+                  <SortTh sortKey="qty"   sort={vendorSort} onSort={toggleSort(setVendorSort)} className="text-right">총 수량</SortTh>
+                  <SortTh sortKey="price" sort={vendorSort} onSort={toggleSort(setVendorSort)} className="text-right">총 금액</SortTh>
+                </tr>
+              </thead>
               <tbody>
-                {summary.vendors.map(v => (
+                {sortedVendors.map(v => (
                   <tr key={v.name}>
                     <td className="col-fill"><strong>{v.name || '(미지정)'}</strong></td>
                     <td className="text-right">{v.count}</td>

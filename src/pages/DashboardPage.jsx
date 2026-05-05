@@ -148,16 +148,53 @@ const PERIOD_OPTS = [
   { v: 0,   l: '전체' },
 ];
 
+function sortArr(arr, { key, direction }) {
+  return [...arr].sort((a, b) => {
+    const av = typeof a[key] === 'string' ? a[key].toLowerCase() : a[key];
+    const bv = typeof b[key] === 'string' ? b[key].toLowerCase() : b[key];
+    if (av == null && bv == null) return 0;
+    if (av == null) return 1;
+    if (bv == null) return -1;
+    if (av < bv) return direction === 'asc' ? -1 : 1;
+    if (av > bv) return direction === 'asc' ? 1 : -1;
+    return 0;
+  });
+}
+
+function SortTh({ children, sortKey, sort, onSort, className, style }) {
+  const active = sort.key === sortKey;
+  return (
+    <th
+      className={className}
+      style={{ cursor: 'pointer', userSelect: 'none', whiteSpace: 'nowrap', ...style }}
+      onClick={() => onSort(sortKey)}
+    >
+      {children}{' '}
+      <span style={{ fontSize: 9, color: active ? 'var(--accent)' : 'var(--text-muted)', opacity: active ? 1 : 0.4 }}>
+        {active ? (sort.direction === 'asc' ? '▲' : '▼') : '⇅'}
+      </span>
+    </th>
+  );
+}
+
 export default function DashboardPage() {
   const [state] = useStore();
   const items = state.mappedData || [];
   const transactions = state.transactions || [];
   const navigate = useNavigate();
   const [period, setPeriod] = useState(0);
+  const [abcSort, setAbcSort]   = useState({ key: 'totalPrice', direction: 'desc' });
+  const [turnSort, setTurnSort] = useState({ key: 'turnover', direction: 'desc' });
   const CHART_ID = 'dashboard-monthly-chart';
 
   const abcData      = useMemo(() => calcABCAnalysis(items), [items]);
   const turnoverData = useMemo(() => calcTurnoverRate(items, transactions), [items, transactions]);
+
+  const toggleSort = (setter) => (key) =>
+    setter(s => ({ key, direction: s.key === key ? (s.direction === 'asc' ? 'desc' : 'asc') : 'desc' }));
+
+  const sortedAbcData      = useMemo(() => sortArr(abcData, abcSort), [abcData, abcSort]);
+  const sortedTurnoverData = useMemo(() => sortArr(turnoverData, turnSort), [turnoverData, turnSort]);
   const monthlyTrend = useMemo(() => calcMonthlyTrend(transactions, period), [transactions, period]);
   const expiryAlerts = useMemo(() => getExpiryAlerts(items), [items]);
   const kpiTrends    = useMemo(() => calcKPITrends(transactions), [transactions]);
@@ -249,7 +286,7 @@ export default function DashboardPage() {
             <button
               className="btn btn-sm btn-outline"
               style={{ marginTop: 8, fontSize: 11, color: 'var(--danger)', borderColor: 'var(--danger)' }}
-              onClick={() => navigate('/auto-order')}
+              onClick={() => navigate('/orders')}
             >
               발주 바로가기 →
             </button>
@@ -275,16 +312,16 @@ export default function DashboardPage() {
             <thead>
               <tr>
                 <th style={{ width: '40px' }}>순위</th>
-                <th>등급</th>
-                <th className="col-fill">품목명</th>
-                <th>코드</th>
-                <th className="text-right">수량</th>
-                <th className="text-right">금액</th>
-                <th className="text-right">누적비중</th>
+                <SortTh sortKey="grade"      sort={abcSort} onSort={toggleSort(setAbcSort)}>등급</SortTh>
+                <SortTh sortKey="itemName"   sort={abcSort} onSort={toggleSort(setAbcSort)} className="col-fill">품목명</SortTh>
+                <SortTh sortKey="itemCode"   sort={abcSort} onSort={toggleSort(setAbcSort)}>코드</SortTh>
+                <SortTh sortKey="quantity"   sort={abcSort} onSort={toggleSort(setAbcSort)} className="text-right">수량</SortTh>
+                <SortTh sortKey="totalPrice" sort={abcSort} onSort={toggleSort(setAbcSort)} className="text-right">금액</SortTh>
+                <SortTh sortKey="cumPercent" sort={abcSort} onSort={toggleSort(setAbcSort)} className="text-right">누적비중</SortTh>
               </tr>
             </thead>
             <tbody>
-              {abcData.slice(0, 20).map((d, i) => (
+              {sortedAbcData.map((d, i) => (
                 <tr
                   key={i}
                   style={{ cursor: 'pointer' }}
@@ -324,16 +361,16 @@ export default function DashboardPage() {
           <table className="data-table">
             <thead>
               <tr>
-                <th className="col-fill">품목명</th>
-                <th>코드</th>
-                <th className="text-right">현재 재고</th>
-                <th className="text-right">30일 출고량</th>
-                <th className="text-right">회전율</th>
+                <SortTh sortKey="itemName"   sort={turnSort} onSort={toggleSort(setTurnSort)} className="col-fill">품목명</SortTh>
+                <SortTh sortKey="itemCode"   sort={turnSort} onSort={toggleSort(setTurnSort)}>코드</SortTh>
+                <SortTh sortKey="currentQty" sort={turnSort} onSort={toggleSort(setTurnSort)} className="text-right">현재 재고</SortTh>
+                <SortTh sortKey="outQty"     sort={turnSort} onSort={toggleSort(setTurnSort)} className="text-right">30일 출고량</SortTh>
+                <SortTh sortKey="turnover"   sort={turnSort} onSort={toggleSort(setTurnSort)} className="text-right">회전율</SortTh>
                 <th>상태</th>
               </tr>
             </thead>
             <tbody>
-              {turnoverData.slice(0, 20).map((d, i) => (
+              {sortedTurnoverData.map((d, i) => (
                 <tr key={i}>
                   <td className="col-fill"><strong>{d.itemName}</strong></td>
                   <td style={{ color: 'var(--text-muted)' }}>{d.itemCode || '-'}</td>
@@ -383,7 +420,7 @@ export default function DashboardPage() {
         <div className="card" style={{ borderLeft: '3px solid var(--warning)' }}>
           <div className="card-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span style={{ color: 'var(--warning)' }}>유통기한 임박 품목 <span className="badge badge-warning">{expiryAlerts.length}건</span></span>
-            <button className="btn btn-sm btn-outline" onClick={() => navigate('/auto-order')}>발주 바로가기 →</button>
+            <button className="btn btn-sm btn-outline" onClick={() => navigate('/orders')}>발주 바로가기 →</button>
           </div>
           <div className="table-wrapper" style={{ border: 'none' }}>
             <table className="data-table">

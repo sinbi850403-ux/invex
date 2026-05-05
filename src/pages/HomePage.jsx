@@ -161,24 +161,36 @@ export default function HomePage() {
             ))}
           </div>
         </div>
-        {recentTransactions.length > 0 ? (
-          <div className="table-wrapper" style={{ border: 'none', margin: 0 }}>
-            <table className="data-table" style={{ fontSize: 12 }}>
-              <thead><tr><th>유형</th><th>품목명</th><th className="text-right">수량</th><th>날짜</th><th>거래처</th></tr></thead>
-              <tbody>
-                {recentTransactions.filter(tx => txFilter === 'all' || tx.type === txFilter).slice(0, 8).map((tx, i) => (
-                  <tr key={tx.id || i}>
-                    <td><span className={`badge ${tx.type === 'in' ? 'badge-success' : 'badge-danger'}`}>{tx.type === 'in' ? '입고' : '출고'}</span></td>
-                    <td>{tx.itemName || '-'}</td>
-                    <td className="text-right">{toNumber(tx.quantity).toLocaleString('ko-KR')}</td>
-                    <td style={{ color: 'var(--text-muted)' }}>{tx.date || '-'}</td>
-                    <td style={{ color: 'var(--text-muted)' }}>{tx.vendor || '-'}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : (
+        {filteredTx.length > 0 ? (() => {
+          const filtered = [...filteredTx]
+            .filter(tx => txFilter === 'all' || tx.type === txFilter)
+            .sort((a, b) => String(b.date || b.createdAt || '').localeCompare(String(a.date || a.createdAt || '')))
+            .slice(0, 8);
+          return filtered.length > 0 ? (
+            <div className="table-wrapper" style={{ border: 'none', margin: 0 }}>
+              <table className="data-table" style={{ fontSize: 12 }}>
+                <thead><tr><th>유형</th><th>품목명</th><th className="text-right">수량</th><th>날짜</th><th>거래처</th></tr></thead>
+                <tbody>
+                  {filtered.map((tx, i) => (
+                    <tr key={tx.id || i}>
+                      <td><span className={`badge ${tx.type === 'in' ? 'badge-success' : 'badge-danger'}`}>{tx.type === 'in' ? '입고' : '출고'}</span></td>
+                      <td>{tx.itemName || '-'}</td>
+                      <td className="text-right">{toNumber(tx.quantity).toLocaleString('ko-KR')}</td>
+                      <td style={{ color: 'var(--text-muted)' }}>{tx.date || '-'}</td>
+                      <td style={{ color: 'var(--text-muted)' }}>{tx.vendor || '-'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="empty-state" style={{ padding: '20px 0' }}>
+              <div className="msg" style={{ fontSize: 13 }}>
+                {txFilter === 'in' ? '최근 입고 내역이 없습니다' : txFilter === 'out' ? '최근 출고 내역이 없습니다' : '아직 기록된 거래가 없습니다'}
+              </div>
+            </div>
+          );
+        })() : (
           <div className="empty-state"><div className="msg">아직 기록된 거래가 없습니다</div></div>
         )}
       </div>
@@ -393,7 +405,7 @@ export default function HomePage() {
                 {deadStockItems.length > 0 && (
                   <button className="btn btn-sm btn-outline"
                     style={{ marginTop: 6, fontSize: 11, color: 'var(--warning)', borderColor: 'var(--warning)', padding: '2px 8px' }}
-                    onClick={e => { e.stopPropagation(); navigate('/auto-order'); }}>
+                    onClick={e => { e.stopPropagation(); navigate('/orders'); }}>
                     발주 바로가기 →
                   </button>
                 )}
@@ -432,7 +444,7 @@ export default function HomePage() {
                 {lowStockItems.length > 3 ? ` 외 ${lowStockItems.length - 3}건` : ''}
               </span>
               <button className="btn btn-sm btn-outline" style={{ flexShrink: 0, fontSize: 11, color: 'var(--danger)', borderColor: 'var(--danger)', padding: '2px 10px' }}
-                onClick={() => navigate('/auto-order')}>발주 바로가기 →</button>
+                onClick={() => navigate('/orders')}>발주 바로가기 →</button>
             </div>
           )}
 
@@ -481,7 +493,7 @@ export default function HomePage() {
                         </div>
                       );
                     })}
-                    <button className="btn btn-sm btn-ghost" style={{ marginTop: 6, fontSize: 11, padding: '2px 8px' }} onClick={() => navigate('/auto-order')}>발주 검토 →</button>
+                    <button className="btn btn-sm btn-ghost" style={{ marginTop: 6, fontSize: 11, padding: '2px 8px' }} onClick={() => navigate('/orders')}>발주 검토 →</button>
                   </>
                 }
               </div>
