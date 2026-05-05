@@ -246,6 +246,21 @@ export default function RolesPage() {
     setShowMember(false);
   };
 
+  // ── 테스트 팀원 자동 생성 ──
+  const handleAddTestMembers = () => {
+    const today = new Date().toISOString().split('T')[0];
+    const testMembers = [
+      { id: 'test-admin-' + Date.now().toString(36),   name: '김관리 (테스트)', email: 'admin.test@example.com',   roleId: 'admin',   status: 'active', joinedAt: today },
+      { id: 'test-mgr-'   + Date.now().toString(36),   name: '이매니저 (테스트)', email: 'mgr.test@example.com',   roleId: 'manager', status: 'active', joinedAt: today },
+      { id: 'test-staff-' + Date.now().toString(36),   name: '박직원 (테스트)', email: 'staff.test@example.com',  roleId: 'staff',   status: 'active', joinedAt: today },
+      { id: 'test-viewer-' + Date.now().toString(36),  name: '최열람 (테스트)', email: 'viewer.test@example.com', roleId: 'viewer',  status: 'invited', joinedAt: today },
+    ];
+    // 이미 테스트 멤버가 있으면 제거 후 재생성
+    const filtered = members.filter(m => !m.id.startsWith('test-'));
+    setState({ members: [...filtered, ...testMembers] });
+    showToast('테스트 팀원 4명을 추가했습니다.', 'success');
+  };
+
   // ── 팀원 삭제 ──
   const handleRemoveMember = (memberId) => {
     if (!window.confirm('이 팀원을 삭제하시겠습니까?')) return;
@@ -293,6 +308,9 @@ export default function RolesPage() {
           )}
           <button className="btn btn-primary" onClick={handleSave} disabled={saving || !isDirty}>
             {saving ? '저장 중…' : '💾 저장'}
+          </button>
+          <button className="btn btn-ghost" onClick={handleAddTestMembers} title="관리자·매니저·직원·열람자 테스트 계정 자동 생성">
+            🧪 테스트 팀원
           </button>
           <button className="btn btn-accent" onClick={() => setShowMember(true)}>
             👤 팀원 초대
@@ -515,7 +533,22 @@ export default function RolesPage() {
             <div className="card-title">👥 팀원 목록
               <span className="card-subtitle" style={{ marginLeft: '6px' }}>({members.length}명)</span>
             </div>
-            <button className="btn btn-primary btn-sm" onClick={() => setShowMember(true)}>+ 팀원 초대</button>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button className="btn btn-ghost btn-sm" onClick={handleAddTestMembers} title="테스트용 샘플 팀원 4명 자동 생성">
+                🧪 테스트 팀원 추가
+              </button>
+              {members.some(m => m.id.startsWith('test-')) && (
+                <button className="btn btn-ghost btn-sm"
+                  style={{ color: 'var(--danger)' }}
+                  onClick={() => {
+                    setState({ members: members.filter(m => !m.id.startsWith('test-')) });
+                    showToast('테스트 팀원을 삭제했습니다.', 'info');
+                  }}>
+                  🗑 테스트 삭제
+                </button>
+              )}
+              <button className="btn btn-primary btn-sm" onClick={() => setShowMember(true)}>+ 팀원 초대</button>
+            </div>
           </div>
           {members.length > 0 ? (
             <div className="table-wrapper" style={{ border: 'none' }}>
