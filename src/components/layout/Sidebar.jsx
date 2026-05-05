@@ -7,6 +7,7 @@ import { initGlobalSearch, toggleGlobalSearch } from '../../global-search.js';
 import { toggleTheme } from '../../theme.js';
 import { showToast } from '../../toast.js';
 import { PAGE_LABELS } from '../../router-config.js';
+import { isSuperAdminEmail } from '../../admin-emails.js';
 
 // 사이드바 섹션 정의
 const NAV_SECTIONS = [
@@ -165,7 +166,7 @@ export default function Sidebar({ isOpen, onClose, collapsed = false, onToggleCo
   const plan = PLANS[planId];
   const userName = profile?.name || user?.displayName || '사용자';
   const userPhoto = user?.photoURL;
-  const adminMode = profile?.role === 'admin';
+  const adminMode = isSuperAdminEmail(user?.email);
 
   return (
     <aside id="sidebar" className={`sidebar ${isOpen ? 'open' : ''}${collapsed ? ' sidebar--collapsed' : ''}`}>
