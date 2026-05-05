@@ -1,11 +1,13 @@
 /**
  * ai-report.js — AI 경영 분석 리포트 생성
  * Vercel Edge Function(/api/ai-proxy)을 통해 OpenAI 호출 — 키 클라이언트 미노출
- * @version 2.1.0
+ * @version 2.2.0
  */
 
-// P0-1: VITE_OPENAI_API_KEY 클라이언트 번들 노출 수정
+import { supabase } from './supabase-client.js';
+
 // 클라이언트는 /api/ai-proxy 만 호출. OpenAI 키는 서버(api/ai-proxy.js)에서만 보유.
+// ai-proxy는 Supabase JWT 검증 필수 — 로그인 세션이 없으면 401
 const PROXY_ENDPOINT = '/api/ai-proxy';
 export const MODEL = 'gpt-4o-mini';
 
@@ -18,9 +20,17 @@ export const MODEL = 'gpt-4o-mini';
  * @param {(chunk: string) => void} onChunk - 토큰 수신 콜백
  */
 export async function callAIStream(systemPrompt, userPrompt, onChunk) {
+  // Supabase 세션 토큰을 Authorization 헤더로 전달 (서버에서 JWT 검증)
+  const { data: { session } } = await supabase.auth.getSession();
+  const token = session?.access_token;
+  if (!token) throw new Error('AI 분석을 사용하려면 로그인이 필요합니다.');
+
   const res = await fetch(PROXY_ENDPOINT, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
     body: JSON.stringify({ systemPrompt, userPrompt }),
   });
   if (!res.ok) {
