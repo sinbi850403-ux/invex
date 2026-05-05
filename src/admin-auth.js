@@ -31,7 +31,10 @@ export async function isAdminVerified() {
       .eq('id', user.uid)
       .single();
     if (error || !data) return false;
-    return data.role === 'admin' || isSuperAdminEmail(user.email);
+    // [SECURITY] DB role만 신뢰 — 이메일 폴백 제거 (H2 수정)
+    // 이전: data.role === 'admin' || isSuperAdminEmail() → 이메일만 맞으면 통과
+    // 수정: DB role === 'admin' 만 허용 (Fail-secure)
+    return data.role === 'admin';
   } catch {
     // [SECURITY] DB 조회 실패 시 false 반환 (Fail-secure 원칙)
     // 이전에는 이메일 체크 폴백으로 오프라인 상태를 악용한 권한 우회 가능

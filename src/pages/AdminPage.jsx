@@ -22,8 +22,10 @@ export default function AdminPage() {
   const [showNotice, setShowNotice] = useState(false);
   const [ticketsKey, setTicketsKey] = useState(0);
 
-  // 총관리자 체크: VITE_ADMIN_EMAILS에 등록된 이메일만 접근 가능
-  // profile.role === 'admin'은 워크스페이스 소유자도 해당되므로 이메일 기반 체크 사용
+  // 슈퍼 관리자 UI 게이트: profile.role='admin'은 워크스페이스 오너도 포함되므로
+  // 이 페이지는 VITE_ADMIN_EMAILS에 등록된 플랫폼 총관리자만 접근 가능
+  // [SECURITY] 실제 데이터 보안은 DB RPC(fetchAllUsers, admin_change_user_plan 등)가 담당
+  // 이메일 노출 리스크: 클라이언트 번들에 포함 → 정보 공개 수준이며 DB 접근 우회 불가
   const isAdmin = isSuperAdminEmail(user?.email);
 
   const loadUsers = useCallback(async () => {
