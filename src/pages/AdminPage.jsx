@@ -78,7 +78,7 @@ export default function AdminPage() {
   const entUsers = users.filter(u => u.plan === 'enterprise').length;
   const paidUsers = proUsers + entUsers;
   const conversionRate = totalUsers > 0 ? Math.round((paidUsers / totalUsers) * 100) : 0;
-  const monthlyRevenue = (proUsers * 290000) + (entUsers * 490000);
+  const monthlyRevenue = (proUsers * 29000) + (entUsers * 59000);
   const today = new Date().toISOString().slice(0, 10);
   const todaySignups = users.filter(u => u.createdAt?.startsWith(today)).length;
   const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
