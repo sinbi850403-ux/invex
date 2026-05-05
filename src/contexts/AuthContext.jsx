@@ -5,7 +5,7 @@ import { restoreState, setupRealtimeSync, cleanupRealtimeSync, getState as getSt
 import { primeUserIdCache, setWorkspaceUserId, clearWorkspaceUserId } from '../db.js';
 import { injectGetCurrentUser, injectGetUserProfile, PLANS, setPlan, getCurrentPlan } from '../plan.js';
 import { setMonitorUser, clearMonitorUser } from '../error-monitor.js';
-import { getWorkspaceId } from '../workspace.js';
+import { getWorkspaceId, ensureOwnerAdminRole } from '../workspace.js';
 import { LAST_PAGE_KEY, PAGE_LOADERS } from '../router-config.js';
 
 const AuthContext = createContext(null);
@@ -74,6 +74,12 @@ export function AuthProvider({ children }) {
 
       // 워크스페이스 소속 시 오너 UID로 전환
       if (uid) {
+        // 대표(오너) 역할 자동 승격 — profiles.role이 viewer인 기존 사용자 대응
+        await ensureOwnerAdminRole(uid);
+        // 역할 변경 시 React 프로필 상태도 재동기화
+        const updatedProfile = getUserProfileData();
+        if (updatedProfile) setProfile({ ...updatedProfile });
+
         const wsId = await getWorkspaceId(uid);
         if (wsId && wsId !== uid) {
           setWorkspaceUserId(wsId);
@@ -84,7 +90,7 @@ export function AuthProvider({ children }) {
       initializingRef.current = false;
       setIsInitializing(false);
     }
-  }, []);
+  }, [setProfile]);
 
   useEffect(() => {
     // Supabase 미설정 시 자동 로그인

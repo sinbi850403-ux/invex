@@ -3,6 +3,7 @@ export const ROLE_ORDER = {
   staff: 1,
   manager: 2,
   admin: 3,
+  owner: 4,  // 워크스페이스 대표 — admin보다 높음 (모든 기능 접근 가능)
 };
 
 export const PLAN_ORDER = {
