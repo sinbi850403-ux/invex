@@ -415,7 +415,9 @@ export default function PayrollPage() {
             ].map(({ label, val, color, icon }) => (
               <div key={label} style={{
                 borderRadius: 10,
-                border: '1px solid var(--border)',
+                borderTop: '1px solid var(--border)',
+                borderRight: '1px solid var(--border)',
+                borderBottom: '1px solid var(--border)',
                 borderLeft: `4px solid ${color}`,
                 background: 'var(--bg-secondary)',
                 padding: '14px 16px',
